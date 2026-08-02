@@ -1,5 +1,5 @@
 import type { ShelfSummary } from "@second-pass/spl-api";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import { RemoveIconButton } from "../../../components/icons/RemoveIconButton";
 import { Button, ErrorPanel } from "../../../components/ui";

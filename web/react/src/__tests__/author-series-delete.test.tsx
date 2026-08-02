@@ -1,6 +1,6 @@
 import { ApiError, type BookPreview, type CompactBook } from "@second-pass/spl-api";
 import { renderToStaticMarkup } from "react-dom/server";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
 import { confirmAuthorSeriesDelete, isAttachedBookConflict } from "../features/library/authorSeriesDelete";

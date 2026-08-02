@@ -1,6 +1,6 @@
 import type { CreateUserRole } from "@second-pass/spl-api";
 import type { FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import { Button, FormField } from "../../../components/ui";
 import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";

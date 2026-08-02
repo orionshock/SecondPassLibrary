@@ -1,5 +1,5 @@
 import type { BookPreview } from "@second-pass/spl-api";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import { breadcrumbNavigationState, type BreadcrumbItem } from "../../../app/navigation/breadcrumbs";
 import { Button, ErrorPanel } from "../../../components/ui";

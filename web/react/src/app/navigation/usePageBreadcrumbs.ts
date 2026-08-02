@@ -1,5 +1,5 @@
 import { useLayoutEffect } from "react";
-import { useLocation, useOutletContext } from "react-router-dom";
+import { useLocation, useOutletContext } from "react-router";
 
 import type { AppOutletContext } from "../layout/AppFrame";
 import { resolveBreadcrumbTrail, type BreadcrumbItem } from "./breadcrumbs";

@@ -13,7 +13,7 @@ import {
   type UpdateManagedUserInput,
 } from "@second-pass/spl-api";
 import { useEffect, useMemo, useState } from "react";
-import { Link, useOutletContext, useParams } from "react-router-dom";
+import { Link, useOutletContext, useParams } from "react-router";
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";

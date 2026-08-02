@@ -1,6 +1,6 @@
 import { createUser, type CreateUserResult } from "@second-pass/spl-api";
 import { useReducer, useState, type FormEvent } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useOutletContext } from "react-router";
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";

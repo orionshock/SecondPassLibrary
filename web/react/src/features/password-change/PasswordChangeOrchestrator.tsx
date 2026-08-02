@@ -1,6 +1,6 @@
 import { changeCurrentUserPassword } from "@second-pass/spl-api";
 import { useReducer, useState, type FormEvent } from "react";
-import { useNavigate, useOutletContext } from "react-router-dom";
+import { useNavigate, useOutletContext } from "react-router";
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
 import { passwordBreadcrumbFallback } from "../../app/navigation/accountBreadcrumbs";

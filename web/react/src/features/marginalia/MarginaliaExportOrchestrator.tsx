@@ -1,6 +1,6 @@
 import { downloadCompleteMarginaliaExport, downloadSelectedMarginaliaExport, listMarginaliaSessions, type MarginaliaSessionListItem, type Page } from "@second-pass/spl-api";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useSearchParams } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router";
 
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { loadPageWithRecovery } from "../../app/routing/pageRecovery";

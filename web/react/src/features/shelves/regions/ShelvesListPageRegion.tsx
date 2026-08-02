@@ -1,5 +1,5 @@
 import type { Page, ShelfOrdering, ShelfScope, ShelfSummary } from "@second-pass/spl-api";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { Button, ErrorPanel, PageHeader } from "../../../components/ui";

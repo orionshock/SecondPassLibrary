@@ -1,5 +1,5 @@
 import { PageHeader } from "../../../components/ui";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { libraryEntityAxisPath, libraryEntityBreadcrumbs, libraryEntityNavigationState, libraryEntityNewPath } from "../authorSeriesLifecycle";
 import type { LibraryView } from "../libraryQuery";
 

@@ -9,7 +9,7 @@ import {
   type ServerSettings,
 } from "@second-pass/spl-api";
 import { useEffect, useState, type FormEvent } from "react";
-import { useLocation, useOutletContext, useSearchParams } from "react-router-dom";
+import { useLocation, useOutletContext, useSearchParams } from "react-router";
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";

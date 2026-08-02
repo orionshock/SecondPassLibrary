@@ -32,7 +32,7 @@ import { GroupDangerZonePageRegion } from "../features/groups/regions/GroupDange
 import { GroupMemberCandidatesPageRegion } from "../features/groups/regions/GroupMemberCandidatesPageRegion";
 import { GroupMembersEditPageRegion } from "../features/groups/regions/GroupMembersEditPageRegion";
 import { GroupPublicDetailsPageRegion } from "../features/groups/regions/GroupPublicDetailsPageRegion";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 
 const baseUser: CurrentUser = {
   username: "reader", email: "", firstName: "", lastName: "", profileId: "profile",

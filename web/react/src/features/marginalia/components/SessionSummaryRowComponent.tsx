@@ -1,5 +1,5 @@
 import type { MarginaliaBookReference, MarginaliaSessionSummary } from "@second-pass/spl-api";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { BookCoverComponent } from "../../../shared/books/BookCoverComponent";

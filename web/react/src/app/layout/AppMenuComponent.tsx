@@ -6,7 +6,7 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import { MaterialIcon } from "../../components/icons/MaterialIcon";
 

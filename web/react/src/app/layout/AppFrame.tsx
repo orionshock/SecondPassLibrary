@@ -6,7 +6,7 @@ import {
   type ServerInfo,
 } from "@second-pass/spl-api";
 import { useCallback, useState } from "react";
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation } from "react-router";
 
 import { BreadcrumbsComponent } from "../navigation/BreadcrumbsComponent";
 import type { BreadcrumbItem } from "../navigation/breadcrumbs";

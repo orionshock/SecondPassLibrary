@@ -4,6 +4,9 @@ Practical local development workflow (Windows/PowerShell).
 
 ## Setup
 
+Use Python 3.12 through 3.14. The React workspace requires Node.js 22.22.0
+or newer.
+
 ```powershell
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1

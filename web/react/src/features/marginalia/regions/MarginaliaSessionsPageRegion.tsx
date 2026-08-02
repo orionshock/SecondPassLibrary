@@ -6,7 +6,7 @@ import type {
   Page,
 } from "@second-pass/spl-api";
 import type { FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import { Button, ErrorPanel } from "../../../components/ui";
 import { CompactBookRowComponent } from "../../../shared/books/CompactBookRowComponent";

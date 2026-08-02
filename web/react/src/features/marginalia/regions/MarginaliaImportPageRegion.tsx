@@ -1,6 +1,6 @@
 import type { MarginaliaImportApplyResult, MarginaliaImportPreview } from "@second-pass/spl-api";
 import { useEffect, useRef, type FormEvent, type RefObject } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import { Badge, Button, FormField, Surface } from "../../../components/ui";
 import { HelpPopoverComponent } from "../../../components/HelpPopoverComponent";

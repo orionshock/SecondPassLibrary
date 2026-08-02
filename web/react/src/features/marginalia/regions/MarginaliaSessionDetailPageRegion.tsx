@@ -1,6 +1,6 @@
 import type { MarginaliaAnnotation, MarginaliaSessionEnvelope } from "@second-pass/spl-api";
 import type { ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
 import { Badge, Button, ErrorPanel, Surface } from "../../../components/ui";

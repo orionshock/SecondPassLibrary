@@ -1,5 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { createMemoryRouter, MemoryRouter } from "react-router-dom";
+import { createMemoryRouter, MemoryRouter } from "react-router";
 import { describe, expect, it } from "vitest";
 
 import { BreadcrumbsComponent } from "../app/navigation/BreadcrumbsComponent";

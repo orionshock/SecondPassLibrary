@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { Button, ErrorPanel } from "../../../components/ui";
 import { libraryEntityBreadcrumbs, libraryEntityEditPath, libraryEntityNavigationState } from "../authorSeriesLifecycle";
 import { ClampedLibraryTextComponent } from "../components/ClampedLibraryTextComponent";

@@ -7,7 +7,7 @@ import {
   type ServerInfo,
 } from "@second-pass/spl-api";
 import { useEffect, useState } from "react";
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate, useLocation } from "react-router";
 
 import { AppFrame } from "./layout/AppFrame";
 import "../components/ui.css";

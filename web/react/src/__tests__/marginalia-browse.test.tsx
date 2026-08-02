@@ -1,7 +1,7 @@
 import type { MarginaliaBookSummary, MarginaliaSessionSummary, Page } from "@second-pass/spl-api";
 import { Children, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
 import { MarginaliaViewSelectorComponent } from "../features/marginalia/components/MarginaliaViewSelectorComponent";

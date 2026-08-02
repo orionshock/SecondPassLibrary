@@ -1,5 +1,5 @@
 import type { BookDetail } from "@second-pass/spl-api";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import { BookCoverComponent } from "../../../shared/books/BookCoverComponent";
 import { selectedLibraryContextNavigationState } from "../libraryPresentation";

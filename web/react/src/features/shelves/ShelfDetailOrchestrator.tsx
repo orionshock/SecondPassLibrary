@@ -1,6 +1,6 @@
 import { ApiError, getShelf, listShelfItems, type Page, type ShelfItem, type ShelfSummary } from "@second-pass/spl-api";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useParams, useSearchParams } from "react-router-dom";
+import { useLocation, useParams, useSearchParams } from "react-router";
 
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { loadPageWithRecovery } from "../../app/routing/pageRecovery";

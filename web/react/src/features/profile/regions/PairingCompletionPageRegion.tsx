@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import { ActionFeedbackComponent } from "../../../shared/feedback/ActionFeedbackComponent";
 import { PairingPageFrameComponent } from "../components/PairingPageFrameComponent";

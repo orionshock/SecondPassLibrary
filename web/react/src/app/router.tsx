@@ -1,5 +1,5 @@
 import { canSeeImports, canSeeServerSettings, canSeeUsers, isAtLeastLibrarian, type CurrentUser, type ServerInfo } from "@second-pass/spl-api";
-import { createBrowserRouter } from "react-router-dom";
+import { createBrowserRouter } from "react-router";
 
 import { App } from "./App";
 import { RoleRouteGuardComponent } from "./navigation/RoleRouteGuardComponent";

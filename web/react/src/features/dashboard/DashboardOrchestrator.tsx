@@ -5,7 +5,7 @@ import {
   listRecentMarginaliaSessions,
 } from "@second-pass/spl-api";
 import { useEffect, useState } from "react";
-import { useOutletContext } from "react-router-dom";
+import { useOutletContext } from "react-router";
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";

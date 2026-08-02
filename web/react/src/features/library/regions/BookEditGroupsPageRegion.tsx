@@ -1,6 +1,6 @@
 import type { BookGroupSummary, LibraryGroup } from "@second-pass/spl-api";
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import { AddIconButton } from "../../../components/icons/AddIconButton";
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";

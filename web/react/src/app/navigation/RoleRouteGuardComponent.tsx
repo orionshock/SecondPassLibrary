@@ -1,6 +1,6 @@
 import type { CurrentUser, ServerInfo } from "@second-pass/spl-api";
 import type { ReactNode } from "react";
-import { Navigate, useOutletContext } from "react-router-dom";
+import { Navigate, useOutletContext } from "react-router";
 
 import type { AppOutletContext } from "../layout/AppFrame";
 

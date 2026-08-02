@@ -1,5 +1,5 @@
 import type { ClientSession } from "@second-pass/spl-api";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import type { BreadcrumbLocationState } from "../../../app/navigation/breadcrumbs";
 import { Button, Surface } from "../../../components/ui";

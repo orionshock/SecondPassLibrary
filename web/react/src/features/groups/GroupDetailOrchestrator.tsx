@@ -11,7 +11,7 @@ import {
   type ShelfSummary,
 } from "@second-pass/spl-api";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useOutletContext, useParams, useSearchParams } from "react-router-dom";
+import { useLocation, useOutletContext, useParams, useSearchParams } from "react-router";
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";

@@ -7,7 +7,7 @@ import {
   type UpdateCurrentUserInput,
 } from "@second-pass/spl-api";
 import { useEffect, useState } from "react";
-import { Link, useOutletContext } from "react-router-dom";
+import { Link, useOutletContext } from "react-router";
 
 import type { AppOutletContext } from "../../app/layout/AppFrame";
 import { clientPairingBreadcrumbFallback, passwordBreadcrumbFallback, profileBreadcrumbFallback } from "../../app/navigation/accountBreadcrumbs";

@@ -1,5 +1,5 @@
 import type { ShelfSummary } from "@second-pass/spl-api";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import { Badge, Button, ErrorPanel, PageHeader } from "../../../components/ui";
 import { UserInlineIdentityComponent } from "../../../shared/users/UserInlineIdentityComponent";

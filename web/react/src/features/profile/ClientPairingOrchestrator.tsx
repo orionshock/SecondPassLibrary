@@ -1,6 +1,6 @@
 import { decideClientPairing, lookupClientPairing, type ClientPairingRequest } from "@second-pass/spl-api";
 import { useEffect, useRef, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 
 import { clientPairingBreadcrumbFallback } from "../../app/navigation/accountBreadcrumbs";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";

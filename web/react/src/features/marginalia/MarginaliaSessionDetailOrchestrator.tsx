@@ -6,7 +6,7 @@ import {
   type MarginaliaSessionEnvelope,
 } from "@second-pass/spl-api";
 import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { Button, ErrorPanel } from "../../components/ui";

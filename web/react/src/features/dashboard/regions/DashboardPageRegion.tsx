@@ -1,5 +1,5 @@
 import type { RecentMarginaliaSession } from "@second-pass/spl-api";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 
 import { Button, ErrorPanel } from "../../../components/ui";
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
