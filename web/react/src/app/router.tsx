@@ -1,35 +1,42 @@
 import { canSeeImports, canSeeServerSettings, canSeeUsers, isAtLeastLibrarian, type CurrentUser, type ServerInfo } from "@second-pass/spl-api";
+import { lazy } from "react";
 import { createBrowserRouter } from "react-router";
 
 import { App } from "./App";
 import { RoleRouteGuardComponent } from "./navigation/RoleRouteGuardComponent";
 import { DashboardOrchestrator } from "../features/dashboard/DashboardOrchestrator";
-import { GroupDetailOrchestrator } from "../features/groups/GroupDetailOrchestrator";
-import { GroupCreateOrchestrator } from "../features/groups/GroupCreateOrchestrator";
-import { GroupEditOrchestrator } from "../features/groups/GroupEditOrchestrator";
-import { GroupsListOrchestrator } from "../features/groups/GroupsListOrchestrator";
 import { canCreateGroupMetadata } from "../features/groups/groupMetadataAuthority";
-import { ImportsOrchestrator } from "../features/imports/ImportsOrchestrator";
-import { BookDetailOrchestrator } from "../features/library/BookDetailOrchestrator";
-import { BookEditOrchestrator } from "../features/library/BookEditOrchestrator";
-import { AuthorSeriesEditOrchestrator } from "../features/library/AuthorSeriesEditOrchestrator";
-import { LibraryOrchestrator } from "../features/library/LibraryOrchestrator";
-import { ProfileOrchestrator } from "../features/profile/ProfileOrchestrator";
-import { MarginaliaSessionsOrchestrator } from "../features/marginalia/MarginaliaSessionsOrchestrator";
-import { MarginaliaSessionDetailOrchestrator } from "../features/marginalia/MarginaliaSessionDetailOrchestrator";
-import { MarginaliaImportOrchestrator } from "../features/marginalia/MarginaliaImportOrchestrator";
-import { MarginaliaExportOrchestrator } from "../features/marginalia/MarginaliaExportOrchestrator";
-import { ClientPairingOrchestrator } from "../features/profile/ClientPairingOrchestrator";
-import { PasswordChangeOrchestrator } from "../features/password-change/PasswordChangeOrchestrator";
-import { ServerSettingsOrchestrator } from "../features/server-settings/ServerSettingsOrchestrator";
-import { ShelfCreateOrchestrator } from "../features/shelves/ShelfCreateOrchestrator";
-import { ShelfDetailOrchestrator } from "../features/shelves/ShelfDetailOrchestrator";
-import { ShelfEditOrchestrator } from "../features/shelves/ShelfEditOrchestrator";
-import { ShelvesListOrchestrator } from "../features/shelves/ShelvesListOrchestrator";
-import { UserEditOrchestrator } from "../features/users/UserEditOrchestrator";
-import { UserCreateOrchestrator } from "../features/users/UserCreateOrchestrator";
-import { UsersListOrchestrator } from "../features/users/UsersListOrchestrator";
 import { ProductPageShellComponent } from "../shared/layout/ProductPageShellComponent";
+
+const LibraryOrchestrator = lazy(() => import("./routes/libraryRoutes").then((module) => ({ default: module.LibraryOrchestrator })));
+const BookDetailOrchestrator = lazy(() => import("./routes/libraryRoutes").then((module) => ({ default: module.BookDetailOrchestrator })));
+const BookEditOrchestrator = lazy(() => import("./routes/libraryMutationRoutes").then((module) => ({ default: module.BookEditOrchestrator })));
+const AuthorSeriesEditOrchestrator = lazy(() => import("./routes/libraryMutationRoutes").then((module) => ({ default: module.AuthorSeriesEditOrchestrator })));
+
+const MarginaliaSessionsOrchestrator = lazy(() => import("./routes/marginaliaRoutes").then((module) => ({ default: module.MarginaliaSessionsOrchestrator })));
+const MarginaliaSessionDetailOrchestrator = lazy(() => import("./routes/marginaliaRoutes").then((module) => ({ default: module.MarginaliaSessionDetailOrchestrator })));
+const MarginaliaImportOrchestrator = lazy(() => import("./routes/marginaliaTransferRoutes").then((module) => ({ default: module.MarginaliaImportOrchestrator })));
+const MarginaliaExportOrchestrator = lazy(() => import("./routes/marginaliaTransferRoutes").then((module) => ({ default: module.MarginaliaExportOrchestrator })));
+
+const ShelvesListOrchestrator = lazy(() => import("./routes/shelvesRoutes").then((module) => ({ default: module.ShelvesListOrchestrator })));
+const ShelfCreateOrchestrator = lazy(() => import("./routes/shelvesRoutes").then((module) => ({ default: module.ShelfCreateOrchestrator })));
+const ShelfDetailOrchestrator = lazy(() => import("./routes/shelvesRoutes").then((module) => ({ default: module.ShelfDetailOrchestrator })));
+const ShelfEditOrchestrator = lazy(() => import("./routes/shelvesRoutes").then((module) => ({ default: module.ShelfEditOrchestrator })));
+
+const GroupsListOrchestrator = lazy(() => import("./routes/groupsRoutes").then((module) => ({ default: module.GroupsListOrchestrator })));
+const GroupDetailOrchestrator = lazy(() => import("./routes/groupsRoutes").then((module) => ({ default: module.GroupDetailOrchestrator })));
+const GroupCreateOrchestrator = lazy(() => import("./routes/groupManagementRoutes").then((module) => ({ default: module.GroupCreateOrchestrator })));
+const GroupEditOrchestrator = lazy(() => import("./routes/groupManagementRoutes").then((module) => ({ default: module.GroupEditOrchestrator })));
+
+const ProfileOrchestrator = lazy(() => import("./routes/profileRoutes").then((module) => ({ default: module.ProfileOrchestrator })));
+const ClientPairingOrchestrator = lazy(() => import("./routes/profileRoutes").then((module) => ({ default: module.ClientPairingOrchestrator })));
+const PasswordChangeOrchestrator = lazy(() => import("./routes/profileRoutes").then((module) => ({ default: module.PasswordChangeOrchestrator })));
+
+const ImportsOrchestrator = lazy(() => import("./routes/administrationRoutes").then((module) => ({ default: module.ImportsOrchestrator })));
+const UsersListOrchestrator = lazy(() => import("./routes/administrationRoutes").then((module) => ({ default: module.UsersListOrchestrator })));
+const UserCreateOrchestrator = lazy(() => import("./routes/administrationRoutes").then((module) => ({ default: module.UserCreateOrchestrator })));
+const UserEditOrchestrator = lazy(() => import("./routes/administrationRoutes").then((module) => ({ default: module.UserEditOrchestrator })));
+const ServerSettingsOrchestrator = lazy(() => import("./routes/administrationRoutes").then((module) => ({ default: module.ServerSettingsOrchestrator })));
 
 export const sectionRoutes = [] as const;
 

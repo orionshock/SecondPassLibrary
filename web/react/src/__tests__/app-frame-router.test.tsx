@@ -1,4 +1,4 @@
-import { isValidElement } from "react";
+import { Children, isValidElement, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it, vi } from "vitest";
@@ -6,10 +6,12 @@ import { describe, expect, it, vi } from "vitest";
 import type { CurrentUser, ServerInfo } from "@second-pass/spl-api";
 import { AppFrame, navigationDestinationOwnsPath } from "../app/layout/AppFrame";
 import { appRoutes, NotFoundPageRegion, PlaceholderPageRegion, sectionRoutes } from "../app/router";
+import {
+  RouteModuleBoundaryComponent,
+  RouteModuleErrorComponent,
+  RouteModuleLoadingComponent,
+} from "../app/routing/RouteModuleBoundaryComponent";
 import { DashboardOrchestrator } from "../features/dashboard/DashboardOrchestrator";
-import { MarginaliaSessionsOrchestrator } from "../features/marginalia/MarginaliaSessionsOrchestrator";
-import { MarginaliaExportOrchestrator } from "../features/marginalia/MarginaliaExportOrchestrator";
-import { MarginaliaImportOrchestrator } from "../features/marginalia/MarginaliaImportOrchestrator";
 
 const user: CurrentUser = { username: "owner", email: "", firstName: "", lastName: "", profileId: "profile", role: "manager", mustChangePassword: false, isOwner: true, isManager: false, isLibrarian: false, isReader: false, canAccessDjangoAdmin: false, groups: [] };
 const server: ServerInfo = { name: "Family Library", description: "Hidden", bannerText: "", advancedLibraryGroupsEnabled: false, readingClientBaseUrl: null, marginaliaProfileUri: "profile", publicGroup: { id: "public", name: "Common Room", description: "" }, version: "0.1.0-dev", releaseDate: "2026-07-20" };
@@ -125,17 +127,17 @@ describe("app frame and router", () => {
       { isOwner: false, isReader: true },
     ]) expect(navMarkup(facts, { advancedLibraryGroupsEnabled: false })).not.toContain('href="/groups"');
   });
-  it("defines implemented Product routes separately from placeholders", () => {
+  it("keeps Dashboard eager and defines implemented Product routes separately from placeholders", () => {
     expect(sectionRoutes.map(({ path }) => `/${path}`)).toEqual([]);
+    const dashboardRoute = appRoutes[0].children.find((route) => "index" in route && route.index);
+    expect(isValidElement(dashboardRoute?.element)).toBe(true);
+    if (isValidElement(dashboardRoute?.element)) expect(dashboardRoute.element.type).toBe(DashboardOrchestrator);
     const marginaliaRoute = appRoutes[0].children.find((route) => route.path === "marginalia");
     expect(isValidElement(marginaliaRoute?.element)).toBe(true);
-    if (isValidElement(marginaliaRoute?.element)) expect(marginaliaRoute.element.type).toBe(MarginaliaSessionsOrchestrator);
     const marginaliaImportRoute = appRoutes[0].children.find((route) => route.path === "marginalia/import");
     expect(isValidElement(marginaliaImportRoute?.element)).toBe(true);
-    if (isValidElement(marginaliaImportRoute?.element)) expect(marginaliaImportRoute.element.type).toBe(MarginaliaImportOrchestrator);
     const marginaliaExportRoute = appRoutes[0].children.find((route) => route.path === "marginalia/export");
     expect(isValidElement(marginaliaExportRoute?.element)).toBe(true);
-    if (isValidElement(marginaliaExportRoute?.element)) expect(marginaliaExportRoute.element.type).toBe(MarginaliaExportOrchestrator);
     expect(appRoutes[0].children.some((route) => route.path?.startsWith("reading"))).toBe(false);
     expect(appRoutes[0].children.some((route) => route.path === "groups")).toBe(true);
     expect(appRoutes[0].children.some((route) => route.path === "groups/new")).toBe(true);
@@ -161,6 +163,52 @@ describe("app frame and router", () => {
     expect(appRoutes[0].children.some((route) => route.path === "server")).toBe(true);
     expect(renderToStaticMarkup(<PlaceholderPageRegion title="Future section" />)).toContain("Future section");
     expect(renderToStaticMarkup(<NotFoundPageRegion />)).toContain("Page not found");
+  });
+
+  it("resolves coherent feature and rare-route modules", async () => {
+    const [library, libraryMutation, marginalia, marginaliaTransfer, shelves, groups, groupManagement, administration, profile] = await Promise.all([
+      import("../app/routes/libraryRoutes"),
+      import("../app/routes/libraryMutationRoutes"),
+      import("../app/routes/marginaliaRoutes"),
+      import("../app/routes/marginaliaTransferRoutes"),
+      import("../app/routes/shelvesRoutes"),
+      import("../app/routes/groupsRoutes"),
+      import("../app/routes/groupManagementRoutes"),
+      import("../app/routes/administrationRoutes"),
+      import("../app/routes/profileRoutes"),
+    ]);
+    for (const routeComponent of [
+      library.LibraryOrchestrator,
+      library.BookDetailOrchestrator,
+      libraryMutation.BookEditOrchestrator,
+      libraryMutation.AuthorSeriesEditOrchestrator,
+      marginalia.MarginaliaSessionsOrchestrator,
+      marginalia.MarginaliaSessionDetailOrchestrator,
+      marginaliaTransfer.MarginaliaImportOrchestrator,
+      marginaliaTransfer.MarginaliaExportOrchestrator,
+      shelves.ShelvesListOrchestrator,
+      shelves.ShelfEditOrchestrator,
+      groups.GroupsListOrchestrator,
+      groups.GroupDetailOrchestrator,
+      groupManagement.GroupCreateOrchestrator,
+      groupManagement.GroupEditOrchestrator,
+      administration.ImportsOrchestrator,
+      administration.UsersListOrchestrator,
+      administration.ServerSettingsOrchestrator,
+      profile.ProfileOrchestrator,
+      profile.PasswordChangeOrchestrator,
+    ]) expect(typeof routeComponent).toBe("function");
+  });
+
+  it("keeps route loading and lazy-module failures bounded inside the shell", () => {
+    expect(renderToStaticMarkup(<RouteModuleLoadingComponent />)).toContain('data-route-state="loading"');
+    const reload = vi.fn();
+    const error = RouteModuleErrorComponent({ onReload: reload }) as ReactElement<{ children: ReactNode }>;
+    expect(renderToStaticMarkup(error)).toContain('data-route-state="error"');
+    const reloadButton = Children.toArray(error.props.children)[1] as ReactElement<{ onClick: () => void }>;
+    reloadButton.props.onClick();
+    expect(reload).toHaveBeenCalledOnce();
+    expect(RouteModuleBoundaryComponent.getDerivedStateFromError()).toEqual({ failed: true });
   });
 
   it("guards Groups routes by the server-driven advanced-groups mode, not role rank", () => {

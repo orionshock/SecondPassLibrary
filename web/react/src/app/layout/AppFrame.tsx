@@ -5,12 +5,13 @@ import {
   type CurrentUser,
   type ServerInfo,
 } from "@second-pass/spl-api";
-import { useCallback, useState } from "react";
+import { Suspense, useCallback, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router";
 
 import { BreadcrumbsComponent } from "../navigation/BreadcrumbsComponent";
 import type { BreadcrumbItem } from "../navigation/breadcrumbs";
 import { MaterialIcon } from "../../components/icons/MaterialIcon";
+import { RouteModuleBoundaryComponent, RouteModuleLoadingComponent } from "../routing/RouteModuleBoundaryComponent";
 import { AppMenuComponent, type AppMenuItem } from "./AppMenuComponent";
 import "./AppFrame.css";
 
@@ -138,7 +139,11 @@ export function AppFrame({
       </div>
 
       <main className="app-content">
-        <Outlet context={{ currentUser: user, serverInfo: server, onCurrentUserChange, refreshCurrentUser: onRefreshCurrentUser, refreshServerInfo: onRefreshServerInfo, setBreadcrumbs } satisfies AppOutletContext} />
+        <RouteModuleBoundaryComponent key={location.pathname}>
+          <Suspense fallback={<RouteModuleLoadingComponent />}>
+            <Outlet context={{ currentUser: user, serverInfo: server, onCurrentUserChange, refreshCurrentUser: onRefreshCurrentUser, refreshServerInfo: onRefreshServerInfo, setBreadcrumbs } satisfies AppOutletContext} />
+          </Suspense>
+        </RouteModuleBoundaryComponent>
       </main>
 
       <footer className="app-footer">
