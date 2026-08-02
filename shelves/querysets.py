@@ -4,11 +4,12 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
-from django.db.models import Count, F, Min, OuterRef, Q, QuerySet, Subquery
+from django.db.models import Count, F, OuterRef, Q, QuerySet, Subquery
 from rest_framework.exceptions import ValidationError
 
 from accounts.roles import is_librarian
 from library.queries import visible_books_for_user
+from library.catalog.ordering import with_primary_author_sort
 
 from .models import Shelf, ShelfItem
 
@@ -196,13 +197,13 @@ def apply_shelf_item_ordering(queryset: QuerySet[ShelfItem], ordering: str) -> Q
     if ordering in {"author", "-author"}:
         descending = ordering.startswith("-")
         author_order = (
-            F("_primary_author_name").desc(nulls_last=True)
+            F("_primary_author_sort").desc(nulls_last=True)
             if descending
-            else F("_primary_author_name").asc(nulls_last=True)
+            else F("_primary_author_sort").asc(nulls_last=True)
         )
         title_order = "-book__title" if descending else "book__title"
         return (
-            queryset.annotate(_primary_author_name=Min("book__authors__sort_name"))
+            with_primary_author_sort(queryset, book_id_field="book_id")
             .order_by(author_order, title_order, "id")
         )
     raise ValidationError({"ordering": "Invalid ordering."})

@@ -25,17 +25,22 @@ Series membership is represented by `BookSeries`, which links a Book to a
 Series and stores its `series_index`. Author biographies and Series summaries
 are optional descriptive metadata.
 
+A Series index is null when its position is unknown, or a positive decimal with
+at most two fractional digits. It is stored exactly in `DecimalField(max_digits=8,
+decimal_places=2)` and compared numerically; `1`, `1.0`, and `1.00` are the same
+position. Values that are zero, negative, malformed, or require more than two
+fractional digits are invalid and are never rounded into the catalog.
+
+`BookAuthor.position` is the canonical Author order for a Book. The row with
+the lowest position, then through-row id, is the primary Author. Library,
+search, Group browse, and Shelf Author sorting compare only that Author's
+`sort_name` (falling back to `name`); secondary Authors do not affect sorting.
+
 Author and Series names also maintain indexed, non-unique `normalized_name`
 values. Normalization applies Unicode NFKC, trims and collapses whitespace, and
 case-folds while preserving punctuation. These values support duplicate
 advisories; they are not identity constraints and do not prevent same-name
 records.
-
-Known follow-up: `BookSeries.series_index` stores two decimal places, while the
-public Book API accepts and emits one decimal place and OPF import parsing can
-produce broader Decimal values. Ordering remains numeric and deterministic in
-this release. Align storage, API writes, import normalization, and Reader-facing
-expectations in one separate contract change; do not change precision piecemeal.
 
 ## Dates and identifiers
 

@@ -20,6 +20,7 @@ from library.models import (
     BookSeries,
     Series,
 )
+from library.series_indexes import normalize_series_index
 
 
 IMPORT_STATUS_IMPORTED = "imported"
@@ -151,7 +152,7 @@ def _persist_series(*, book: Book, metadata: ImportMetadata) -> None:
     BookSeries.objects.create(
         book=book,
         series=series,
-        series_index=metadata.series.series_index,
+        series_index=normalize_series_index(metadata.series.series_index),
     )
 
 

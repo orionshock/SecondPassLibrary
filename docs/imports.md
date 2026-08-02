@@ -38,6 +38,12 @@ replacement, not a field-by-field merge or a later synchronization mechanism.
 Missing, malformed, oversized, or non-qualifying sidecars fall back to embedded
 EPUB metadata.
 
+Calibre/OPF Series indexes are whitespace-trimmed and parsed as exact decimals.
+Positive values with at most two fractional digits are preserved through
+preview, persistence, and result output. Blank, malformed, zero, negative, or
+over-precision values are treated as an unknown Series position; the Book and
+Series metadata remain importable, and the value is never rounded.
+
 Checksum duplicate detection takes precedence over metadata refresh. A
 duplicate returns the existing Book without changing metadata, identifiers,
 Catalog Tags, EPUB bytes, or cover. A new candidate whose identifiers conflict

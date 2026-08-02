@@ -10,7 +10,7 @@ import { bookEditQueryDuringImmediateMutation, bookEditQueryFromSearchParams, bo
 const book: BookDetail = {
   id: "book", title: "Book", sortTitle: "Book, The", subtitle: "Sub", description: "Text",
   authors: [{ id: "a1", name: "Author One" }, { id: "a2", name: "Author Two" }],
-  series: { id: "s1", name: "Series", sortName: "Series", seriesIndex: "2.0" },
+  series: { id: "s1", name: "Series", sortName: "Series", seriesIndex: "2.00" },
   publisher: "Press", language: "eng", publishedYear: 2025, publishedMonth: 2, publishedDay: 28,
   publishedDatePrecision: "day", coverUrl: null, catalogTags: [{ id: "t1", name: "Fantasy", slug: "fantasy" }],
   identifiers: [{ id: "identifier-1", scheme: "isbn_13", value: "978123" }], file: null, groups: [],
@@ -38,7 +38,7 @@ describe("Book Edit draft contract", () => {
   it("initializes ordered relationship and date state and builds the explicit replacement payload", () => {
     const draft = bookEditDraftFromBook(book);
     expect(draft).toMatchObject({
-      authorIds: ["a1", "a2"], seriesId: "s1", seriesIndex: "2.0",
+      authorIds: ["a1", "a2"], seriesId: "s1", seriesIndex: "2.00",
       publishedYear: "2025", publishedMonth: "2", publishedDay: "28",
       identifiers: [{ key: "identifier-1", scheme: "isbn_13", value: "978123" }],
       catalogTagNames: ["Fantasy"],
@@ -46,14 +46,14 @@ describe("Book Edit draft contract", () => {
     expect(bookEditInputFromDraft(draft)).toEqual({
       title: "Book", sortTitle: "Book, The", subtitle: "Sub", description: "Text", publisher: "Press", language: "eng",
       publishedDatePrecision: "day", publishedYear: 2025, publishedMonth: 2, publishedDay: 28,
-      authorIds: ["a1", "a2"], seriesId: "s1", seriesIndex: "2.0",
+      authorIds: ["a1", "a2"], seriesId: "s1", seriesIndex: "2.00",
       identifiers: [{ scheme: "isbn_13", value: "978123" }], catalogTagNames: ["Fantasy"],
     });
     expect(bookEditDraftsEqual(draft, { ...draft, title: " Book ", catalogTagNames: ["Fantasy", "fantasy"] })).toBe(true);
   });
 
   it("normalizes explicit date and Series clears for the backend contract", () => {
-    const draft = { ...bookEditDraftFromBook(book), publishedDatePrecision: "" as const, seriesId: null, seriesIndex: "2.0" };
+    const draft = { ...bookEditDraftFromBook(book), publishedDatePrecision: "" as const, seriesId: null, seriesIndex: "2.00" };
     expect(bookEditInputFromDraft(draft)).toMatchObject({ publishedDatePrecision: "", publishedYear: null, publishedMonth: null, publishedDay: null, seriesId: null, seriesIndex: null });
   });
 
@@ -61,7 +61,10 @@ describe("Book Edit draft contract", () => {
     const cases = [
       { ...bookEditDraftFromBook(book), title: " " },
       { ...bookEditDraftFromBook(book), publishedDay: "31" },
-      { ...bookEditDraftFromBook(book), seriesIndex: "1.55" },
+      { ...bookEditDraftFromBook(book), seriesIndex: "1.555" },
+      { ...bookEditDraftFromBook(book), seriesIndex: "0" },
+      { ...bookEditDraftFromBook(book), seriesIndex: "-1.25" },
+      { ...bookEditDraftFromBook(book), seriesIndex: "not-a-number" },
       { ...bookEditDraftFromBook(book), seriesId: null, seriesIndex: "1.0" },
       { ...bookEditDraftFromBook(book), authorIds: ["a1", "a1"] },
       { ...bookEditDraftFromBook(book), identifiers: [{ key: "blank", scheme: "doi" as const, value: " " }] },
@@ -73,6 +76,13 @@ describe("Book Edit draft contract", () => {
       ] },
     ];
     for (const draft of cases) expect(() => validateBookEditDraft(draft)).toThrow(LocalValidationError);
+  });
+
+  it("preserves exact two-decimal Series index text in the mutation contract", () => {
+    const draft = { ...bookEditDraftFromBook(book), seriesIndex: " 1.25 " };
+
+    expect(() => validateBookEditDraft(draft)).not.toThrow();
+    expect(bookEditInputFromDraft(draft).seriesIndex).toBe("1.25");
   });
 
   it("treats identifier add/remove and values as draft state, not server row identity", () => {

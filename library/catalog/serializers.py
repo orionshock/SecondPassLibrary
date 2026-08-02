@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import date
-from decimal import Decimal
 import logging
 
 from django.urls import reverse
@@ -9,6 +8,11 @@ from rest_framework import serializers
 
 from library.groups.public_group import is_public_group
 from library.models import Author, Book, BookIdentifier, CatalogTag, LibraryGroup, Series
+from library.series_indexes import (
+    SERIES_INDEX_DECIMAL_PLACES,
+    SERIES_INDEX_MAX_DIGITS,
+    SERIES_INDEX_MIN_VALUE,
+)
 from library.storage_diagnostics import log_storage_issue
 
 
@@ -152,7 +156,11 @@ class BookSeriesSummarySerializer(serializers.Serializer):
     id = serializers.UUIDField(source="series.id")
     name = serializers.CharField(source="series.name")
     sort_name = serializers.CharField(source="series.sort_name")
-    series_index = serializers.DecimalField(max_digits=7, decimal_places=1, allow_null=True)
+    series_index = serializers.DecimalField(
+        max_digits=SERIES_INDEX_MAX_DIGITS,
+        decimal_places=SERIES_INDEX_DECIMAL_PLACES,
+        allow_null=True,
+    )
 
 
 class BookIdentifierSerializer(serializers.ModelSerializer):
@@ -353,11 +361,11 @@ class BookUpdateSerializer(RejectUnknownFieldsMixin, serializers.Serializer):
     authors = serializers.PrimaryKeyRelatedField(queryset=Author.objects.all(), many=True, required=False)
     series = SeriesReferenceField(required=False, allow_null=True)
     series_index = serializers.DecimalField(
-        max_digits=7,
-        decimal_places=1,
+        max_digits=SERIES_INDEX_MAX_DIGITS,
+        decimal_places=SERIES_INDEX_DECIMAL_PLACES,
         required=False,
         allow_null=True,
-        min_value=Decimal("0.1"),
+        min_value=SERIES_INDEX_MIN_VALUE,
     )
     identifiers = BookIdentifierWriteSerializer(many=True, required=False)
     catalog_tags = serializers.ListField(

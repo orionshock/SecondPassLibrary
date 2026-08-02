@@ -103,7 +103,7 @@ List and detail use the same projection:
   "series": {
     "id": "<series-uuid>",
     "name": "Series name",
-    "series_index": "2.5"
+    "series_index": "2.50"
   },
   "cover_url": "http://example.test/media/covers/example.jpg",
   "can_open": false,

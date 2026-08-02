@@ -4,7 +4,7 @@ import pytest
 from rest_framework import status
 
 from library.cover_services import set_book_cover_from_bytes
-from library.models import Author
+from library.models import Author, BookAuthor
 from shelves.models import Shelf, ShelfItem
 from tests.shelves.helpers import BaseShelvesAPITest
 from tests.utils.books import create_file_backed_book
@@ -257,6 +257,7 @@ class ShelfItemTests(BaseShelvesAPITest):
 
         zulu = create_file_backed_book(title="Zulu", assign_public=False).book
         zulu.authors.add(author_z)
+        BookAuthor.objects.create(book=zulu, author=author_a, position=1)
         alpha = create_file_backed_book(title="Alpha", assign_public=False).book
         alpha.authors.add(author_a)
         beta = create_file_backed_book(title="Beta", assign_public=False).book

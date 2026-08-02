@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 from datetime import date
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal
 import re
 import unicodedata
 
+from django.core.exceptions import ValidationError
+
 from library.imports.dto import ImportIdentifier, ImportTag
+from library.series_indexes import normalize_series_index
 
 
 DATE_PRECISION_YEAR = "year"
@@ -159,6 +162,6 @@ def parse_series_index(value: str | None) -> Decimal | None:
     if not text:
         return None
     try:
-        return Decimal(text)
-    except InvalidOperation:
+        return normalize_series_index(text)
+    except ValidationError:
         return None

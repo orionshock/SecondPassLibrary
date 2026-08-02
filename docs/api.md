@@ -712,7 +712,7 @@ Shelf payload notes:
   - `GET /api/v1/shelves/<id>/items/?ordering=-position` orders by stored shelf position in reverse.
   - `GET /api/v1/shelves/<id>/items/?ordering=title` orders the response by contained book title.
   - `GET /api/v1/shelves/<id>/items/?ordering=-title` orders the response by contained book title descending.
-  - `GET /api/v1/shelves/<id>/items/?ordering=author` orders the response by contained book primary author name using the same author-name ordering convention as book display.
+  - `GET /api/v1/shelves/<id>/items/?ordering=author` orders by the contained Book's lowest-positioned `BookAuthor` only, using that Author's sort name/name fallback and then Book title/item id. Secondary Authors do not affect ordering; Books without Authors sort last.
   - `GET /api/v1/shelves/<id>/items/?ordering=-author` reverses the author ordering.
   - Invalid ordering values return `400`.
   - Title/author ordering is response/view ordering only and does not mutate stored `ShelfItem.position`; move/reorder endpoints continue to operate on stored positions.
@@ -1023,7 +1023,7 @@ Book list ordering:
   compose with `tag`, `q`, `ordering`, `page`, and `page_size`.
 
 - `GET /api/v1/library/books/?ordering=title` orders by title A-Z and is the default for general book browsing and author-filtered book browsing.
-- `GET /api/v1/library/books/?ordering=author` orders by primary/first author name A-Z using the existing author-name display convention, then title/id fallback.
+- `GET /api/v1/library/books/?ordering=author` selects the lowest-positioned `BookAuthor` (through-row id breaks position ties), orders by only that Author's sort name/name fallback, then Book sort title/title/id. Secondary Authors do not affect ordering; Books without Authors sort last.
 - `GET /api/v1/library/books/?ordering=series` orders by series name A-Z, then `series_index`, title, and id fallback.
 - `GET /api/v1/library/books/?series=<series_id>` defaults to `series_index` ordering.
 - `GET /api/v1/library/books/?series=<series_id>&ordering=series_index` orders by `series_index` ascending, nulls last, then title/id fallback.
@@ -1124,9 +1124,10 @@ Book write and media notes:
 - Book write shape: `authors` is a list of Author ids; `series` is an existing Series id, `null`, or `{ "name": "New series" }` to create and assign a series atomically.
 - Duplicate Author ids are deduplicated server-side while preserving the first
   occurrence order. An empty list clears all Author relationships.
-- `series_index` accepts only values greater than zero with at most one decimal
-  place (for example `5` or `5.1`). Book list/detail responses serialize a
-  present index with one decimal place (`5.0`, `5.1`). Null clears the index;
+- `series_index` accepts only positive decimal values with at most two
+  fractional digits (for example `5`, `5.1`, or `5.25`). Book list/detail
+  responses serialize a present index as an exact fixed two-decimal JSON string
+  (`5.00`, `5.10`, `5.25`), never a binary floating-point number. Null clears the index;
   omission preserves it. A non-null index without a target Series is a field
   validation error. Clearing `series` removes the BookSeries relationship.
 - `subtitle` may be patched to an empty string.
@@ -1238,7 +1239,7 @@ Group book list responses use the normal `{count, next, previous, results}`
 pagination envelope. React owns any UI paging state built on this API.
 
 - `GET /api/v1/library/groups/<group_id>/books/?ordering=title` orders by title A-Z and is the default.
-- `GET /api/v1/library/groups/<group_id>/books/?ordering=author` orders by primary/first author name A-Z using the existing author-name display convention, then title/id fallback.
+- `GET /api/v1/library/groups/<group_id>/books/?ordering=author` uses the same lowest-positioned primary-Author rule and deterministic fallback as the Library Book list.
 - `GET /api/v1/library/groups/<group_id>/books/?ordering=series` orders by series name A-Z, then `series_index`, title, and id fallback.
 - Group Book ordering accepts the normal Book-list values: `title`, `author`,
   `series`, `series_index`, and `publisher`, plus the descending `-` form of

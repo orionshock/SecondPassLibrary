@@ -22,6 +22,9 @@ class LibraryBearerCatalogReadTests(LibraryBearerApiTestCase):
                 self.assertEqual(detail.status_code, 200)
                 self.assertEqual(detail.json()[field], expected)
 
+        book = self.bearer_get(f"/api/v1/library/books/{self.visible_one.id}/")
+        self.assertEqual(book.json()["series"]["series_index"], "2.00")
+
     def test_book_detail_includes_same_visibility_scoped_group_summaries(self):
         response = self.bearer_get(f"/api/v1/library/books/{self.multi_group.id}/")
 

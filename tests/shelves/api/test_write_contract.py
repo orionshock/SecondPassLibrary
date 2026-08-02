@@ -96,7 +96,7 @@ class ShelfWriteContractTests(BaseShelvesAPITest):
                 "file_format",
             },
         )
-        self.assertEqual(nested_book["series"]["series_index"], "1.5")
+        self.assertEqual(nested_book["series"]["series_index"], "1.50")
         self.assertEqual(nested_book["catalog_tags"][0]["name"], "Catalog Tag")
         self.assertEqual(nested_book["publisher"], "Publisher")
         self.assertEqual(nested_book["file_format"], "epub")

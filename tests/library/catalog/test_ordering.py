@@ -2,10 +2,93 @@ from __future__ import annotations
 
 from django.test import TestCase
 
-from tests.library.helpers import LibraryCatalogApiFixtureMixin, response_titles
+from library.models import Author, Book, BookAuthor, BookGroupAssignment, Series
+from tests.library.helpers import LibraryCatalogApiFixtureMixin, create_catalog_book, response_titles
 
 
 class LibraryCatalogBookOrderingTests(LibraryCatalogApiFixtureMixin, TestCase):
+    def test_author_ordering_uses_lowest_position_and_is_stable_across_search_and_pagination(self):
+        alpha = Author.objects.create(name="Alpha Secondary", sort_name="Alpha, Secondary")
+        middle = Author.objects.create(name="Middle Primary", sort_name="Middle, Primary")
+        zeta = Author.objects.create(name="Zeta Primary", sort_name="Zeta, Primary")
+        book_a = create_catalog_book("Primary Ordering A", author=zeta, group=self.public)
+        BookAuthor.objects.create(book=book_a, author=alpha, position=1)
+        create_catalog_book("Primary Ordering B", author=middle, group=self.public)
+        create_catalog_book("Primary Ordering C", author=middle, group=self.public)
+        no_author = Book.objects.create(title="Primary Ordering No Author")
+        BookGroupAssignment.objects.create(book=no_author, group=self.public)
+
+        expected = [
+            "Primary Ordering B",
+            "Primary Ordering C",
+            "Primary Ordering A",
+            "Primary Ordering No Author",
+        ]
+        library = self.client.get(
+            "/api/v1/library/books/",
+            {"q": "Primary Ordering", "ordering": "author"},
+        )
+        search = self.client.get(
+            "/api/v1/library/search",
+            {"q": "Primary Ordering", "ordering": "author"},
+        )
+        first_page = self.client.get(
+            "/api/v1/library/books/",
+            {"q": "Primary Ordering", "ordering": "author", "page_size": 2},
+        )
+        second_page = self.client.get(first_page.json()["next"])
+
+        self.assertEqual(response_titles(library), expected)
+        self.assertEqual(response_titles(search), expected)
+        self.assertEqual(response_titles(first_page) + response_titles(second_page), expected)
+
+        primary = BookAuthor.objects.get(book=book_a, author=zeta)
+        secondary = BookAuthor.objects.get(book=book_a, author=alpha)
+        primary.position = 2
+        primary.save(update_fields=["position"])
+        secondary.position = 0
+        secondary.save(update_fields=["position"])
+        reordered = self.client.get(
+            "/api/v1/library/books/",
+            {"q": "Primary Ordering", "ordering": "author"},
+        )
+        self.assertEqual(response_titles(reordered)[0], "Primary Ordering A")
+
+    def test_series_index_ordering_uses_exact_decimals_and_deterministic_fallbacks(self):
+        series = Series.objects.create(name="Decimal Series", sort_name="Decimal Series")
+        for title, index in (
+            ("Index 1.01", "1.01"),
+            ("Index 1.10", "1.10"),
+            ("Index 1.25 A", "1.25"),
+            ("Index 1.25 B", "1.25"),
+            ("Index 2.00", "2.00"),
+            ("Index Unknown", None),
+        ):
+            create_catalog_book(
+                title,
+                author=self.alpha,
+                series=series,
+                series_index=index,
+                group=self.public,
+            )
+
+        response = self.client.get(
+            "/api/v1/library/books/",
+            {"series": str(series.id)},
+        )
+
+        self.assertEqual(
+            response_titles(response),
+            [
+                "Index 1.01",
+                "Index 1.10",
+                "Index 1.25 A",
+                "Index 1.25 B",
+                "Index 2.00",
+                "Index Unknown",
+            ],
+        )
+
     def test_ordering_supports_allowed_book_axes_in_both_directions(self):
         cases = [
             ("title", ["Multi Group", "Visible One", "Visible Three", "Visible Two"]),

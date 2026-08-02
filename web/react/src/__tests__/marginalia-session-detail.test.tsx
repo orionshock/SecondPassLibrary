@@ -22,7 +22,7 @@ const detail: MarginaliaSessionEnvelope = {
     id: "book/id",
     title: "Visible Book",
     authors: [{ id: "author-1", name: "Visible Author" }],
-    series: { id: "series-1", name: "Visible Series", seriesIndex: "2.0" },
+    series: { id: "series-1", name: "Visible Series", seriesIndex: "2.00" },
     coverUrl: "/media/cover.jpg",
     canOpen: true,
     sessionCount: 2,

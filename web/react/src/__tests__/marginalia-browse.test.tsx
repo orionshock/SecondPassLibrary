@@ -12,7 +12,7 @@ const book: MarginaliaBookSummary = {
   id: "11111111-1111-4111-8111-111111111111",
   title: "Battle Ground",
   authors: [{ id: "author-1", name: "Jim Butcher" }],
-  series: { id: "series-1", name: "Dresden Files", seriesIndex: "18.0" },
+  series: { id: "series-1", name: "Dresden Files", seriesIndex: "18.00" },
   coverUrl: "/media/battle-ground.jpg",
   canOpen: true,
   sessionCount: 3,

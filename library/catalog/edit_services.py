@@ -7,6 +7,7 @@ from library.imports.normalization import normalize_identifier
 from library.catalog.tag_services import replace_book_catalog_tags
 from library.catalog.names import normalize_catalog_entity_name
 from library.models import Author, Book, BookAuthor, BookIdentifier, BookSeries, Series
+from library.series_indexes import normalize_series_index
 
 
 @transaction.atomic
@@ -47,6 +48,7 @@ def update_book_metadata(
     existing_link = BookSeries.objects.filter(book=book).first()
     target_series = series if series_supplied else (existing_link.series if existing_link else None)
     target_index = series_index if series_index_supplied else (existing_link.series_index if existing_link else None)
+    target_index = normalize_series_index(target_index)
     if target_series is None:
         if series_supplied and existing_link is not None:
             existing_link.delete()

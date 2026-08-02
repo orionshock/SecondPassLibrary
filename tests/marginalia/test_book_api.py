@@ -196,7 +196,7 @@ class MarginaliaBookAPITests(APITestCase):
             {
                 "id": str(series.id),
                 "name": "Archive Cycle",
-                "series_index": "3.5",
+                "series_index": "3.50",
             },
         )
 

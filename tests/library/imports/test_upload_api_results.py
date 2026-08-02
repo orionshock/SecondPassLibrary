@@ -42,7 +42,7 @@ class LibraryImportUploadResultTests(
               <dc:creator>Kevin J. Anderson</dc:creator>
               <dc:language>en</dc:language>
               <meta name="calibre:series" content="Legends of Dune"/>
-              <meta name="calibre:series_index" content="1"/>
+              <meta name="calibre:series_index" content="1.25"/>
             </metadata>
         """)
 
@@ -53,7 +53,7 @@ class LibraryImportUploadResultTests(
         self.assertEqual(item["title"], "The Butlerian Jihad")
         self.assertEqual(item["authors"], ["Brian Herbert", "Kevin J. Anderson"])
         self.assertEqual(item["series"], "Legends of Dune")
-        self.assertEqual(item["series_index"], "1.00")
+        self.assertEqual(item["series_index"], "1.25")
 
     def test_zip_upload_returns_batch_result(self):
         self.login_librarian()

@@ -11,6 +11,7 @@ from django.db.models import Q
 
 from core.models import TimeStampedModel
 from library.catalog.names import normalize_catalog_entity_name
+from library.series_indexes import SERIES_INDEX_MIN_VALUE
 
 
 _COVER_FILENAME_RE = re.compile(r"^(?P<sha>[0-9a-f]{64})(?P<ext>\.[A-Za-z0-9]+)?$")
@@ -242,11 +243,23 @@ class BookAuthor(TimeStampedModel):
 class BookSeries(TimeStampedModel):
     book = models.OneToOneField(Book, on_delete=models.CASCADE, related_name="book_series")
     series = models.ForeignKey(Series, on_delete=models.PROTECT, related_name="book_series")
-    series_index = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    series_index = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(SERIES_INDEX_MIN_VALUE)],
+    )
 
     class Meta:
         verbose_name_plural = "book series"
         ordering = ["series__sort_name", "series__name", "series_index", "book__sort_title", "book__title"]
+        constraints = [
+            models.CheckConstraint(
+                condition=Q(series_index__isnull=True) | Q(series_index__gt=0),
+                name="book_series_index_positive_or_null",
+            )
+        ]
 
     def __str__(self) -> str:
         return f"{self.book} - {self.series}"

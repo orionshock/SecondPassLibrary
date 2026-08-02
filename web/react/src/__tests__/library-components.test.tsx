@@ -269,7 +269,7 @@ describe("Library Author and Series components", () => {
       draft={{
         title: "Book", sortTitle: "", subtitle: "", description: "", publisher: "", language: "",
         publishedDatePrecision: "", publishedYear: "", publishedMonth: "", publishedDay: "",
-        catalogTagNames: [], authorIds: [author.id], seriesId: series.id, seriesIndex: "1.0", identifiers: [],
+        catalogTagNames: [], authorIds: [author.id], seriesId: series.id, seriesIndex: "1.25", identifiers: [],
       }}
       authors={[author]}
       series={[series]}
@@ -292,6 +292,9 @@ describe("Library Author and Series components", () => {
       "/library/series/series-1/edit",
     ]) expect(markup).toContain(`href="${path}"`);
     expect(markup).not.toContain('href="/library/authors/author-1/edit"');
+    expect(markup).toContain('type="number"');
+    expect(markup).toContain('min="0.01"');
+    expect(markup).toContain('step="0.01"');
   });
 
   it("keeps selected-context empty copy anti-leakage-safe and accepts matching navigation display state", () => {

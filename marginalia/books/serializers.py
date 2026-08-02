@@ -4,14 +4,15 @@ from rest_framework import serializers
 
 from library.catalog.serializers import book_cover_url
 from library.models import Book
+from library.series_indexes import SERIES_INDEX_DECIMAL_PLACES, SERIES_INDEX_MAX_DIGITS
 
 
 class MarginaliaBookSeriesSerializer(serializers.Serializer):
     id = serializers.UUIDField(source="series_id")
     name = serializers.CharField(source="series.name")
     series_index = serializers.DecimalField(
-        max_digits=7,
-        decimal_places=1,
+        max_digits=SERIES_INDEX_MAX_DIGITS,
+        decimal_places=SERIES_INDEX_DECIMAL_PLACES,
         allow_null=True,
     )
 

@@ -117,8 +117,8 @@ describe("Library SDK", () => {
       } as T;
     } };
     await updateBook("book/id", {
-      title: "Saved", sortTitle: "", publishedYear: null, authorIds: [], seriesId: null,
-      seriesIndex: null, identifiers: [{
+      title: "Saved", sortTitle: "", publishedYear: null, authorIds: [], seriesId: "series-1",
+      seriesIndex: "1.25", identifiers: [{
         scheme: "doi", value: "10.1000/example",
         ...({ id: "forbidden", key: "forbidden", normalizedValue: "forbidden", randomField: "forbidden" } as object),
       }], catalogTagNames: [],
@@ -129,7 +129,7 @@ describe("Library SDK", () => {
     expect(calls[0]?.path).toBe("/api/v1/library/books/book%2Fid/");
     expect(calls[0]?.init?.method).toBe("PATCH");
     expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({
-      title: "Saved", sort_title: "", published_year: null, authors: [], series: null, series_index: null,
+      title: "Saved", sort_title: "", published_year: null, authors: [], series: "series-1", series_index: "1.25",
       identifiers: [{ scheme: "doi", value: "10.1000/example" }], catalog_tags: [],
     });
     expect(JSON.parse(String(calls[1]?.init?.body))).toEqual({ title: "Unchanged" });

@@ -40,7 +40,7 @@ const compactBook = {
   sort_title: "Book",
   subtitle: "Subtitle",
   authors: [{ id: "author", name: "Author" }],
-  series: { id: "series", name: "Series", sort_name: "Series", series_index: "1.0" },
+  series: { id: "series", name: "Series", sort_name: "Series", series_index: "1.00" },
   catalog_tags: [{ id: "tag", name: "Tag", slug: "tag" }],
   language: "eng",
   publisher: "Publisher",
@@ -244,7 +244,7 @@ describe("Shelves SDK", () => {
       book: {
         id: "book",
         title: "Book",
-        series: { id: "series", name: "Series", seriesIndex: "1.0" },
+        series: { id: "series", name: "Series", seriesIndex: "1.00" },
         catalogTags: [{ id: "tag", name: "Tag", slug: "tag" }],
       },
     });

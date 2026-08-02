@@ -122,8 +122,8 @@ export function validateBookEditDraft(value: BookEditDraft): void {
 
   if (new Set(value.authorIds).size !== value.authorIds.length) errors.authorIds = ["Each author may be assigned once."];
   if (!value.seriesId && value.seriesIndex.trim()) errors.seriesIndex = ["Choose a Series before entering an index."];
-  if (draft.seriesIndex && (!/^\d+(?:\.\d)?$/.test(draft.seriesIndex) || Number(draft.seriesIndex) <= 0)) {
-    errors.seriesIndex = ["Enter a positive value with at most one decimal place."];
+  if (draft.seriesIndex && !isValidSeriesIndex(draft.seriesIndex)) {
+    errors.seriesIndex = ["Enter a positive value with at most two decimal places."];
   }
   const identifierKeys = new Set<string>();
   draft.identifiers.forEach((identifier, index) => {
@@ -190,6 +190,16 @@ function integer(value: string): number | undefined {
   if (!/^\d+$/.test(value)) return undefined;
   const parsed = Number(value);
   return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function isValidSeriesIndex(value: string): boolean {
+  const match = /^(\d+)(?:\.(\d{1,2}))?$/.exec(value);
+  if (!match) return false;
+  const whole = match[1]!;
+  const fraction = match[2] ?? "";
+  const significantWhole = whole.replace(/^0+/, "");
+  if (significantWhole.length > 6) return false;
+  return /[1-9]/.test(whole) || /[1-9]/.test(fraction);
 }
 
 function daysInMonth(year: number, month: number): number {

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+from decimal import Decimal
 from uuid import uuid4
 
 from django.core.files.base import ContentFile
@@ -48,7 +49,7 @@ class LibraryBookEditApiTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertEqual(payload["description"], "dresden case file")
         self.assertEqual(payload["authors"][0]["id"], str(self.beta.id))
         self.assertEqual(payload["series"]["id"], str(self.first_series.id))
-        self.assertEqual(payload["series"]["series_index"], "2.0")
+        self.assertEqual(payload["series"]["series_index"], "2.00")
         self.assertEqual(payload["identifiers"][0]["id"], str(self.identifier.id))
         self.assertEqual(payload["file"]["format"], "epub")
         self.assertEqual(payload["file"]["file_size"], len(b"book edit contract epub"))
@@ -156,7 +157,7 @@ class LibraryBookEditApiTests(LibraryCatalogApiFixtureMixin, TestCase):
             [self.beta.id],
         )
 
-    def test_series_index_accepts_positive_one_decimal_values_and_normalizes_output(self):
+    def test_series_index_accepts_positive_two_decimal_values_and_round_trips_exactly(self):
         self.client.logout()
         self.assertTrue(self.client.login(username="manager", password="pw"))
 
@@ -170,17 +171,25 @@ class LibraryBookEditApiTests(LibraryCatalogApiFixtureMixin, TestCase):
             data={"series_index": "1.5"},
             content_type="application/json",
         )
+        exact = self.client.patch(
+            f"/api/v1/library/books/{self.visible_one.id}/",
+            data={"series_index": "1.25"},
+            content_type="application/json",
+        )
 
         self.assertEqual(whole.status_code, 200)
-        self.assertEqual(whole.json()["series"]["series_index"], "1.0")
+        self.assertEqual(whole.json()["series"]["series_index"], "1.00")
         self.assertEqual(decimal.status_code, 200)
-        self.assertEqual(decimal.json()["series"]["series_index"], "1.5")
+        self.assertEqual(decimal.json()["series"]["series_index"], "1.50")
+        self.assertEqual(exact.status_code, 200)
+        self.assertEqual(exact.json()["series"]["series_index"], "1.25")
+        self.assertEqual(BookSeries.objects.get(book=self.visible_one).series_index, Decimal("1.25"))
 
     def test_invalid_series_indexes_return_field_errors_without_partial_changes(self):
         self.client.logout()
         self.assertTrue(self.client.login(username="manager", password="pw"))
 
-        for value in ("1.55", "0", "-1.0", "not-a-number"):
+        for value in ("1.555", "1.230", "0", "-1.0", "not-a-number"):
             with self.subTest(value=value):
                 response = self.client.patch(
                     f"/api/v1/library/books/{self.visible_one.id}/",
@@ -383,7 +392,7 @@ class LibraryBookEditApiTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertEqual(payload["published_date_precision"], "year")
         self.assertEqual([author["id"] for author in payload["authors"]], [str(self.alpha.id)])
         self.assertEqual(payload["series"]["id"], str(self.second_series.id))
-        self.assertEqual(payload["series"]["series_index"], "4.5")
+        self.assertEqual(payload["series"]["series_index"], "4.50")
         self.assertEqual(BookIdentifier.objects.filter(book=self.visible_one).count(), 1)
         self.assertTrue(BookIdentifier.objects.filter(pk=self.identifier.id).exists())
 

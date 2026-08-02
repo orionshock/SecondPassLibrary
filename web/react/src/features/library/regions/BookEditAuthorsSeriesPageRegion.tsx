@@ -71,7 +71,7 @@ export function BookEditAuthorsSeriesPageRegion({ draft, error, authors, series,
           <select id="book-edit-series" value={draft.seriesId ?? ""} onChange={(event) => { const id = event.target.value || null; onChange("seriesId", id); if (!id) onChange("seriesIndex", ""); }}><option value="">No Series</option>{series.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
         </FormField>
         <FormField label="Series index" htmlFor="book-edit-series-index" error={fieldError(error, "seriesIndex")}>
-          <input id="book-edit-series-index" disabled={!draft.seriesId} inputMode="decimal" value={draft.seriesIndex} onChange={(event) => onChange("seriesIndex", event.target.value)} />
+          <input id="book-edit-series-index" type="number" min="0.01" step="0.01" disabled={!draft.seriesId} inputMode="decimal" value={draft.seriesIndex} onChange={(event) => onChange("seriesIndex", event.target.value)} />
         </FormField>
         {draft.seriesId && series.find(({ id }) => id === draft.seriesId) ? <Link
           className="book-edit-assigned-series-link"

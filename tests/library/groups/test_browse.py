@@ -8,6 +8,7 @@ from accounts.models import UserProfile
 from core.server_settings import set_advanced_library_groups_enabled
 from library.models import (
     Author,
+    BookAuthor,
     BookGroupAssignment,
     CatalogTag,
     LibraryGroup,
@@ -126,6 +127,19 @@ class LibraryGroupBrowseTests(TestCase):
             "source_filename",
         ):
             self.assertNotIn(detail_field, row)
+
+    def test_group_author_ordering_uses_the_lowest_positioned_author_only(self):
+        BookAuthor.objects.create(book=self.club_beta, author=self.alpha, position=1)
+
+        response = self.client.get(
+            f"/api/v1/library/groups/{self.club.id}/books/",
+            {"ordering": "author"},
+        )
+
+        self.assertEqual(
+            response_titles(response),
+            ["Club Alpha", "Shared Book", "Club Beta"],
+        )
 
     def test_group_books_exclude_books_visible_through_another_group(self):
         response = self.client.get(f"/api/v1/library/groups/{self.club.id}/books/")
