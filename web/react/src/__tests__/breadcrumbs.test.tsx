@@ -45,6 +45,19 @@ describe("contextual breadcrumbs", () => {
     expect(withoutIcon).toContain("Edit");
   });
 
+  it("renders Shelf scope icon keys through the shared decorative icon boundary", () => {
+    const markup = renderBreadcrumbs([
+      { label: "Personal", icon: "shelf" },
+      { label: "Shared by Others", icon: "shared-shelf" },
+      { label: "Group Shelves", icon: "group-shelf" },
+    ]);
+    expect(markup).toContain(">shelves</span>");
+    expect(markup).toContain(">share</span>");
+    expect(markup).toContain(">group_work</span>");
+    expect(markup.match(/aria-hidden="true"/g)).toHaveLength(3);
+    expect(markup).toContain('aria-current="page"');
+  });
+
   it("suppresses breadcrumbs on the base Profile route and provides child fallbacks", () => {
     expect(resolveBreadcrumbTrail(undefined, profileBreadcrumbFallback)).toEqual([]);
     expect(breadcrumbText(resolveBreadcrumbTrail(undefined, profileBreadcrumbFallback))).toBe("");

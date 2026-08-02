@@ -96,6 +96,7 @@ describe("Shelves read-only regions", () => {
     const renderItems = (ordering: ShelfItemOrdering) => renderToStaticMarkup(<MemoryRouter><ShelfItemsPageRegion
       shelfId="shelf"
       shelfName="Favorites"
+      scope="personal"
       shelfPath="/shelves/shelf?ordering=title"
       page={{ items: [item], count: 1, next: null, previous: null }}
       pageNumber={1}

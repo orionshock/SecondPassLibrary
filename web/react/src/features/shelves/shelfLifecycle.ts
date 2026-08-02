@@ -2,6 +2,7 @@ import {
   isAtLeastLibrarian,
   type CurrentUser,
   type LibraryGroup,
+  type ShelfScope,
   type ShelfSummary,
 } from "@second-pass/spl-api";
 
@@ -12,6 +13,7 @@ import {
 } from "../../app/navigation/breadcrumbs";
 import { confirmDangerousAction } from "../../shared/confirmations/confirmDangerousAction";
 import { shelfDetailBreadcrumbFallback } from "./shelvesBreadcrumbs";
+import { shelfScopeBreadcrumb, shelfScopeFromSummary } from "./shelfScopes";
 
 export type ShelfLifecycleMode = "new" | "edit";
 
@@ -27,16 +29,22 @@ export function shelfDetailPathForId(shelfId: string): string {
   return `/shelves/${encodeURIComponent(shelfId)}`;
 }
 
-export function shelfNewBreadcrumbs(): BreadcrumbItem[] {
+export function shelfNewBreadcrumbs(scope: ShelfScope = "personal"): BreadcrumbItem[] {
   return [
     { label: "Shelves", to: "/shelves", resetTrail: true, icon: "shelf" },
+    shelfScopeBreadcrumb(scope),
     { label: "New Shelf" },
   ];
 }
 
-export function shelfEditBreadcrumbs(shelfId: string, name = "Shelf"): BreadcrumbItem[] {
+export function shelfEditBreadcrumbs(
+  shelfId: string,
+  name = "Shelf",
+  scope: ShelfScope = "personal",
+): BreadcrumbItem[] {
   return [
     { label: "Shelves", to: "/shelves", resetTrail: true, icon: "shelf" },
+    shelfScopeBreadcrumb(scope),
     { label: name, to: shelfDetailPathForId(shelfId), icon: "shelf" },
     { label: "Edit" },
   ];
@@ -44,7 +52,7 @@ export function shelfEditBreadcrumbs(shelfId: string, name = "Shelf"): Breadcrum
 
 export function shelfEditNavigationState(
   currentState: unknown,
-  shelf: Pick<ShelfSummary, "id" | "name">,
+  shelf: Pick<ShelfSummary, "id" | "name" | "ownerType" | "canEdit">,
 ): object {
   const incoming = readIncomingBreadcrumbTrail(currentState);
   const trail: BreadcrumbItem[] = incoming?.length
@@ -53,13 +61,13 @@ export function shelfEditNavigationState(
       { label: shelf.name, to: shelfDetailPathForId(shelf.id), icon: "shelf" },
       { label: "Edit" },
     ]
-    : shelfEditBreadcrumbs(shelf.id, shelf.name);
+    : shelfEditBreadcrumbs(shelf.id, shelf.name, shelfScopeFromSummary(shelf));
   return breadcrumbNavigationState(trail);
 }
 
 export function shelfDetailNavigationStateFromEdit(
   currentState: unknown,
-  shelf: Pick<ShelfSummary, "id" | "name">,
+  shelf: Pick<ShelfSummary, "id" | "name" | "ownerType" | "canEdit">,
 ): object {
   const incoming = readIncomingBreadcrumbTrail(currentState);
   if (incoming && incoming.at(-1)?.label === "Edit") {
@@ -68,7 +76,7 @@ export function shelfDetailNavigationStateFromEdit(
     detailTrail[last] = { label: shelf.name, icon: "shelf" };
     return breadcrumbNavigationState(detailTrail);
   }
-  return breadcrumbNavigationState(shelfDetailBreadcrumbFallback(shelf.name));
+  return breadcrumbNavigationState(shelfDetailBreadcrumbFallback(shelfScopeFromSummary(shelf), shelf.name));
 }
 
 export function shelfLifecycleNavigationState(

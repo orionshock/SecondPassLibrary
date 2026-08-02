@@ -1,4 +1,4 @@
-import type { ShelfEditorItem, ShelfEditorItemsPage } from "@second-pass/spl-api";
+import type { ShelfEditorItem, ShelfEditorItemsPage, ShelfScope } from "@second-pass/spl-api";
 
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
@@ -8,9 +8,10 @@ import { CompactBookRowComponent } from "../../../shared/books/CompactBookRowCom
 import { PagerComponent } from "../../../shared/pagination/PagerComponent";
 import { shelfBookBreadcrumbs } from "../shelvesBreadcrumbs";
 
-export function ShelfEditBooksPageRegion({ shelfId, shelfName, page, pageNumber, pageSize, loading, error, pendingItemId, pendingAction, controlsDisabled, onMove, onMoveTo, onRemove, onPageChange, onPageSizeChange, onRetry }: {
+export function ShelfEditBooksPageRegion({ shelfId, shelfName, scope, page, pageNumber, pageSize, loading, error, pendingItemId, pendingAction, controlsDisabled, onMove, onMoveTo, onRemove, onPageChange, onPageSizeChange, onRetry }: {
   shelfId: string;
   shelfName: string;
+  scope: ShelfScope;
   page?: ShelfEditorItemsPage;
   pageNumber: number;
   pageSize: number;
@@ -51,6 +52,7 @@ export function ShelfEditBooksPageRegion({ shelfId, shelfName, page, pageNumber,
           item={item}
           shelfId={shelfId}
           shelfName={shelfName}
+          scope={scope}
           canMoveUp={hasVisibleBefore(item, visibleItems, page)}
           canMoveDown={hasVisibleAfter(item, visibleItems, page)}
           positionCount={page.count}
@@ -67,10 +69,11 @@ export function ShelfEditBooksPageRegion({ shelfId, shelfName, page, pageNumber,
   </section>;
 }
 
-function VisibleShelfItemRow({ item, shelfId, shelfName, canMoveUp, canMoveDown, positionCount, directPositioningDisabled, disabled, moving, removing, onMove, onMoveTo, onRemove }: {
+function VisibleShelfItemRow({ item, shelfId, shelfName, scope, canMoveUp, canMoveDown, positionCount, directPositioningDisabled, disabled, moving, removing, onMove, onMoveTo, onRemove }: {
   item: Extract<ShelfEditorItem, { unavailable: false }>;
   shelfId: string;
   shelfName: string;
+  scope: ShelfScope;
   canMoveUp: boolean;
   canMoveDown: boolean;
   positionCount: number;
@@ -87,7 +90,7 @@ function VisibleShelfItemRow({ item, shelfId, shelfName, canMoveUp, canMoveDown,
     <CompactBookRowComponent
       book={item.book}
       detailPath={`/library/books/${encodeURIComponent(item.book.id)}`}
-      navigationState={breadcrumbNavigationState(shelfBookBreadcrumbs(shelfId, shelfName, item.book.title))}
+      navigationState={breadcrumbNavigationState(shelfBookBreadcrumbs(scope, shelfId, shelfName, item.book.title))}
       actions={<>
         <ShelfPositionSelectComponent
           bookTitle={item.book.title}

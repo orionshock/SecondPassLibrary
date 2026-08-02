@@ -57,6 +57,7 @@ import {
   withShelfEditTab,
   type ShelfEditUrlState,
 } from "./shelvesQuery";
+import { shelfScopeFromSummary, validBreadcrumbStateForShelf } from "./shelfScopes";
 import "./ShelfLifecycle.css";
 
 type ShelfLoad =
@@ -118,15 +119,18 @@ export function ShelfEditOrchestrator() {
   );
   const allowNavigation = useRef(false);
   const shelf = load.status === "ready" || load.status === "not-allowed" ? load.shelf : undefined;
+  const scope = shelf ? shelfScopeFromSummary(shelf) : "personal";
   const dirty = !shelfDraftsEqual(draft, baseline);
   const blocker = useBlocker(({ currentLocation, nextLocation }) => (
     !allowNavigation.current && dirty && currentLocation.pathname !== nextLocation.pathname
   ));
   const breadcrumbs = useMemo(
-    () => shelfEditBreadcrumbs(shelfId, shelf?.name),
-    [shelf?.name, shelfId],
+    () => shelfEditBreadcrumbs(shelfId, shelf?.name, scope),
+    [scope, shelf?.name, shelfId],
   );
-  usePageBreadcrumbs(breadcrumbs);
+  usePageBreadcrumbs(breadcrumbs, false, {
+    locationState: shelf ? validBreadcrumbStateForShelf(location.state, shelf) : location.state,
+  });
 
   useEffect(() => {
     const canonical = shelfEditPathWithState(shelfId, editState);
@@ -394,6 +398,7 @@ export function ShelfEditOrchestrator() {
       <ShelfEditBooksPageRegion
         shelfId={editableShelf.id}
         shelfName={editableShelf.name}
+        scope={scope}
         page={itemsLoad.page}
         pageNumber={editState.page}
         pageSize={editState.pageSize}
@@ -419,6 +424,7 @@ export function ShelfEditOrchestrator() {
       <ShelfEditAddBooksPageRegion
         shelfId={editableShelf.id}
         shelfName={editableShelf.name}
+        scope={scope}
         search={searchDraft}
         page={candidatesLoad.page}
         pageNumber={editState.page}

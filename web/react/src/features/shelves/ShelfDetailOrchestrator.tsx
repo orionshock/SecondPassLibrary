@@ -11,6 +11,7 @@ import { ShelfHeaderPageRegion } from "./regions/ShelfHeaderPageRegion";
 import { ShelfItemsPageRegion } from "./regions/ShelfItemsPageRegion";
 import { shelfDetailBreadcrumbFallback } from "./shelvesBreadcrumbs";
 import { shelfEditNavigationState, shelfEditPath } from "./shelfLifecycle";
+import { shelfScopeFromSummary, validBreadcrumbStateForShelf } from "./shelfScopes";
 import {
   shelfDetailPath,
   shelfDetailSearchParams,
@@ -48,8 +49,14 @@ export function ShelfDetailOrchestrator() {
   const [items, setItems] = useState<ItemsLoad>({ loading: true });
   const recoveredPageKeys = useRef(new Set<string>());
   const shelf = detail.status === "ready" ? detail.shelf : undefined;
-  const breadcrumbs = useMemo(() => shelfDetailBreadcrumbFallback(shelf?.name), [shelf?.name]);
-  usePageBreadcrumbs(breadcrumbs);
+  const scope = shelf ? shelfScopeFromSummary(shelf) : "personal";
+  const breadcrumbs = useMemo(
+    () => shelfDetailBreadcrumbFallback(scope, shelf?.name),
+    [scope, shelf?.name],
+  );
+  usePageBreadcrumbs(breadcrumbs, false, {
+    locationState: shelf ? validBreadcrumbStateForShelf(location.state, shelf) : location.state,
+  });
 
   useEffect(() => {
     if (queryKey === canonicalQuery) return;
@@ -128,6 +135,7 @@ export function ShelfDetailOrchestrator() {
     {shelf ? <ShelfItemsPageRegion
       shelfId={shelf.id}
       shelfName={shelf.name}
+      scope={scope}
       shelfPath={currentPath}
       page={items.page}
       pageNumber={queryState.page}

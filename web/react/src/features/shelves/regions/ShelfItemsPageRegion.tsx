@@ -1,4 +1,4 @@
-import type { Page, ShelfItem, ShelfItemOrdering } from "@second-pass/spl-api";
+import type { Page, ShelfItem, ShelfItemOrdering, ShelfScope } from "@second-pass/spl-api";
 
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { Button, ErrorPanel } from "../../../components/ui";
@@ -16,9 +16,10 @@ const shelfItemOrderingOptions: readonly OrderMenuOption<ShelfItemOrdering>[] = 
   { value: "-author", label: "Author Z-A", icon: "person" },
 ];
 
-export function ShelfItemsPageRegion({ shelfId, shelfName, shelfPath, page, pageNumber, pageSize, ordering, loading, error, onOrderingChange, onPageChange, onPageSizeChange, onRetry }: {
+export function ShelfItemsPageRegion({ shelfId, shelfName, scope, shelfPath, page, pageNumber, pageSize, ordering, loading, error, onOrderingChange, onPageChange, onPageSizeChange, onRetry }: {
   shelfId: string;
   shelfName: string;
+  scope: ShelfScope;
   shelfPath: string;
   page?: Page<ShelfItem>;
   pageNumber: number;
@@ -35,13 +36,14 @@ export function ShelfItemsPageRegion({ shelfId, shelfName, shelfPath, page, page
     <div className="shelf-items-controls">
       <OrderMenuComponent label="Order" ariaLabel="Order shelf books" value={ordering} options={shelfItemOrderingOptions} onChange={onOrderingChange} />
     </div>
-    <ShelfItemResults shelfId={shelfId} shelfName={shelfName} shelfPath={shelfPath} page={page} pageNumber={pageNumber} pageSize={pageSize} loading={loading} error={error} onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} onRetry={onRetry} />
+    <ShelfItemResults shelfId={shelfId} shelfName={shelfName} scope={scope} shelfPath={shelfPath} page={page} pageNumber={pageNumber} pageSize={pageSize} loading={loading} error={error} onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} onRetry={onRetry} />
   </section>;
 }
 
-function ShelfItemResults({ shelfId, shelfName, shelfPath, page, pageNumber, pageSize, loading, error, onPageChange, onPageSizeChange, onRetry }: {
+function ShelfItemResults({ shelfId, shelfName, scope, shelfPath, page, pageNumber, pageSize, loading, error, onPageChange, onPageSizeChange, onRetry }: {
   shelfId: string;
   shelfName: string;
+  scope: ShelfScope;
   shelfPath: string;
   page?: Page<ShelfItem>;
   pageNumber: number;
@@ -63,7 +65,7 @@ function ShelfItemResults({ shelfId, shelfName, shelfPath, page, pageNumber, pag
         key={item.id}
         book={item.book}
         detailPath={`/library/books/${encodeURIComponent(item.book.id)}`}
-        navigationState={breadcrumbNavigationState(shelfBookBreadcrumbs(shelfId, shelfName, item.book.title, shelfPath))}
+        navigationState={breadcrumbNavigationState(shelfBookBreadcrumbs(scope, shelfId, shelfName, item.book.title, shelfPath))}
       />)}
     </div>}
     <PagerComponent page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Books" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} />

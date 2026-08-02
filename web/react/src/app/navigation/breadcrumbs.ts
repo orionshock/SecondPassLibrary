@@ -7,6 +7,8 @@ export type BreadcrumbIcon =
   | "group"
   | "public-group"
   | "shelf"
+  | "shared-shelf"
+  | "group-shelf"
   | "user"
   | "profile"
   | "server-settings"
@@ -28,6 +30,8 @@ export const breadcrumbIconSymbols: Readonly<Record<BreadcrumbIcon, string>> = {
   group: "group",
   "public-group": "public",
   shelf: "shelves",
+  "shared-shelf": "share",
+  "group-shelf": "group_work",
   user: "person",
   profile: "account_circle",
   "server-settings": "settings",

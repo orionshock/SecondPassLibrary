@@ -3,6 +3,7 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 
 import type { CurrentUser, LibraryGroup, ShelfEditorItemsPage, ShelfSummary } from "@second-pass/spl-api";
+import { breadcrumbNavigationState, readIncomingBreadcrumbTrail } from "../app/navigation/breadcrumbs";
 import {
   createShelfInputFromDraft,
   emptyShelfDraft,
@@ -16,7 +17,9 @@ import {
   confirmShelfDelete,
   confirmUnavailableShelfItemRemoval,
   localManageableShelfGroups,
+  shelfDetailNavigationStateFromEdit,
   shelfEditBreadcrumbs,
+  shelfEditNavigationState,
   shelfNewBreadcrumbs,
   shouldLoadAllShelfGroups,
 } from "../features/shelves/shelfLifecycle";
@@ -108,12 +111,14 @@ describe("Shelf lifecycle contracts", () => {
   });
 
   it("uses explicit lifecycle breadcrumbs and confirmation", () => {
-    expect(shelfNewBreadcrumbs()).toEqual([
+    expect(shelfNewBreadcrumbs("group")).toEqual([
       { label: "Shelves", to: "/shelves", resetTrail: true, icon: "shelf" },
+      { label: "Group Shelves", to: "/shelves?scope=group", icon: "group-shelf" },
       { label: "New Shelf" },
     ]);
-    expect(shelfEditBreadcrumbs("shelf/id", "Favorites")).toEqual([
+    expect(shelfEditBreadcrumbs("shelf/id", "Favorites", "shared")).toEqual([
       { label: "Shelves", to: "/shelves", resetTrail: true, icon: "shelf" },
+      { label: "Shared by Others", to: "/shelves?scope=shared", icon: "shared-shelf" },
       { label: "Favorites", to: "/shelves/shelf%2Fid", icon: "shelf" },
       { label: "Edit" },
     ]);
@@ -122,6 +127,36 @@ describe("Shelf lifecycle contracts", () => {
     expect(confirm).toHaveBeenCalledOnce();
     expect(confirmUnavailableShelfItemRemoval(confirm)).toBe(true);
     expect(confirm).toHaveBeenCalledTimes(2);
+  });
+
+  it("preserves one Shelf scope crumb through detail and edit navigation", () => {
+    const detailState = breadcrumbNavigationState([
+      { label: "Shelves", to: "/shelves", resetTrail: true, icon: "shelf" },
+      { label: "Group Shelves", to: "/shelves?scope=group", icon: "group-shelf" },
+      { label: "Favorites", icon: "shelf" },
+    ]);
+    const editState = shelfEditNavigationState(detailState, groupShelf);
+    const editTrail = readIncomingBreadcrumbTrail(editState)!;
+    expect(editTrail.map(({ icon }) => icon).filter((icon) => icon === "group-shelf")).toHaveLength(1);
+    expect(editTrail.at(-1)?.label).toBe("Edit");
+
+    const returned = readIncomingBreadcrumbTrail(shelfDetailNavigationStateFromEdit(editState, groupShelf))!;
+    expect(returned.map(({ label }) => label)).toEqual(["Shelves", "Group Shelves", "Favorites"]);
+    expect(returned[1]?.to).toBe("/shelves?scope=group");
+  });
+
+  it("builds truthful lifecycle fallbacks when incoming state is absent", () => {
+    const groupEdit = readIncomingBreadcrumbTrail(shelfEditNavigationState(undefined, groupShelf))!;
+    const sharedDetail = readIncomingBreadcrumbTrail(shelfDetailNavigationStateFromEdit(
+      undefined,
+      { ...personalShelf, canEdit: false },
+    ))!;
+    expect(groupEdit[1]).toEqual({
+      label: "Group Shelves", to: "/shelves?scope=group", icon: "group-shelf",
+    });
+    expect(sharedDetail[1]).toEqual({
+      label: "Shared by Others", to: "/shelves?scope=shared", icon: "shared-shelf",
+    });
   });
 
   it("uses server canEdit for lifecycle affordances and keeps item controls out of Details", () => {
@@ -169,11 +204,11 @@ describe("Shelf lifecycle contracts", () => {
     };
     const tabs = renderToStaticMarkup(<ShelfEditTabsPageRegion activeTab="details" onTabChange={vi.fn()} />);
     const books = renderToStaticMarkup(<MemoryRouter><ShelfEditBooksPageRegion
-      shelfId="shelf" shelfName="Favorites" page={page} pageNumber={1} pageSize={20}
+      shelfId="shelf" shelfName="Favorites" scope="personal" page={page} pageNumber={1} pageSize={20}
       loading={false} onMove={vi.fn()} onMoveTo={vi.fn()} onRemove={vi.fn()} onPageChange={vi.fn()} onPageSizeChange={vi.fn()} onRetry={vi.fn()}
     /></MemoryRouter>);
     const candidates = renderToStaticMarkup(<MemoryRouter><ShelfEditAddBooksPageRegion
-      shelfId="shelf" shelfName="Favorites" search="Book"
+      shelfId="shelf" shelfName="Favorites" scope="personal" search="Book"
       page={{ count: 1, next: null, previous: null, items: [book] }} pageNumber={1} pageSize={20}
       loading={false} onSearchChange={vi.fn()} onSearch={vi.fn()} onAdd={vi.fn()}
       onPageChange={vi.fn()} onPageSizeChange={vi.fn()} onRetry={vi.fn()}
@@ -235,7 +270,7 @@ describe("Shelf lifecycle contracts", () => {
     };
     const renderBooks = (currentPage: ShelfEditorItemsPage, props: { pendingItemId?: string; error?: Error } = {}) => renderToStaticMarkup(
       <MemoryRouter><ShelfEditBooksPageRegion
-        shelfId="shelf" shelfName="Favorites" page={currentPage} pageNumber={1} pageSize={20}
+        shelfId="shelf" shelfName="Favorites" scope="personal" page={currentPage} pageNumber={1} pageSize={20}
         loading={false} {...props} onMove={vi.fn()} onMoveTo={vi.fn()} onRemove={vi.fn()}
         onPageChange={vi.fn()} onPageSizeChange={vi.fn()} onRetry={vi.fn()}
       /></MemoryRouter>,

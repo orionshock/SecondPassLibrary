@@ -33,7 +33,7 @@ export function ShelvesListPageRegion({ page, pageNumber, pageSize, scope, order
   onRetry: () => void;
 }) {
   return <div className="shelves-list-page">
-    <PageHeader title="Shelves" actions={<Link className="button-link" to={shelfNewPath()} state={breadcrumbNavigationState(shelfNewBreadcrumbs())}>New Shelf</Link>} />
+    <PageHeader title="Shelves" actions={<Link className="button-link" to={shelfNewPath()} state={breadcrumbNavigationState(shelfNewBreadcrumbs(scope))}>New Shelf</Link>} />
     <div className="shelves-list-toolbar">
       <ShelfScopesPageRegion activeScope={scope} onScopeChange={onScopeChange} />
     </div>
@@ -67,7 +67,7 @@ function ShelvesListResults({ page, pageNumber, pageSize, scope, ordering, loadi
           const previewBooks: BookCoverPreviewItem[] = (shelf.previewBooks ?? []).map((book) => ({
             ...book,
             href: `/library/books/${encodeURIComponent(book.id)}`,
-            navigationState: breadcrumbNavigationState(shelfBookBreadcrumbs(shelf.id, shelf.name, book.title)),
+            navigationState: breadcrumbNavigationState(shelfBookBreadcrumbs(scope, shelf.id, shelf.name, book.title)),
           }));
           return <ShelfSummaryRowComponent
             key={shelf.id}
@@ -75,7 +75,7 @@ function ShelvesListResults({ page, pageNumber, pageSize, scope, ordering, loadi
             description={shelf.description}
             itemCount={shelf.itemCount}
             detailPath={detailPath}
-            navigationState={breadcrumbNavigationState(shelfDetailBreadcrumbFallback(shelf.name))}
+            navigationState={breadcrumbNavigationState(shelfDetailBreadcrumbFallback(scope, shelf.name))}
             previewBooks={previewBooks}
             owner={scope === "group" && shelf.ownerGroup
               ? { kind: "group", label: shelf.ownerGroup.name, isPublicGroup: shelf.ownerGroup.isPublicGroup }

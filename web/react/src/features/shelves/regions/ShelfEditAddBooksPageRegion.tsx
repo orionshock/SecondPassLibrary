@@ -1,4 +1,4 @@
-import type { CompactBook, Page } from "@second-pass/spl-api";
+import type { CompactBook, Page, ShelfScope } from "@second-pass/spl-api";
 import type { FormEvent } from "react";
 
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
@@ -7,9 +7,10 @@ import { CompactBookRowComponent } from "../../../shared/books/CompactBookRowCom
 import { PagerComponent } from "../../../shared/pagination/PagerComponent";
 import { shelfBookBreadcrumbs } from "../shelvesBreadcrumbs";
 
-export function ShelfEditAddBooksPageRegion({ shelfId, shelfName, search, page, pageNumber, pageSize, loading, error, pendingBookId, controlsDisabled, onSearchChange, onSearch, onAdd, onPageChange, onPageSizeChange, onRetry }: {
+export function ShelfEditAddBooksPageRegion({ shelfId, shelfName, scope, search, page, pageNumber, pageSize, loading, error, pendingBookId, controlsDisabled, onSearchChange, onSearch, onAdd, onPageChange, onPageSizeChange, onRetry }: {
   shelfId: string;
   shelfName: string;
+  scope: ShelfScope;
   search: string;
   page?: Page<CompactBook>;
   pageNumber: number;
@@ -46,7 +47,7 @@ export function ShelfEditAddBooksPageRegion({ shelfId, shelfName, search, page, 
             key={book.id}
             book={book}
             detailPath={`/library/books/${encodeURIComponent(book.id)}`}
-            navigationState={breadcrumbNavigationState(shelfBookBreadcrumbs(shelfId, shelfName, book.title))}
+            navigationState={breadcrumbNavigationState(shelfBookBreadcrumbs(scope, shelfId, shelfName, book.title))}
             actions={<Button type="button" disabled={controlsDisabled || Boolean(pendingBookId)} onClick={() => onAdd(book.id)}>
               {pendingBookId === book.id ? "Adding..." : "Add"}
             </Button>}

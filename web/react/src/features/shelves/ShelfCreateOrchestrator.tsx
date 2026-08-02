@@ -33,6 +33,7 @@ import {
   shelfNewBreadcrumbs,
   shouldLoadAllShelfGroups,
 } from "./shelfLifecycle";
+import { shelfScopeFromBreadcrumbState, shelfScopeFromSummary, shelfScopePath } from "./shelfScopes";
 import "./ShelfLifecycle.css";
 
 interface GroupChoicesLoad {
@@ -62,7 +63,11 @@ export function ShelfCreateOrchestrator() {
   const blocker = useBlocker(({ currentLocation, nextLocation }) => (
     !allowNavigation.current && dirty && currentLocation.pathname !== nextLocation.pathname
   ));
-  const breadcrumbs = useMemo(() => shelfNewBreadcrumbs(), []);
+  const originatingScope = useMemo(
+    () => shelfScopeFromBreadcrumbState(location.state) ?? "personal",
+    [location.state],
+  );
+  const breadcrumbs = useMemo(() => shelfNewBreadcrumbs(originatingScope), [originatingScope]);
   usePageBreadcrumbs(breadcrumbs);
 
   useEffect(() => {
@@ -121,7 +126,7 @@ export function ShelfCreateOrchestrator() {
       navigate(shelfEditPath(saved.id), {
         replace: true,
         state: shelfLifecycleNavigationState(
-          shelfEditBreadcrumbs(saved.id, saved.name),
+          shelfEditBreadcrumbs(saved.id, saved.name, shelfScopeFromSummary(saved)),
           "Shelf saved.",
         ),
       });
@@ -133,7 +138,7 @@ export function ShelfCreateOrchestrator() {
   function cancel() {
     if (dirty && !window.confirm("Discard unsaved Shelf changes?")) return;
     allowNavigation.current = true;
-    navigate("/shelves", { state: null });
+    navigate(shelfScopePath(originatingScope), { state: null });
   }
 
   return <ProductPageShellComponent className="shelf-lifecycle-page" eyebrow="New Shelf" title="Create Shelf">
