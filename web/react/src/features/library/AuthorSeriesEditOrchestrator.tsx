@@ -2,6 +2,8 @@ import {
   ApiError,
   createAuthor,
   createSeries,
+  deleteAuthor,
+  deleteSeries,
   getAuthor,
   getSeries,
   updateAuthor,
@@ -27,6 +29,7 @@ import {
   validateAuthorSeriesEditDraft,
   type AuthorSeriesEditDraft,
 } from "./authorSeriesEditDraft";
+import { confirmAuthorSeriesDelete, isAttachedBookConflict } from "./authorSeriesDelete";
 import {
   libraryEntityAxisPath,
   libraryEntityBreadcrumbs,
@@ -41,6 +44,8 @@ import {
   type LibraryEntityKind,
 } from "./authorSeriesLifecycle";
 import { AuthorSeriesEditFormPageRegion } from "./regions/AuthorSeriesEditFormPageRegion";
+import { AuthorSeriesAttachedBooksPageRegion } from "./regions/AuthorSeriesAttachedBooksPageRegion";
+import { AuthorSeriesDangerZonePageRegion } from "./regions/AuthorSeriesDangerZonePageRegion";
 import "./AuthorSeriesEdit.css";
 
 type Entity = LibraryAuthor | LibrarySeries;
@@ -62,6 +67,8 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
     ...idleMutationState,
     ...(readLibraryEntitySuccessMessage(location.state) ? { message: readLibraryEntitySuccessMessage(location.state) } : {}),
   }));
+  const [deleteMutation, setDeleteMutation] = useState<MutationState>(idleMutationState);
+  const deletePending = useRef(false);
   const allowNavigation = useRef(false);
   const entity = load.status === "ready" ? load.entity : undefined;
   const dirty = !authorSeriesEditDraftsEqual(draft, baseline);
@@ -71,6 +78,10 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
   const breadcrumbs = useMemo(
     () => libraryEntityBreadcrumbs(kind, mode, entity?.name, entityId),
     [entity?.name, entityId, kind, mode],
+  );
+  const resolvedBreadcrumbs = useMemo(
+    () => resolveBreadcrumbTrail(location.state, breadcrumbs),
+    [breadcrumbs, location.state],
   );
   usePageBreadcrumbs(breadcrumbs);
 
@@ -138,7 +149,10 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
       const next = kind === "author"
         ? authorEditDraft(saved as LibraryAuthor)
         : seriesEditDraft(saved as LibrarySeries);
-      setLoad({ status: "ready", entity: saved });
+      const entityWithPreview = entity?.previewBooks && !saved.previewBooks
+        ? { ...saved, previewBooks: entity.previewBooks }
+        : saved;
+      setLoad({ status: "ready", entity: entityWithPreview });
       setDraft(next);
       setBaseline(next);
       const message = `${titleKind(kind)} saved.`;
@@ -187,6 +201,31 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
     navigate(returnTo, { state: breadcrumbNavigationState(parentBreadcrumbs) });
   }
 
+  async function removeEntity() {
+    if (mode !== "edit" || !entityId || !entity || entity.bookCount > 0 || deletePending.current) return;
+    if (!confirmAuthorSeriesDelete(kind, entity.name)) return;
+    deletePending.current = true;
+    setDeleteMutation({ pending: true });
+    try {
+      if (kind === "author") await deleteAuthor(entityId);
+      else await deleteSeries(entityId);
+      allowNavigation.current = true;
+      navigate(libraryEntityAxisPath(kind), { replace: true, state: null });
+    } catch (error: unknown) {
+      deletePending.current = false;
+      const normalized = normalizeMutationError(error);
+      setDeleteMutation({ pending: false, error: normalized });
+      if (isAttachedBookConflict(error, kind)) {
+        try {
+          const refreshed = kind === "author" ? await getAuthor(entityId) : await getSeries(entityId);
+          setLoad({ status: "ready", entity: refreshed });
+        } catch {
+          // Keep the deletion error and last authoritative detail on screen.
+        }
+      }
+    }
+  }
+
   const entityTitle = titleKind(kind);
   if (load.status === "loading") return <div className="author-series-edit-state" aria-busy="true">Loading {entityTitle}...</div>;
   if (load.status === "not-found") return <div className="author-series-edit-state"><ErrorPanel>{entityTitle} not found or unavailable.</ErrorPanel><Link to={libraryEntityAxisPath(kind)}>Back to {entityTitle === "Author" ? "Authors" : "Series"}</Link></div>;
@@ -205,6 +244,24 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
       onSubmit={(event) => void save(event)}
       onCancel={cancel}
     />
+    {mode === "edit" && entity && entityId ? <>
+      <AuthorSeriesDangerZonePageRegion
+        kind={kind}
+        name={entity.name}
+        bookCount={entity.bookCount}
+        state={deleteMutation}
+        controlsDisabled={mutation.pending}
+        onDelete={() => void removeEntity()}
+      />
+      <AuthorSeriesAttachedBooksPageRegion
+        kind={kind}
+        entityId={entityId}
+        bookCount={entity.bookCount}
+        books={entity.previewBooks ?? []}
+        breadcrumbTrail={resolvedBreadcrumbs}
+        editPath={`${location.pathname}${location.search}`}
+      />
+    </> : null}
   </ProductPageShellComponent>;
 }
 

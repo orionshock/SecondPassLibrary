@@ -1,4 +1,4 @@
-import { breadcrumbNavigationState, type BreadcrumbItem } from "../../app/navigation/breadcrumbs";
+import { appendBreadcrumbTrail, breadcrumbNavigationState, type BreadcrumbItem } from "../../app/navigation/breadcrumbs";
 
 export type LibraryEntityKind = "author" | "series";
 export type LibraryEntityEditMode = "new" | "edit";
@@ -63,6 +63,17 @@ export function libraryEntityContextBreadcrumbs(
     },
     { label: "Edit" },
   ];
+}
+
+export function libraryEntityAttachedBookBreadcrumbs(
+  editTrail: readonly BreadcrumbItem[],
+  editPath: string,
+  bookTitle: string,
+): BreadcrumbItem[] {
+  const parent = editTrail.map((item, index) => (
+    index === editTrail.length - 1 ? { ...item, to: editPath } : { ...item }
+  ));
+  return appendBreadcrumbTrail(parent, { label: bookTitle, icon: "book" });
 }
 
 export function libraryEntitySavedBreadcrumbs(

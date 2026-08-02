@@ -187,7 +187,13 @@ class AuthorDetailView(AuthorAxisMixin, _BaseAxisDetailView):
             delete_author(author=author)
         except CatalogEntityInUseError as exc:
             return Response(
-                {"error": {"code": exc.code, "message": str(exc)}},
+                {
+                    "error": {
+                        "code": exc.code,
+                        "message": str(exc),
+                        "details": {"book_count": exc.attached_book_count},
+                    }
+                },
                 status=status.HTTP_409_CONFLICT,
             )
         return Response(status=status.HTTP_204_NO_CONTENT)
@@ -241,7 +247,13 @@ class SeriesDetailView(SeriesAxisMixin, _BaseAxisDetailView):
             delete_series(series=series)
         except CatalogEntityInUseError as exc:
             return Response(
-                {"error": {"code": exc.code, "message": str(exc)}},
+                {
+                    "error": {
+                        "code": exc.code,
+                        "message": str(exc),
+                        "details": {"book_count": exc.attached_book_count},
+                    }
+                },
                 status=status.HTTP_409_CONFLICT,
             )
         return Response(status=status.HTTP_204_NO_CONTENT)

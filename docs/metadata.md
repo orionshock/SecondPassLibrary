@@ -31,6 +31,12 @@ case-folds while preserving punctuation. These values support duplicate
 advisories; they are not identity constraints and do not prevent same-name
 records.
 
+Known follow-up: `BookSeries.series_index` stores two decimal places, while the
+public Book API accepts and emits one decimal place and OPF import parsing can
+produce broader Decimal values. Ordering remains numeric and deterministic in
+this release. Align storage, API writes, import normalization, and Reader-facing
+expectations in one separate contract change; do not change precision piecemeal.
+
 ## Dates and identifiers
 
 Published dates retain their known precision instead of inventing missing

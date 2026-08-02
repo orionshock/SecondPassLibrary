@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { ApiError, clearBookCover, createAuthor, createSeries, getAuthor, getBook, getSeries, listAllAuthors, listAllCatalogTags, listAllSeries, listAuthors, listBooks, listCatalogTags, listSeries, replaceBookCover, searchLibraryBooks, updateAuthor, updateBook, updateSeries } from "@second-pass/spl-api";
-import type { ApiClient } from "../client";
+import { ApiError, clearBookCover, createAuthor, createSeries, deleteAuthor, deleteSeries, getAuthor, getBook, getSeries, listAllAuthors, listAllCatalogTags, listAllSeries, listAuthors, listBooks, listCatalogTags, listSeries, replaceBookCover, searchLibraryBooks, updateAuthor, updateBook, updateSeries } from "@second-pass/spl-api";
+import { createApiClient, type ApiClient } from "../client";
 
 const compactWireBook = {
   id: "book-1", title: "The Book", sort_title: "Book, The", subtitle: "Hidden subtitle",
@@ -15,6 +15,27 @@ const compactWireBook = {
 };
 
 describe("Library SDK", () => {
+  it("uses the shared session transport for Author and Series DELETE requests", async () => {
+    const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+    const fetchImplementation: typeof fetch = async (input, init) => {
+      calls.push({ input, init });
+      return new Response(null, { status: 204 });
+    };
+    const client = createApiClient(fetchImplementation, () => "csrf-token");
+
+    await deleteAuthor("author/id", client);
+    await deleteSeries("series/id", client);
+
+    expect(calls.map(({ input, init }) => [input, init?.method])).toEqual([
+      ["/api/v1/library/authors/author%2Fid/", "DELETE"],
+      ["/api/v1/library/series/series%2Fid/", "DELETE"],
+    ]);
+    for (const { init } of calls) {
+      expect(init?.credentials).toBe("same-origin");
+      expect(new Headers(init?.headers).get("X-CSRFToken")).toBe("csrf-token");
+    }
+  });
+
   it("maps Author lifecycle detail/create/update contracts without admitting extra fields", async () => {
     const calls: Array<{ path: string; init?: RequestInit }> = [];
     const client: ApiClient = { request: async <T>(path: string, init?: RequestInit) => {
@@ -26,16 +47,19 @@ describe("Library SDK", () => {
     await expect(getAuthor("author/id", client)).resolves.toMatchObject({ id: "author", sortName: "Author, Ada", biography: "Bio" });
     await createAuthor(input, client);
     await updateAuthor("author/id", input, client);
+    await deleteAuthor("author/id", client);
 
     expect(calls.map(({ path }) => path)).toEqual([
-      "/api/v1/library/authors/author%2Fid/",
+      "/api/v1/library/authors/author%2Fid/?include_preview_books=true",
       "/api/v1/library/authors/",
       "/api/v1/library/authors/author%2Fid/",
+      "/api/v1/library/authors/author%2Fid/",
     ]);
-    expect(calls.slice(1).map(({ init }) => [init?.method, JSON.parse(String(init?.body))])).toEqual([
+    expect(calls.slice(1, 3).map(({ init }) => [init?.method, JSON.parse(String(init?.body))])).toEqual([
       ["POST", { name: "Ada", sort_name: "Author, Ada", biography: "Bio" }],
       ["PATCH", { name: "Ada", sort_name: "Author, Ada", biography: "Bio" }],
     ]);
+    expect(calls[3]?.init).toEqual({ method: "DELETE" });
   });
 
   it("maps Series lifecycle contracts and operation field errors", async () => {
@@ -49,19 +73,36 @@ describe("Library SDK", () => {
     await expect(getSeries("series/id", client)).resolves.toMatchObject({ id: "series", sortName: "Saga", summary: "Summary" });
     await createSeries(input, client);
     await updateSeries("series/id", input, client);
+    await deleteSeries("series/id", client);
     expect(calls.map(({ path }) => path)).toEqual([
-      "/api/v1/library/series/series%2Fid/",
+      "/api/v1/library/series/series%2Fid/?include_preview_books=true",
       "/api/v1/library/series/",
       "/api/v1/library/series/series%2Fid/",
+      "/api/v1/library/series/series%2Fid/",
     ]);
-    expect(calls.slice(1).map(({ init }) => [init?.method, JSON.parse(String(init?.body))])).toEqual([
+    expect(calls.slice(1, 3).map(({ init }) => [init?.method, JSON.parse(String(init?.body))])).toEqual([
       ["POST", { name: "Saga", sort_name: "Saga", summary: "Summary" }],
       ["PATCH", { name: "Saga", sort_name: "Saga", summary: "Summary" }],
     ]);
+    expect(calls[3]?.init).toEqual({ method: "DELETE" });
 
     const failing: ApiClient = { request: async () => { throw new ApiError("Invalid.", 400, { fields: { sort_name: ["Invalid sort name."] } }); } };
     await expect(updateSeries("series", input, failing)).rejects.toMatchObject({
       fields: { sortName: ["Invalid sort name."] },
+    });
+
+    const seriesConflict = new ApiError("Series cannot be deleted because 1 Book is attached.", 409, {
+      code: "series_has_books",
+    });
+    const seriesConflicting: ApiClient = { request: async () => { throw seriesConflict; } };
+    await expect(deleteSeries("series", seriesConflicting)).rejects.toBe(seriesConflict);
+    const authorConflict = new ApiError("Author cannot be deleted because 2 Books are attached.", 409, {
+      code: "author_has_books",
+    });
+    const authorConflicting: ApiClient = { request: async () => { throw authorConflict; } };
+    await expect(deleteAuthor("author", authorConflicting)).rejects.toMatchObject({
+      status: 409,
+      code: "author_has_books",
     });
   });
 

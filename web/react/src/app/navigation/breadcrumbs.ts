@@ -45,7 +45,9 @@ const maximumPathLength = 2048;
 const runtimeBreadcrumbContextId = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 
 export function appendBreadcrumbTrail(parent: readonly BreadcrumbItem[], item: BreadcrumbItem): BreadcrumbItem[] {
-  return [...parent, item];
+  const trail = [...parent, item];
+  if (trail.length <= maximumTrailLength) return trail;
+  return [trail[0]!, ...trail.slice(-(maximumTrailLength - 1))];
 }
 
 export function breadcrumbNavigationState(trail: readonly BreadcrumbItem[]): BreadcrumbLocationState {

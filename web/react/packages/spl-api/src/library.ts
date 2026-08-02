@@ -347,7 +347,7 @@ export async function listSeries(query: LibraryAxisQuery = {}, client: ApiClient
 
 export async function getAuthor(authorId: string, client: ApiClient = apiClient): Promise<LibraryAuthor> {
   return mapLibraryAuthor(await client.request<LibraryAuthorResponse>(
-    `/api/v1/library/authors/${encodeURIComponent(authorId)}/`,
+    `/api/v1/library/authors/${encodeURIComponent(authorId)}/?include_preview_books=true`,
   ));
 }
 
@@ -371,9 +371,15 @@ export async function updateAuthor(authorId: string, input: AuthorMutationInput,
   );
 }
 
+export async function deleteAuthor(authorId: string, client: ApiClient = apiClient): Promise<void> {
+  await client.request<void>(`/api/v1/library/authors/${encodeURIComponent(authorId)}/`, {
+    method: "DELETE",
+  });
+}
+
 export async function getSeries(seriesId: string, client: ApiClient = apiClient): Promise<LibrarySeries> {
   return mapLibrarySeries(await client.request<LibrarySeriesResponse>(
-    `/api/v1/library/series/${encodeURIComponent(seriesId)}/`,
+    `/api/v1/library/series/${encodeURIComponent(seriesId)}/?include_preview_books=true`,
   ));
 }
 
@@ -395,6 +401,12 @@ export async function updateSeries(seriesId: string, input: SeriesMutationInput,
     mapLibrarySeries,
     client,
   );
+}
+
+export async function deleteSeries(seriesId: string, client: ApiClient = apiClient): Promise<void> {
+  await client.request<void>(`/api/v1/library/series/${encodeURIComponent(seriesId)}/`, {
+    method: "DELETE",
+  });
 }
 
 export function listAllAuthors(client: ApiClient = apiClient): Promise<LibraryAuthor[]> {

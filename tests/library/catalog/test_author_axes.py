@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from unittest.mock import patch
+from uuid import uuid4
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db.models.deletion import ProtectedError
 from django.test import TestCase
 
 from accounts.models import UserProfile
@@ -238,16 +240,53 @@ class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         unattached = Author.objects.create(
             name="Disposable", sort_name="Disposable", normalized_name="disposable"
         )
+        User = get_user_model()
+        librarian = User.objects.create_user(username="delete-librarian", password="pw")
+        set_user_role(librarian, UserProfile.ROLE_LIBRARIAN)
         self.client.logout()
-        self.assertTrue(self.client.login(username="manager", password="pw"))
+        self.assertTrue(self.client.login(username="delete-librarian", password="pw"))
 
         deleted = self.client.delete(f"/api/v1/library/authors/{unattached.id}/")
         blocked = self.client.delete(f"/api/v1/library/authors/{self.alpha.id}/")
 
         self.assertEqual(deleted.status_code, 204)
         self.assertEqual(blocked.status_code, 409)
-        self.assertEqual(blocked.json()["error"]["code"], "AUTHOR_IN_USE")
+        self.assertEqual(
+            blocked.json()["error"],
+            {
+                "code": "author_has_books",
+                "message": "Author cannot be deleted because 3 Books are attached.",
+                "details": {"book_count": 3},
+            },
+        )
+        self.assertTrue(Author.objects.filter(pk=self.alpha.pk).exists())
         self.assertTrue(BookAuthor.objects.filter(author=self.alpha).exists())
+        self.assertTrue(BookAuthor.objects.filter(author=self.alpha, book=self.visible_two).exists())
+
+    def test_late_author_protection_failure_uses_the_same_bounded_conflict(self):
+        unattached = Author.objects.create(name="Raced", sort_name="Raced")
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        with patch.object(
+            Author,
+            "delete",
+            side_effect=ProtectedError("protected", [object()]),
+        ):
+            response = self.client.delete(f"/api/v1/library/authors/{unattached.id}/")
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["error"]["code"], "author_has_books")
+        self.assertEqual(response.json()["error"]["details"], {"book_count": 1})
+        self.assertTrue(Author.objects.filter(pk=unattached.pk).exists())
+
+    def test_reader_cannot_delete_author(self):
+        response = self.client.delete(f"/api/v1/library/authors/{self.alpha.id}/")
+        missing = self.client.delete(f"/api/v1/library/authors/{uuid4()}/")
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(missing.status_code, response.status_code)
+        self.assertTrue(Author.objects.filter(pk=self.alpha.pk).exists())
 
     def test_blank_and_overlong_author_names_are_rejected(self):
         self.client.logout()

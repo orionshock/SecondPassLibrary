@@ -46,7 +46,7 @@ class LibraryBearerCatalogMutationBoundaryTests(LibraryBearerApiTestCase):
         self.assertEqual(deleted.status_code, 405)
         self.assertEqual(tag_patch.status_code, 405)
 
-    def test_privileged_bearer_cannot_patch_author_or_series(self):
+    def test_privileged_bearer_cannot_patch_or_delete_author_or_series(self):
         headers = {"HTTP_AUTHORIZATION": f"Bearer {self.token}"}
         cases = [
             (f"/api/v1/library/authors/{self.alpha.id}/", self.alpha, "Alpha Author"),
@@ -57,6 +57,7 @@ class LibraryBearerCatalogMutationBoundaryTests(LibraryBearerApiTestCase):
             with self.subTest(url=url):
                 response = self.bearer.patch(url, {"name": "Bearer changed"}, format="json", **headers)
                 self.assertEqual(response.status_code, 403)
+                self.assertEqual(self.bearer.delete(url, **headers).status_code, 403)
                 instance.refresh_from_db()
                 self.assertEqual(instance.name, original_name)
 

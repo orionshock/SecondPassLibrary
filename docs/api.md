@@ -940,9 +940,11 @@ Author/Series payload notes:
   as the fallback. Submitting a blank sort name stores the current display name;
   omitting it from PATCH preserves the existing value.
 - DELETE returns `204` for an unattached entity. Attached Authors and Series are
-  not detached automatically and return bounded `409 AUTHOR_IN_USE` or
-  `409 SERIES_IN_USE` errors. React's first lifecycle slice does not expose
-  deletion.
+  not detached automatically and return bounded `409 author_has_books` or
+  `409 series_has_books` errors. The canonical error envelope includes a clear
+  message and `error.details.book_count`; it never embeds attached Book payloads.
+  The mutation rechecks inside its transaction and translates late database
+  protection failures to the same conflict contract.
 - Author display names are not unique in the current catalog model, so POST
   deliberately creates a new Author when the same display name already exists.
   The response uses the normal Author axis shape (`id`, `name`, `sort_name`,

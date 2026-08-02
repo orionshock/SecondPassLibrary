@@ -235,13 +235,11 @@ These differences from the parked UI are deliberate and should not be
 
 Only genuinely unresolved legacy-derived work belongs here:
 
-1. **Author and Series deletion.** React create/edit exists; deletion and its
-   attached-Book conflict workflow remain an explicit future product decision.
-2. **Additional Book lifecycle actions.** EPUB/file replacement, Book deletion,
+1. **Additional Book lifecycle actions.** EPUB/file replacement, Book deletion,
    and Reader/Open integration remain outside the current Book editor/detail
    scope. Treat each as a focused product/API decision, not automatic legacy
    parity.
-3. **Arbitrary Shelf positioning.** Current up/down mutation is the supported
+2. **Arbitrary Shelf positioning.** Current up/down mutation is the supported
    workflow. Move-to-position and drag/drop remain deferred until unavailable
    placeholder semantics can be preserved without frontend fiction.
 

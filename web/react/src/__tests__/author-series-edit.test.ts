@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { LibraryAuthor, LibrarySeries } from "@second-pass/spl-api";
+import { breadcrumbNavigationState, resolveBreadcrumbTrail } from "../app/navigation/breadcrumbs";
 import {
   authorEditDraft,
   authorMutationInput,
@@ -12,6 +13,8 @@ import {
 } from "../features/library/authorSeriesEditDraft";
 import {
   libraryEntityBreadcrumbs,
+  libraryEntityAxisPath,
+  libraryEntityAttachedBookBreadcrumbs,
   libraryEntityContextBreadcrumbs,
   libraryEntityContextPath,
   libraryEntityEditPath,
@@ -48,6 +51,8 @@ describe("Author and Series lifecycle draft contract", () => {
   });
 
   it("encodes lifecycle paths and accepts only safe internal return destinations", () => {
+    expect(libraryEntityAxisPath("author")).toBe("/library?view=authors");
+    expect(libraryEntityAxisPath("series")).toBe("/library?view=series");
     expect(libraryEntityEditPath("author", "author/id")).toBe("/library/authors/author%2Fid/edit");
     expect(libraryEntityContextPath("author", "author/id")).toBe("/library?view=authors&author=author%2Fid");
     expect(libraryEntityBreadcrumbs("author", "edit", "Ada", "author/id")[2]).toEqual({
@@ -82,5 +87,29 @@ describe("Author and Series lifecycle draft contract", () => {
     expect(libraryEntityParentBreadcrumbs(savedTrail, "author", "edit")).toEqual(parent.map((item, index) => (
       index === parent.length - 1 ? { ...item, to: returnTo } : item
     )));
+  });
+
+  it("extends the resolved edit trail when an attached Book is selected", () => {
+    const editTrail = [
+      { label: "Library", to: "/library", icon: "library" as const },
+      { label: "Authors", to: "/library?view=authors", icon: "author" as const },
+      { label: "Ada", to: "/library?view=authors&author=author", icon: "author" as const },
+      { label: "Edit" },
+    ];
+
+    const attachedBookTrail = libraryEntityAttachedBookBreadcrumbs(
+      editTrail,
+      "/library/authors/author/edit",
+      "Selected Book",
+    );
+    expect(attachedBookTrail).toEqual([
+      ...editTrail.slice(0, -1),
+      { label: "Edit", to: "/library/authors/author/edit" },
+      { label: "Selected Book", icon: "book" },
+    ]);
+    expect(resolveBreadcrumbTrail(
+      breadcrumbNavigationState(attachedBookTrail),
+      [{ label: "Reset fallback" }],
+    )).toEqual(attachedBookTrail);
   });
 });

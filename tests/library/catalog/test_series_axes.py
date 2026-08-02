@@ -1,7 +1,12 @@
 from __future__ import annotations
 
+from unittest.mock import patch
+
+from django.db.models.deletion import ProtectedError
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 
+from accounts.models import UserProfile
 from library.models import BookSeries, Series
 from tests.library.helpers import (
     LibraryCatalogApiFixtureMixin,
@@ -10,6 +15,7 @@ from tests.library.helpers import (
     response_book_counts,
     response_names,
 )
+from tests.utils.users import set_user_role
 
 
 def preview_titles(row):
@@ -192,16 +198,47 @@ class LibrarySeriesAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         unattached = Series.objects.create(
             name="Disposable", sort_name="Disposable", normalized_name="disposable"
         )
+        User = get_user_model()
+        librarian = User.objects.create_user(username="delete-librarian", password="pw")
+        set_user_role(librarian, UserProfile.ROLE_LIBRARIAN)
         self.client.logout()
-        self.assertTrue(self.client.login(username="manager", password="pw"))
+        self.assertTrue(self.client.login(username="delete-librarian", password="pw"))
 
         deleted = self.client.delete(f"/api/v1/library/series/{unattached.id}/")
         blocked = self.client.delete(f"/api/v1/library/series/{self.first_series.id}/")
 
         self.assertEqual(deleted.status_code, 204)
         self.assertEqual(blocked.status_code, 409)
-        self.assertEqual(blocked.json()["error"]["code"], "SERIES_IN_USE")
+        self.assertEqual(
+            blocked.json()["error"],
+            {
+                "code": "series_has_books",
+                "message": "Series cannot be deleted because 2 Books are attached.",
+                "details": {"book_count": 2},
+            },
+        )
+        self.assertTrue(Series.objects.filter(pk=self.first_series.pk).exists())
         self.assertTrue(BookSeries.objects.filter(series=self.first_series).exists())
+        self.assertTrue(
+            BookSeries.objects.filter(series=self.first_series, book=self.visible_two).exists()
+        )
+
+    def test_late_series_protection_failure_uses_the_same_bounded_conflict(self):
+        unattached = Series.objects.create(name="Raced", sort_name="Raced")
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        with patch.object(
+            Series,
+            "delete",
+            side_effect=ProtectedError("protected", [object()]),
+        ):
+            response = self.client.delete(f"/api/v1/library/series/{unattached.id}/")
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["error"]["code"], "series_has_books")
+        self.assertEqual(response.json()["error"]["details"], {"book_count": 1})
+        self.assertTrue(Series.objects.filter(pk=unattached.pk).exists())
 
     def test_list_includes_only_series_with_visible_books(self):
         Series.objects.create(name="Unattached", sort_name="Unattached")

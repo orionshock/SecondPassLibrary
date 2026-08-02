@@ -8,9 +8,23 @@ from library.models import Author, BookAuthor, BookSeries, Series
 
 
 class CatalogEntityInUseError(Exception):
-    def __init__(self, *, code: str, message: str):
+    def __init__(self, *, code: str, message: str, attached_book_count: int):
         self.code = code
+        self.attached_book_count = attached_book_count
         super().__init__(message)
+
+
+def _entity_in_use_error(
+    *, kind: str, code: str, attached_book_count: int
+) -> CatalogEntityInUseError:
+    return CatalogEntityInUseError(
+        code=code,
+        message=(
+            f"{kind} cannot be deleted because {attached_book_count} "
+            f"{'Book is' if attached_book_count == 1 else 'Books are'} attached."
+        ),
+        attached_book_count=attached_book_count,
+    )
 
 
 def create_author(*, name: str, sort_name: str = "", biography: str = "") -> Author:
@@ -71,27 +85,37 @@ def create_series(*, name: str, sort_name: str = "", summary: str = "") -> Serie
 
 @transaction.atomic
 def delete_author(*, author: Author) -> None:
-    if BookAuthor.objects.filter(author=author).exists():
-        raise CatalogEntityInUseError(
-            code="AUTHOR_IN_USE", message="Author is assigned to one or more books."
+    author = Author.objects.select_for_update().get(pk=author.pk)
+    attached_book_count = BookAuthor.objects.filter(author=author).count()
+    if attached_book_count:
+        raise _entity_in_use_error(
+            kind="Author", code="author_has_books", attached_book_count=attached_book_count
         )
     try:
         author.delete()
     except ProtectedError as exc:
-        raise CatalogEntityInUseError(
-            code="AUTHOR_IN_USE", message="Author is assigned to one or more books."
+        attached_book_count = max(
+            BookAuthor.objects.filter(author=author).count(), len(exc.protected_objects), 1
+        )
+        raise _entity_in_use_error(
+            kind="Author", code="author_has_books", attached_book_count=attached_book_count
         ) from exc
 
 
 @transaction.atomic
 def delete_series(*, series: Series) -> None:
-    if BookSeries.objects.filter(series=series).exists():
-        raise CatalogEntityInUseError(
-            code="SERIES_IN_USE", message="Series is assigned to one or more books."
+    series = Series.objects.select_for_update().get(pk=series.pk)
+    attached_book_count = BookSeries.objects.filter(series=series).count()
+    if attached_book_count:
+        raise _entity_in_use_error(
+            kind="Series", code="series_has_books", attached_book_count=attached_book_count
         )
     try:
         series.delete()
     except ProtectedError as exc:
-        raise CatalogEntityInUseError(
-            code="SERIES_IN_USE", message="Series is assigned to one or more books."
+        attached_book_count = max(
+            BookSeries.objects.filter(series=series).count(), len(exc.protected_objects), 1
+        )
+        raise _entity_in_use_error(
+            kind="Series", code="series_has_books", attached_book_count=attached_book_count
         ) from exc

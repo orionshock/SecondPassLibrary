@@ -61,6 +61,19 @@ describe("contextual breadcrumbs", () => {
     expect(resolveBreadcrumbTrail(state, passwordBreadcrumbFallback)).toEqual(contextual);
   });
 
+  it("bounds extended deep trails without discarding the root or newest context", () => {
+    const parent = [
+      { label: "Library", to: "/library" },
+      ...Array.from({ length: 11 }, (_, index) => ({ label: `Context ${index + 1}` })),
+    ];
+    const trail = appendBreadcrumbTrail(parent, { label: "Selected Book", icon: "book" });
+
+    expect(trail).toHaveLength(12);
+    expect(trail[0]).toEqual({ label: "Library", to: "/library" });
+    expect(trail.at(-1)).toEqual({ label: "Selected Book", icon: "book" });
+    expect(resolveBreadcrumbTrail(breadcrumbNavigationState(trail), [])).toEqual(trail);
+  });
+
   it("preserves breadcrumb context by default and resets only explicit branch links", () => {
     const trail: BreadcrumbItem[] = [
       { label: "Library", to: "/library", resetTrail: true, icon: "library" },

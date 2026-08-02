@@ -149,6 +149,8 @@ export {
   getSeries,
   createAuthor,
   createSeries,
+  deleteAuthor,
+  deleteSeries,
   updateAuthor,
   updateSeries,
   updateBook,

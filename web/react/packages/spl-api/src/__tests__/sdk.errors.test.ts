@@ -54,6 +54,19 @@ describe("apiErrorFromPayload", () => {
     expect(error.fields).toBeUndefined();
   });
 
+  it("normalizes Author and Series attachment conflicts without treating bounded details as fields", () => {
+    for (const [code, message] of [
+      ["author_has_books", "Author cannot be deleted because 2 Books are attached."],
+      ["series_has_books", "Series cannot be deleted because 1 Book is attached."],
+    ]) {
+      const error = apiErrorFromPayload(409, {
+        error: { code, message, details: { book_count: 2 } },
+      });
+      expect(error).toMatchObject({ status: 409, code, message });
+      expect(error.fields).toBeUndefined();
+    }
+  });
+
   it("classifies authentication, validation, network, and unknown failures", () => {
     expect(classifyApiError(new ApiError("Signed out", 401))).toBe("authentication");
     expect(classifyApiError(new ApiError("Forbidden", 403))).toBe("authentication");
