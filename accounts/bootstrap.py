@@ -64,6 +64,9 @@ def create_first_owner(
                 advanced_library_groups_enabled=advanced_library_groups_enabled,
             )
         except OperationalError as exc:
+            # The atomic attempt has rolled back before control reaches here, but
+            # cache reads performed inside it are not transactional.
+            clear_server_settings_cache()
             if (
                 connection.vendor != "sqlite"
                 or "locked" not in str(exc).lower()
@@ -71,6 +74,9 @@ def create_first_owner(
             ):
                 raise
             time.sleep(0.05)
+        except Exception:
+            clear_server_settings_cache()
+            raise
 
 
 @transaction.atomic
@@ -127,13 +133,9 @@ def _create_first_owner_once(
         set_advanced_library_groups_enabled(advanced_library_groups_enabled)
         user.save()
     except IntegrityError as exc:
-        clear_server_settings_cache()
         raise ValidationError(
             {"username": "A user with that username already exists."}
         ) from exc
-    except Exception:
-        clear_server_settings_cache()
-        raise
 
     profile = get_or_create_profile(user=user)
     profile.role = UserProfile.ROLE_MANAGER
