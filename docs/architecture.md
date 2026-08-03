@@ -57,7 +57,7 @@ Second Pass Library currently uses Django/DRF built-in authentication for local 
 
 - Django **session authentication** for the React Product UI
 - Explicit **Client API bearer token authentication** on selected reader-client endpoints
-- Session login/logout at `/login/` and `/logout/`
+- Session login at `GET/POST /login/` and CSRF-protected logout at `POST /logout/`
 - Optional Django admin at `/admin/` when `SECOND_PASS_ENABLE_DJANGO_ADMIN=1`
   (service hatch; not the product UI)
 
@@ -76,6 +76,13 @@ Position:
   independent browser reader clients can use bearer tokens from another origin.
   Product UI session-auth routes are intentionally not CORS-open.
 - Email verification, password reset flows, MFA, and invite systems are not implemented yet.
+
+Interactive password login reserves database-backed failure slots before each
+credential check: 10 attempts per normalized source over 10 minutes and 5 per
+NFKC-normalized, case-folded username over 15 minutes. Successful authentication
+clears both relevant buckets. Bucket keys are keyed hashes rather than stored IP
+addresses or usernames; expired slots are removed in bounded batches during
+normal login traffic, so no scheduled cleanup service is required.
 
 ### First-run bootstrap
 

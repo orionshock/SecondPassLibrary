@@ -50,10 +50,10 @@ class ReactRootRouteContractTests(TestCase):
         self.assertEqual(root.content, server_link.content)
         self.assertEqual(root["Cache-Control"], "no-cache")
 
-    def test_get_logout_clears_session_and_redirects_to_login(self):
+    def test_post_logout_clears_session_and_redirects_to_login(self):
         self.client.force_login(self.owner)
 
-        response = self.client.get("/logout/")
+        response = self.client.post("/logout/")
 
         self.assertRedirects(response, "/login/", fetch_redirect_response=False)
         self.assertNotIn("_auth_user_id", self.client.session)

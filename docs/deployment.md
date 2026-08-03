@@ -161,8 +161,8 @@ DJANGO_SECURE_COOKIES=1
 ```
 
 Uvicorn proxy-header rewriting is disabled in every supported startup path, so
-the ASGI direct peer remains Django's `REMOTE_ADDR`. Pairing request throttling
-uses that peer by default and ignores `X-Forwarded-For`. To use forwarded client
+the ASGI direct peer remains Django's `REMOTE_ADDR`. Pairing-request and browser
+login throttling use that peer by default and ignore `X-Forwarded-For`. To use forwarded client
 addresses, explicitly enable Django's interpretation and list the exact direct
 proxy peers that may supply the header:
 

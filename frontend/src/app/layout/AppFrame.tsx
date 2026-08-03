@@ -2,6 +2,7 @@ import {
   canSeeImports,
   canSeeServerSettings,
   canSeeUsers,
+  logoutCurrentWebSession,
   type CurrentUser,
   type ServerInfo,
 } from "@second-pass/spl-api";
@@ -48,7 +49,10 @@ export function navigationDestinationOwnsPath(destination: string, pathname: str
   return pathname === destination || pathname.startsWith(`${destination}/`);
 }
 
-export function accountMenuItems(pathname: string): readonly AppMenuItem[] {
+export function accountMenuItems(
+  pathname: string,
+  onLogout: () => void = () => undefined,
+): readonly AppMenuItem[] {
   return [
     {
       key: "profile",
@@ -57,7 +61,7 @@ export function accountMenuItems(pathname: string): readonly AppMenuItem[] {
       to: "/profile",
       active: navigationDestinationOwnsPath("/profile", pathname),
     },
-    { key: "logout", label: "Log out", icon: "logout", href: "/logout/" },
+    { key: "logout", label: "Log out", icon: "logout", onSelect: onLogout },
   ];
 }
 
@@ -92,6 +96,11 @@ export function AppFrame({
     active: navigationDestinationOwnsPath(item.to, location.pathname),
   }));
   const accountActive = navigationDestinationOwnsPath("/profile", location.pathname);
+  const logout = useCallback(() => {
+    void logoutCurrentWebSession()
+      .then(() => window.location.assign("/login/"))
+      .catch(() => undefined);
+  }, []);
 
   return (
     <div className="app-shell">
@@ -129,7 +138,7 @@ export function AppFrame({
           trigger={<><span className="account-menu__username">{user.username}</span><MaterialIcon name="expand_more" className="account-menu__chevron" /></>}
           triggerLabel={`Open account menu for ${user.username}`}
           menuLabel={`Account menu for ${user.username}`}
-          items={accountMenuItems(location.pathname)}
+          items={accountMenuItems(location.pathname, logout)}
           active={accountActive}
         />
       </header>

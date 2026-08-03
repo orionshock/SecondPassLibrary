@@ -213,6 +213,35 @@ class ClientPairingThrottleSlot(models.Model):
         ]
 
 
+class BrowserLoginThrottleSlot(models.Model):
+    BUCKET_SOURCE = "source"
+    BUCKET_USERNAME = "username"
+    BUCKET_CHOICES = [
+        (BUCKET_SOURCE, "Source"),
+        (BUCKET_USERNAME, "Username"),
+    ]
+
+    bucket_type = models.CharField(max_length=16, choices=BUCKET_CHOICES)
+    bucket_key = models.CharField(max_length=64)
+    slot = models.PositiveSmallIntegerField()
+    expires_at = models.DateTimeField()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["bucket_type", "bucket_key", "slot"],
+                name="unique_browser_login_throttle_slot",
+            )
+        ]
+        indexes = [
+            models.Index(
+                fields=["bucket_type", "bucket_key", "expires_at"],
+                name="acct_login_bucket_exp_idx",
+            ),
+            models.Index(fields=["expires_at"], name="acct_login_exp_idx"),
+        ]
+
+
 class UserClientSession(TimeStampedModel):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(

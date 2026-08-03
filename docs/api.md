@@ -10,7 +10,7 @@ Current supported authentication methods:
 
 - Django session authentication for the React Product UI
 - Explicit Client API bearer tokens on selected reader-client endpoints
-- Session login/logout is provided by `/login/` and `/logout/`; API responses are JSON-only.
+- Session login is provided by `/login/`; logout is CSRF-protected and POST-only at `/logout/`. API responses are JSON-only.
 - Optional Django admin authentication via `/admin/` when
   `SECOND_PASS_ENABLE_DJANGO_ADMIN=1` (service hatch; not the product UI)
 

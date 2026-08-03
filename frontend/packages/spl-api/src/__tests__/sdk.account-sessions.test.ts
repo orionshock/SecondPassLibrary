@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { listClientSessions, logoutOtherWebSessions, revokeClientSession } from "../accountSessions";
+import { listClientSessions, logoutCurrentWebSession, logoutOtherWebSessions, revokeClientSession } from "../accountSessions";
 import type { ApiClient } from "../client";
 
 describe("account sessions SDK", () => {
@@ -14,6 +14,12 @@ describe("account sessions SDK", () => {
     await expect(listClientSessions(client)).resolves.toEqual([{ id: "one", name: "Phone", clientType: "reader", createdAt: "created", updatedAt: "updated", lastSeenAt: undefined }]);
     await revokeClientSession("one", client);
     await logoutOtherWebSessions(client);
-    expect(calls.map(({ path }) => path)).toEqual(["/api/v1/accounts/me/client-sessions/", "/api/v1/accounts/me/client-sessions/one/", "/api/v1/accounts/me/web-sessions/logout-others/"]);
+    await logoutCurrentWebSession(client);
+    expect(calls).toEqual([
+      { path: "/api/v1/accounts/me/client-sessions/", init: undefined },
+      { path: "/api/v1/accounts/me/client-sessions/one/", init: { method: "DELETE" } },
+      { path: "/api/v1/accounts/me/web-sessions/logout-others/", init: { method: "POST" } },
+      { path: "/logout/", init: { method: "POST" } },
+    ]);
   });
 });

@@ -119,7 +119,7 @@ class MustChangePasswordEnforcementTests(APITestCase):
     def test_flagged_user_can_log_out(self):
         self._flag_and_login(self.reader)
 
-        response = self.client.get("/logout/")
+        response = self.client.post("/logout/")
 
         self.assertEqual(response.status_code, status.HTTP_302_FOUND)
         self.assertEqual(response["Location"], "/login/")

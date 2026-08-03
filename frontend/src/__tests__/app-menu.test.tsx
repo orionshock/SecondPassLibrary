@@ -32,7 +32,7 @@ describe("app-shell menus", () => {
     expect(markup).toContain('aria-expanded="false"');
   });
 
-  it("renders Profile settings and safe existing logout destinations with icons", () => {
+  it("renders Profile settings and an accessible POST logout action with icons", () => {
     const markup = renderToStaticMarkup(<MemoryRouter><AppMenuItemsComponent
       label="Account menu for owner"
       items={accountItems}
@@ -43,7 +43,8 @@ describe("app-shell menus", () => {
     expect(markup).toContain('href="/profile"');
     expect(markup).toContain("Profile settings");
     expect(markup).toContain(">person<");
-    expect(markup).toContain('href="/logout/"');
+    expect(markup).not.toContain('href="/logout/"');
+    expect(markup).toMatch(/<button[^>]*type="button"[^>]*>.*Log out/s);
     expect(markup).toContain("Log out");
     expect(markup).toContain(">logout<");
     expect(markup).toMatch(/aria-current="page"[^>]*href="\/profile"/);

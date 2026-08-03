@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.core.exceptions import ValidationError
 from django import forms
 
 from core.server_settings import DEFAULT_SERVER_NAME
@@ -10,8 +11,55 @@ from library.groups.public_group import (
     DEFAULT_PUBLIC_GROUP_NAME,
 )
 
+from .login_throttle import (
+    LoginTemporarilyThrottled,
+    clear_login_attempts,
+    record_failed_login,
+    release_login_reservation,
+    reserve_login_attempt,
+)
+from .request_identity import canonical_client_ip
+
 
 User = get_user_model()
+
+
+class ThrottledAuthenticationForm(AuthenticationForm):
+    error_messages = {
+        **AuthenticationForm.error_messages,
+        "temporarily_throttled": (
+            "Too many login attempts. Please wait a few minutes and try again."
+        ),
+    }
+
+    def clean(self):
+        username = self.cleaned_data.get("username")
+        password = self.cleaned_data.get("password")
+        if not username or not password:
+            return super().clean()
+
+        try:
+            reservation = reserve_login_attempt(
+                source_ip=canonical_client_ip(self.request),
+                username=username,
+            )
+        except LoginTemporarilyThrottled as exc:
+            raise ValidationError(
+                self.error_messages["temporarily_throttled"],
+                code="temporarily_throttled",
+            ) from exc
+
+        try:
+            cleaned_data = super().clean()
+        except ValidationError:
+            record_failed_login(reservation)
+            raise
+        except Exception:
+            release_login_reservation(reservation)
+            raise
+
+        clear_login_attempts(reservation)
+        return cleaned_data
 
 
 class FirstOwnerSetupForm(UserCreationForm):

@@ -23,6 +23,10 @@ export async function logoutOtherWebSessions(client: ApiClient = apiClient): Pro
   await client.request<{ message: string }>("/api/v1/accounts/me/web-sessions/logout-others/", { method: "POST" });
 }
 
+export async function logoutCurrentWebSession(client: ApiClient = apiClient): Promise<void> {
+  await client.request<void>("/logout/", { method: "POST" });
+}
+
 export async function listClientSessions(client: ApiClient = apiClient): Promise<ClientSession[]> {
   const response = await client.request<ClientSessionResponse[]>("/api/v1/accounts/me/client-sessions/");
   return response.map(mapClientSession);

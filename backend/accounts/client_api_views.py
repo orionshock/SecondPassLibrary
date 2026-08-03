@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-import ipaddress
 from typing import Any, cast
 from urllib.parse import urlencode
 
-from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.utils import timezone
 from rest_framework.authentication import SessionAuthentication
@@ -13,14 +11,15 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 
+from accounts.request_identity import canonical_client_ip
+from core import server_settings
+
 from . import client_api
 from .models import ClientLoginRequest
-from core import server_settings
 
 
 PAIRING_CACHE_CONTROL = "no-store, private"
 PAIRING_PRAGMA = "no-cache"
-MAX_FORWARDED_FOR_HOPS = 10
 
 
 class PairingNoStoreMixin:
@@ -65,7 +64,7 @@ class ClientLoginRequestCreateView(PairingNoStoreMixin, APIView):
         client_type = str(data.get("client_type") or "").strip()
 
         ua = request.META.get("HTTP_USER_AGENT") or ""
-        ip = _pairing_source_ip(request)
+        ip = canonical_client_ip(request)
 
         try:
             obj, code = client_api.create_login_request(
@@ -226,42 +225,3 @@ def _login_request_state(login_request: ClientLoginRequest | None) -> str:
     if client_api.is_login_request_expired(login_request, now=timezone.now()):
         return ClientLoginRequest.STATUS_EXPIRED
     return login_request.status
-
-
-def _pairing_source_ip(request) -> str | None:
-    direct_ip = _normalized_ip(request.META.get("REMOTE_ADDR"))
-    if not settings.TRUST_X_FORWARDED_FOR or direct_ip is None:
-        return direct_ip
-
-    trusted_proxy_ips = {
-        normalized
-        for value in settings.TRUSTED_PROXY_IPS
-        if (normalized := _normalized_ip(value)) is not None
-    }
-    if direct_ip not in trusted_proxy_ips:
-        return direct_ip
-
-    forwarded_values = [
-        value.strip()
-        for value in (request.META.get("HTTP_X_FORWARDED_FOR") or "").split(",")
-    ]
-    if not forwarded_values or len(forwarded_values) > MAX_FORWARDED_FOR_HOPS:
-        return direct_ip
-    forwarded_ips = [_normalized_ip(value) for value in forwarded_values]
-    if any(value is None for value in forwarded_ips):
-        return direct_ip
-
-    for candidate in reversed([*forwarded_ips, direct_ip]):
-        if candidate not in trusted_proxy_ips:
-            return candidate
-    return direct_ip
-
-
-def _normalized_ip(value: object) -> str | None:
-    try:
-        address = ipaddress.ip_address(str(value or "").strip())
-        if isinstance(address, ipaddress.IPv6Address) and address.ipv4_mapped:
-            return str(address.ipv4_mapped)
-        return str(address)
-    except ValueError:
-        return None

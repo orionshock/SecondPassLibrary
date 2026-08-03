@@ -10,13 +10,14 @@ from django.contrib.auth.views import redirect_to_login
 from django.core.exceptions import ValidationError
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
+from django.views.decorators.http import require_POST
 
 from accounts.bootstrap import (
     SetupAlreadyComplete,
     create_first_owner,
     has_active_owner,
 )
-from accounts.forms import FirstOwnerSetupForm
+from accounts.forms import FirstOwnerSetupForm, ThrottledAuthenticationForm
 
 
 REACT_BUILD_MISSING_MESSAGE = (
@@ -48,13 +49,21 @@ def react_app(request: HttpRequest, react_path: str = "") -> HttpResponse:
 def login(request: HttpRequest) -> HttpResponse:
     if not has_active_owner():
         return redirect("web:setup")
-    return auth_views.LoginView.as_view(template_name="rest_framework/login.html")(
-        request
-    )
+    return auth_views.LoginView.as_view(
+        template_name="rest_framework/login.html",
+        authentication_form=ThrottledAuthenticationForm,
+    )(request)
 
 
+@require_POST
 def logout(request: HttpRequest) -> HttpResponse:
     django_logout(request)
+    accepted_types = {
+        value.split(";", 1)[0].strip().lower()
+        for value in request.headers.get("Accept", "").split(",")
+    }
+    if "application/json" in accepted_types:
+        return HttpResponse(status=204)
     return redirect("login")
 
 
