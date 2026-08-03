@@ -6,10 +6,11 @@ from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
 
-from django.db.models import Count, IntegerField, Sum, Value
+from django.db.models import Count, IntegerField, Subquery, Sum, Value
 from django.db.models.functions import Coalesce, Length
 from django.utils import timezone
 
+from library.models import Book, BookAuthor
 from marginalia.archives import render_archive_json, serialize_archive
 from marginalia.models import Annotation, ReadingSession
 
@@ -21,6 +22,12 @@ MAX_FULL_EXPORT_SESSIONS = 5_000
 MAX_EXPORT_ANNOTATIONS = 50_000
 MAX_EXPORT_BYTES = 16 * 1024 * 1024
 _BASE_ESTIMATED_BYTES = 4 * 1024
+# The archive writes one Book object per distinct represented Book and one author
+# string per BookAuthor link. These fixed allowances cover their JSON structure;
+# actual title, checksum, and author-name characters retain the worst-case 6-byte
+# UTF-8/JSON escaping multiplier used by Session and annotation text.
+_BOOK_ESTIMATED_OVERHEAD = 256
+_AUTHOR_ESTIMATED_OVERHEAD = 16
 _SESSION_ESTIMATED_OVERHEAD = 512
 _ANNOTATION_ESTIMATED_OVERHEAD = 256
 _TEXT_ESTIMATE_MULTIPLIER = 6
@@ -102,7 +109,10 @@ def _build_export(
     include_empty_sessions: bool,
     maximum_sessions: int,
 ) -> MarginaliaExportDocument:
-    stats = _export_stats(sessions)
+    stats = _export_stats(
+        sessions,
+        include_empty_sessions=include_empty_sessions,
+    )
     if stats.session_count > maximum_sessions:
         _reject_export(
             user=user,
@@ -159,10 +169,12 @@ def _build_export(
 class _ExportStats:
     session_count: int
     annotation_count: int
+    book_count: int
+    author_count: int
     estimated_bytes: int
 
 
-def _export_stats(sessions) -> _ExportStats:
+def _export_stats(sessions, *, include_empty_sessions: bool) -> _ExportStats:
     session_stats = sessions.aggregate(
         count=Count("pk"),
         text_characters=_text_character_sum(
@@ -189,13 +201,36 @@ def _export_stats(sessions) -> _ExportStats:
             "comment_text",
         ),
     )
+    represented_sessions = sessions
+    if not include_empty_sessions:
+        represented_sessions = sessions.filter(annotations__is_deleted=False)
+    represented_book_ids = represented_sessions.order_by().values("book_id").distinct()
+    books = Book.objects.filter(pk__in=Subquery(represented_book_ids))
+    book_stats = books.aggregate(
+        count=Count("pk"),
+        text_characters=_text_character_sum("title", "checksum"),
+    )
+    book_authors = BookAuthor.objects.filter(
+        book_id__in=Subquery(represented_book_ids),
+    )
+    author_stats = book_authors.aggregate(
+        count=Count("pk"),
+        text_characters=_text_character_sum("author__name"),
+    )
     session_count = int(session_stats["count"])
     annotation_count = int(annotation_stats["count"])
-    text_characters = int(session_stats["text_characters"]) + int(
-        annotation_stats["text_characters"]
+    book_count = int(book_stats["count"])
+    author_count = int(author_stats["count"])
+    text_characters = (
+        int(session_stats["text_characters"])
+        + int(annotation_stats["text_characters"])
+        + int(book_stats["text_characters"])
+        + int(author_stats["text_characters"])
     )
     estimated_bytes = (
         _BASE_ESTIMATED_BYTES
+        + book_count * _BOOK_ESTIMATED_OVERHEAD
+        + author_count * _AUTHOR_ESTIMATED_OVERHEAD
         + session_count * _SESSION_ESTIMATED_OVERHEAD
         + annotation_count * _ANNOTATION_ESTIMATED_OVERHEAD
         + text_characters * _TEXT_ESTIMATE_MULTIPLIER
@@ -203,6 +238,8 @@ def _export_stats(sessions) -> _ExportStats:
     return _ExportStats(
         session_count=session_count,
         annotation_count=annotation_count,
+        book_count=book_count,
+        author_count=author_count,
         estimated_bytes=estimated_bytes,
     )
 

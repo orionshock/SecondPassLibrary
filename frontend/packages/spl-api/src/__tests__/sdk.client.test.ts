@@ -49,4 +49,45 @@ describe("createApiClient", () => {
       new ApiError("Select at least one session.", 400, { code: "INVALID_SELECTION", fields: { books: ["Required."] } }),
     );
   });
+
+  it.each([
+    "application/json",
+    "Application/JSON",
+    "application/problem+json",
+    "application/json; charset=utf-8",
+  ])("decodes attachment errors with JSON media type %s", async (contentType) => {
+    const client = createApiClient(async () => new Response(
+      JSON.stringify({ detail: "Bounded JSON error.", code: "BOUNDED_ERROR" }),
+      { status: 413, headers: { "Content-Type": contentType } },
+    ));
+
+    await expect(client.requestAttachment("/export")).rejects.toEqual(
+      new ApiError("Bounded JSON error.", 413, { code: "BOUNDED_ERROR" }),
+    );
+  });
+
+  it.each([
+    ["text/html", "<html>proxy secret</html>"],
+    ["text/plain", "proxy secret"],
+  ])("keeps non-JSON proxy 413 responses generic for %s", async (contentType, body) => {
+    const client = createApiClient(async () => new Response(body, {
+      status: 413,
+      headers: { "Content-Type": contentType },
+    }));
+
+    await expect(client.requestAttachment("/export")).rejects.toEqual(
+      new ApiError("The server could not complete the request.", 413),
+    );
+  });
+
+  it("keeps malformed JSON attachment errors bounded", async () => {
+    const client = createApiClient(async () => new Response("proxy secret {", {
+      status: 413,
+      headers: { "Content-Type": "application/problem+json" },
+    }));
+
+    await expect(client.requestAttachment("/export")).rejects.toEqual(
+      new ApiError("The server returned invalid JSON.", 413),
+    );
+  });
 });

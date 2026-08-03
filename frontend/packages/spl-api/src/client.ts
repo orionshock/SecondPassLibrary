@@ -68,7 +68,7 @@ export function createApiClient(
       const response = await send(path, init, "application/json, application/octet-stream");
       if (!response.ok) {
         const contentType = response.headers.get("content-type") ?? "";
-        if (contentType.includes("application/json")) {
+        if (isJsonMediaType(contentType)) {
           let payload: unknown;
           try {
             payload = await response.json();
@@ -117,7 +117,7 @@ async function parseJson(response: Response): Promise<unknown> {
   if (response.status === 204) return undefined;
 
   const contentType = response.headers.get("content-type") ?? "";
-  if (!contentType.includes("application/json")) {
+  if (!isJsonMediaType(contentType)) {
     throw new ApiError("The server returned an unexpected response.", response.status);
   }
 
@@ -126,6 +126,11 @@ async function parseJson(response: Response): Promise<unknown> {
   } catch {
     throw new ApiError("The server returned invalid JSON.", response.status);
   }
+}
+
+function isJsonMediaType(contentType: string): boolean {
+  const mediaType = contentType.split(";", 1)[0]?.trim().toLowerCase() ?? "";
+  return mediaType === "application/json" || mediaType.endsWith("+json");
 }
 
 export const apiClient = createApiClient();

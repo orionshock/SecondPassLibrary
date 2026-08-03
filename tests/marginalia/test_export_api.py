@@ -13,9 +13,9 @@ from rest_framework.test import APIClient
 
 from accounts.client_api import generate_bearer_token, hash_client_secret
 from accounts.models import UserClientSession
-from library.models import Book
+from library.models import Author, Book, BookAuthor
 from marginalia.archives import DuplicateBookHashError
-from marginalia.exports.services import export_all_marginalia
+from marginalia.exports.services import _export_stats, export_all_marginalia
 from marginalia.models import Annotation, ReadingSession
 
 
@@ -345,7 +345,10 @@ class MarginaliaExportAPITests(TestCase):
 
     @patch("marginalia.exports.services.MAX_EXPORT_BYTES", 100)
     def test_export_estimated_size_limit_rejects_before_serialization(self):
-        with patch("marginalia.exports.services.serialize_archive") as serialize:
+        with (
+            patch("marginalia.exports.services.serialize_archive") as serialize,
+            patch("marginalia.exports.services.render_archive_json") as render,
+        ):
             response = self.client.get(self.url)
 
         self.assertEqual(response.status_code, status.HTTP_413_REQUEST_ENTITY_TOO_LARGE)
@@ -354,6 +357,77 @@ class MarginaliaExportAPITests(TestCase):
             {"kind": "estimated_archive_bytes", "maximum": 100},
         )
         serialize.assert_not_called()
+        render.assert_not_called()
+
+    def test_export_estimate_includes_distinct_book_titles(self):
+        sessions = ReadingSession.objects.filter(user=self.user)
+        before = _export_stats(sessions, include_empty_sessions=True)
+        previous_length = len(self.second_book.title)
+        self.second_book.title = "T" * 512
+        self.second_book.save(update_fields=["title"])
+
+        after = _export_stats(sessions, include_empty_sessions=True)
+
+        self.assertEqual(after.book_count, before.book_count)
+        self.assertEqual(
+            after.estimated_bytes - before.estimated_bytes,
+            (512 - previous_length) * 6,
+        )
+
+    def test_export_estimate_includes_each_serialized_book_author(self):
+        sessions = ReadingSession.objects.filter(user=self.user)
+        before = _export_stats(sessions, include_empty_sessions=True)
+        names = [f"{index:02d}" + "A" * 253 for index in range(10)]
+        for position, name in enumerate(names):
+            author = Author.objects.create(name=name)
+            BookAuthor.objects.create(
+                book=self.second_book,
+                author=author,
+                position=position,
+            )
+
+        after = _export_stats(sessions, include_empty_sessions=True)
+
+        self.assertEqual(after.author_count - before.author_count, len(names))
+        self.assertEqual(
+            after.estimated_bytes - before.estimated_bytes,
+            sum(map(len, names)) * 6 + len(names) * 16,
+        )
+
+    def test_export_estimate_counts_book_metadata_once_for_repeated_sessions(self):
+        sessions = ReadingSession.objects.filter(book=self.second_book)
+        before = _export_stats(sessions, include_empty_sessions=True)
+        ReadingSession.objects.create(user=self.other, book=self.second_book)
+
+        after = _export_stats(sessions, include_empty_sessions=True)
+
+        self.assertEqual(after.book_count, before.book_count)
+        self.assertEqual(after.author_count, before.author_count)
+        self.assertEqual(after.estimated_bytes - before.estimated_bytes, 512)
+
+    def test_book_metadata_estimate_rejects_before_archive_materialization(self):
+        sessions = ReadingSession.objects.filter(user=self.user)
+        before = _export_stats(sessions, include_empty_sessions=True)
+        author = Author.objects.create(name="A" * 255)
+        BookAuthor.objects.create(book=self.second_book, author=author)
+
+        with (
+            patch(
+                "marginalia.exports.services.MAX_EXPORT_BYTES",
+                before.estimated_bytes + 1,
+            ),
+            patch("marginalia.exports.services.serialize_archive") as serialize,
+            patch("marginalia.exports.services.render_archive_json") as render,
+        ):
+            response = self.client.get(self.url, {"include_empty_sessions": "true"})
+
+        self.assertEqual(response.status_code, status.HTTP_413_REQUEST_ENTITY_TOO_LARGE)
+        self.assertEqual(
+            response.json()["error"]["limit"]["kind"],
+            "estimated_archive_bytes",
+        )
+        serialize.assert_not_called()
+        render.assert_not_called()
 
     @patch("marginalia.exports.services.MAX_EXPORT_BYTES", 100)
     @patch(
@@ -427,7 +501,7 @@ class MarginaliaExportAPITests(TestCase):
         self.assertEqual(bearer_post.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_export_codec_query_count_is_bounded(self):
-        with self.assertNumQueries(5):
+        with self.assertNumQueries(7):
             document = export_all_marginalia(user=self.user)
 
         self.assertTrue(document.content)
