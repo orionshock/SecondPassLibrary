@@ -108,6 +108,8 @@ def safe_import_source_name(source_name: str) -> str:
 def safe_zip_member_name(name: str) -> str | None:
     if not name:
         return None
+    if any(ord(character) < 32 for character in name):
+        return None
     if _is_url_like(name):
         return None
     if name.startswith(("/", "\\")) or ":" in name:

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from io import BytesIO
 import logging
 import zipfile
 
@@ -102,7 +101,7 @@ def _import_zip_candidate(
 
     sidecar_opf = _read_sidecar_opf(archive, candidate)
     return import_epub_file(
-        BytesIO(data),
+        data,
         source_filename=candidate.source_name,
         actor=actor,
         sidecar_opf=sidecar_opf,

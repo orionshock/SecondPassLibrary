@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from unittest.mock import patch
 
 from rest_framework.authentication import SessionAuthentication
 
@@ -34,6 +35,23 @@ class LibraryImportUploadBoundaryTests(
 
         self.assertEqual(response.status_code, 200)
         self.assertNotIn("operator_detail", json.dumps(response.json()))
+
+    def test_unsafe_epub_preflight_uses_bounded_import_error_response(self):
+        self.login_librarian()
+
+        with patch("library.imports.epub.MAX_EPUB_MEMBERS", 3):
+            response = self.client.post(
+                self.url,
+                {"file": upload_file("unsafe.epub", minimal_epub_bytes())},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["items"][0]["status"], "failed")
+        self.assertEqual(
+            response.json()["items"][0]["safe_message"],
+            "Invalid or unsupported EPUB file.",
+        )
+        self.assertFalse(Book.objects.exists())
 
     def test_skipped_item_has_no_book_id(self):
         self.login_librarian()
