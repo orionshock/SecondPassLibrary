@@ -1,0 +1,68 @@
+{
+  "folders": [
+    {
+      "path": "."
+    }
+  ],
+  "settings": {
+    "chat.tools.terminal.autoApprove": {
+      "c:/projects/SecondPassLibrary/.venv/Scripts/python.exe": true,
+      "mkdir": true,
+      "mv": true,
+      "true": true,
+    },
+    "LineCount.excludes": [
+      "*.md",
+      "*.png",
+      "**/__init__.py",
+      "**/__pycache__/**",
+      "**/__tests__/**",
+      "**/.pytest_cache/**",
+      "**/TestFiles/**",
+      "**/.ruff_cache/**",
+      "**/.venv/**",
+      "**/.vscode/**",
+      "**/coverage/**",
+      "**/dist/**",
+      "**/migrations/*.py",
+      "**/node_modules/**",
+      "**/out/**",
+      "**/package-lock.json",
+      "**/test/**",
+      "**/tests/**",
+      "**/*.tsbuildinfo",
+      "**/userdata/**",
+      "**/var/**",
+      ".coverage",
+      "**/.env.example",
+      ".gitattributes",
+      ".git",
+      ".gitignore",
+      "SecondPassLibrary.code-workspace",
+      "**/docs/**",
+      "pyrightconfig.json",
+      "requirements.txt",
+      "**/tools/**",
+      "web/static/web/favicon.png",
+    ],
+    "sqltools.connections": [
+      {
+        "previewLimit": 50,
+        "driver": "SQLite",
+        "database": "${workspaceFolder:SecondPassLibrary}/userdata/db/db.sqlite3",
+        "name": "SPL userdate db"
+      }
+    ],
+    "sqltools.useNodeRuntime": true
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-python.python",
+      "ms-python.vscode-pylance",
+      "ms-python.debugpy",
+      "ms-python.vscode-python-envs",
+      "charliermarsh.ruff",
+      "vitest.explorer"
+    ]
+  }
+}
