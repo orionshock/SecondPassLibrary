@@ -106,14 +106,14 @@ class CurrentUserChangePasswordView(APIView):
                 current_password=str(data.get("current_password") or ""),
                 new_password=str(data.get("new_password") or ""),
                 confirm_password=str(data.get("confirm_password") or ""),
+                current_session_key=getattr(
+                    getattr(request, "session", None), "session_key", None
+                ),
             )
         except DjangoValidationError as exc:
             detail = getattr(exc, "message_dict", None) or {"detail": exc.messages}
             raise DRFValidationError(detail=detail) from exc
         update_session_auth_hash(request, request.user)
-        session_control.user_changed_own_password(
-            request.user, getattr(getattr(request, "session", None), "session_key", None)
-        )
         return Response({"status": "ok"}, status=status.HTTP_200_OK)
 
 
@@ -317,7 +317,6 @@ class ManagedUserResetPasswordView(APIView):
         except DjangoValidationError as exc:
             detail = getattr(exc, "message_dict", None) or {"detail": exc.messages}
             raise DRFValidationError(detail=detail) from exc
-        session_control.admin_reset_user_password(target_user, actor=request.user)
         return Response(
             {
                 "username": result.username,

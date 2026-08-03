@@ -118,17 +118,18 @@ class AccountOperationalLoggingTests(APITestCase):
         self.client.login(username="reader", password="pw")
 
         with self.assertLogs("accounts.operational_logging", level="INFO") as logs:
-            response = assert_response(
-                self.client.post(
-                    "/api/v1/accounts/me/change-password/",
-                    data={
-                        "current_password": "pw",
-                        "new_password": "NewPassw0rd!",
-                        "confirm_password": "NewPassw0rd!",
-                    },
-                    format="json",
+            with self.captureOnCommitCallbacks(execute=True):
+                response = assert_response(
+                    self.client.post(
+                        "/api/v1/accounts/me/change-password/",
+                        data={
+                            "current_password": "pw",
+                            "new_password": "NewPassw0rd!",
+                            "confirm_password": "NewPassw0rd!",
+                        },
+                        format="json",
+                    )
                 )
-            )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         joined = "\n".join(logs.output)
@@ -142,19 +143,22 @@ class AccountOperationalLoggingTests(APITestCase):
         self.client.login(username="manager", password="pw")
 
         with self.assertLogs("accounts.operational_logging", level="INFO") as logs:
-            response = assert_response(
-                self.client.post(
-                    f"/api/v1/accounts/users/{self.reader.profile.id}/reset-password/",
-                    data={},
-                    format="json",
+            with self.captureOnCommitCallbacks(execute=True):
+                response = assert_response(
+                    self.client.post(
+                        f"/api/v1/accounts/users/{self.reader.profile.id}/reset-password/",
+                        data={},
+                        format="json",
+                    )
                 )
-            )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         joined = "\n".join(logs.output)
         self.assertIn("Managed password reset completed", joined)
-        self.assertIn("reason=managed_reset count=2", joined)
-        self.assertIn("reason=managed_reset count=1", joined)
+        self.assertIn(
+            "reason=managed_reset web_sessions=2 client_sessions=1",
+            joined,
+        )
         payload = response_data_dict(response)
         self.assertNotIn(str(payload["temporary_password"]), joined)
 
@@ -300,6 +304,10 @@ class AccountOperationalLoggingTests(APITestCase):
         self.assertIn("Web session revocation failed", logs.output[0])
         self.assertIn("exception=RuntimeError", logs.output[0])
         self.assertNotIn("session-key-secret", logs.output[0])
+        self.reader.refresh_from_db()
+        self.reader.profile.refresh_from_db()
+        self.assertTrue(self.reader.check_password("pw"))
+        self.assertFalse(self.reader.profile.must_change_password)
 
     def _make_web_sessions(self, user, *, username: str) -> None:
         authenticated_tracked_client(self, username=username)

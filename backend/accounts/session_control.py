@@ -6,6 +6,7 @@ from django.contrib.sessions.models import Session
 from django.utils import timezone
 
 from accounts.operational_logging import logger, user_uuid
+from core.operational_logging import info_on_commit
 
 from .models import UserClientSession, UserWebSession
 
@@ -132,13 +133,22 @@ def user_changed_own_password(user, current_session_key: str | None) -> SessionR
         current_session_key,
         actor=user,
         reason="password_change",
-        log_event=True,
+        log_event=False,
     )
     client_count = revoke_all_api_sessions(
         user,
         actor=user,
         reason="password_change",
-        log_event=True,
+        log_event=False,
+    )
+    info_on_commit(
+        logger,
+        "Sessions revoked: actor=%s target=%s reason=password_change "
+        "web_sessions=%d client_sessions=%d",
+        user_uuid(user),
+        user_uuid(user),
+        web_count,
+        client_count,
     )
     return SessionRevocationCounts(web_sessions=web_count, client_sessions=client_count)
 
@@ -149,13 +159,22 @@ def admin_reset_user_password(user, *, actor=None) -> SessionRevocationCounts:
         None,
         actor=actor,
         reason="managed_reset",
-        log_event=True,
+        log_event=False,
     )
     client_count = revoke_all_api_sessions(
         user,
         actor=actor,
         reason="managed_reset",
-        log_event=True,
+        log_event=False,
+    )
+    info_on_commit(
+        logger,
+        "Sessions revoked: actor=%s target=%s reason=managed_reset "
+        "web_sessions=%d client_sessions=%d",
+        user_uuid(actor),
+        user_uuid(user),
+        web_count,
+        client_count,
     )
     return SessionRevocationCounts(web_sessions=web_count, client_sessions=client_count)
 

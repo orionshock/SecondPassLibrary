@@ -535,7 +535,8 @@ Global `role` and `is_owner` describe broad account authority. `groups[].is_cura
 Additional identity fields:
 
 - `first_name`, `last_name`
-- `must_change_password` (force change via product UI redirect)
+- `must_change_password` (force change through the Product UI and server-side
+  session restriction)
 
 Broad Product UI affordances should be derived from `role` and `is_owner`.
 Group-scoped curator affordances should use the matching `groups[]` membership
@@ -592,7 +593,18 @@ Rules:
 - Sets the new password via Django `set_password()` and runs configured password validators.
 - Updates the current session hash so the user stays logged in.
 - Revokes all other Django web sessions for the user (keeps the current session).
+- Revokes the user's Client API bearer sessions.
 - Clears `UserProfile.must_change_password` when the change succeeds.
+- Password persistence, flag clearing, and revocation are one atomic workflow.
+
+While `must_change_password=true`, Django session requests may read
+`/api/v1/accounts/me/` and `/api/v1/server/info/` and may call the password
+change endpoint. Other API requests return `403` with
+`code=password_change_required`; API requests are never redirected to HTML.
+Product UI shell routes and logout remain reachable so the React password-change
+experience can complete without a redirect loop. Reader Client bearer
+authentication remains governed by its existing contract and is not restricted
+by this session-only flag.
 
 ## Shelves
 

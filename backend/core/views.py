@@ -3,6 +3,7 @@ import os
 from django.conf import settings
 from django.db import DatabaseError, connections
 from django.http import JsonResponse
+from django.views.decorators.http import require_safe
 
 from core import server_settings
 
@@ -34,6 +35,7 @@ def _userdata_is_ready() -> bool:
     )
 
 
+@require_safe
 def health_check(request):
     checks = {
         "database": _database_is_ready(),
@@ -50,6 +52,7 @@ def health_check(request):
     )
 
 
+@require_safe
 def secondpass_well_known(request):
     """
     Minimal discovery document for external clients.

@@ -79,3 +79,9 @@ class HealthCheckContractTests(TestCase):
 
         self.assertEqual(response.status_code, 503)
         self.assertFalse(response.json()["checks"]["userdata"])
+
+    def test_health_rejects_unsafe_methods(self):
+        response = self.client.post("/api/v1/health/")
+
+        self.assertEqual(response.status_code, 405)
+        self.assertEqual(response["Allow"], "GET, HEAD")

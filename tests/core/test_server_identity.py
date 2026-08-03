@@ -241,6 +241,12 @@ class ServerIdentitySettingsTests(TestCase):
         self.assertNotIn("authorize_url", payload)
         self.assertNotIn("poll_endpoint_template", payload)
 
+    def test_well_known_discovery_rejects_unsafe_methods(self):
+        response = self.client.post("/.well-known/secondpass")
+
+        self.assertEqual(response.status_code, 405)
+        self.assertEqual(response["Allow"], "GET, HEAD")
+
     def test_discovery_includes_server_identity(self):
         owner = User.objects.create_user(
             username="owner",

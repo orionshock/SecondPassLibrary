@@ -20,14 +20,25 @@ Web session revocation follows these rules:
 - **Self password change**:
   - keeps the **current** Django web session
   - revokes **all other** Django web sessions for that user
+  - revokes all Reader Client bearer sessions
+  - atomically clears `must_change_password`; revocation failure rolls back the change
 - **Managed/admin password reset**:
   - revokes **all** Django web sessions for the target user
+  - revokes all Reader Client bearer sessions
+  - atomically sets the temporary password and `must_change_password=true`
 - **Disabling a user**:
   - revokes **all** Django web sessions for the target user
 - **Client API bearer sessions**:
   - revoke Client API sessions (see `revoke_all_api_sessions(user)`)
 
 API endpoints remain authoritative; the rules below describe the intended behavior enforced by the session control module.
+
+An authenticated Django session whose profile has `must_change_password=true`
+is restricted by middleware after Django authentication. It can load the Product
+UI shell, logout, read the current-user and server bootstrap endpoints, and
+submit the password change. Unrelated APIs receive a bounded JSON `403` with
+`code=password_change_required`. Bearer-only requests authenticate later at the
+DRF boundary and are intentionally unchanged.
 
 ## Models
 

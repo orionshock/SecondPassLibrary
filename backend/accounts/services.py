@@ -378,6 +378,7 @@ def change_current_user_password(
     current_password: str,
     new_password: str,
     confirm_password: str,
+    current_session_key: str | None,
 ) -> None:
     if getattr(user, "is_anonymous", False):
         raise PermissionDenied("Not allowed.")
@@ -395,19 +396,29 @@ def change_current_user_password(
     if (new_password or "") == (current_password or ""):
         raise ValidationError({"new_password": "New password must be different from current password."})
 
-    user.set_password(new_password)
-    user.full_clean()
-    user.save(update_fields=["password"])
-
     profile = get_or_create_profile(user=user)
-    if profile.must_change_password:
-        profile.must_change_password = False
-        profile.save(update_fields=["must_change_password", "updated_at"])
-    logger.info(
-        "Self password changed: actor=%s target=%s",
-        user_uuid(user),
-        user_uuid(user),
-    )
+    forced_change = profile.must_change_password
+    with transaction.atomic():
+        user.set_password(new_password)
+        user.full_clean()
+        user.save(update_fields=["password"])
+
+        if profile.must_change_password:
+            profile.must_change_password = False
+            profile.save(update_fields=["must_change_password", "updated_at"])
+
+        from accounts import session_control
+
+        session_control.user_changed_own_password(user, current_session_key)
+        actor = user_uuid(user)
+        transaction.on_commit(
+            lambda: logger.info(
+                "Self password changed: actor=%s target=%s forced=%s",
+                actor,
+                actor,
+                forced_change,
+            )
+        )
 
 
 def reset_managed_user_password(
@@ -437,11 +448,18 @@ def reset_managed_user_password(
             profile.full_clean()
             profile.save(update_fields=["must_change_password", "updated_at"])
 
-    logger.info(
-        "Managed password reset completed: actor=%s target=%s",
-        user_log_label(actor),
-        user_log_label(target_user),
-    )
+        from accounts import session_control
+
+        session_control.admin_reset_user_password(target_user, actor=actor)
+        actor_label = user_log_label(actor)
+        target_label = user_log_label(target_user)
+        transaction.on_commit(
+            lambda: logger.info(
+                "Managed password reset completed: actor=%s target=%s",
+                actor_label,
+                target_label,
+            )
+        )
     return ManagedPasswordResetResult(
         username=target_user.get_username(),
         temporary_password=temporary_password,
