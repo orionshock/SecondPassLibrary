@@ -13,7 +13,12 @@ export interface AttachmentDownload {
 }
 
 export interface AttachmentApiClient {
-  requestAttachment(path: string, init?: RequestInit, fallbackFilename?: string): Promise<AttachmentDownload>;
+  requestAttachment(
+    path: string,
+    init?: RequestInit,
+    fallbackFilename?: string,
+    errorMapper?: ApiErrorMapper,
+  ): Promise<AttachmentDownload>;
 }
 
 type CsrfTokenProvider = () => string | undefined;
@@ -54,7 +59,12 @@ export function createApiClient(
       if (!response.ok) throw errorMapper(response.status, payload);
       return payload as T;
     },
-    async requestAttachment(path: string, init: RequestInit = {}, fallbackFilename = "download") {
+    async requestAttachment(
+      path: string,
+      init: RequestInit = {},
+      fallbackFilename = "download",
+      errorMapper: ApiErrorMapper = apiErrorFromPayload,
+    ) {
       const response = await send(path, init, "application/json, application/octet-stream");
       if (!response.ok) {
         const contentType = response.headers.get("content-type") ?? "";
@@ -65,7 +75,7 @@ export function createApiClient(
           } catch {
             throw new ApiError("The server returned invalid JSON.", response.status);
           }
-          throw apiErrorFromPayload(response.status, payload);
+          throw errorMapper(response.status, payload);
         }
         throw new ApiError("The server could not complete the request.", response.status);
       }

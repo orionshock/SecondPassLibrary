@@ -1,4 +1,4 @@
-import { downloadCompleteMarginaliaExport, downloadSelectedMarginaliaExport, listMarginaliaSessions, type MarginaliaSessionListItem, type Page } from "@second-pass/spl-api";
+import { downloadCompleteMarginaliaExport, downloadSelectedMarginaliaExport, listMarginaliaSessions, MarginaliaExportTooLargeError, type MarginaliaSessionListItem, type Page } from "@second-pass/spl-api";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useSearchParams } from "react-router";
 
@@ -11,7 +11,7 @@ import { marginaliaExportBreadcrumbFallback } from "./marginaliaBreadcrumbs";
 import { MarginaliaSectionActionsComponent } from "./components/MarginaliaSectionActionsComponent";
 import { marginaliaExportSelectedBookCount, marginaliaExportSelectedSessionIds, withMarginaliaExportPageSelection, withMarginaliaExportSessionSelection, type MarginaliaExportSelectionMap } from "./marginaliaExportSelection";
 import { marginaliaExportCandidateQuery, marginaliaExportSearchParams, marginaliaExportStateFromSearchParams, withMarginaliaExportChange } from "./marginaliaExportQuery";
-import { MarginaliaExportPageRegion } from "./regions/MarginaliaExportPageRegion";
+import { MarginaliaExportPageRegion, type MarginaliaExportLimitFailure } from "./regions/MarginaliaExportPageRegion";
 import "./Marginalia.css";
 
 interface MarginaliaExportLoadState {
@@ -98,6 +98,8 @@ export function MarginaliaExportOrchestrator() {
   }
 
   const selectedSessionIds = new Set(selection.keys());
+  const completeLimitFailure = marginaliaExportLimitFailure(completeState.error);
+  const selectedLimitFailure = marginaliaExportLimitFailure(selectedState.error);
   return <ProductPageShellComponent title="Export Marginalia" actions={<MarginaliaSectionActionsComponent activeSection="export" />}>
     <MarginaliaExportPageRegion
       page={load.page}
@@ -108,7 +110,9 @@ export function MarginaliaExportOrchestrator() {
       loading={load.loading}
       loadError={load.error}
       completeState={completeState}
+      completeLimitFailure={completeLimitFailure}
       selectedState={selectedState}
+      selectedLimitFailure={selectedLimitFailure}
       selectedSessionIds={selectedSessionIds}
       selectedBookCount={marginaliaExportSelectedBookCount(selection)}
       includeEmptySessions={includeEmptySessions}
@@ -132,4 +136,25 @@ export function MarginaliaExportOrchestrator() {
       onSelectedExport={() => void exportSelected()}
     />
   </ProductPageShellComponent>;
+}
+
+export function marginaliaExportLimitFailure(
+  error: Error | undefined,
+): MarginaliaExportLimitFailure | undefined {
+  if (!(error instanceof MarginaliaExportTooLargeError)) return undefined;
+  const limitLabel = error.limitKind.endsWith("_bytes")
+    ? `Maximum archive size: ${formatByteLimit(error.maximum)}.`
+    : `Maximum: ${error.maximum.toLocaleString("en-US")} ${error.limitKind === "annotations" ? "annotations" : "Sessions"}.`;
+  return {
+    message: error.message,
+    guidance: error.guidance,
+    limitLabel,
+  };
+}
+
+function formatByteLimit(bytes: number): string {
+  const mebibyte = 1024 * 1024;
+  return bytes % mebibyte === 0
+    ? `${bytes / mebibyte} MiB`
+    : `${bytes.toLocaleString("en-US")} bytes`;
 }

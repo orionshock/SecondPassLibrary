@@ -6,6 +6,7 @@ from rest_framework.exceptions import NotFound
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
 
+from core.errors import ErrorCode, api_error_response
 from marginalia.api import invalid_request_response
 from marginalia.archives import DuplicateBookHashError, MissingBookChecksumError
 
@@ -14,6 +15,7 @@ from .serializers import (
     MarginaliaSelectedExportSerializer,
 )
 from .services import (
+    ExportTooLargeError,
     NoExportableSessionsError,
     SelectedSessionNotFoundError,
     export_all_marginalia,
@@ -57,6 +59,22 @@ class MarginaliaExportView(APIView):
                 message="No Reading Sessions are available to export.",
                 status_code=status.HTTP_409_CONFLICT,
             )
+        except ExportTooLargeError as exc:
+            response = api_error_response(
+                code=ErrorCode.EXPORT_TOO_LARGE,
+                message="The Marginalia export is too large.",
+                hint=(
+                    "Use Selected Sessions and choose fewer Sessions, then try again."
+                    if exc.mode == "full"
+                    else "Choose fewer Sessions and try the export again."
+                ),
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            )
+            response.data["error"].update(
+                export_mode=exc.mode,
+                limit={"kind": exc.reason, "maximum": exc.maximum},
+            )
+            return response
         except MissingBookChecksumError:
             return invalid_request_response(
                 message="Marginalia export requires a valid Book checksum.",

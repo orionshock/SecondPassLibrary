@@ -232,6 +232,31 @@ by default; explicit inclusion applies identically to complete and selective
 exports. No surviving Sessions, a missing Book checksum, or conflicting Book
 hashes returns bounded `409`. Current Library access is not required.
 
+Buffered export work is bounded to 500 selected Session IDs, 5,000 Sessions in
+a complete export, 50,000 non-deleted Annotations, a conservative 16 MiB
+pre-serialization estimate, and 16 MiB of final UTF-8 JSON. Count and estimate
+limits are checked before archive materialization; the final byte limit is
+checked before constructing an attachment response. Oversized requests return
+`413` without partial output or persistent files:
+
+```json
+{
+  "error": {
+    "code": "EXPORT_TOO_LARGE",
+    "message": "The Marginalia export is too large.",
+    "detail": "",
+    "hint": "Choose fewer Sessions and try the export again.",
+    "export_mode": "selected",
+    "limit": {"kind": "annotations", "maximum": 50000}
+  }
+}
+```
+
+`limit.kind` is one of `selected_sessions`, `full_sessions`, `annotations`,
+`estimated_archive_bytes`, or `archive_bytes`. Complete-export guidance directs
+the user to the selected-Session workflow. Limit responses never include
+selected IDs, annotation content, or archive data.
+
 Successful responses use `application/json; charset=utf-8` and attachment
 filename `YYYYMMDD-second-pass-marginalia.json`, with the server-local date.
 Archive `generatedAt` remains precise. The canonical archive has no scope field

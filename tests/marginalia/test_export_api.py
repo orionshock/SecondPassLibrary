@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -219,6 +220,49 @@ class MarginaliaExportAPITests(TestCase):
         }
         self.assertEqual(names, {"Active", "Closed"})
 
+    @patch("marginalia.exports.services.MAX_SELECTED_EXPORT_SESSION_IDS", 2)
+    def test_selected_export_at_session_limit_succeeds(self):
+        response = self.client.post(
+            self.url,
+            {"reading_session_ids": [str(self.active.pk), str(self.closed.pk)]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("Content-Disposition", response)
+
+    @patch("marginalia.exports.services.MAX_SELECTED_EXPORT_SESSION_IDS", 1)
+    def test_selected_export_above_limit_rejects_before_query_or_serialization(self):
+        with (
+            patch("marginalia.exports.services.ReadingSession.objects.filter") as query,
+            patch("marginalia.exports.services.serialize_archive") as serialize,
+            self.assertLogs("marginalia.exports.services", level="INFO") as logs,
+        ):
+            response = self.client.post(
+                self.url,
+                {
+                    "reading_session_ids": [
+                        str(self.active.pk),
+                        str(self.closed.pk),
+                    ]
+                },
+                format="json",
+            )
+
+        self.assertEqual(response.status_code, status.HTTP_413_REQUEST_ENTITY_TOO_LARGE)
+        self.assertEqual(response.json()["error"]["code"], "EXPORT_TOO_LARGE")
+        self.assertEqual(
+            response.json()["error"]["limit"],
+            {"kind": "selected_sessions", "maximum": 1},
+        )
+        self.assertEqual(response.json()["error"]["export_mode"], "selected")
+        self.assertIn("Choose fewer Sessions", response.json()["error"]["hint"])
+        self.assertNotIn(str(self.active.pk), json.dumps(response.json()))
+        self.assertNotIn("Content-Disposition", response)
+        query.assert_not_called()
+        serialize.assert_not_called()
+        self.assertNotIn(str(self.active.pk), logs.output[0])
+
     def test_selective_export_rejects_duplicate_missing_and_foreign_ids(self):
         duplicate = self.client.post(
             self.url,
@@ -266,6 +310,79 @@ class MarginaliaExportAPITests(TestCase):
             "Empty",
         )
 
+    @patch("marginalia.exports.services.MAX_FULL_EXPORT_SESSIONS", 3)
+    def test_full_export_at_session_limit_succeeds(self):
+        response = self.client.get(self.url, {"include_empty_sessions": "true"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("Content-Disposition", response)
+
+    @patch("marginalia.exports.services.MAX_FULL_EXPORT_SESSIONS", 2)
+    def test_full_export_above_session_limit_rejects_before_serialization(self):
+        with patch("marginalia.exports.services.serialize_archive") as serialize:
+            response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_413_REQUEST_ENTITY_TOO_LARGE)
+        self.assertEqual(
+            response.json()["error"]["limit"],
+            {"kind": "full_sessions", "maximum": 2},
+        )
+        self.assertEqual(response.json()["error"]["export_mode"], "full")
+        self.assertNotIn("Content-Disposition", response)
+        serialize.assert_not_called()
+
+    @patch("marginalia.exports.services.MAX_EXPORT_ANNOTATIONS", 1)
+    def test_export_annotation_limit_rejects_before_serialization(self):
+        with patch("marginalia.exports.services.serialize_archive") as serialize:
+            response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_413_REQUEST_ENTITY_TOO_LARGE)
+        self.assertEqual(
+            response.json()["error"]["limit"],
+            {"kind": "annotations", "maximum": 1},
+        )
+        serialize.assert_not_called()
+
+    @patch("marginalia.exports.services.MAX_EXPORT_BYTES", 100)
+    def test_export_estimated_size_limit_rejects_before_serialization(self):
+        with patch("marginalia.exports.services.serialize_archive") as serialize:
+            response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_413_REQUEST_ENTITY_TOO_LARGE)
+        self.assertEqual(
+            response.json()["error"]["limit"],
+            {"kind": "estimated_archive_bytes", "maximum": 100},
+        )
+        serialize.assert_not_called()
+
+    @patch("marginalia.exports.services.MAX_EXPORT_BYTES", 100)
+    @patch(
+        "marginalia.exports.services._export_stats",
+        return_value=SimpleNamespace(
+            session_count=3,
+            annotation_count=2,
+            estimated_bytes=99,
+        ),
+    )
+    def test_final_serialized_size_limit_rejects_without_partial_attachment(
+        self,
+        _stats,
+    ):
+        with patch(
+            "marginalia.exports.services.render_archive_json",
+            return_value=b"x" * 101,
+        ):
+            response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_413_REQUEST_ENTITY_TOO_LARGE)
+        self.assertEqual(response.json()["error"]["code"], "EXPORT_TOO_LARGE")
+        self.assertEqual(
+            response.json()["error"]["limit"],
+            {"kind": "archive_bytes", "maximum": 100},
+        )
+        self.assertNotIn("Content-Disposition", response)
+        self.assertEqual(response["Content-Type"], "application/json")
+
     def test_selective_export_applies_checksum_integrity_rules(self):
         self.second_book.checksum = ""
         self.second_book.save(update_fields=["checksum"])
@@ -310,7 +427,7 @@ class MarginaliaExportAPITests(TestCase):
         self.assertEqual(bearer_post.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_export_codec_query_count_is_bounded(self):
-        with self.assertNumQueries(3):
+        with self.assertNumQueries(5):
             document = export_all_marginalia(user=self.user)
 
         self.assertTrue(document.content)

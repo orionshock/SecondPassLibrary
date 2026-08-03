@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { AttachmentApiClient, AttachmentDownload } from "../client";
+import { createApiClient, type AttachmentApiClient, type AttachmentDownload } from "../client";
 import { ApiError } from "../errors";
-import { downloadCompleteMarginaliaExport, downloadSelectedMarginaliaExport } from "../marginalia";
+import { downloadCompleteMarginaliaExport, downloadSelectedMarginaliaExport, MarginaliaExportTooLargeError } from "../marginalia";
 
 const attachment: AttachmentDownload = {
   blob: new Blob(["archive"], { type: "application/json" }),
@@ -20,6 +20,7 @@ describe("Marginalia Export SDK", () => {
       "/api/v1/marginalia/export/",
       undefined,
       "second-pass-marginalia.json",
+      expect.any(Function),
     );
   });
 
@@ -32,6 +33,7 @@ describe("Marginalia Export SDK", () => {
       "/api/v1/marginalia/export/?include_empty_sessions=true",
       undefined,
       "second-pass-marginalia.json",
+      expect.any(Function),
     );
   });
 
@@ -52,6 +54,37 @@ describe("Marginalia Export SDK", () => {
       include_empty_sessions: true,
     });
     expect(fallback).toBe("second-pass-marginalia.json");
+  });
+
+  it("maps the structured oversized-export response", async () => {
+    const client = createApiClient(async () => new Response(JSON.stringify({
+      error: {
+        code: "EXPORT_TOO_LARGE",
+        message: "The Marginalia export is too large.",
+        detail: "",
+        hint: "Choose fewer Sessions and try the export again.",
+        export_mode: "selected",
+        limit: { kind: "annotations", maximum: 50000 },
+      },
+    }), {
+      status: 413,
+      headers: { "Content-Type": "application/json" },
+    }), () => undefined);
+
+    const promise = downloadSelectedMarginaliaExport({
+      readingSessionIds: ["session-1"],
+    }, client);
+
+    await expect(promise).rejects.toEqual(expect.objectContaining({
+      name: "MarginaliaExportTooLargeError",
+      status: 413,
+      code: "EXPORT_TOO_LARGE",
+      guidance: "Choose fewer Sessions and try the export again.",
+      exportMode: "selected",
+      limitKind: "annotations",
+      maximum: 50000,
+    }));
+    await expect(promise).rejects.toBeInstanceOf(MarginaliaExportTooLargeError);
   });
 
   it("preserves the attachment result and bounded SDK errors", async () => {

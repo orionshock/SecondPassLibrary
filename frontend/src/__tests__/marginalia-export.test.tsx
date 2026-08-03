@@ -1,4 +1,4 @@
-import type { CurrentUser, MarginaliaSessionListItem, Page, ServerInfo } from "@second-pass/spl-api";
+import { MarginaliaExportTooLargeError, type CurrentUser, type MarginaliaSessionListItem, type Page, type ServerInfo } from "@second-pass/spl-api";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it, vi } from "vitest";
@@ -6,10 +6,10 @@ import { describe, expect, it, vi } from "vitest";
 import { AppFrame } from "../app/layout/AppFrame";
 import { appRoutes } from "../app/router";
 import { marginaliaExportBreadcrumbFallback } from "../features/marginalia/marginaliaBreadcrumbs";
-import { MarginaliaExportOrchestrator } from "../features/marginalia/MarginaliaExportOrchestrator";
+import { marginaliaExportLimitFailure, MarginaliaExportOrchestrator } from "../features/marginalia/MarginaliaExportOrchestrator";
 import { marginaliaExportSelectedBookCount, marginaliaExportSelectedSessionIds, withMarginaliaExportPageSelection, withMarginaliaExportSessionSelection } from "../features/marginalia/marginaliaExportSelection";
 import { MarginaliaSessionsOrchestrator } from "../features/marginalia/MarginaliaSessionsOrchestrator";
-import { MarginaliaExportPageRegion } from "../features/marginalia/regions/MarginaliaExportPageRegion";
+import { MarginaliaExportPageRegion, type MarginaliaExportLimitFailure } from "../features/marginalia/regions/MarginaliaExportPageRegion";
 
 const visibleSession: MarginaliaSessionListItem = {
   id: "session-sensitive-1", name: "Morning notes", status: "active",
@@ -26,7 +26,7 @@ const page: Page<MarginaliaSessionListItem> = { items: [visibleSession, hiddenSe
 const user: CurrentUser = { username: "reader", email: "", firstName: "", lastName: "", profileId: "profile", role: "reader", mustChangePassword: false, isOwner: false, isManager: false, isLibrarian: false, isReader: true, canAccessDjangoAdmin: false, groups: [] };
 const server: ServerInfo = { name: "SPL", description: "", bannerText: "", advancedLibraryGroupsEnabled: false, readingClientBaseUrl: null, marginaliaProfileUri: "profile", publicGroup: { id: "public", name: "Common Room", description: "" }, version: "dev", releaseDate: "" };
 
-function renderExport(selectedSessionIds: ReadonlySet<string> = new Set(), options: { page?: Page<MarginaliaSessionListItem>; loadError?: Error; selectedError?: Error; completeError?: Error } = {}) {
+function renderExport(selectedSessionIds: ReadonlySet<string> = new Set(), options: { page?: Page<MarginaliaSessionListItem>; loadError?: Error; selectedError?: Error; completeError?: Error; selectedLimitFailure?: MarginaliaExportLimitFailure; completeLimitFailure?: MarginaliaExportLimitFailure } = {}) {
   return renderToStaticMarkup(<MemoryRouter><MarginaliaExportPageRegion
     page={options.page ?? page}
     pageNumber={1}
@@ -36,7 +36,9 @@ function renderExport(selectedSessionIds: ReadonlySet<string> = new Set(), optio
     loading={false}
     loadError={options.loadError}
     completeState={{ pending: false, error: options.completeError }}
+    completeLimitFailure={options.completeLimitFailure}
     selectedState={{ pending: false, error: options.selectedError }}
+    selectedLimitFailure={options.selectedLimitFailure}
     selectedSessionIds={selectedSessionIds}
     selectedBookCount={selectedSessionIds.size}
     includeEmptySessions={false}
@@ -98,5 +100,37 @@ describe("My Marginalia Export", () => {
     expect(markup).toContain("Selected export failed.");
     expect(markup).toContain("Complete export failed.");
     expect(markup).not.toMatch(/disabled=""[^>]*>Export selected Sessions/);
+  });
+
+  it("shows actionable oversized-export guidance in the affected section", () => {
+    const failure: MarginaliaExportLimitFailure = {
+      message: "The Marginalia export is too large.",
+      guidance: "Choose fewer Sessions and try the export again.",
+      limitLabel: "Maximum: 50,000 annotations.",
+    };
+    const markup = renderExport(new Set([visibleSession.id]), {
+      selectedError: new Error(failure.message),
+      selectedLimitFailure: failure,
+    });
+
+    expect(markup).toContain(failure.message);
+    expect(markup).toContain(failure.guidance);
+    expect(markup).toContain(failure.limitLabel);
+    expect(markup).toContain("Export selected Sessions");
+  });
+
+  it("maps the SDK limit error at the Export orchestrator boundary", () => {
+    expect(marginaliaExportLimitFailure(new MarginaliaExportTooLargeError({
+      message: "The Marginalia export is too large.",
+      guidance: "Use Selected Sessions and choose fewer Sessions, then try again.",
+      exportMode: "full",
+      limitKind: "archive_bytes",
+      maximum: 16 * 1024 * 1024,
+    }))).toEqual({
+      message: "The Marginalia export is too large.",
+      guidance: "Use Selected Sessions and choose fewer Sessions, then try again.",
+      limitLabel: "Maximum archive size: 16 MiB.",
+    });
+    expect(marginaliaExportLimitFailure(new Error("Other failure"))).toBeUndefined();
   });
 });

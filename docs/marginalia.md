@@ -300,6 +300,17 @@ Missing checksums and conflicting duplicate Book hashes fail the entire request
 with a bounded integrity conflict before an attachment is emitted. The archive
 contains no selection-scope field; its Books and Sessions are authoritative.
 
+Export remains intentionally buffered but is bounded before materialization:
+selected requests accept at most 500 unique Session IDs, complete exports at
+most 5,000 owned Sessions, and either mode at most 50,000 non-deleted
+Annotations. A conservative database-side estimate rejects likely archives over
+16 MiB before serialization, and the one final UTF-8 JSON byte string is also
+limited to 16 MiB before an attachment response is created. Oversized exports
+return `413 EXPORT_TOO_LARGE` with the export mode, triggered limit kind and
+maximum, plus guidance to use a smaller selected export. No partial or
+persistent export file is created. Ownership filtering and the missing/foreign
+selected-ID `404` boundary are unchanged.
+
 ## Import preview and staging
 
 `POST /api/v1/marginalia/import/preview/` accepts multipart `file` and optional

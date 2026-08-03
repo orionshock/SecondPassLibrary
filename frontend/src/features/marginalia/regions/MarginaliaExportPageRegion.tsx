@@ -9,7 +9,13 @@ import type { MutationState } from "../../../shared/feedback/mutationState";
 import { PaginatedListFrameComponent } from "../../../shared/pagination/PaginatedListFrameComponent";
 import type { MarginaliaExportStatusFilter } from "../marginaliaExportQuery";
 
-export function MarginaliaExportPageRegion({ page, pageNumber, pageSize, search, status, loading, loadError, completeState, selectedState, selectedSessionIds, selectedBookCount, includeEmptySessions, onIncludeEmptySessionsChange, onSearchChange, onSearch, onStatusChange, onPageChange, onPageSizeChange, onRetry, onCompleteExport, onSessionSelectionChange, onSelectPage, onClearSelection, onSelectedExport }: {
+export interface MarginaliaExportLimitFailure {
+  message: string;
+  guidance: string;
+  limitLabel: string;
+}
+
+export function MarginaliaExportPageRegion({ page, pageNumber, pageSize, search, status, loading, loadError, completeState, completeLimitFailure, selectedState, selectedLimitFailure, selectedSessionIds, selectedBookCount, includeEmptySessions, onIncludeEmptySessionsChange, onSearchChange, onSearch, onStatusChange, onPageChange, onPageSizeChange, onRetry, onCompleteExport, onSessionSelectionChange, onSelectPage, onClearSelection, onSelectedExport }: {
   page?: Page<MarginaliaSessionListItem>;
   pageNumber: number;
   pageSize: number;
@@ -18,7 +24,9 @@ export function MarginaliaExportPageRegion({ page, pageNumber, pageSize, search,
   loading: boolean;
   loadError?: Error;
   completeState: MutationState;
+  completeLimitFailure?: MarginaliaExportLimitFailure;
   selectedState: MutationState;
+  selectedLimitFailure?: MarginaliaExportLimitFailure;
   selectedSessionIds: ReadonlySet<string>;
   selectedBookCount: number;
   includeEmptySessions: boolean;
@@ -45,7 +53,7 @@ export function MarginaliaExportPageRegion({ page, pageNumber, pageSize, search,
     <Surface title="Complete archive">
       <div className="marginalia-export-complete">
         <p>Download all of your reading history, including Sessions tied to Books that are no longer available.</p>
-        <div className="marginalia-export-action-row"><ActionFeedbackComponent state={completeState} /><Button type="button" disabled={completeState.pending} onClick={onCompleteExport}>{completeState.pending ? "Preparing..." : "Download complete archive"}</Button></div>
+        <div className="marginalia-export-action-row"><MarginaliaExportFeedback state={completeState} limitFailure={completeLimitFailure} /><Button type="button" disabled={completeState.pending} onClick={onCompleteExport}>{completeState.pending ? "Preparing..." : "Download complete archive"}</Button></div>
       </div>
     </Surface>
 
@@ -80,11 +88,20 @@ export function MarginaliaExportPageRegion({ page, pageNumber, pageSize, search,
       </div> : null}
 
       <div className="marginalia-export-submit">
-        <ActionFeedbackComponent state={selectedState} />
+        <MarginaliaExportFeedback state={selectedState} limitFailure={selectedLimitFailure} />
         <Button type="button" disabled={!selectedSessionIds.size || selectedState.pending} onClick={onSelectedExport}>{selectedState.pending ? "Preparing..." : "Export selected Sessions"}</Button>
       </div>
     </section>
   </div>;
+}
+
+function MarginaliaExportFeedback({ state, limitFailure }: { state: MutationState; limitFailure?: MarginaliaExportLimitFailure }) {
+  if (!limitFailure) return <ActionFeedbackComponent state={state} />;
+  return <ErrorPanel>
+    <p>{limitFailure.message}</p>
+    <p>{limitFailure.guidance}</p>
+    <p>{limitFailure.limitLabel}</p>
+  </ErrorPanel>;
 }
 
 function MarginaliaExportSessionRow({ session, selected, disabled, onChange }: { session: MarginaliaSessionListItem; selected: boolean; disabled: boolean; onChange: (selected: boolean) => void }) {
