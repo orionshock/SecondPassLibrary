@@ -26,7 +26,6 @@ from django.urls import include, path, re_path
 from django.views import defaults as default_views
 from django.views.static import serve as static_serve
 
-from core.asgi_streaming import use_async_iterator_under_asgi
 from core.views import secondpass_well_known
 from web import views as web_views
 
@@ -89,12 +88,11 @@ def _cover_media(request, path: str):
     parts = path.replace("\\", "/").split("/")
     if ".." in parts or path.startswith("/"):
         raise Http404()
-    response = static_serve(
+    return static_serve(
         request,
         path,
         document_root=Path(settings.MEDIA_ROOT) / "covers",
     )
-    return use_async_iterator_under_asgi(request, response)
 
 
 urlpatterns += [

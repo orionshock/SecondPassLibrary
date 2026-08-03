@@ -137,6 +137,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "core.asgi_streaming.asgi_streaming_response_middleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -149,7 +150,7 @@ MIDDLEWARE = [
 
 ENABLE_WHITENOISE = env.bool("SECOND_PASS_ENABLE_WHITENOISE", default=not DEBUG)
 if ENABLE_WHITENOISE:
-    MIDDLEWARE.insert(1, "core.asgi_streaming.AsyncWhiteNoiseMiddleware")
+    MIDDLEWARE.insert(2, "whitenoise.middleware.WhiteNoiseMiddleware")
 
 ROOT_URLCONF = "secondpass.urls"
 
