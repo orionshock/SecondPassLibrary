@@ -2,10 +2,10 @@
 
 FROM node:22.22.0-bookworm-slim AS frontend-dependencies
 
-WORKDIR /build/web/react
+WORKDIR /build/frontend
 
-COPY web/react/package.json web/react/package-lock.json ./
-COPY web/react/packages/spl-api/package.json packages/spl-api/package.json
+COPY frontend/package.json frontend/package-lock.json ./
+COPY frontend/packages/spl-api/package.json packages/spl-api/package.json
 
 RUN --mount=type=cache,target=/root/.npm \
     npm ci
@@ -13,10 +13,10 @@ RUN --mount=type=cache,target=/root/.npm \
 
 FROM frontend-dependencies AS frontend-build
 
-COPY web/react/ ./
+COPY frontend/ ./
 
-RUN npm run build \
-    && ! find dist -type f -name '*.map' -print -quit | grep -q .
+RUN npm run build -- --outDir /build/product_ui \
+    && ! find /build/product_ui -type f -name '*.map' -print -quit | grep -q .
 
 
 FROM python:3.13-slim AS python-runtime-dependencies
@@ -46,25 +46,12 @@ ENV DJANGO_SETTINGS_MODULE=secondpass.settings \
 
 WORKDIR /runtime
 
-COPY manage.py ./
-COPY accounts/ accounts/
-COPY core/ core/
-COPY library/ library/
-COPY marginalia/ marginalia/
-COPY secondpass/ secondpass/
-COPY shelves/ shelves/
-COPY templates/ templates/
-COPY web/*.py web/
-COPY web/static/ web/static/
-COPY web/templates/ web/templates/
-COPY --from=frontend-build /build/web/react/dist/ web/react/dist/
+COPY backend/ ./
+COPY --from=frontend-build /build/product_ui/ web/product_ui/
 
 RUN python manage.py collectstatic --noinput --clear \
     && find var/static -type f -name '*.map' -delete \
-    && mv web/react/dist/index.html /tmp/react-index.html \
-    && rm -rf web/react/dist web/static \
-    && mkdir -p web/react/dist \
-    && mv /tmp/react-index.html web/react/dist/index.html
+    && rm -rf web/product_ui/assets web/static
 
 
 FROM python:3.13-slim AS runtime

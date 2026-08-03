@@ -18,7 +18,7 @@ def _database_is_ready() -> bool:
 
 
 def _react_ui_is_ready() -> bool:
-    return (settings.REACT_UI_DIST_DIR / "index.html").is_file()
+    return (settings.PRODUCT_UI_DIR / "index.html").is_file()
 
 
 def _userdata_is_ready() -> bool:

@@ -60,14 +60,15 @@ Runtime and user data live under `userdata/`:
 - `userdata/imports/` for staged imports
 
 `userdata/` is ignored by Git and should be backed up separately.
-Collected static files are generated deploy artifacts under `var/static/`.
+Collected static files are generated deploy artifacts under `backend/var/static/`.
 Docker images generate them during the build; local deployments can regenerate
 them with `collectstatic`. They are not part of normal user-data backups.
 
 EPUB files are stored by SHA-256 checksum for deduplication. Human-readable filenames are derived from book metadata when files are downloaded or exported.
 
-The production Docker build compiles the Product UI and collects its assets into
-`var/static/`, which WhiteNoise serves under `/static/`. WhiteNoise does not
+The production Docker build compiles the Product UI into
+`backend/web/product_ui/` and collects its hashed assets into
+`backend/var/static/`, which WhiteNoise serves under `/static/`. WhiteNoise does not
 serve `userdata/media/`.
 The only public raw media namespace is `/media/covers/`; books, imports,
 exports, marginalia, and other protected user data are not exposed as raw media.

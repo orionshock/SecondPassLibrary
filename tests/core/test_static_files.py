@@ -9,6 +9,7 @@ from secondpass.settings import _staticfiles_backend
 
 
 ROOT = Path(__file__).resolve().parents[2]
+BACKEND_ROOT = ROOT / "backend"
 
 
 class WhiteNoiseStaticFilesTests(SimpleTestCase):
@@ -24,7 +25,7 @@ class WhiteNoiseStaticFilesTests(SimpleTestCase):
 
     def test_static_root_and_production_whitenoise_storage_are_configured(self):
         self.assertTrue(settings.STATIC_ROOT)
-        self.assertEqual(Path(settings.STATIC_ROOT), ROOT / "var" / "static")
+        self.assertEqual(Path(settings.STATIC_ROOT), BACKEND_ROOT / "var" / "static")
         self.assertFalse(Path(settings.STATIC_ROOT).is_relative_to(ROOT / "userdata"))
         self.assertEqual(settings.STATIC_URL, "/static/")
         self.assertEqual(

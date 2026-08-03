@@ -27,7 +27,7 @@ except ImportError:
 if django_stubs_ext is not None:
     django_stubs_ext.monkeypatch()
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# Django runtime tree root.
 BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env()
 
@@ -74,7 +74,9 @@ def _secret_key(*, debug: bool) -> str:
 
 
 # User data directory for runtime data
-USERDATA_DIR = Path(env.path("SECOND_PASS_USERDATA_DIR", default=str(BASE_DIR / "userdata")))
+USERDATA_DIR = Path(
+    env.path("SECOND_PASS_USERDATA_DIR", default=str(BASE_DIR.parent / "userdata"))
+)
 RUNNING_TESTS = "test" in sys.argv or any(
     Path(argument).name.startswith("pytest") for argument in sys.argv
 ) or "pytest" in sys.modules
@@ -275,9 +277,12 @@ LOGGING = {
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "var" / "static"
-REACT_UI_DIST_DIR = BASE_DIR / "web" / "react" / "dist"
+PRODUCT_UI_DIR = BASE_DIR / "web" / "product_ui"
+PRODUCT_UI_ASSETS_DIR = PRODUCT_UI_DIR / "assets"
 STATICFILES_DIRS = (
-    [("react", REACT_UI_DIST_DIR)] if REACT_UI_DIST_DIR.is_dir() else []
+    [("product_ui/assets", PRODUCT_UI_ASSETS_DIR)]
+    if PRODUCT_UI_ASSETS_DIR.is_dir()
+    else []
 )
 STORAGES = {
     "default": {

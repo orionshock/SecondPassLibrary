@@ -20,7 +20,7 @@ from accounts.forms import FirstOwnerSetupForm
 
 
 REACT_BUILD_MISSING_MESSAGE = (
-    "React Product UI build is missing. Run 'npm.cmd run build' from web/react."
+    "React Product UI build is missing. Run 'npm.cmd --prefix frontend run build'."
 )
 
 
@@ -30,7 +30,7 @@ def react_app(request: HttpRequest, react_path: str = "") -> HttpResponse:
     if not request.user.is_authenticated:
         return redirect_to_login(request.get_full_path(), login_url="login")
 
-    index_path = settings.REACT_UI_DIST_DIR / "index.html"
+    index_path = settings.PRODUCT_UI_DIR / "index.html"
     try:
         index_html = index_path.read_text(encoding="utf-8")
     except (OSError, UnicodeError):

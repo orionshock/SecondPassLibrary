@@ -189,8 +189,8 @@ cleanup. The command is intended for host scheduling (cron, systemd timer, or
 equivalent); the application does not run it implicitly.
 
 ```powershell
-python manage.py cleanup_shelves
-python manage.py cleanup_shelves --apply
+python backend/manage.py cleanup_shelves
+python backend/manage.py cleanup_shelves --apply
 ```
 
 The default invocation is a dry run. It reports affected user-owned shelves and

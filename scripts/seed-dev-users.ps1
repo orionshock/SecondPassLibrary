@@ -2,6 +2,7 @@ $ErrorActionPreference = "Stop"
 
 $PythonExecutable = "python"
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
+$ManagePy = Join-Path $ProjectRoot "backend\manage.py"
 $SeedArgs = @("seed_dev_users")
 
 $env:DJANGO_SETTINGS_MODULE = "secondpass.settings"
@@ -22,7 +23,7 @@ $SeedArgs += $args
 
 Push-Location $ProjectRoot
 try {
-    & $PythonExecutable manage.py @SeedArgs
+    & $PythonExecutable $ManagePy @SeedArgs
     exit $LASTEXITCODE
 } finally {
     Pop-Location

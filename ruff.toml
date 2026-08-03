@@ -1,0 +1,6 @@
+src = ["backend"]
+
+extend-exclude = [
+    "backend/*/migrations",
+    "frontend",
+]

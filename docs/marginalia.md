@@ -407,7 +407,7 @@ still use a ready stage afterward. An applied stage whose file was already
 removed is unavailable; the bounded stored Apply result is not used to
 reconstruct an archive.
 
-`python manage.py cleanup_marginalia_import_stages` removes expired stages and
+`python backend/manage.py cleanup_marginalia_import_stages` removes expired stages and
 safe digest-named orphan files; `--dry-run` reports bounded counts without
 deleting. The command is repeat-safe and suitable for periodic host scheduling.
 Django does not schedule it. A weekly run is acceptable because runtime access

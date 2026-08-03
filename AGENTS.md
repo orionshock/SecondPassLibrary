@@ -22,11 +22,11 @@ Read `PROJECT.md` before editing. Use the focused documents under `docs/` for do
 ## Product and security boundaries
 
 - Keep REST/JSON APIs under `/api/v1/`. Never expose filesystem paths, storage identities, secrets, or authentication internals.
-- The Product UI is React under `web/react`.
+- The Product UI source is React under `frontend/`.
 - Use Vite, React Router, and Vitest for the React app. Frontend dependencies are acceptable when they solve established infrastructure problems; do not add GraphQL or a generated API client unless explicitly requested.
 - React routes and components must use the first-party TypeScript API package rather than ad hoc `fetch()` calls or raw API URLs. The package owns server-shape normalization and returns stable app-facing objects. React hooks may wrap it, but the package itself remains framework-light plain TypeScript.
 - Keep React layered: the app orchestrator owns bootstrap and the global frame; branch orchestrators own page assembly; regions own only their local operations; shared components stay server-blind. Communicate through explicit props, callbacks, outlet context, or stable contracts. Only `@second-pass/spl-api` may know server URLs or perform server communication.
-- Name feature route controllers `*Orchestrator`, major page sections `*PageRegion`, and reusable presentational pieces `*Component` (`*SubComponent` only when clearly subordinate). Promote genuinely cross-feature behavior to focused modules under `web/react/src/shared`; do not bury shared behavior in Profile or promote feature-only rules merely to reduce file count.
+- Name feature route controllers `*Orchestrator`, major page sections `*PageRegion`, and reusable presentational pieces `*Component` (`*SubComponent` only when clearly subordinate). Promote genuinely cross-feature behavior to focused modules under `frontend/src/shared`; do not bury shared behavior in Profile or promote feature-only rules merely to reduce file count.
 - Vite is the primary Product UI development surface and proxies same-origin-style requests to Django. Production and Docker React integration are deferred.
 - React owns `/` and intended Product UI deep links after setup and login. Only first-time setup, `/login/`, `/logout/`, and Django Admin remain Django-rendered application surfaces. Do not add separate Product UI mounts, DRF browsable pages, or Django-rendered Reader Client authorization pages.
 - Selected reader-client APIs use bearer tokens. Do not redesign authentication unless asked.
@@ -55,11 +55,11 @@ Unless explicitly requested, do not add:
 
 ## Tests and verification
 
-- For meaningful code changes, run `python manage.py check` and focused pytest coverage for the changed area. Use the full suite only when the scope or risk warrants it.
+- For meaningful code changes, run `python backend/manage.py check` and focused pytest coverage for the changed area. Use the full suite only when the scope or risk warrants it.
 - Classify changed tests as `invariant`, `contract`, `regression`, or `implementation detail` in the final report.
 - Do not weaken invariant or contract tests without explicitly explaining why.
 - Tests cover runtime behavior, not copy or prose. When changing a suite, remove copy-only coverage.
-- Keep every React/Vitest test under `web/react/src/__tests__`; do not colocate Vitest files with runtime components or SDK source.
+- Keep every React/Vitest test under `frontend/src/__tests__`; do not colocate Vitest files with runtime components or SDK source.
 - Do not treat local helper scripts as production contracts.
 - Docs-only changes do not require application tests.
 - Do not claim the full suite passed unless it was actually run; report focused and skipped verification accurately.

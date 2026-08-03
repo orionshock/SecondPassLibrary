@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -20,7 +21,7 @@ class ReactRootRouteContractTests(TestCase):
     def _built_dist(self, directory: str) -> Path:
         dist = Path(directory)
         (dist / "index.html").write_text(
-            '<!doctype html><div id="root"></div><script src="/static/react/assets/app.js"></script>',
+            '<!doctype html><div id="root"></div><script src="/static/product_ui/assets/app.js"></script>',
             encoding="utf-8",
         )
         return dist
@@ -36,7 +37,7 @@ class ReactRootRouteContractTests(TestCase):
         self.client.force_login(self.owner)
         with TemporaryDirectory() as directory:
             dist = self._built_dist(directory)
-            with override_settings(REACT_UI_DIST_DIR=dist):
+            with override_settings(PRODUCT_UI_DIR=dist):
                 root = self.client.get("/")
                 deep_link = self.client.get("/library/books/example/")
                 marginalia_link = self.client.get("/marginalia")
@@ -61,11 +62,11 @@ class ReactRootRouteContractTests(TestCase):
         self.client.force_login(self.owner)
         with TemporaryDirectory() as directory:
             missing_dist = Path(directory) / "missing"
-            with override_settings(REACT_UI_DIST_DIR=missing_dist):
+            with override_settings(PRODUCT_UI_DIR=missing_dist):
                 response = self.client.get("/")
 
         self.assertEqual(response.status_code, 503)
-        self.assertContains(response, "npm.cmd run build", status_code=503)
+        self.assertContains(response, "npm.cmd --prefix frontend run build", status_code=503)
         self.assertNotContains(response, str(missing_dist), status_code=503)
 
     def test_service_routes_are_not_captured_by_react(self):
@@ -91,9 +92,24 @@ class ReactRootRouteContractTests(TestCase):
             asset = dist / "assets" / "app.js"
             asset.parent.mkdir()
             asset.write_text("export {};", encoding="utf-8")
-            with override_settings(STATICFILES_DIRS=[("react", dist)]):
+            with override_settings(
+                STATICFILES_DIRS=[("product_ui/assets", dist / "assets")]
+            ):
                 discovered = FileSystemFinder().find(
-                    str(Path("react") / "assets" / "app.js")
+                    f"product_ui/assets{os.sep}app.js"
                 )
 
         self.assertEqual(Path(discovered), asset)
+
+    def test_react_index_is_not_a_collectstatic_input(self):
+        with TemporaryDirectory() as directory:
+            product_ui = Path(directory)
+            assets = product_ui / "assets"
+            assets.mkdir()
+            (product_ui / "index.html").write_text("<!doctype html>", encoding="utf-8")
+            with override_settings(
+                STATICFILES_DIRS=[("product_ui/assets", assets)]
+            ):
+                discovered = FileSystemFinder().find("product_ui/index.html")
+
+        self.assertFalse(discovered)

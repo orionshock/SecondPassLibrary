@@ -4,7 +4,11 @@ import react from "@vitejs/plugin-react";
 const djangoTarget = "http://127.0.0.1:8000";
 
 export default defineConfig(({ command }) => ({
-  base: command === "build" ? "/static/react/" : "/",
+  base: command === "build" ? "/static/product_ui/" : "/",
+  build: {
+    outDir: "../backend/web/product_ui",
+    emptyOutDir: true,
+  },
   plugins: [react()],
   test: {
     include: [

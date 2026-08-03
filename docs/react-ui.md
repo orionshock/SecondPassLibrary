@@ -2,11 +2,11 @@
 
 > **Document purpose:** This is the running record of the current React Product UI: implemented surfaces, active behavior, architecture, and deferred work. Durable cross-page rules belong in `docs/react-ui-rules.md`.
 
-The Product UI lives in `web/react`.
+The Product UI source lives in `frontend/`. Production builds write the runtime artifact to `backend/web/product_ui/`.
 
 ## Development
 
-Node.js 22.22.0 or newer is required. Run Django on port 8000 and the Product UI Vite server on port 5174. Port 5173 remains available for the standalone Reading Client. From `web/react`, run `npm install` and `npm run dev`. Vite proxies `/api`, `/media`, `/admin`, `/login`, `/logout`, and `/setup` to Django, so the app uses Django session authentication through same-origin-style URLs.
+Node.js 22.22.0 or newer is required. Run Django on port 8000 with `python backend/manage.py runserver` and the Product UI Vite server on port 5174 with `npm --prefix frontend run dev`. Port 5173 remains available for the standalone Reading Client. Vite proxies `/.well-known`, `/api`, `/media`, `/admin`, `/login`, `/logout`, `/setup`, and `/static` to Django, so the app uses Django session authentication through same-origin-style URLs.
 
 Vite is the primary development surface. Django serves the authenticated React shell at `/` and intended Product UI deep links when a local build exists. Before bootstrap, these routes redirect to `/setup/`; afterward unauthenticated requests redirect to `/login/`.
 
@@ -20,16 +20,18 @@ The current Dashboard presentation is cover-forward: recent Sessions use native 
 
 ## Production integration
 
-The multi-stage Docker image installs the locked npm workspace, builds the React
-application, and supplies its output to Django static collection. The final
-runtime image retains the built shell and collected assets, but not Node,
-frontend source, or development dependencies.
+The multi-stage Docker image installs the locked npm workspace from `frontend/`,
+builds the React application, copies its output to `web/product_ui/` in the
+prepared backend runtime tree, and supplies its hashed assets to Django static
+collection. The final runtime image retains `web/product_ui/index.html` and the
+collected assets, but not a second asset copy, Node, frontend source, or
+development dependencies.
 
 First-time setup, `/login/`, `/logout/`, and the Django `/admin/` service hatch are the only retained Django-rendered application surfaces. DRF browsable pages and `/api-auth/` are disabled. The old Reader Client authorization webpage is retired. React pairing approval uses authenticated JSON endpoints under `/api/v1/client-api/`; token delivery remains confined to external-client polling. Dashboard, library/catalog, books, groups, shelves, users, imports, and Product UI server settings are React scope.
 
 ## Server boundary
 
-`web/react/packages/spl-api` is the first-party, framework-light TypeScript server communication package. It owns `fetch`, credentials, JSON parsing, structured error normalization, pagination types, server response mapping, and domain calls. React routes, components, and hooks consume its stable app-facing objects; they do not scatter raw `fetch()` calls or API URLs.
+`frontend/packages/spl-api` is the first-party, framework-light TypeScript server communication package. It owns `fetch`, credentials, JSON parsing, structured error normalization, pagination types, server response mapping, and domain calls. React routes, components, and hooks consume its stable app-facing objects; they do not scatter raw `fetch()` calls or API URLs.
 
 SDK errors expose operation fields with app-facing camelCase names. Wire field names remain inside the SDK. Local form validation uses the React shared validation error rather than manufacturing an HTTP `ApiError`. Text returned in API payloads may be rendered normally through React's escaped text rendering; never inject API strings as raw HTML. The source boundary check enforces communication and field-name hygiene, not distrust of returned payload values.
 
@@ -183,4 +185,4 @@ Use the shared `AddIconButton` and `RemoveIconButton` for compact draft-list add
 Shared text and icon buttons expose small/medium sizing and semantic tone props. Page-level create/save actions retain primary emphasis, manage/edit and cancel actions use secondary emphasis, destructive text actions use danger, and compact row/pager controls use the small size.
 Text-like inputs, native selects, and textareas share a React-shell-scoped dark form-control treatment with consistent medium sizing, placeholder, focus, disabled, and invalid states. Native selects retain keyboard behavior while using a consistent dark menu and chevron treatment; pager page-size selection uses the compact control size. File inputs and checkbox controls keep their purpose-specific native treatments.
 
-App and feature Vitest files live together under `web/react/src/__tests__`; do not colocate them with runtime components or create component-specific test directories. SDK contract tests live under `web/react/packages/spl-api/src/__tests__`. `vite.config.ts` discovers both locations without duplicate execution. The workspace recommends the Vitest Explorer extension so the suite is available in VS Code's Testing panel; `npm run test:vitest` provides its watch-mode command.
+App and feature Vitest files live together under `frontend/src/__tests__`; do not colocate them with runtime components or create component-specific test directories. SDK contract tests live under `frontend/packages/spl-api/src/__tests__`. `vite.config.ts` discovers both locations without duplicate execution. The workspace recommends the Vitest Explorer extension so the suite is available in VS Code's Testing panel; `npm --prefix frontend run test:vitest` provides its watch-mode command.

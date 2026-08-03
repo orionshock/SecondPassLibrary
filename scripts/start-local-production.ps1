@@ -5,9 +5,12 @@ $NpmExecutable = "npm.cmd"
 $UvicornHost = "127.0.0.1"
 $UvicornPort = 8000
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
-$ReactRoot = Join-Path $ProjectRoot "web\react"
-$ReactPackage = Join-Path $ReactRoot "package.json"
-$ReactVitePackage = Join-Path $ReactRoot "node_modules\vite\package.json"
+$BackendRoot = Join-Path $ProjectRoot "backend"
+$FrontendRoot = Join-Path $ProjectRoot "frontend"
+$ManagePy = Join-Path $BackendRoot "manage.py"
+$ProductUiAssets = Join-Path $BackendRoot "web\product_ui\assets"
+$ReactPackage = Join-Path $FrontendRoot "package.json"
+$ReactVitePackage = Join-Path $FrontendRoot "node_modules\vite\package.json"
 
 $env:DJANGO_SETTINGS_MODULE = "secondpass.settings"
 $env:DJANGO_DEBUG = "0"
@@ -26,14 +29,14 @@ $env:SECOND_PASS_USERDATA_DIR = Join-Path $ProjectRoot "userdata"
 Push-Location $ProjectRoot
 try {
     if (-not (Test-Path -LiteralPath $ReactPackage -PathType Leaf)) {
-        Write-Error "React workspace is missing at '$ReactRoot'."
+        Write-Error "React workspace is missing at '$FrontendRoot'."
     }
 
     if (-not (Test-Path -LiteralPath $ReactVitePackage -PathType Leaf)) {
-        Write-Error "React dependencies are missing. Run 'npm.cmd install' from '$ReactRoot'."
+        Write-Error "React dependencies are missing. Run 'npm.cmd install' from '$FrontendRoot'."
     }
 
-    Push-Location $ReactRoot
+    Push-Location $FrontendRoot
     try {
         & $NpmExecutable run build
         if ($LASTEXITCODE -ne 0) {
@@ -43,19 +46,22 @@ try {
         Pop-Location
     }
 
-    & $PythonExecutable manage.py check --deploy
+    & $PythonExecutable $ManagePy check --deploy
     if ($LASTEXITCODE -ne 0) {
         exit $LASTEXITCODE
     }
 
-    & $PythonExecutable manage.py migrate --noinput
+    & $PythonExecutable $ManagePy migrate --noinput
     if ($LASTEXITCODE -ne 0) {
         exit $LASTEXITCODE
     }
 
-    & $PythonExecutable manage.py collectstatic --noinput
+    & $PythonExecutable $ManagePy collectstatic --noinput
     if ($LASTEXITCODE -ne 0) {
         exit $LASTEXITCODE
+    }
+    if (Test-Path -LiteralPath $ProductUiAssets -PathType Container) {
+        Remove-Item -LiteralPath $ProductUiAssets -Recurse -Force
     }
 
     $UvicornArgs = @(
@@ -66,8 +72,13 @@ try {
         "--no-access-log"
     )
 
-    & $PythonExecutable -m uvicorn @UvicornArgs
-    exit $LASTEXITCODE
+    Push-Location $BackendRoot
+    try {
+        & $PythonExecutable -m uvicorn @UvicornArgs
+        exit $LASTEXITCODE
+    } finally {
+        Pop-Location
+    }
 } finally {
     Pop-Location
 }

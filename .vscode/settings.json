@@ -2,6 +2,9 @@
   "python.analysis.diagnosticMode": "workspace",
   "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
   "python.envFile": "${workspaceFolder}/.env",
+  "python.analysis.extraPaths": [
+    "${workspaceFolder}/backend"
+  ],
   "python.linting.enabled": true,
   "python.terminal.activateEnvironment": true,
   "python.testing.cwd": "${workspaceFolder}",
@@ -11,6 +14,7 @@
   ],
   "python.testing.unittestEnabled": false,
   "python.testing.pytestEnabled": true,
+  "vitest.rootConfig": "frontend/vite.config.ts",
   "python-envs.pythonProjects": [
     {
       "path": ".",

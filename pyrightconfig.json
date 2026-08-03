@@ -4,13 +4,13 @@
   "venvPath": ".",
   "venv": ".venv",
   "include": [
-    "accounts",
-    "core",
-    "library",
+    "backend",
     "reading",
-    "secondpass",
-    "shelves",
-    "web"
+    "tests",
+    "tools"
+  ],
+  "extraPaths": [
+    "backend"
   ],
   "exclude": [
     "**/.*",

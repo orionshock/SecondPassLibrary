@@ -40,9 +40,10 @@ tests/
 
 # Frontend local output and caches
 node_modules/
-web/react/node_modules/
-web/react/dist/
-web/react/coverage/
+frontend/node_modules/
+frontend/coverage/
+backend/web/product_ui/
+backend/var/
 *.tsbuildinfo
 *.map
 npm-debug.log*

@@ -2,8 +2,10 @@ $ErrorActionPreference = "Stop"
 
 $PythonExecutable = "python"
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
-$ReactRoot = Join-Path $ProjectRoot "web\react"
-$ViteEntrypoint = Join-Path $ReactRoot "node_modules\vite\bin\vite.js"
+$BackendRoot = Join-Path $ProjectRoot "backend"
+$FrontendRoot = Join-Path $ProjectRoot "frontend"
+$ManagePy = Join-Path $BackendRoot "manage.py"
+$ViteEntrypoint = Join-Path $FrontendRoot "node_modules\vite\bin\vite.js"
 
 $env:DJANGO_SETTINGS_MODULE = "secondpass.settings"
 $env:DJANGO_DEBUG = "1"
@@ -23,27 +25,27 @@ $ViteProcess = $null
 
 Push-Location $ProjectRoot
 try {
-    & $PythonExecutable manage.py migrate --noinput
+    & $PythonExecutable $ManagePy migrate --noinput
     if ($LASTEXITCODE -ne 0) {
         exit $LASTEXITCODE
     }
 
     if (-not (Test-Path -LiteralPath $ViteEntrypoint -PathType Leaf)) {
-        Write-Error "React dependencies are missing. Run 'npm.cmd install' from '$ReactRoot'."
+        Write-Error "React dependencies are missing. Run 'npm.cmd install' from '$FrontendRoot'."
     }
 
     $NodeExecutable = (Get-Command node -ErrorAction Stop).Source
     $ViteProcess = Start-Process `
         -FilePath $NodeExecutable `
         -ArgumentList $ViteEntrypoint `
-        -WorkingDirectory $ReactRoot `
+        -WorkingDirectory $FrontendRoot `
         -NoNewWindow `
         -PassThru
 
     Write-Host "React UI: http://localhost:5174"
     Write-Host "Django:  http://localhost:8000"
 
-    & $PythonExecutable manage.py runserver @args
+    & $PythonExecutable $ManagePy runserver @args
     exit $LASTEXITCODE
 } finally {
     if ($null -ne $ViteProcess -and -not $ViteProcess.HasExited) {

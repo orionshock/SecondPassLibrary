@@ -26,4 +26,4 @@ Principles:
 
 The current implementation is EPUB-only. Do not add PDF or speculative format support unless explicitly requested.
 
-The Product UI is React under `web/react` and owns `/`. Only bootstrap setup, login/logout, and Django Admin remain Django-rendered application surfaces.
+The Product UI source is React under `frontend/` and owns `/`. Its production artifact is built into `backend/web/product_ui/`. Only bootstrap setup, login/logout, and Django Admin remain Django-rendered application surfaces.

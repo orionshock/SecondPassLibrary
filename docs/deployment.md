@@ -33,8 +33,11 @@ Uvicorn run as the non-root `secondpass` user. Uvicorn serves
 `secondpass.asgi:application` with exactly one worker. Do not scale this service
 or increase its worker count while it uses SQLite.
 
-The multi-stage image builds React and runs `collectstatic`. WhiteNoise serves
-that immutable collected tree. Reverse proxy and TLS configuration remain
+The multi-stage image builds only `frontend/`, copies `backend/` into a prepared
+runtime tree, places the React artifact at `web/product_ui/`, and runs
+`collectstatic`. It then drops the source static directories and the copied
+Product UI asset directory, retaining the Product UI index and one immutable
+collected asset tree for WhiteNoise. Reverse proxy and TLS configuration remain
 operator-owned.
 
 From the repository root:

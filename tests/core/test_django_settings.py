@@ -21,6 +21,7 @@ from secondpass.settings import (
 
 
 ROOT = Path(__file__).resolve().parents[2]
+BACKEND_ROOT = ROOT / "backend"
 
 
 @pytest.mark.django_db
@@ -38,7 +39,7 @@ class DjangoSettingsContractTests(SimpleTestCase):
                 env[key] = value
         return subprocess.run(
             [sys.executable, "-c", "import secondpass.settings"],
-            cwd=ROOT,
+            cwd=BACKEND_ROOT,
             env=env,
             capture_output=True,
             text=True,
@@ -118,8 +119,17 @@ class DjangoSettingsContractTests(SimpleTestCase):
             self.assertIs(env.bool("DJANGO_SECURE_COOKIES", default=False), True)
 
     def test_static_root_is_generated_artifact_outside_userdata(self):
-        self.assertEqual(Path(settings.STATIC_ROOT), ROOT / "var" / "static")
+        self.assertEqual(Path(settings.STATIC_ROOT), BACKEND_ROOT / "var" / "static")
         self.assertNotEqual(Path(settings.STATIC_ROOT).parent, settings.USERDATA_DIR)
+
+    def test_product_ui_uses_the_canonical_backend_artifact_path(self):
+        self.assertEqual(
+            Path(settings.PRODUCT_UI_DIR), BACKEND_ROOT / "web" / "product_ui"
+        )
+        self.assertEqual(
+            Path(settings.PRODUCT_UI_ASSETS_DIR),
+            BACKEND_ROOT / "web" / "product_ui" / "assets",
+        )
 
     def test_userdata_dir_supports_path_operations(self):
         self.assertEqual(Path(settings.USERDATA_DIR / "db"), Path(settings.USERDATA_DIR) / "db")

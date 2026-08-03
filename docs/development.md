@@ -22,7 +22,7 @@ sidecar cover takes precedence over an embedded cover; arbitrary sidecar assets
 are not imported. See [Imports](imports.md) and
 [Metadata and identifiers](metadata.md) for the current precedence rules.
 
-The React Product UI has its npm workspace under `web/react`; see
+The React Product UI has its npm workspace under `frontend/`; see
 [React Product UI](react-ui.md). There is no repository-root npm project.
 
 ## Pre-release migration reset
@@ -118,8 +118,8 @@ WhiteNoise serves packaged Product UI assets under `/static/` only. Django
 serves only the public cover namespace, `/media/covers/`; stored EPUB files,
 imports, exports, marginalia, and other protected user data are never served as
 raw media URLs.
-Production `collectstatic` output goes to `var/static/`, which is generated and
-can be rebuilt. Back up `userdata/`, not `var/static/`.
+Production `collectstatic` output goes to `backend/var/static/`, which is generated and
+can be rebuilt. Back up `userdata/`, not `backend/var/static/`.
 
 Docker environment examples live at `docker/.env.example`. The local
 PowerShell helpers define their own environment in the script files.
@@ -131,9 +131,8 @@ PowerShell helpers define their own environment in the script files.
 ```
 
 The script sets `DJANGO_DEBUG=1`, disables WhiteNoise runtime caching for faster
-template/static iteration, runs `python manage.py migrate --noinput`, and then
-starts Django on port 8000 and the Product UI Vite server on port 5174. Run `npm.cmd install` from
-`web/react` before using it for the first time. Vite uses the proxy configuration
+template/static iteration, runs `python backend/manage.py migrate --noinput`, and then
+starts Django on port 8000 and the Product UI Vite server on port 5174. Run `npm.cmd --prefix frontend install` before using it for the first time. Vite uses the proxy configuration
 documented in [React Product UI](react-ui.md) and is stopped when the Django
 process exits. The script's Python executable and application environment are
 defined in the script and do not inherit configuration choices from the calling
@@ -145,15 +144,16 @@ example:
 .\scripts\start-dev.ps1 --noreload
 ```
 
-Raw `python manage.py runserver` uses the normal settings defaults. Because
+Raw `python backend/manage.py runserver` uses the normal settings defaults. Because
 `DEBUG` defaults to false, local development behavior requires either the
 development startup script or an explicit `DJANGO_DEBUG=1` in the shell before
 running raw `runserver`.
 
 For production-likeness, use `.\scripts\start-local-production.ps1`; it keeps
 `DJANGO_DEBUG=0`, builds the React workspace, runs `collectstatic`, and uses
-WhiteNoise in manifest-backed mode. It requires `npm.cmd install` to have been
-run from `web/react`, but it does not run a Vite or Node server. It runs one
+WhiteNoise in manifest-backed mode. After collection it retains the Product UI
+index and removes the redundant source-asset copy. It requires `npm.cmd install` to have been
+run for `frontend/`, but it does not run a Vite or Node server. It runs one
 direct Uvicorn worker against
 `secondpass.asgi:application`, matching the Docker application target and
 runtime path. Access logs are disabled in both deployment-like paths. Static
@@ -192,9 +192,9 @@ control after enablement; disabling is a Django admin recovery flow that
 consolidates custom group state into Public/Common Room. Once an active Owner
 exists, `/setup/` is disabled and normal Product UI login at `/login/` is used.
 
-Raw `python manage.py runserver` remains available, but it does not create or
+Raw `python backend/manage.py runserver` remains available, but it does not create or
 migrate the database schema. If using raw `runserver`, set `DJANGO_DEBUG=1` for
-local debug/static/media behavior and run `python manage.py migrate --noinput`
+local debug/static/media behavior and run `python backend/manage.py migrate --noinput`
 first. The setup wizard assumes migrations already exist; it does not create
 database tables during an HTTP request.
 
@@ -217,7 +217,7 @@ session auth with CSRF.
 
 ## Product UI
 
-The Product UI is the Vite React workspace under `web/react`. Django serves the
+The Product UI is the Vite React workspace under `frontend/`. Django serves the
 authenticated React shell at `/`; ordinary development should use the Vite
 server on port 5174.
 
@@ -265,15 +265,14 @@ Practical notes:
 ## Run Checks And Tests
 
 ```powershell
-python manage.py check
+python backend/manage.py check
 python -m pytest
-npm run typecheck
+npm --prefix frontend run build
 ```
 
-`npm run typecheck` runs Pyright with a conservative Django-friendly baseline.
-It is intended to catch ordinary Python mistakes without treating Django's
-dynamic model/runtime attributes as hard errors.
-If PowerShell blocks `npm.ps1`, use `npm.cmd run typecheck`.
+Pyright uses the checked-in `pyrightconfig.json` with `backend/` as the Python
+import root. The frontend production build runs the TypeScript project checks
+before Vite emits the Product UI artifact.
 
 Prefer pytest for focused test runs. Run the smallest package, module, class,
 or test that covers the change. Broad suites are intentional, not the default.
@@ -390,8 +389,8 @@ changes. Dry-run is the default; add `--apply` to remove those rows and repair
 remaining positions:
 
 ```powershell
-python manage.py cleanup_shelves
-python manage.py cleanup_shelves --apply
+python backend/manage.py cleanup_shelves
+python backend/manage.py cleanup_shelves --apply
 docker compose -f docker/compose.yml exec -T secondpasslibrary python manage.py cleanup_shelves
 docker compose -f docker/compose.yml exec -T secondpasslibrary python manage.py cleanup_shelves --apply
 ```
@@ -411,8 +410,8 @@ scheduler is optional architecture, not a current dependency.
 Inspect or remove expired canonical Marginalia import stages:
 
 ```powershell
-python manage.py cleanup_marginalia_import_stages --dry-run
-python manage.py cleanup_marginalia_import_stages
+python backend/manage.py cleanup_marginalia_import_stages --dry-run
+python backend/manage.py cleanup_marginalia_import_stages
 ```
 
 Stages live under `userdata/imports/staged/marginalia/`. Runtime token access
@@ -426,9 +425,9 @@ Import a single local EPUB, a ZIP archive, or a non-recursive directory
 (operator-only host/container path):
 
 ```powershell
-python manage.py import_library "path\to\book.epub"
-python manage.py import_library "path\to\books.zip"
-python manage.py import_library "path\to\directory"
+python backend/manage.py import_library "path\to\book.epub"
+python backend/manage.py import_library "path\to\books.zip"
+python backend/manage.py import_library "path\to\directory"
 ```
 
 The command shares the same import services as Product/API imports, supports ZIP

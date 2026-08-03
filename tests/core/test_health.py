@@ -20,7 +20,7 @@ class HealthCheckContractTests(TestCase):
             userdata, react_dist = self._ready_paths(directory)
             with override_settings(
                 USERDATA_DIR=userdata,
-                REACT_UI_DIST_DIR=react_dist,
+                PRODUCT_UI_DIR=react_dist,
             ):
                 response = self.client.get("/api/v1/health/")
 
@@ -43,7 +43,7 @@ class HealthCheckContractTests(TestCase):
             missing_dist = Path(directory) / "missing-react-dist"
             with override_settings(
                 USERDATA_DIR=userdata,
-                REACT_UI_DIST_DIR=missing_dist,
+                PRODUCT_UI_DIR=missing_dist,
             ):
                 response = self.client.get("/api/v1/health/")
 
@@ -56,7 +56,7 @@ class HealthCheckContractTests(TestCase):
             with (
                 override_settings(
                     USERDATA_DIR=userdata,
-                    REACT_UI_DIST_DIR=react_dist,
+                    PRODUCT_UI_DIR=react_dist,
                 ),
                 patch("core.views._database_is_ready", return_value=False),
             ):
@@ -71,7 +71,7 @@ class HealthCheckContractTests(TestCase):
             with (
                 override_settings(
                     USERDATA_DIR=userdata,
-                    REACT_UI_DIST_DIR=react_dist,
+                    PRODUCT_UI_DIR=react_dist,
                 ),
                 patch("core.views.os.access", return_value=False),
             ):

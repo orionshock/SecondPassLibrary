@@ -99,7 +99,7 @@ fields owned by `Book`.
 
 ## Operator import command
 
-`python manage.py import_library <path>` imports:
+`python backend/manage.py import_library <path>` imports:
 
 - one local `.epub`
 - one local `.zip`
