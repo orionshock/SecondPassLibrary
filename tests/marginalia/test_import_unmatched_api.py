@@ -261,7 +261,7 @@ class MarginaliaImportUnmatchedAPITests(IsolatedUserdataMixin, APITestCase):
             exported = parse_archive(zip_file.read(zip_file.namelist()[0]))
         self.assertEqual(exported.books[0].file_hash, f"sha256:{'b' * 64}")
 
-    def test_download_keeps_ready_stage_applicable_and_applied_missing_file_is_unusable(
+    def test_applied_stage_retains_download_when_unmatched_sessions_remain(
         self,
     ):
         preview = self.preview(self.mixed_payload())
@@ -277,11 +277,114 @@ class MarginaliaImportUnmatchedAPITests(IsolatedUserdataMixin, APITestCase):
                 },
                 format="json",
             )
-        unavailable = self.download(preview["import_token"])
+        remaining = self.download(preview["import_token"])
 
         self.assertEqual(applied.status_code, status.HTTP_200_OK)
-        self.assertEqual(unavailable.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertTrue(applied.data["unmatched_download_available"])
+        self.assertEqual(remaining.status_code, status.HTTP_200_OK)
         self.assertEqual(ReadingSession.objects.count(), 1)
+
+    def test_apply_time_inaccessible_session_downloads_staged_data_and_reimports(self):
+        second_group = LibraryGroup.objects.create(name="Second group")
+        LibraryGroupMembership.objects.create(user=self.user, group=second_group)
+        lost_book = Book.objects.create(title="Hidden live title", checksum="c" * 64)
+        BookGroupAssignment.objects.create(book=lost_book, group=second_group)
+        payload = archive_payload(
+            file_hash=f"sha256:{'a' * 64}",
+            sessions=[archive_session(source_id="visible")],
+        )
+        payload["books"].append(
+            _archive_book(
+                file_hash=f"sha256:{'c' * 64}",
+                title="Staged retry title",
+                sessions=[archive_session(source_id="lost")],
+            )
+        )
+        payload["books"][1]["authors"] = ["Staged author"]
+        preview = self.preview(payload)
+        LibraryGroupMembership.objects.filter(
+            user=self.user,
+            group=second_group,
+        ).delete()
+
+        applied = self.client.post(
+            self.apply_url,
+            {
+                "import_token": preview["import_token"],
+                "reading_sessions": [
+                    {"candidate_id": "reading-session-000001"},
+                    {"candidate_id": "reading-session-000002"},
+                ],
+            },
+            format="json",
+        )
+        downloaded = self.download(preview["import_token"])
+
+        self.assertEqual(applied.status_code, status.HTTP_200_OK)
+        self.assertEqual(applied.data["imported_reading_session_count"], 1)
+        self.assertEqual(applied.data["unmatched_reading_session_count"], 1)
+        self.assertEqual(downloaded.status_code, status.HTTP_200_OK)
+        with ZipFile(BytesIO(downloaded.content)) as zip_file:
+            self.assertEqual(len(zip_file.namelist()), 1)
+            raw = zip_file.read(zip_file.namelist()[0])
+        exported = parse_archive(raw)
+        self.assertEqual(exported.books[0].title, "Staged retry title")
+        self.assertEqual(exported.books[0].authors, ("Staged author",))
+        self.assertNotIn("Hidden live title", raw.decode("utf-8"))
+        self.assertNotIn(str(lost_book.pk), raw.decode("utf-8"))
+        self.assertFalse(ReadingSession.objects.filter(book=lost_book).exists())
+
+        LibraryGroupMembership.objects.create(user=self.user, group=second_group)
+        retried = self.preview(json.loads(raw))
+        self.assertEqual(retried["books"][0]["match"]["status"], "matched")
+        retry_apply = self.client.post(
+            self.apply_url,
+            {
+                "import_token": retried["import_token"],
+                "reading_sessions": [{"candidate_id": "reading-session-000001"}],
+            },
+            format="json",
+        )
+        self.assertEqual(retry_apply.status_code, status.HTTP_200_OK)
+        self.assertTrue(ReadingSession.objects.filter(book=lost_book).exists())
+
+    def test_apply_time_access_loss_downloads_only_selected_sessions_in_stage_order(self):
+        payload = archive_payload(
+            file_hash=f"sha256:{'a' * 64}",
+            sessions=[
+                archive_session(source_id="first"),
+                archive_session(source_id="unselected"),
+                archive_session(source_id="third"),
+            ],
+        )
+        preview = self.preview(payload)
+        LibraryGroupMembership.objects.filter(user=self.user, group=self.group).delete()
+
+        applied = self.client.post(
+            self.apply_url,
+            {
+                "import_token": preview["import_token"],
+                "reading_sessions": [
+                    {"candidate_id": "reading-session-000003"},
+                    {"candidate_id": "reading-session-000001"},
+                ],
+            },
+            format="json",
+        )
+        downloaded = self.download(preview["import_token"])
+
+        self.assertEqual(applied.status_code, status.HTTP_200_OK)
+        self.assertEqual(applied.data["unmatched_reading_session_count"], 2)
+        with ZipFile(BytesIO(downloaded.content)) as zip_file:
+            exported = [
+                parse_archive(zip_file.read(name)).books[0].reading_sessions[0]
+                for name in zip_file.namelist()
+            ]
+        self.assertEqual(
+            [session.source_reading_session_id for session in exported],
+            ["first", "third"],
+        )
+        self.assertEqual(ReadingSession.objects.count(), 0)
 
     def test_invalid_foreign_expired_and_missing_file_stages_are_equivalent(self):
         previews = [

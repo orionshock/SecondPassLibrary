@@ -119,10 +119,11 @@ class MarginaliaImportPreviewAPITests(IsolatedUserdataMixin, APITestCase):
         self.assertNotIn("path", json.dumps(payload).lower())
         self.assertNotIn("download_url", json.dumps(payload))
 
-    def test_unmatched_and_inaccessible_books_remain_reviewable_but_not_importable(
-        self,
-    ):
-        response = self.post_preview(archive_payload(file_hash=f"sha256:{'b' * 64}"))
+    def test_inaccessible_book_is_unmatched_with_staged_metadata_only(self):
+        staged = archive_payload(file_hash=f"sha256:{'b' * 64}")
+        staged["books"][0]["title"] = "Staged hidden title"
+        staged["books"][0]["authors"] = ["Staged author"]
+        response = self.post_preview(staged)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertFalse(response.data["can_apply"])
@@ -131,9 +132,26 @@ class MarginaliaImportPreviewAPITests(IsolatedUserdataMixin, APITestCase):
         self.assertEqual(
             response.data["unmatched_downloadable_reading_session_count"], 1
         )
-        self.assertEqual(response.data["books"][0]["match"], {"status": "unmatched"})
+        book = response.data["books"][0]
+        self.assertEqual(
+            book["match"],
+            {"status": "unmatched", "reason": "book_inaccessible"},
+        )
+        self.assertEqual(book["title"], "Staged hidden title")
+        self.assertEqual(book["authors"], ["Staged author"])
+        self.assertNotIn(str(self.hidden_book.pk), json.dumps(response.data))
+        self.assertNotIn(self.hidden_book.title, json.dumps(response.data))
         self.assertFalse(
             response.data["books"][0]["reading_sessions"][0]["will_import"]
+        )
+
+    def test_missing_book_has_distinct_unmatched_reason(self):
+        response = self.post_preview(archive_payload(file_hash=f"sha256:{'c' * 64}"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["books"][0]["match"],
+            {"status": "unmatched", "reason": "not_found"},
         )
 
     def test_empty_policy_defaults_to_exclusion_and_opt_in_includes(self):
@@ -208,7 +226,7 @@ class MarginaliaImportPreviewAPITests(IsolatedUserdataMixin, APITestCase):
         self.assertEqual(ImportStage.objects.count(), 0)
         self.assertEqual(set(import_stage_root().glob("*.json")), staged_files_before)
 
-    def test_duplicate_accessible_library_hash_is_integrity_failure(self):
+    def test_ambiguous_accessible_hash_is_unmatched_and_not_selectable(self):
         duplicate_rows = [
             SimpleNamespace(pk="one", checksum="a" * 64),
             SimpleNamespace(pk="two", checksum="a" * 64),
@@ -222,8 +240,13 @@ class MarginaliaImportPreviewAPITests(IsolatedUserdataMixin, APITestCase):
                 archive_payload(file_hash=f"sha256:{'a' * 64}")
             )
 
-        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
-        self.assertEqual(ImportStage.objects.count(), 0)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["books"][0]["match"],
+            {"status": "unmatched", "reason": "ambiguous_match"},
+        )
+        self.assertFalse(response.data["books"][0]["reading_sessions"][0]["will_import"])
+        self.assertEqual(ImportStage.objects.count(), 1)
 
     def test_session_only_authentication(self):
         self.client.logout()

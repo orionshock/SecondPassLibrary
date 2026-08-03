@@ -1,11 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createApiClient, type ApiClient, type AttachmentApiClient, type AttachmentDownload } from "../client";
+import { type ApiClient, type AttachmentApiClient, type AttachmentDownload } from "../client";
 import { ApiError } from "../errors";
 import {
   applyMarginaliaImport,
   downloadUnmatchedMarginaliaImport,
-  MarginaliaImportAccessError,
   previewMarginaliaImport,
 } from "../marginaliaImport";
 
@@ -45,7 +44,7 @@ const previewResponse = {
       file_hash: "sha256:two",
       title: "Missing Book",
       authors: [],
-      match: { status: "unmatched" as const },
+      match: { status: "unmatched" as const, reason: "book_inaccessible" as const },
       reading_sessions: [{
         candidate_id: "reading-session-000002",
         source_reading_session_id: "source-session-2",
@@ -119,7 +118,7 @@ describe("Marginalia Import SDK", () => {
             warnings: [{ code: "POSSIBLE_DUPLICATE_SESSION", candidateId: "reading-session-000001" }],
           }],
         },
-        { candidateId: "book-000002", match: { status: "unmatched" } },
+        { candidateId: "book-000002", match: { status: "unmatched", reason: "book_inaccessible" } },
       ],
     });
   });
@@ -131,6 +130,10 @@ describe("Marginalia Import SDK", () => {
       return {
         imported_reading_session_count: 1,
         imported_annotation_count: 3,
+        unmatched_reading_session_count: 2,
+        unmatched_downloadable_reading_session_count: 2,
+        unmatched_download_available: true,
+        unmatched_books: [{ candidate_id: "book-000002", title: "Staged unavailable Book", reason: "book_inaccessible" }],
         reading_sessions: [{ candidate_id: "reading-session-000001", reading_session_id: "local-session", status: "closed", name: "Edited", annotation_count: 3 }],
         warnings: [{ code: "POSSIBLE_DUPLICATE_SESSION", message: "Possible duplicate.", candidate_id: "reading-session-000001" }],
       } as T;
@@ -156,41 +159,13 @@ describe("Marginalia Import SDK", () => {
     expect(result).toEqual({
       importedReadingSessionCount: 1,
       importedAnnotationCount: 3,
+      unmatchedReadingSessionCount: 2,
+      unmatchedDownloadableReadingSessionCount: 2,
+      unmatchedDownloadAvailable: true,
+      unmatchedBooks: [{ candidateId: "book-000002", title: "Staged unavailable Book", reason: "book_inaccessible" }],
       readingSessions: [{ candidateId: "reading-session-000001", readingSessionId: "local-session", status: "closed", name: "Edited", annotationCount: 3 }],
       warnings: [{ code: "POSSIBLE_DUPLICATE_SESSION", message: "Possible duplicate.", candidateId: "reading-session-000001" }],
     });
-  });
-
-  it("maps lost Book access details into the typed Apply error", async () => {
-    const client = createApiClient(async () => new Response(JSON.stringify({
-      error: {
-        code: "PERMISSION_DENIED",
-        message: "Current Library access is required for one or more selected Books.",
-        detail: "",
-        hint: "",
-        inaccessible_books: [{ title: "First Book" }, { title: "Second Book" }],
-        inaccessible_book_count: 4,
-        inaccessible_books_truncated: true,
-      },
-    }), {
-      status: 403,
-      headers: { "Content-Type": "application/json" },
-    }), () => undefined);
-
-    const promise = applyMarginaliaImport({
-      importToken: "opaque-preview-token",
-      readingSessions: [{ candidateId: "reading-session-000001" }],
-    }, client);
-
-    await expect(promise).rejects.toEqual(expect.objectContaining({
-      name: "MarginaliaImportAccessError",
-      status: 403,
-      code: "PERMISSION_DENIED",
-      inaccessibleBooks: [{ title: "First Book" }, { title: "Second Book" }],
-      inaccessibleBookCount: 4,
-      inaccessibleBooksTruncated: true,
-    }));
-    await expect(promise).rejects.toBeInstanceOf(MarginaliaImportAccessError);
   });
 
   it("downloads unmatched Sessions through attachment transport with the backend filename", async () => {

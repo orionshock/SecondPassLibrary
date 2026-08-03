@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from django.utils.dateparse import parse_datetime
 
+from library.models import Book
 from library.queries import visible_books_for_user
 from marginalia.archives import MarginaliaArchive, parse_archive
 from marginalia.models import ReadingSession
@@ -21,10 +22,6 @@ class ImportUploadTooLargeError(ImportPreviewError):
 
 
 class NoImportCandidatesError(ImportPreviewError):
-    pass
-
-
-class DuplicateLibraryBookHashError(ImportPreviewError):
     pass
 
 
@@ -87,17 +84,23 @@ def _build_preview(
     if not surviving_books:
         raise NoImportCandidatesError
 
-    matches = _accessible_book_matches(
+    matches = _book_matches(
         user=user,
         file_hashes=[book.file_hash for book, _sessions in surviving_books],
     )
     duplicates = _existing_session_keys(
-        user=user, book_ids=[book.pk for book in matches.values()]
+        user=user,
+        book_ids=[
+            match["book"].pk
+            for match in matches.values()
+            if match["status"] == "matched"
+        ],
     )
 
     for book_number, (book, sessions) in enumerate(surviving_books, start=1):
-        local_book = matches.get(book.file_hash)
-        matched = local_book is not None
+        match = matches.get(book.file_hash, {"status": "unmatched", "reason": "not_found"})
+        local_book = match.get("book")
+        matched = match["status"] == "matched"
         matched_book_count += int(matched)
         unmatched_book_count += int(not matched)
         session_rows = []
@@ -143,7 +146,7 @@ def _build_preview(
                 "match": (
                     {"status": "matched", "book_id": str(local_book.pk)}
                     if matched
-                    else {"status": "unmatched"}
+                    else {"status": "unmatched", "reason": match["reason"]}
                 ),
                 "reading_sessions": session_rows,
             }
@@ -170,16 +173,33 @@ def _build_preview(
     }
 
 
-def _accessible_book_matches(*, user, file_hashes: list[str]):
+def _book_matches(*, user, file_hashes: list[str]) -> dict[str, dict]:
+    """Resolve exact identities, exposing only caller-owned data for hidden Books."""
     checksums = [value.removeprefix("sha256:") for value in file_hashes]
-    matches = {}
+    accessible: dict[str, list] = {}
     for book in visible_books_for_user(user, cached=False).filter(
         checksum__in=checksums
     ):
         file_hash = f"sha256:{book.checksum}"
-        if file_hash in matches:
-            raise DuplicateLibraryBookHashError
-        matches[file_hash] = book
+        accessible.setdefault(file_hash, []).append(book)
+
+    known_hashes = {
+        f"sha256:{checksum}"
+        for checksum in Book.objects.filter(checksum__in=checksums).values_list(
+            "checksum", flat=True
+        )
+    }
+    matches = {}
+    for file_hash in file_hashes:
+        visible = accessible.get(file_hash, [])
+        if len(visible) == 1:
+            matches[file_hash] = {"status": "matched", "book": visible[0]}
+        elif len(visible) > 1:
+            matches[file_hash] = {"status": "unmatched", "reason": "ambiguous_match"}
+        elif file_hash in known_hashes:
+            matches[file_hash] = {"status": "unmatched", "reason": "book_inaccessible"}
+        else:
+            matches[file_hash] = {"status": "unmatched", "reason": "not_found"}
     return matches
 
 

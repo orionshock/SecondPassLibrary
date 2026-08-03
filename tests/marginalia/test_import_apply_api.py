@@ -270,7 +270,28 @@ class MarginaliaImportApplyAPITests(IsolatedUserdataMixin, APITestCase):
         self.assertEqual(stage.state, ImportStage.STATE_READY)
         self.assertTrue(path.exists())
 
-    def test_apply_rechecks_uncached_visibility_after_membership_removal(self):
+    def test_access_loss_partially_applies_and_consumes_stage_replay_safely(self):
+        second_checksum = "b" * 64
+        second_group = LibraryGroup.objects.create(name="Second group")
+        LibraryGroupMembership.objects.create(user=self.user, group=second_group)
+        second = Book.objects.create(title="Visible database title", checksum=second_checksum)
+        BookGroupAssignment.objects.create(book=second, group=second_group)
+        payload = archive_payload(file_hash=f"sha256:{'a' * 64}")
+        payload["books"] = [
+            _archive_book(
+                checksum="a" * 64,
+                title="Lost staged title",
+                sessions=[archive_session(source_id="lost")],
+            ),
+            _archive_book(
+                checksum=second_checksum,
+                title="Visible staged title",
+                sessions=[archive_session(source_id="visible")],
+            ),
+        ]
+        preview = self.preview(payload)
+        stage = ImportStage.objects.get()
+        path = stage_file_path(stage.storage_name)
         existing = ReadingSession.objects.create(user=self.user, book=self.book)
         existing_annotation = Annotation.objects.create(
             session=existing,
@@ -278,181 +299,58 @@ class MarginaliaImportApplyAPITests(IsolatedUserdataMixin, APITestCase):
             kind=Annotation.KIND_BOOKMARK,
             cfi="opaque::existing",
         )
-        payload = archive_payload(file_hash=f"sha256:{'a' * 64}")
-        payload["books"][0]["title"] = "  Staged\nBook   Title  "
-        preview = self.preview(payload)
-        self.book.title = "Current database title"
-        self.book.save(update_fields=["title", "updated_at"])
-        stage = ImportStage.objects.get()
-        path = stage_file_path(stage.storage_name)
-        LibraryGroupMembership.objects.filter(
-            user=self.user,
-            group=self.group,
-        ).delete()
+        LibraryGroupMembership.objects.filter(user=self.user, group=self.group).delete()
 
+        selections = [
+            {"candidate_id": "reading-session-000001"},
+            {"candidate_id": "reading-session-000002"},
+        ]
         with (
+            self.assertLogs("marginalia.imports.apply", level="INFO") as logs,
             patch(
                 "marginalia.imports.apply.visible_books_for_user",
                 wraps=visible_books_for_user,
             ) as visibility_query,
-            self.assertLogs("marginalia.imports.apply", level="INFO") as logs,
+            self.captureOnCommitCallbacks(execute=True),
         ):
-            response = self.apply(
-                preview["import_token"],
-                [{"candidate_id": "reading-session-000001"}],
-            )
+            response = self.apply(preview["import_token"], selections)
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(response.data["error"]["code"], "PERMISSION_DENIED")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["imported_reading_session_count"], 1)
+        self.assertEqual(response.data["unmatched_reading_session_count"], 1)
+        self.assertTrue(response.data["unmatched_download_available"])
         self.assertEqual(
-            response.data["error"]["message"],
-            "Current Library access is required for one or more selected Books.",
+            response.data["unmatched_books"],
+            [{
+                "candidate_id": "book-000001",
+                "title": "Lost staged title",
+                "reason": "book_inaccessible",
+            }],
         )
-        self.assertEqual(
-            response.data["error"]["inaccessible_books"],
-            [{"title": "Staged Book Title"}],
-        )
-        self.assertEqual(response.data["error"]["inaccessible_book_count"], 1)
-        self.assertFalse(response.data["error"]["inaccessible_books_truncated"])
         visibility_query.assert_called_once_with(self.user, cached=False)
-        self.assertEqual(ReadingSession.objects.count(), 1)
+        self.assertEqual(ReadingSession.objects.filter(book=second).count(), 1)
+        self.assertFalse(ReadingSession.objects.filter(book=self.book).exclude(pk=existing.pk).exists())
         self.assertTrue(ReadingSession.objects.filter(pk=existing.pk).exists())
         self.assertTrue(Annotation.objects.filter(pk=existing_annotation.pk).exists())
-        stage.refresh_from_db()
-        self.assertEqual(stage.state, ImportStage.STATE_READY)
-        self.assertIsNone(stage.result)
-        self.assertTrue(path.exists())
         detail = self.client.get(f"/api/v1/marginalia/sessions/{existing.pk}/")
         self.assertEqual(detail.status_code, status.HTTP_200_OK)
         self.assertFalse(detail.data["context"]["book"]["can_open"])
-        self.assertIn("book_ref=", logs.output[0])
+        stage.refresh_from_db()
+        self.assertEqual(stage.state, ImportStage.STATE_APPLIED)
+        self.assertEqual(
+            stage.preview["books"][0]["reading_sessions"][0]["unmatched_reason"],
+            "book_inaccessible",
+        )
+        self.assertTrue(path.exists())
+        replay = self.apply(preview["import_token"], list(reversed(selections)))
+        self.assertEqual(replay.data, response.data)
+        self.assertEqual(ReadingSession.objects.filter(book=second).count(), 1)
+        self.assertIn("applied_count=1", logs.output[0])
+        self.assertIn("inaccessible_count=1", logs.output[0])
+        self.assertNotIn("Lost staged title", logs.output[0])
         self.assertNotIn(preview["import_token"], logs.output[0])
 
-    def test_multiple_inaccessible_books_follow_staged_order_and_deduplicate(self):
-        second_checksum = "b" * 64
-        second = Book.objects.create(title="Database second", checksum=second_checksum)
-        BookGroupAssignment.objects.create(book=second, group=self.group)
-        payload = archive_payload(file_hash=f"sha256:{'a' * 64}")
-        payload["books"] = [
-            _archive_book(
-                checksum="a" * 64,
-                title="First staged",
-                sessions=[
-                    archive_session(source_id="first-one"),
-                    archive_session(source_id="first-two"),
-                ],
-            ),
-            _archive_book(
-                checksum=second_checksum,
-                title="Second staged",
-                sessions=[archive_session(source_id="second-one")],
-            ),
-        ]
-        preview = self.preview(payload)
-        LibraryGroupMembership.objects.filter(user=self.user, group=self.group).delete()
-
-        response = self.apply(
-            preview["import_token"],
-            [
-                {"candidate_id": "reading-session-000003"},
-                {"candidate_id": "reading-session-000002"},
-                {"candidate_id": "reading-session-000001"},
-            ],
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(response.data["error"]["inaccessible_book_count"], 2)
-        self.assertEqual(
-            response.data["error"]["inaccessible_books"],
-            [{"title": "First staged"}, {"title": "Second staged"}],
-        )
-        self.assertFalse(response.data["error"]["inaccessible_books_truncated"])
-        self.assertEqual(ReadingSession.objects.count(), 0)
-        self.assertEqual(Annotation.objects.count(), 0)
-        self.assertEqual(ImportStage.objects.get().state, ImportStage.STATE_READY)
-
-    def test_inaccessible_book_titles_are_bounded_and_report_total(self):
-        payload = archive_payload(file_hash=f"sha256:{'a' * 64}")
-        payload["books"] = []
-        for number in range(1, 13):
-            checksum = f"{number:064x}"
-            book = Book.objects.create(title=f"Database {number}", checksum=checksum)
-            BookGroupAssignment.objects.create(book=book, group=self.group)
-            payload["books"].append(
-                _archive_book(
-                    checksum=checksum,
-                    title=(" X" * 250 if number == 1 else f"Staged Book {number:02d}"),
-                    sessions=[archive_session(source_id=f"source-{number}")],
-                )
-            )
-        preview = self.preview(payload)
-        LibraryGroupMembership.objects.filter(user=self.user, group=self.group).delete()
-
-        response = self.apply(
-            preview["import_token"],
-            [
-                {"candidate_id": f"reading-session-{number:06d}"}
-                for number in range(1, 13)
-            ],
-        )
-
-        error = response.data["error"]
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(error["inaccessible_book_count"], 12)
-        self.assertEqual(
-            error["inaccessible_books"],
-            [
-                {"title": "X " * 99 + "X"},
-                *[
-                    {"title": f"Staged Book {number:02d}"}
-                    for number in range(2, 11)
-                ],
-            ],
-        )
-        self.assertTrue(error["inaccessible_books_truncated"])
-        self.assertEqual(ReadingSession.objects.count(), 0)
-        self.assertEqual(Annotation.objects.count(), 0)
-
-    def test_inaccessible_book_titles_use_fallback_for_invalid_staged_values(self):
-        second_checksum = "b" * 64
-        second = Book.objects.create(title="Second", checksum=second_checksum)
-        BookGroupAssignment.objects.create(book=second, group=self.group)
-        payload = archive_payload(file_hash=f"sha256:{'a' * 64}")
-        payload["books"] = [
-            _archive_book(
-                checksum="a" * 64,
-                title="First",
-                sessions=[archive_session(source_id="first")],
-            ),
-            _archive_book(
-                checksum=second_checksum,
-                title="Second",
-                sessions=[archive_session(source_id="second")],
-            ),
-        ]
-        preview = self.preview(payload)
-        stage = ImportStage.objects.get()
-        stage.preview["books"][0]["title"] = " \t\n "
-        stage.preview["books"][1]["title"] = {"invalid": True}
-        stage.save(update_fields=["preview", "updated_at"])
-        LibraryGroupMembership.objects.filter(user=self.user, group=self.group).delete()
-
-        response = self.apply(
-            preview["import_token"],
-            [
-                {"candidate_id": "reading-session-000001"},
-                {"candidate_id": "reading-session-000002"},
-            ],
-        )
-
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(response.data["error"]["inaccessible_book_count"], 2)
-        self.assertEqual(
-            response.data["error"]["inaccessible_books"],
-            [{"title": "Untitled Book"}, {"title": "Untitled Book"}],
-        )
-
-    def test_apply_rejects_when_book_assignment_is_removed_after_preview(self):
+    def test_assignment_removal_becomes_successful_unmatched_result(self):
         preview = self.preview(archive_payload(file_hash=f"sha256:{'a' * 64}"))
         BookGroupAssignment.objects.filter(book=self.book, group=self.group).delete()
 
@@ -461,13 +359,15 @@ class MarginaliaImportApplyAPITests(IsolatedUserdataMixin, APITestCase):
             [{"candidate_id": "reading-session-000001"}],
         )
 
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(response.data["error"]["code"], "PERMISSION_DENIED")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["imported_reading_session_count"], 0)
+        self.assertEqual(response.data["unmatched_reading_session_count"], 1)
+        self.assertEqual(response.data["unmatched_books"][0]["reason"], "book_inaccessible")
         self.assertEqual(ReadingSession.objects.count(), 0)
         self.assertEqual(Annotation.objects.count(), 0)
         stage = ImportStage.objects.get()
-        self.assertEqual(stage.state, ImportStage.STATE_READY)
-        self.assertIsNone(stage.result)
+        self.assertEqual(stage.state, ImportStage.STATE_APPLIED)
+        self.assertIsNotNone(stage.result)
 
     def test_apply_keeps_missing_book_and_malformed_stage_contracts(self):
         missing_preview = self.preview(

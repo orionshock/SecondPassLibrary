@@ -1,10 +1,10 @@
-import { MarginaliaImportAccessError, type CurrentUser, type MarginaliaImportApplyResult, type MarginaliaImportPreview, type ServerInfo } from "@second-pass/spl-api";
+import { type CurrentUser, type MarginaliaImportApplyResult, type MarginaliaImportPreview, type ServerInfo } from "@second-pass/spl-api";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
 import { AppFrame } from "../app/layout/AppFrame";
-import { marginaliaImportAccessFailure, MarginaliaImportOrchestrator, MarginaliaImportRequestGuard, previewSelectedMarginaliaImport } from "../features/marginalia/MarginaliaImportOrchestrator";
+import { MarginaliaImportOrchestrator, MarginaliaImportRequestGuard, previewSelectedMarginaliaImport } from "../features/marginalia/MarginaliaImportOrchestrator";
 import { MarginaliaSessionsOrchestrator } from "../features/marginalia/MarginaliaSessionsOrchestrator";
 import { marginaliaImportBreadcrumbFallback } from "../features/marginalia/marginaliaBreadcrumbs";
 import {
@@ -14,7 +14,7 @@ import {
   marginaliaImportSelectedCount,
   withMarginaliaImportBookSelection,
 } from "../features/marginalia/marginaliaImportDraft";
-import { MarginaliaImportPageRegion, type MarginaliaImportAccessFailure } from "../features/marginalia/regions/MarginaliaImportPageRegion";
+import { MarginaliaImportPageRegion } from "../features/marginalia/regions/MarginaliaImportPageRegion";
 import { LocalValidationError } from "../shared/feedback/mutationState";
 
 const preview: MarginaliaImportPreview = {
@@ -70,7 +70,7 @@ const preview: MarginaliaImportPreview = {
       fileHash: "sha256:missing",
       title: "Missing Book",
       authors: [],
-      match: { status: "unmatched" },
+      match: { status: "unmatched", reason: "book_inaccessible" },
       readingSessions: [{
         candidateId: "reading-session-000003",
         sourceReadingSessionId: "source-session-3",
@@ -98,7 +98,6 @@ function renderImport(options: {
   draft?: ReturnType<typeof createMarginaliaImportDraft>;
   previewError?: Error;
   applyState?: { pending: boolean; error?: Error; message?: string };
-  applyAccessFailure?: MarginaliaImportAccessFailure;
   downloadState?: { pending: boolean; error?: Error; message?: string };
   editingSessionKeys?: ReadonlySet<string>;
 } = {}) {
@@ -109,7 +108,6 @@ function renderImport(options: {
     editingSessionKeys={options.editingSessionKeys ?? new Set()}
     previewState={{ pending: false, error: options.previewError }}
     applyState={options.applyState ?? { pending: false }}
-    applyAccessFailure={options.applyAccessFailure}
     downloadState={options.downloadState ?? { pending: false }}
     inputRef={{ current: null }}
     includeEmptySessions={false}
@@ -176,7 +174,8 @@ describe("My Marginalia Import", () => {
   it("renders canonical matched/unmatched, duplicate, and active-to-Closed copy", () => {
     const markup = renderImport({ preview, draft: createMarginaliaImportDraft(preview) });
     expect(markup).toContain("Matched Book");
-    expect(markup).toContain("Unmatched Book");
+    expect(markup).toContain("Unavailable Book");
+    expect(markup).toContain("not currently available through your Library access");
     expect(markup).toContain("Possible Duplicate Session");
     expect(markup).toContain("Active source Session imports as Closed");
     expect(markup).not.toContain("historical");
@@ -216,46 +215,6 @@ describe("My Marginalia Import", () => {
     expect(markup).toContain("Import Selected Sessions");
   });
 
-  it("shows inaccessible staged Book titles and the truncated remainder", () => {
-    const failure: MarginaliaImportAccessFailure = {
-      message: "Current Library access is required for one or more selected Books.",
-      books: [{ title: "First Book" }, { title: "Second Book" }],
-      totalCount: 4,
-      truncated: true,
-    };
-
-    const markup = renderImport({
-      preview,
-      draft: createMarginaliaImportDraft(preview),
-      applyState: { pending: false, error: new Error(failure.message) },
-      applyAccessFailure: failure,
-    });
-
-    expect(markup).toContain(failure.message);
-    expect(markup).toContain("Restore Library access or deselect these Books");
-    expect(markup).toContain("<li>First Book</li>");
-    expect(markup).toContain("<li>Second Book</li>");
-    expect(markup).toContain("2 additional Books are not shown.");
-    expect(markup).toContain("Import Selected Sessions");
-  });
-
-  it("maps the SDK access error at the Import orchestrator boundary", () => {
-    expect(marginaliaImportAccessFailure(new MarginaliaImportAccessError({
-      message: "Access changed.",
-      status: 403,
-      code: "PERMISSION_DENIED",
-      inaccessibleBooks: [{ title: "Staged Book" }],
-      inaccessibleBookCount: 1,
-      inaccessibleBooksTruncated: false,
-    }))).toEqual({
-      message: "Access changed.",
-      books: [{ title: "Staged Book" }],
-      totalCount: 1,
-      truncated: false,
-    });
-    expect(marginaliaImportAccessFailure(new Error("Other failure"))).toBeUndefined();
-  });
-
   it("disables Apply for an empty selection", () => {
     const draft = createMarginaliaImportDraft(preview);
     Object.values(draft).forEach((session) => { session.selected = false; });
@@ -267,6 +226,10 @@ describe("My Marginalia Import", () => {
     const result: MarginaliaImportApplyResult = {
       importedReadingSessionCount: 1,
       importedAnnotationCount: 3,
+      unmatchedReadingSessionCount: 1,
+      unmatchedDownloadableReadingSessionCount: 1,
+      unmatchedDownloadAvailable: true,
+      unmatchedBooks: [{ candidateId: "book-000002", title: "Missing Book", reason: "book_inaccessible" }],
       readingSessions: [{ candidateId: "reading-session-000001", readingSessionId: "local-session", status: "closed", name: "Imported session", annotationCount: 3 }],
       warnings: [],
     };
@@ -274,6 +237,10 @@ describe("My Marginalia Import", () => {
     expect(markup).toContain("1 session created");
     expect(markup).toContain("3 annotations created");
     expect(markup).toContain('href="/marginalia/sessions/local-session"');
+    expect(markup).toContain("1 Session remains unmatched");
+    expect(markup).toContain("Download Unmatched Sessions (1)");
+    expect(markup).toContain("Missing Book");
+    expect(markup).not.toContain("Something went wrong");
     expect(markup).toContain("Closed");
     expect(markup).not.toContain("Select all importable sessions");
   });

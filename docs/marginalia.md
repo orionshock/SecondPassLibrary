@@ -320,11 +320,13 @@ schema, creates no Sessions or Annotations, and returns an opaque import token
 plus deterministic `book-000001` and `reading-session-000001` candidate
 identities.
 
-Book matching uses only exact canonical `fileHash` values against Books the
-caller can currently access through Library policy. There is no title, author,
-ISBN, CFI, or EPUB fallback. No match is reported as unmatched. Multiple
-accessible Library rows with the same checksum fail the complete preview as a
-Library integrity error. A conservative same-Book/name/start-time duplicate
+Book matching uses only exact canonical `fileHash` values. A trusted service
+may resolve the identity across the Library to distinguish `not_found`,
+`ambiguous_match`, and `book_inaccessible`, but the preview returns only the
+staged metadata supplied by the user and never hidden live metadata or UUIDs.
+All three reasons appear in the Unmatched review and are not selectable. There
+is no title, author, ISBN, CFI, or EPUB fallback. A conservative
+same-Book/name/start-time duplicate
 check produces a warning only; it does not suppress a matched Session.
 
 Empty Sessions have no non-deleted Annotations. They are omitted by default;
@@ -356,21 +358,14 @@ stage can be selected; unmatched candidates and empty Sessions excluded by the
 staged policy cannot be introduced at Apply time.
 
 Apply locks the stage and validates the complete selection and staged canonical
-archive before creating data. All selected Sessions, direct progress fields,
-and Annotations are created in one database transaction with fresh local UUIDs.
-Immediately before those writes, Apply rechecks every selected Book through the
-uncached Library visibility query. If an existing selected Book is no longer
-visible, the all-or-nothing Apply returns the standard Book-access `403`, creates
-no data, and leaves the stage ready for a corrected retry. A missing Book is a
-stale-stage integrity failure and retains the bounded `409` response. Marginalia
+archive before creating data. Immediately before mutation it rechecks every
+selected Book through the uncached Library visibility query. Still-visible
+candidates are created in one database transaction with fresh local UUIDs;
+candidates that lost access are marked `book_inaccessible` in the persisted
+stage preview and moved into the same Unmatched result/artifact. Access loss is
+a successful partial apply, not a `403`. A missing Book, malformed stage, or
+persistence failure remains a transaction-wide bounded `409`. Marginalia
 created by earlier valid activity is unaffected.
-
-The `403` error includes the total number of distinct inaccessible selected
-Books and up to 10 normalized titles from the caller-owned staged preview, in
-staged candidate order. Multiple selected Sessions for one Book produce one
-entry. Titles are capped at 200 characters and use `Untitled Book` when empty or
-malformed. A truncation flag reports whether further inaccessible Books were
-omitted. Apply never looks up hidden Book metadata to populate this response.
 Archive `clientAnnotationId` values become Session-scoped `Annotation.client_id`
 values. Location strings and Annotation content are preserved unchanged; the
 server does not parse CFI or inspect EPUB content.
@@ -383,13 +378,17 @@ mutates the user's active Session. Preview duplicate warnings remain warnings;
 an explicitly selected candidate is imported.
 
 On success, the stage stores a SHA-256 fingerprint of the effective selection
-and overrides, its applied timestamp, and the bounded candidate-to-new-Session
-result. Candidate order does not affect the fingerprint. An identical retry
-returns that stored result without creating duplicates, including after the
-staged file is gone. A changed selection or override returns `409`.
+and overrides, its applied timestamp, applied/unmatched counts, staged-only
+Unmatched Book summaries, and the bounded candidate-to-new-Session result.
+Candidate order does not affect the fingerprint. An identical retry returns
+that stored result without creating duplicates. A changed selection or override
+returns `409`. The stage is consumed even for a partial or zero-created result;
+retrying inaccessible material requires downloading and re-importing the diff.
 
-The stage is the consumption authority. Its file is deleted only after the
-database transaction commits. A cleanup failure does not undo the import; it
+The stage is the consumption authority. Its file is deleted after commit only
+when no downloadable Unmatched Sessions remain. Partial results retain the file
+until the normal two-hour stage expiry so their diff stays downloadable. A
+cleanup failure does not undo the import; it
 is logged without user data and the periodic cleanup command can remove the
 digest-named orphan later. Validation or transaction failure leaves the stage
 ready and retains its file for a corrected retry.
@@ -405,8 +404,9 @@ change does not alter the reviewed result. It does not parse CFI or inspect an
 EPUB.
 
 The response is `application/zip` with stable filename
-`secondpass-marginalia-sessions.zip`. It contains only unmatched Books that
-still have staged downloadable candidates, using this splitter-compatible
+`secondpass-marginalia-sessions.zip`. It contains only unmatched Books and
+candidate-level apply-time access losses that still have staged downloadable
+candidates, using this splitter-compatible
 layout:
 
 ```text
@@ -427,9 +427,10 @@ and JSON rendering are fixed, so repeated downloads from the same stage are
 byte-identical. A stage with no downloadable unmatched Sessions returns `409`.
 
 Download does not consume, extend, update, or invalidate the stage. Apply may
-still use a ready stage afterward. An applied stage whose file was already
-removed is unavailable; the bounded stored Apply result is not used to
-reconstruct an archive.
+still use a ready stage afterward. A consumed partial stage remains downloadable
+until expiry; its diff is assembled from the original staged archive and the
+persisted classification. Restoring access does not rematch that stage: import
+the downloaded canonical diff to preview and apply it again.
 
 `python backend/manage.py cleanup_marginalia_import_stages` removes expired stages and
 safe digest-named orphan files; `--dry-run` reports bounded counts without

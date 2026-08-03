@@ -5,6 +5,7 @@ import json
 import logging
 import time
 
+from copy import deepcopy
 from dataclasses import dataclass
 from functools import partial
 
@@ -23,7 +24,6 @@ from marginalia.archives import (
     UnsupportedArchiveProfileError,
     parse_archive,
 )
-from marginalia.exceptions import BookAccessRequiredError
 from marginalia.models import Annotation, ImportStage, ReadingSession
 
 from .staging import (
@@ -35,8 +35,6 @@ from .staging import (
 
 
 logger = logging.getLogger(__name__)
-MAX_INACCESSIBLE_BOOK_TITLES = 10
-MAX_INACCESSIBLE_BOOK_TITLE_LENGTH = 200
 UNTITLED_BOOK = "Untitled Book"
 
 
@@ -56,16 +54,10 @@ class StagedArchiveInvalidError(ImportApplyError):
     pass
 
 
-class ImportBookAccessRequiredError(BookAccessRequiredError):
-    def __init__(self, *, titles: tuple[str, ...], total_count: int) -> None:
-        super().__init__()
-        self.titles = titles
-        self.total_count = total_count
-
-
 @dataclass(frozen=True, slots=True)
 class _SelectedSession:
     candidate_id: str
+    book_candidate_id: str
     book_id: str
     staged_book_title: object
     source: ArchiveReadingSession
@@ -98,7 +90,11 @@ def _apply_import_once(
 ) -> dict:
     stage = claim_import_stage(user=user, token=import_token)
     preview_candidates = _preview_candidates(stage.preview)
-    selections = _normalize_selections(reading_sessions, preview_candidates)
+    selections = _normalize_selections(
+        reading_sessions,
+        preview_candidates,
+        allow_applied_inaccessible=stage.state == ImportStage.STATE_APPLIED,
+    )
     fingerprint = _request_fingerprint(selections)
 
     if stage.state == ImportStage.STATE_APPLIED:
@@ -125,27 +121,55 @@ def _apply_import_once(
         preview_candidates=preview_candidates,
     )
 
+    _validate_local_books(selected)
+    accessible, inaccessible = _partition_current_book_access(
+        user=user,
+        selected=selected,
+    )
     try:
-        imported = _create_sessions(user=user, selected=selected)
+        imported = _create_sessions(user=user, selected=accessible)
     except (IntegrityError, ValueError) as exc:
         raise StagedArchiveInvalidError from exc
 
-    result = _result(imported)
+    updated_preview = _preview_with_inaccessible_candidates(
+        preview=stage.preview,
+        inaccessible=inaccessible,
+    )
+    result = _result(
+        imported,
+        preview=updated_preview,
+    )
     applied_at = timezone.now()
     stage.state = ImportStage.STATE_APPLIED
     stage.request_fingerprint = fingerprint
+    stage.preview = updated_preview
     stage.result = result
     stage.applied_at = applied_at
     stage.save(
         update_fields=[
             "state",
             "request_fingerprint",
+            "preview",
             "result",
             "applied_at",
             "updated_at",
         ]
     )
-    transaction.on_commit(partial(delete_stage_file, stage.storage_name))
+    if not result["unmatched_download_available"]:
+        transaction.on_commit(partial(delete_stage_file, stage.storage_name))
+    if inaccessible:
+        transaction.on_commit(
+            partial(
+                _log_partial_apply_summary,
+                user_id=user.pk,
+                stage_ref=stage.token_digest[:8],
+                applied_count=len(imported),
+                inaccessible_count=len(inaccessible),
+                other_unmatched_count=(
+                    result["unmatched_reading_session_count"] - len(inaccessible)
+                ),
+            )
+        )
     return result
 
 
@@ -157,6 +181,7 @@ def _preview_candidates(preview: dict) -> dict[str, dict]:
             for session in book["reading_sessions"]:
                 candidates[session["candidate_id"]] = {
                     **session,
+                    "book_candidate_id": book["candidate_id"],
                     "book_id": match.get("book_id"),
                     "staged_book_title": book.get("title"),
                     "matched": match["status"] == "matched",
@@ -167,7 +192,10 @@ def _preview_candidates(preview: dict) -> dict[str, dict]:
 
 
 def _normalize_selections(
-    reading_sessions: list[dict], preview_candidates: dict[str, dict]
+    reading_sessions: list[dict],
+    preview_candidates: dict[str, dict],
+    *,
+    allow_applied_inaccessible: bool,
 ) -> tuple[dict, ...]:
     normalized = []
     for requested in reading_sessions:
@@ -175,7 +203,13 @@ def _normalize_selections(
         if (
             candidate is None
             or not candidate["matched"]
-            or not candidate["will_import"]
+            or (
+                not candidate["will_import"]
+                and not (
+                    allow_applied_inaccessible
+                    and candidate.get("unmatched_reason") == "book_inaccessible"
+                )
+            )
         ):
             raise ImportCandidateError
         normalized.append(
@@ -216,6 +250,7 @@ def _resolve_selected_sessions(
         selected.append(
             _SelectedSession(
                 candidate_id=selection["candidate_id"],
+                book_candidate_id=candidate["book_candidate_id"],
                 book_id=candidate["book_id"],
                 staged_book_title=candidate["staged_book_title"],
                 source=source,
@@ -236,8 +271,6 @@ def _validate_local_books(selected: tuple[_SelectedSession, ...]) -> None:
 def _create_sessions(
     *, user, selected: tuple[_SelectedSession, ...]
 ) -> list[tuple[_SelectedSession, ReadingSession]]:
-    _validate_local_books(selected)
-    _require_current_book_access(user=user, selected=selected)
     pairs = []
     for item in selected:
         source = item.source
@@ -263,6 +296,8 @@ def _create_sessions(
         pairs.append((item, session))
 
     sessions = [session for _item, session in pairs]
+    if not sessions:
+        return []
     ReadingSession.objects.bulk_create(sessions)
     for item, session in pairs:
         source = item.source
@@ -277,9 +312,9 @@ def _create_sessions(
     return pairs
 
 
-def _require_current_book_access(
+def _partition_current_book_access(
     *, user, selected: tuple[_SelectedSession, ...]
-) -> None:
+) -> tuple[tuple[_SelectedSession, ...], tuple[_SelectedSession, ...]]:
     """Recheck uncached Library authority at the import mutation boundary."""
     book_ids = {item.book_id for item in selected}
     visible_ids = {
@@ -288,30 +323,9 @@ def _require_current_book_access(
         .filter(pk__in=book_ids)
         .values_list("pk", flat=True)
     }
-    inaccessible_ids = book_ids - visible_ids
-    if not inaccessible_ids:
-        return
-    inaccessible_titles = []
-    seen_book_ids = set()
-    for item in selected:
-        if item.book_id not in inaccessible_ids or item.book_id in seen_book_ids:
-            continue
-        seen_book_ids.add(item.book_id)
-        if len(inaccessible_titles) < MAX_INACCESSIBLE_BOOK_TITLES:
-            inaccessible_titles.append(
-                _normalized_staged_book_title(item.staged_book_title)
-            )
-    total_count = len(seen_book_ids)
-    logger.info(
-        "Marginalia import apply rejected after Library access changed. "
-        "user_id=%s book_ref=%s inaccessible_count=%s",
-        user.pk,
-        sorted(inaccessible_ids)[0][:8],
-        total_count,
-    )
-    raise ImportBookAccessRequiredError(
-        titles=tuple(inaccessible_titles),
-        total_count=total_count,
+    return (
+        tuple(item for item in selected if item.book_id in visible_ids),
+        tuple(item for item in selected if item.book_id not in visible_ids),
     )
 
 
@@ -321,7 +335,50 @@ def _normalized_staged_book_title(value: object) -> str:
     normalized = " ".join(value.split())
     if not normalized:
         return UNTITLED_BOOK
-    return normalized[:MAX_INACCESSIBLE_BOOK_TITLE_LENGTH].rstrip()
+    return normalized
+
+
+def _preview_with_inaccessible_candidates(
+    *, preview: dict, inaccessible: tuple[_SelectedSession, ...]
+) -> dict:
+    updated = deepcopy(preview)
+    inaccessible_ids = {item.candidate_id for item in inaccessible}
+    if not inaccessible_ids:
+        return updated
+
+    affected_books = set()
+    for book in updated["books"]:
+        for candidate in book["reading_sessions"]:
+            if candidate["candidate_id"] not in inaccessible_ids:
+                continue
+            candidate["will_import"] = False
+            candidate["unmatched_reason"] = "book_inaccessible"
+            affected_books.add(book["candidate_id"])
+    if len(inaccessible_ids) != len(inaccessible):
+        raise StagedArchiveInvalidError
+    updated["unmatched_book_count"] += len(affected_books)
+    updated["unmatched_reading_session_count"] += len(inaccessible)
+    updated["unmatched_downloadable_reading_session_count"] += len(inaccessible)
+    return updated
+
+
+def _log_partial_apply_summary(
+    *,
+    user_id,
+    stage_ref: str,
+    applied_count: int,
+    inaccessible_count: int,
+    other_unmatched_count: int,
+) -> None:
+    logger.info(
+        "Marginalia import partial apply completed. user_id=%s stage_ref=%s "
+        "applied_count=%s inaccessible_count=%s other_unmatched_count=%s",
+        user_id,
+        stage_ref,
+        applied_count,
+        inaccessible_count,
+        other_unmatched_count,
+    )
 
 
 def _create_annotations(
@@ -363,6 +420,8 @@ def _create_annotations(
 
 def _result(
     imported: list[tuple[_SelectedSession, ReadingSession]],
+    *,
+    preview: dict,
 ) -> dict:
     rows = [
         {
@@ -383,9 +442,36 @@ def _result(
         for item, _session in imported
         if item.possible_duplicate
     ]
+    unmatched_books = []
+    for book in preview["books"]:
+        match = book["match"]
+        reasons = {
+            candidate.get("unmatched_reason")
+            for candidate in book["reading_sessions"]
+            if candidate.get("unmatched_reason")
+        }
+        reason = (
+            match.get("reason")
+            if match["status"] == "unmatched"
+            else ("book_inaccessible" if "book_inaccessible" in reasons else None)
+        )
+        if reason is not None:
+            unmatched_books.append(
+                {
+                    "candidate_id": book["candidate_id"],
+                    "title": _normalized_staged_book_title(book.get("title")),
+                    "reason": reason,
+                }
+            )
+    unmatched_count = preview["unmatched_reading_session_count"]
+    downloadable_count = preview["unmatched_downloadable_reading_session_count"]
     return {
         "imported_reading_session_count": len(rows),
         "imported_annotation_count": sum(row["annotation_count"] for row in rows),
+        "unmatched_reading_session_count": unmatched_count,
+        "unmatched_downloadable_reading_session_count": downloadable_count,
+        "unmatched_download_available": downloadable_count > 0,
+        "unmatched_books": unmatched_books,
         "reading_sessions": rows,
         "warnings": warnings,
     }

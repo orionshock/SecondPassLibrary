@@ -1,9 +1,7 @@
 import { apiClient, type ApiClient, type AttachmentApiClient, type AttachmentDownload } from "./client";
-import { ApiError, apiErrorFromPayload } from "./errors";
 import type { MarginaliaSessionStatus } from "./marginalia";
 
-const MAX_INACCESSIBLE_BOOK_TITLES = 10;
-const MAX_INACCESSIBLE_BOOK_TITLE_LENGTH = 200;
+export type MarginaliaImportUnmatchedReason = "not_found" | "ambiguous_match" | "book_inaccessible";
 
 export interface MarginaliaImportWarning {
   code: string;
@@ -28,7 +26,7 @@ export interface MarginaliaImportPreviewSession {
 
 export type MarginaliaImportBookMatch =
   | { status: "matched"; bookId: string }
-  | { status: "unmatched" };
+  | { status: "unmatched"; reason: MarginaliaImportUnmatchedReason };
 
 export interface MarginaliaImportPreviewBook {
   candidateId: string;
@@ -76,33 +74,16 @@ export interface MarginaliaImportedSessionResult {
 export interface MarginaliaImportApplyResult {
   importedReadingSessionCount: number;
   importedAnnotationCount: number;
+  unmatchedReadingSessionCount: number;
+  unmatchedDownloadableReadingSessionCount: number;
+  unmatchedDownloadAvailable: boolean;
+  unmatchedBooks: Array<{
+    candidateId: string;
+    title: string;
+    reason: MarginaliaImportUnmatchedReason;
+  }>;
   readingSessions: MarginaliaImportedSessionResult[];
   warnings: MarginaliaImportWarning[];
-}
-
-export interface MarginaliaImportInaccessibleBook {
-  title: string;
-}
-
-export class MarginaliaImportAccessError extends ApiError {
-  readonly inaccessibleBooks: MarginaliaImportInaccessibleBook[];
-  readonly inaccessibleBookCount: number;
-  readonly inaccessibleBooksTruncated: boolean;
-
-  constructor(input: {
-    message: string;
-    status: number;
-    code?: string;
-    inaccessibleBooks: MarginaliaImportInaccessibleBook[];
-    inaccessibleBookCount: number;
-    inaccessibleBooksTruncated: boolean;
-  }) {
-    super(input.message, input.status, { code: input.code });
-    this.name = "MarginaliaImportAccessError";
-    this.inaccessibleBooks = input.inaccessibleBooks;
-    this.inaccessibleBookCount = input.inaccessibleBookCount;
-    this.inaccessibleBooksTruncated = input.inaccessibleBooksTruncated;
-  }
 }
 
 interface ImportWarningResponse {
@@ -126,7 +107,7 @@ interface ImportPreviewResponse {
     file_hash: string;
     title: string;
     authors: string[];
-    match: { status: "matched"; book_id: string } | { status: "unmatched" };
+    match: { status: "matched"; book_id: string } | { status: "unmatched"; reason: MarginaliaImportUnmatchedReason };
     reading_sessions: Array<{
       candidate_id: string;
       source_reading_session_id: string;
@@ -146,6 +127,14 @@ interface ImportPreviewResponse {
 interface ImportApplyResponse {
   imported_reading_session_count: number;
   imported_annotation_count: number;
+  unmatched_reading_session_count: number;
+  unmatched_downloadable_reading_session_count: number;
+  unmatched_download_available: boolean;
+  unmatched_books: Array<{
+    candidate_id: string;
+    title: string;
+    reason: MarginaliaImportUnmatchedReason;
+  }>;
   reading_sessions: Array<{
     candidate_id: string;
     reading_session_id: string;
@@ -190,7 +179,7 @@ export async function previewMarginaliaImport(
       authors: [...book.authors],
       match: book.match.status === "matched"
         ? { status: "matched", bookId: book.match.book_id }
-        : { status: "unmatched" },
+        : { status: "unmatched", reason: book.match.reason },
       readingSessions: book.reading_sessions.map((session) => ({
         candidateId: session.candidate_id,
         sourceReadingSessionId: session.source_reading_session_id,
@@ -223,11 +212,18 @@ export async function applyMarginaliaImport(
         ...(session.notes !== undefined ? { notes: session.notes } : {}),
       })),
     }),
-    marginaliaImportErrorFromPayload,
   );
   return {
     importedReadingSessionCount: response.imported_reading_session_count,
     importedAnnotationCount: response.imported_annotation_count,
+    unmatchedReadingSessionCount: response.unmatched_reading_session_count,
+    unmatchedDownloadableReadingSessionCount: response.unmatched_downloadable_reading_session_count,
+    unmatchedDownloadAvailable: response.unmatched_download_available,
+    unmatchedBooks: response.unmatched_books.map((book) => ({
+      candidateId: book.candidate_id,
+      title: book.title,
+      reason: book.reason,
+    })),
     readingSessions: response.reading_sessions.map((session) => ({
       candidateId: session.candidate_id,
       readingSessionId: session.reading_session_id,
@@ -237,47 +233,6 @@ export async function applyMarginaliaImport(
     })),
     warnings: response.warnings.map(mapImportWarning),
   };
-}
-
-function marginaliaImportErrorFromPayload(status: number, payload: unknown): ApiError {
-  const fallback = apiErrorFromPayload(status, payload);
-  if (status !== 403 || fallback.code !== "PERMISSION_DENIED" || !isRecord(payload)) {
-    return fallback;
-  }
-  const error = payload.error;
-  if (!isRecord(error)) return fallback;
-  const books = error.inaccessible_books;
-  const count = error.inaccessible_book_count;
-  const truncated = error.inaccessible_books_truncated;
-  if (
-    !Array.isArray(books)
-    || books.length > MAX_INACCESSIBLE_BOOK_TITLES
-    || typeof count !== "number"
-    || !Number.isInteger(count)
-    || count < 1
-    || count < books.length
-    || typeof truncated !== "boolean"
-    || truncated !== (count > books.length)
-  ) return fallback;
-  const inaccessibleBooks: MarginaliaImportInaccessibleBook[] = [];
-  for (const book of books) {
-    if (!isRecord(book) || typeof book.title !== "string" || !book.title || book.title.length > MAX_INACCESSIBLE_BOOK_TITLE_LENGTH) {
-      return fallback;
-    }
-    inaccessibleBooks.push({ title: book.title });
-  }
-  return new MarginaliaImportAccessError({
-    message: fallback.message,
-    status,
-    code: fallback.code,
-    inaccessibleBooks,
-    inaccessibleBookCount: count,
-    inaccessibleBooksTruncated: truncated,
-  });
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export function downloadUnmatchedMarginaliaImport(

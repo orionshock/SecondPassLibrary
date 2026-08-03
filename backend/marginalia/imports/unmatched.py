@@ -22,6 +22,7 @@ from .staging import read_import_stage, read_staged_archive
 
 logger = logging.getLogger(__name__)
 ZIP_FILENAME = "secondpass-marginalia-sessions.zip"
+UNMATCHED_REASONS = {"not_found", "ambiguous_match", "book_inaccessible"}
 _FIXED_ZIP_TIME = (1980, 1, 1, 0, 0, 0)
 _RESERVED_KEYS = {
     "con",
@@ -88,6 +89,8 @@ def _unmatched_books(
         match_status = preview_book["match"]["status"]
         if match_status not in {"matched", "unmatched"}:
             raise UnmatchedStageIntegrityError
+        if match_status == "unmatched" and preview_book["match"].get("reason") not in UNMATCHED_REASONS:
+            raise UnmatchedStageIntegrityError
         source_book = archive_books.get(preview_book["file_hash"])
         if source_book is None:
             raise UnmatchedStageIntegrityError
@@ -109,19 +112,24 @@ def _unmatched_books(
             candidate_ids.add(candidate_id)
             source_id = candidate["source_reading_session_id"]
             source_session = source_sessions.get(source_id)
+            candidate_reason = candidate.get("unmatched_reason")
+            if candidate_reason is not None and candidate_reason not in UNMATCHED_REASONS:
+                raise UnmatchedStageIntegrityError
+            is_unmatched = match_status == "unmatched" or candidate_reason is not None
             if (
                 source_session is None
                 or candidate["source_status"] != source_session.status
                 or candidate["annotation_count"] != len(source_session.annotations)
                 or (not include_empty_sessions and not source_session.annotations)
-                or candidate["will_import"] != (match_status == "matched")
+                or candidate["will_import"] != (not is_unmatched)
             ):
                 raise UnmatchedStageIntegrityError
             preview_ids.append(source_id)
-            downloadable.append(source_session)
+            if is_unmatched:
+                downloadable.append(source_session)
         if preview_ids != expected_ids:
             raise UnmatchedStageIntegrityError
-        if match_status == "unmatched" and downloadable:
+        if downloadable:
             results.append((source_book, tuple(downloadable)))
             downloadable_count += len(downloadable)
 

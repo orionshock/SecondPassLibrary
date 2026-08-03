@@ -304,8 +304,12 @@ Reading Session candidate identities. Example candidate structure:
 }
 ```
 
-Matching is exact `fileHash` against currently accessible Library Books. No
-metadata fallback or EPUB/CFI inspection occurs. Empty Sessions are omitted
+Matching is exact `fileHash`. The trusted import service distinguishes no match,
+an ambiguous identity, and a known-but-currently-inaccessible Book. These are
+returned as `unmatched` with `reason` values `not_found`, `ambiguous_match`, or
+`book_inaccessible`; only staged title, author, and identifier data is returned,
+never fresh hidden Library metadata or a hidden Book UUID. No metadata fallback
+or EPUB/CFI inspection occurs. Empty Sessions are omitted
 unless explicitly included; that stored choice governs Apply and
 unmatched-download behavior. Multiple accessible Books with one checksum, no
 surviving Sessions, malformed archives, and staging failures return bounded
@@ -330,34 +334,42 @@ matched importable candidates persisted in that exact preview. Unknown,
 unmatched, or policy-hidden candidates are rejected before writes. Invalid,
 expired, foreign, and missing-file stages share the same no-leakage `404`.
 
-All selected Sessions, progress, and Annotations are imported atomically.
+Selected Sessions, progress, and Annotations are applied in one transaction.
 Apply rechecks current uncached Library visibility for every selected Book at
-the mutation boundary. Loss of access rejects the whole selection with the
-standard Book-access `403`, creates no Marginalia, and leaves the stage ready.
-The denial identifies up to 10 distinct inaccessible selected Books using only
-titles stored in the caller-owned preview:
+the mutation boundary. A candidate that lost access is reclassified as
+`book_inaccessible`, creates no Marginalia, and is added to the existing
+Unmatched artifact while still-accessible selected candidates apply. Structural
+stage/archive failures remain transaction-wide failures.
+
+Success includes authoritative applied and remaining counts:
 
 ```json
 {
-  "error": {
-    "code": "PERMISSION_DENIED",
-    "message": "Current Library access is required for one or more selected Books.",
-    "detail": "",
-    "hint": "",
-    "inaccessible_books": [{"title": "Example Book"}],
-    "inaccessible_book_count": 1,
-    "inaccessible_books_truncated": false
-  }
+  "imported_reading_session_count": 1,
+  "imported_annotation_count": 12,
+  "unmatched_reading_session_count": 1,
+  "unmatched_downloadable_reading_session_count": 1,
+  "unmatched_download_available": true,
+  "unmatched_books": [{
+    "candidate_id": "book-000002",
+    "title": "Staged Book title",
+    "reason": "book_inaccessible"
+  }],
+  "reading_sessions": [{
+    "candidate_id": "reading-session-000001",
+    "reading_session_id": "<new-local-uuid>",
+    "status": "closed",
+    "name": "Imported Session",
+    "annotation_count": 12
+  }],
+  "warnings": []
 }
 ```
 
-`inaccessible_book_count` counts distinct inaccessible Books, not selected
-Sessions. Repeated candidates for one Book produce one title entry. Entries
-follow staged candidate order; whitespace is normalized, titles are limited to
-200 characters, and empty or malformed staged titles become `Untitled Book`.
-`inaccessible_books_truncated` is true when the total exceeds the 10 returned
-entries. Missing Books remain staged-integrity failures and do not receive this
-title list.
+`unmatched_books` follows staged Book order and uses only metadata already in
+the caller-owned archive. Missing Books discovered from a formerly matched
+staged reference remain `409` integrity failures rather than candidate-level
+access loss.
 Imported Sessions always have status `closed`; source closed Sessions preserve
 `closedAt`, while source active Sessions use source `updatedAt` as their
 deterministic close timestamp. Import preserves other canonical timestamps and
@@ -383,7 +395,9 @@ Success returns a bounded result without echoing the token:
 The applied stage stores a cryptographic fingerprint and this bounded result.
 An identical request, regardless of candidate ordering, replays the result;
 changed selection or override values return `409`. The staged file is removed
-after commit. Failure before commit leaves the ready stage and file intact.
+after commit only when no downloadable Unmatched Sessions remain. A partial
+result retains it until stage expiry so the same token can download the diff.
+Failure before commit leaves the ready stage and file intact.
 Post-commit deletion failure does not roll back imported data and is recovered
 by the operator cleanup command.
 
@@ -395,7 +409,8 @@ Content-Disposition: attachment; filename="secondpass-marginalia-sessions.zip"
 ```
 
 Only unmatched Books and Sessions persisted as downloadable by that stage are
-included. The staged `include_empty_sessions` policy remains authoritative.
+included, including apply-time `book_inaccessible` candidates. The staged
+`include_empty_sessions` policy remains authoritative.
 Matching is not rerun, so later Library access changes do not change the ZIP.
 No downloadable unmatched Sessions returns `409`; invalid, expired, foreign,
 missing-file, and otherwise unusable stages share the bounded no-leakage `404`.
@@ -415,8 +430,10 @@ metadata, ordering, compression, and JSON rendering are fixed so repeated
 downloads are byte-identical.
 
 The GET is read-only: it does not update, consume, extend, or invalidate the
-stage, and Apply remains possible afterward. An applied stage cannot be
-reconstructed from its stored result after its archive file has been removed.
+stage, and Apply remains possible afterward while it is ready. Applied partial
+results retain their archive file and remain downloadable until expiry. An
+applied stage cannot be reconstructed from its stored result after its archive
+file has been removed.
 
 The Dashboard-oriented `GET /api/v1/marginalia/sessions/recent/` route returns
 `{"results": [...]}` without pagination. It defaults to the 10 most recently
