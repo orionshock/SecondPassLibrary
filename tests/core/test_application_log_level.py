@@ -47,6 +47,19 @@ class ApplicationLogLevelTests(TestCase):
                 self.assertEqual(server_settings.get_application_log_level(), level_name)
                 self.assertEqual(logger.getEffectiveLevel(), getattr(logging, level_name))
 
+    def test_logger_inventory_uses_current_domain_names(self):
+        self.assertEqual(
+            server_settings.APPLICATION_LOGGER_NAMES,
+            (
+                "accounts",
+                "core",
+                "library",
+                "marginalia",
+                "shelves",
+                "web",
+            ),
+        )
+
     def test_application_level_does_not_reduce_django_security_logger(self):
         security_logger = logging.getLogger("django.security")
         original_level = security_logger.level
