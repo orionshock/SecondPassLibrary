@@ -62,6 +62,7 @@ runtime storage or a destination for generated artifacts.
 - [Marginalia](marginalia.md)
 - [Metadata and identifiers](metadata.md)
 - [Production startup](deployment.md)
+- [Operator maintenance and repair](operations.md)
 - [React Product UI](react-ui.md)
 
 ## Application logging
@@ -100,12 +101,8 @@ continues to use standard stdout/stderr logging as described in
 [Production startup](deployment.md); application code should not invent its
 own file-log directory.
 
-The Django admin **Application Log Level** setting controls application logger
-namespaces with `DEBUG`, `INFO`, `WARNING`, or `ERROR`. It defaults and safely
-falls back to `INFO`, including before the settings table is available. This
-setting does not lower Django security/error logger thresholds and does not
-alter request/access logging. Prefer `INFO` normally and return temporary
-diagnostic `DEBUG` settings to `INFO` after investigation.
+Operator log-level changes and production log review are documented in
+[Operations](operations.md).
 
 ## Media serving (dev)
 
@@ -119,7 +116,8 @@ serves only the public cover namespace, `/media/covers/`; stored EPUB files,
 imports, exports, marginalia, and other protected user data are never served as
 raw media URLs.
 Production `collectstatic` output goes to `backend/var/static/`, which is generated and
-can be rebuilt. Back up `userdata/`, not `backend/var/static/`.
+can be rebuilt. The canonical backup unit is documented in
+[Operations](operations.md#backup-and-restore).
 
 Docker environment examples live at `docker/.env.example`. The local
 PowerShell helpers define their own environment in the script files.
@@ -188,8 +186,8 @@ Email and the display-name fields are optional account metadata. `Common Room`
 managed by librarians and managers. Enabling advanced library groups presents
 separate curator-managed rooms as a first-class UI feature and enables normal
 non-Public group mutation workflows. Product UI does not provide a disable
-control after enablement; disabling is a Django admin recovery flow that
-consolidates custom group state into Public/Common Room. Once an active Owner
+control after enablement; the operator recovery flow is documented in
+[Operations](operations.md#admin-and-repair-workflows). Once an active Owner
 exists, `/setup/` is disabled and normal Product UI login at `/login/` is used.
 
 Raw `python backend/manage.py runserver` remains available, but it does not create or
@@ -257,8 +255,8 @@ Practical notes:
   `SECOND_PASS_ENABLE_DJANGO_ADMIN=1` is set. The local production helper sets
   this for operator testing only when the variable is unset and respects an
   explicit `0`; the settings default leaves the route unregistered.
-- Use the admin recovery action to disable advanced library groups after use;
-  do not manually flip `advanced_library_groups_enabled` false.
+- Admin repair and recovery procedures are documented in
+  [Operations](operations.md#admin-and-repair-workflows).
 - HTTP Basic authentication is not enabled. Non-browser reader clients should use
   the Client API bearer-token flow where supported.
 
@@ -383,48 +381,10 @@ Safety:
   should use the first-run setup page. It remains a development/demo helper
   only.
 
-## Common commands
+## Local Library import command
 
-Optionally inspect unavailable items retained on user-owned shelves after access
-changes. Dry-run is the default; add `--apply` to remove those rows and repair
-remaining positions:
-
-```powershell
-python backend/manage.py cleanup_shelves
-python backend/manage.py cleanup_shelves --apply
-docker compose -f docker/compose.yml exec -T secondpasslibrary python manage.py cleanup_shelves
-docker compose -f docker/compose.yml exec -T secondpasslibrary python manage.py cleanup_shelves --apply
-```
-
-This is operator-invoked cleanup, not live propagation. It does not touch
-group-owned shelves, and normal shelf APIs continue hiding unavailable books.
-The dry run does not mutate data. `--apply` permanently removes unavailable
-personal-shelf items and compacts remaining positions. Repeating it is
-idempotent for the current database state. Retained rows become readable again
-if visibility returns before an apply run removes them.
-
-Docker deployments may schedule the apply command nightly from host cron. Use
-the exact Compose service name shown above; see `docs/deployment.md` for the
-sample cron entry and operational logging expectations. A future Celery-based
-scheduler is optional architecture, not a current dependency.
-
-Inspect or remove expired canonical Marginalia import stages:
-
-```powershell
-python backend/manage.py cleanup_marginalia_import_stages --dry-run
-python backend/manage.py cleanup_marginalia_import_stages
-```
-
-Stages live under `userdata/imports/staged/marginalia/`. Runtime token access
-expires after exactly two hours; this command only reclaims abandoned files
-and records. Successful Apply deletes its staged file after database commit
-only when no unmatched content remains downloadable. Partial Apply retains the
-file until expiry so its unmatched artifact remains available. If post-commit
-deletion fails, the applied database result remains authoritative and this
-command removes the safe digest-named leftover. It is repeat-safe and may be
-scheduled weekly by the host.
-
-Import a single local EPUB, a ZIP archive, or a non-recursive directory
+Recurring cleanup and repair commands belong to
+[Operations](operations.md). To import a single local EPUB, a ZIP archive, or a non-recursive directory
 (operator-only host/container path):
 
 ```powershell

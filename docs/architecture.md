@@ -12,7 +12,7 @@ Current apps:
 - `shelves`: shelves and shelf items (presentation/organization; not access control)
 
 Operator recovery workflows in the Django admin are documented in
-`docs/admin.md`.
+[Operations](operations.md#admin-and-repair-workflows).
 
 ## Server-wide settings
 

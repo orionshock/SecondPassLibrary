@@ -104,6 +104,7 @@ Useful docs:
 
 - [Development setup](docs/development.md)
 - [Production startup](docs/deployment.md)
+- [Operations and maintenance](docs/operations.md)
 - [Architecture](docs/architecture.md)
 - [API index](docs/api.md)
 - [Imports](docs/imports.md)

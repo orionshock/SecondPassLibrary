@@ -28,7 +28,8 @@ cascades to its Annotations, and deleting a Library Book cascades through its
 Marginalia Sessions and Annotations after Django's normal affected-object
 confirmation. Deleting an Import Stage schedules removal of that stage's one
 digest-named archive file; a file cleanup failure does not broaden deletion and
-remains recoverable through `cleanup_marginalia_import_stages`.
+remains recoverable through the documented
+[stage cleanup](operations.md#marginalia-import-stages).
 
 ## Canonical archive codec
 
@@ -432,11 +433,9 @@ until expiry; its diff is assembled from the original staged archive and the
 persisted classification. Restoring access does not rematch that stage: import
 the downloaded canonical diff to preview and apply it again.
 
-`python backend/manage.py cleanup_marginalia_import_stages` removes expired stages and
-safe digest-named orphan files; `--dry-run` reports bounded counts without
-deleting. The command is repeat-safe and suitable for periodic host scheduling.
-Django does not schedule it. A weekly run is acceptable because runtime access
-enforces the two-hour expiry independently.
+Runtime access enforces the two-hour expiry independently of storage cleanup.
+Command usage and scheduling guidance are in
+[Operations](operations.md#marginalia-import-stages).
 
 ## Recent Sessions
 

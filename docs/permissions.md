@@ -172,8 +172,9 @@ Shelves organize Books; they never grant Book access.
 
 Personal shelves and visible group-owned shelves may remain visible when empty.
 Other users' listed shelves are omitted when their viewer-visible `item_count`
-is zero. Detailed scopes, retained-item behavior, and cleanup policy are in
-`docs/shelves.md`.
+is zero. Detailed scopes and retained-item behavior are in `docs/shelves.md`;
+operator cleanup is documented in
+[Operations](operations.md#unavailable-personal-shelf-items).
 
 ## Client bearer restrictions
 

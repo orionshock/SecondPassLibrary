@@ -182,30 +182,12 @@ may surface group-owned shelves. Those relationships do not change shelf or
 Book visibility. Pager, row, icon, and responsive details remain in
 `docs/react-ui.md`.
 
-## `cleanup_shelves` maintenance policy
+## Unavailable-item cleanup
 
 Unavailable user-owned shelf items are removed only by an explicit operator
-cleanup. The command is intended for host scheduling (cron, systemd timer, or
-equivalent); the application does not run it implicitly.
-
-```powershell
-python backend/manage.py cleanup_shelves
-python backend/manage.py cleanup_shelves --apply
-```
-
-The default invocation is a dry run. It reports affected user-owned shelves and
-unavailable item counts without changing data.
-
-`--apply` performs the cleanup transactionally:
-
-- removes only user-owned shelf items whose Book is unavailable to that shelf
-  owner;
-- compacts remaining positions;
-- does not include group-owned shelves;
-- does not change group membership or assignment propagation;
-- does not delete Books, files, or reading data.
-
-Deployment scheduling guidance is in `docs/deployment.md`.
+cleanup; the application does not remove them implicitly. Command usage,
+safety, and scheduling guidance are in
+[Operations](operations.md#unavailable-personal-shelf-items).
 
 ## Non-goals
 

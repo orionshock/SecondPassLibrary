@@ -241,11 +241,8 @@ Management endpoints reject Client API tokens unless explicitly allowed.
   request expires without creating a client session.
 - Denied/expired/consumed requests cannot be reused.
 
-Expired pending/approved rows can be removed immediately with
-`python backend/manage.py cleanup_client_pairing_requests`. Denied, consumed,
-and explicitly expired rows are retained for 24 hours before cleanup eligibility.
-The command supports `--dry-run` and `--limit` and reports eligible, selected,
-deleted, limit-skipped, and retained counts; scheduling is operator-owned.
+Pairing-row retention and recurring cleanup are documented in
+[Operations](operations.md#client-pairing-requests).
 
 ## Product UI integration
 

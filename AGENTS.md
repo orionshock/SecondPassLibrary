@@ -39,6 +39,7 @@ Repository files, current tests, and observed runtime behavior are authoritative
 ## Read when relevant
 
 - Deployment, runtime, and security settings: [docs/deployment.md](docs/deployment.md)
+- Backups, cleanup, maintenance, and Admin repair: [docs/operations.md](docs/operations.md)
 - Development commands and focused checks: [docs/development.md](docs/development.md)
 - Roles, Groups, Books, Shelves, and visibility: [docs/permissions.md](docs/permissions.md)
 - Library imports and metadata: [docs/imports.md](docs/imports.md)
