@@ -149,7 +149,7 @@ MIDDLEWARE = [
 
 ENABLE_WHITENOISE = env.bool("SECOND_PASS_ENABLE_WHITENOISE", default=not DEBUG)
 if ENABLE_WHITENOISE:
-    MIDDLEWARE.insert(1, "whitenoise.middleware.WhiteNoiseMiddleware")
+    MIDDLEWARE.insert(1, "core.asgi_streaming.AsyncWhiteNoiseMiddleware")
 
 ROOT_URLCONF = "secondpass.urls"
 

@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
 from django.conf import settings
-from django.test import SimpleTestCase
+from django.test import AsyncRequestFactory, SimpleTestCase, override_settings
 
+from core.asgi_streaming import AsyncWhiteNoiseMiddleware
 from secondpass.settings import _staticfiles_backend
 
 
@@ -18,7 +21,7 @@ class WhiteNoiseStaticFilesTests(SimpleTestCase):
             "django.middleware.security.SecurityMiddleware"
         )
         whitenoise_index = settings.MIDDLEWARE.index(
-            "whitenoise.middleware.WhiteNoiseMiddleware"
+            "core.asgi_streaming.AsyncWhiteNoiseMiddleware"
         )
 
         self.assertEqual(whitenoise_index, security_index + 1)
@@ -35,4 +38,38 @@ class WhiteNoiseStaticFilesTests(SimpleTestCase):
         self.assertEqual(
             _staticfiles_backend(debug=True),
             "django.contrib.staticfiles.storage.StaticFilesStorage",
+        )
+
+    async def test_whitenoise_asset_streams_without_sync_iterator_adaptation(self):
+        with TemporaryDirectory() as directory:
+            static_root = Path(directory)
+            asset = static_root / "product_ui" / "assets" / "app.js"
+            asset.parent.mkdir(parents=True)
+            asset.write_bytes(b'console.log("product ui");')
+
+            with override_settings(
+                DEBUG=False,
+                STATIC_ROOT=static_root,
+                WHITENOISE_AUTOREFRESH=False,
+            ):
+                middleware = AsyncWhiteNoiseMiddleware(lambda request: None)
+                request = AsyncRequestFactory().get(
+                    "/static/product_ui/assets/app.js"
+                )
+                response = middleware(request)
+
+                with warnings.catch_warnings(record=True) as caught:
+                    warnings.simplefilter("always")
+                    try:
+                        content = b"".join([chunk async for chunk in response])
+                    finally:
+                        response.close()
+
+        self.assertTrue(response.streaming)
+        self.assertTrue(response.is_async)
+        self.assertEqual(content, b'console.log("product ui");')
+        self.assertEqual(response["Content-Type"], 'text/javascript; charset="utf-8"')
+        self.assertEqual(response["Cache-Control"], "max-age=60, public")
+        self.assertFalse(
+            any("synchronous iterators" in str(item.message) for item in caught)
         )

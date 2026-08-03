@@ -2,8 +2,10 @@ from __future__ import annotations
 
 from io import BytesIO
 from pathlib import Path
+import warnings
 
-from django.test import TestCase
+from asgiref.sync import sync_to_async
+from django.test import AsyncClient, TestCase
 from django.test.utils import override_settings
 
 from PIL import Image
@@ -73,6 +75,31 @@ class DirectServerCoverServingTest(IsolatedMediaRootMixin, TestCase):
 
         self.assertEqual(response.status_code, 200)
         response.close()
+
+    async def test_non_debug_asgi_cover_uses_an_async_iterator(self):
+        book = await sync_to_async(
+            lambda: create_file_backed_book(title="ASGI Cover").book
+        )()
+        await sync_to_async(set_book_cover_from_bytes)(
+            book=book,
+            data=self._png_bytes(),
+            source="manual",
+        )
+        await book.arefresh_from_db()
+
+        response = await AsyncClient().get(book.cover_file.url)
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            content = b"".join([chunk async for chunk in response])
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.streaming)
+        self.assertTrue(response.is_async)
+        self.assertEqual(content, self._png_bytes())
+        self.assertEqual(response["Content-Type"], "image/png")
+        self.assertFalse(
+            any("synchronous iterators" in str(item.message) for item in caught)
+        )
 
     def test_non_debug_missing_cover_returns_404(self):
         response = self.client.get("/media/covers/aa/bb/missing.jpg")

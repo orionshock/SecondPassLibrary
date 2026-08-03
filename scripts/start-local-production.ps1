@@ -68,7 +68,7 @@ try {
         "secondpass.asgi:application",
         "--host", $UvicornHost,
         "--port", $UvicornPort,
-        "--workers", "4",
+        "--workers", "1",
         "--no-access-log"
     )
 
