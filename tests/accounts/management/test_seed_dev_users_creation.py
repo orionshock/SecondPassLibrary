@@ -143,8 +143,8 @@ class SeedDevUsersCreationTests(SeedDevUsersCommandTestCase):
                 )
             ),
             {
-                "Common Room: Welcome Shelf",
-                "Common Room: Community Favorites",
+                "Welcome Shelf",
+                "Community Favorites",
             },
         )
         self.assertEqual(ShelfItem.objects.count(), 0)
@@ -156,7 +156,7 @@ class SeedDevUsersCreationTests(SeedDevUsersCommandTestCase):
         )
 
     @override_settings(DEBUG=True)
-    def test_librarian_favorites_are_listed_and_other_personal_shelves_are_private(self):
+    def test_one_librarian_favorites_shelf_is_listed(self):
         self.create_setup_owner()
 
         call_command(
@@ -172,17 +172,16 @@ class SeedDevUsersCreationTests(SeedDevUsersCommandTestCase):
             name="Favorites",
         )
         self.assertEqual(librarian_favorites.count(), 3)
-        self.assertFalse(
-            librarian_favorites.exclude(visibility=Shelf.VISIBILITY_LISTED).exists()
+        self.assertEqual(
+            librarian_favorites.filter(visibility=Shelf.VISIBILITY_LISTED).count(),
+            1,
         )
-        self.assertFalse(
-            Shelf.objects.filter(owner_type=Shelf.OWNER_TYPE_USER)
-            .exclude(
-                owner_user__profile__role=UserProfile.ROLE_LIBRARIAN,
-                name="Favorites",
-            )
-            .exclude(visibility=Shelf.VISIBILITY_PRIVATE)
-            .exists()
+        self.assertEqual(
+            Shelf.objects.filter(
+                owner_type=Shelf.OWNER_TYPE_USER,
+                visibility=Shelf.VISIBILITY_LISTED,
+            ).count(),
+            1,
         )
 
     @override_settings(DEBUG=True)

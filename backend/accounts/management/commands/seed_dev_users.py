@@ -1,14 +1,16 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import hashlib
 import random
 from typing import Any
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
+from django.db.models import Count
 
 from accounts.models import UserProfile
 from accounts.bootstrap import has_active_owner
@@ -18,6 +20,7 @@ from library.groups.book_assignments import add_book_to_group
 from library.groups.memberships import add_user_to_group, remove_user_from_group
 from library.models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from library.groups.public_group import get_public_group
+from library.queries import visible_books_for_user
 from shelves.models import Shelf, ShelfItem
 from shelves.item_services import add_book_to_shelf
 from shelves.services import create_shelf, update_shelf
@@ -58,6 +61,32 @@ class SeedCounts:
     shelves_existing: int = 0
     shelf_items_added: int = 0
     book_group_assignments_added: int = 0
+
+
+@dataclass(frozen=True)
+class CuratorAssignment:
+    group_name: str
+    username: str
+    role: str
+
+
+@dataclass
+class MembershipScenario:
+    mode: str
+    exclusive_group: LibraryGroup | None = None
+    exclusive_users: list[str] = field(default_factory=list)
+    overlapping_user: str | None = None
+    curators: list[CuratorAssignment] = field(default_factory=list)
+    shortfalls: list[str] = field(default_factory=list)
+
+
+@dataclass
+class BookScenario:
+    shelf_books: dict[object, list[Book]] = field(default_factory=dict)
+    exclusive_books: list[Book] = field(default_factory=list)
+    shared_book_count: int = 0
+    metadata_group_count: int = 0
+    fallback_group_count: int = 0
 
 
 DEMO_USERS = [
@@ -138,6 +167,21 @@ def _stable_random(seed: str, key: str) -> random.Random:
     return random.Random(int.from_bytes(digest[:8], "big"))
 
 
+def _stable_order(seed: str, key: str, values: list[Any]) -> list[Any]:
+    def rank(value: Any) -> bytes:
+        if isinstance(value, tuple) and value:
+            identity = str(value[0])
+        else:
+            identity = str(
+                getattr(value, "pk", None)
+                or getattr(value, "username", None)
+                or value
+            )
+        return hashlib.sha256(f"{seed}:{key}:{identity}".encode()).digest()
+
+    return sorted(values, key=rank)
+
+
 def _get_or_create_shelf(
     *,
     actor: Any,
@@ -151,6 +195,7 @@ def _get_or_create_shelf(
     existing = (
         Shelf.objects.filter(
             name=name,
+            description=description,
             owner_type=owner_type,
             owner_user=owner_user,
             owner_group=owner_group,
@@ -251,21 +296,47 @@ class Command(BaseCommand):
         )
 
         user_specs = _expanded_user_specs(user_count)
-        users, created_usernames = self._ensure_demo_users(user_specs, counts)
+        users, managed_usernames = self._ensure_demo_users(user_specs, counts)
         self._ensure_simple_memberships(users=users, public=public, counts=counts)
         groups: list[LibraryGroup] = []
+        membership_scenario = MembershipScenario(mode="simple")
         if advanced_groups_enabled:
             groups = self._ensure_groups(_expanded_group_specs(group_count), counts)
-            self._ensure_advanced_memberships(
+            membership_scenario = self._ensure_advanced_memberships(
                 owner=owner,
                 users=users,
-                created_usernames=created_usernames,
+                managed_usernames=managed_usernames,
                 groups=groups,
+                public=public,
+                seed=seed,
+                counts=counts,
+            )
+
+        books = list(
+            Book.objects.order_by("title", "created_at", "id").prefetch_related(
+                "book_catalog_tags__catalog_tag",
+                "book_authors__author",
+                "book_series__series",
+            )
+        )
+        if advanced_groups_enabled:
+            book_scenario = self._ensure_advanced_book_assignments(
+                owner=owner,
+                books=books,
+                groups=groups,
+                public=public,
+                membership_scenario=membership_scenario,
+                seed=seed,
+                counts=counts,
+            )
+        else:
+            book_scenario = self._ensure_simple_book_assignments(
+                owner=owner,
+                books=books,
                 public=public,
                 counts=counts,
             )
 
-        no_books = False
         if skip_shelves:
             self.stdout.write("Shelves: skipped by --skip-shelves.")
         else:
@@ -274,19 +345,19 @@ class Command(BaseCommand):
                 users=users,
                 groups=groups,
                 public=public,
+                seed=seed,
                 counts=counts,
             )
-            books = list(Book.objects.order_by("title", "created_at", "id"))
             if books:
                 self._populate_shelves(
                     owner=owner,
                     shelves=shelves,
-                    books=books,
+                    book_scenario=book_scenario,
                     seed=seed,
                     counts=counts,
+                    shortfalls=membership_scenario.shortfalls,
                 )
             else:
-                no_books = True
                 self.stdout.write("No books found; shelf item population skipped.")
 
         self.stdout.write("")
@@ -304,16 +375,55 @@ class Command(BaseCommand):
             f"Memberships: {counts.memberships_created} created, "
             f"{counts.memberships_existing} existing/skipped"
         )
+        self.stdout.write(f"Mode: {membership_scenario.mode}")
+        self.stdout.write(
+            "Exclusive Group: "
+            + (
+                membership_scenario.exclusive_group.name
+                if membership_scenario.exclusive_group is not None
+                else "not applicable"
+            )
+        )
+        self.stdout.write(
+            "Exclusive users: "
+            + (", ".join(membership_scenario.exclusive_users) or "none")
+        )
+        self.stdout.write(
+            f"Overlapping user: {membership_scenario.overlapping_user or 'none'}"
+        )
+        self.stdout.write(
+            "Curators: "
+            + (
+                ", ".join(
+                    f"{item.group_name}={item.username} ({item.role})"
+                    for item in membership_scenario.curators
+                )
+                or "none"
+            )
+        )
+        self.stdout.write(f"Exclusive Books: {len(book_scenario.exclusive_books)}")
+        self.stdout.write(f"Shared Books: {book_scenario.shared_book_count}")
+        self.stdout.write(
+            "Book selection: "
+            f"{book_scenario.metadata_group_count} metadata pools, "
+            f"{book_scenario.fallback_group_count} deterministic fallbacks"
+        )
         self.stdout.write(f"Book group assignments added: {counts.book_group_assignments_added}")
         self.stdout.write(
             f"Shelves: {counts.shelves_created} created, "
             f"{counts.shelves_existing} existing/skipped"
         )
         self.stdout.write(f"Shelf items added: {counts.shelf_items_added}")
-        if no_books:
+        if not books:
             self.stdout.write("Book population: skipped because no books exist.")
         elif not skip_shelves:
             self.stdout.write(f"Book population seed: {seed}")
+        if membership_scenario.shortfalls:
+            self.stdout.write("Scenario shortfalls:")
+            for message in membership_scenario.shortfalls:
+                self.stdout.write(self.style.WARNING(f"- {message}"))
+        else:
+            self.stdout.write("Scenario shortfalls: none")
         self.stdout.write(
             self.style.WARNING(
                 f"Dev accounts use password {DEV_PASSWORD}. "
@@ -339,7 +449,7 @@ class Command(BaseCommand):
         counts: SeedCounts,
     ) -> tuple[dict[str, Any], set[str]]:
         users: dict[str, Any] = {}
-        created_usernames: set[str] = set()
+        managed_usernames: set[str] = set()
         for spec in specs:
             user, created = User.objects.get_or_create(
                 username=spec.username,
@@ -360,11 +470,21 @@ class Command(BaseCommand):
                     update_fields=["role", "must_change_password", "updated_at"]
                 )
                 counts.users_created += 1
-                created_usernames.add(spec.username)
+                managed_usernames.add(spec.username)
             else:
                 counts.users_existing += 1
+                if self._matches_demo_identity(user=user, spec=spec):
+                    managed_usernames.add(spec.username)
             users[spec.username] = user
-        return users, created_usernames
+        return users, managed_usernames
+
+    @staticmethod
+    def _matches_demo_identity(*, user: Any, spec: DemoUserSpec) -> bool:
+        return (
+            user.first_name == spec.first_name
+            and user.last_name == spec.last_name
+            and user.email == spec.email
+        )
 
     def _ensure_groups(
         self,
@@ -374,7 +494,10 @@ class Command(BaseCommand):
         groups: list[LibraryGroup] = []
         for spec in specs:
             group = (
-                LibraryGroup.objects.filter(name=spec.name)
+                LibraryGroup.objects.filter(
+                    name=spec.name,
+                    description=spec.description,
+                )
                 .order_by("created_at", "id")
                 .first()
             )
@@ -418,103 +541,568 @@ class Command(BaseCommand):
         *,
         owner: Any,
         users: dict[str, Any],
-        created_usernames: set[str],
+        managed_usernames: set[str],
         groups: list[LibraryGroup],
         public: LibraryGroup,
+        seed: str,
         counts: SeedCounts,
-    ) -> None:
-        user_items = list(users.items())
-        profiles = {
-            username: UserProfile.objects.get(user=user)
-            for username, user in user_items
+    ) -> MembershipScenario:
+        scenario = MembershipScenario(mode="advanced")
+        ordered_groups = _stable_order(seed, "group-scenarios", groups)
+        exclusive_group = ordered_groups[0]
+        other_groups = ordered_groups[1:]
+        scenario.exclusive_group = exclusive_group
+
+        roles = {
+            username: get_or_create_profile(user=user).role
+            for username, user in users.items()
         }
-        reader_users = [
+        safe_exclusive = []
+        allowed_group_ids = {public.pk, exclusive_group.pk}
+        for username in managed_usernames:
+            user = users[username]
+            existing_group_ids = set(
+                LibraryGroupMembership.objects.filter(user=user).values_list(
+                    "group_id",
+                    flat=True,
+                )
+            )
+            if existing_group_ids.issubset(allowed_group_ids):
+                safe_exclusive.append(user)
+
+        ordered_safe = _stable_order(seed, "exclusive-users", safe_exclusive)
+        reader_safe = [
             user
-            for username, user in user_items
-            if profiles[username].role == UserProfile.ROLE_READER
+            for user in ordered_safe
+            if roles[user.username] == UserProfile.ROLE_READER
         ]
-        self._ensure_each_group_has_curator(
-            owner=owner,
-            users=reader_users,
-            groups=groups,
-            counts=counts,
+        exclusive_users: list[Any] = []
+        if reader_safe:
+            exclusive_users.append(reader_safe[0])
+        exclusive_users.extend(
+            user for user in ordered_safe if user not in exclusive_users
+        )
+        exclusive_users = exclusive_users[:2]
+
+        for user in exclusive_users:
+            self._ensure_membership(
+                user=user,
+                group=exclusive_group,
+                counts=counts,
+            )
+            if LibraryGroupMembership.objects.filter(user=user, group=public).exists():
+                remove_user_from_group(user=user, group=public, actor=owner)
+        scenario.exclusive_users = [user.username for user in exclusive_users]
+        if len(exclusive_users) < 2:
+            scenario.shortfalls.append(
+                "Exclusive Group needs two seed-managed users without unrelated "
+                f"memberships; created {len(exclusive_users)}."
+            )
+
+        reserved = {user.username for user in exclusive_users}
+        available = _stable_order(
+            seed,
+            "membership-scenarios",
+            [user for user in users.values() if user.username not in reserved],
         )
 
-        for index, (username, user) in enumerate(user_items):
-            if profiles[username].role != UserProfile.ROLE_READER:
-                continue
+        overlapping_user = available.pop(0) if available and other_groups else None
+        if overlapping_user is not None:
+            self._ensure_membership(
+                user=overlapping_user,
+                group=exclusive_group,
+                counts=counts,
+            )
+            self._ensure_membership(
+                user=overlapping_user,
+                group=other_groups[0],
+                counts=counts,
+            )
+            scenario.overlapping_user = overlapping_user.username
+            reserved.add(overlapping_user.username)
+        else:
+            scenario.shortfalls.append(
+                "Overlapping-user scenario requires another demo user and at "
+                "least two non-Public Groups."
+            )
 
-            desired: list[tuple[LibraryGroup, bool]] = []
-            if index % 4 != 2:
-                desired.append((public, False))
+        public_only = next(
+            (
+                user
+                for user in available
+                if not LibraryGroupMembership.objects.filter(user=user)
+                .exclude(group=public)
+                .exists()
+            ),
+            None,
+        )
+        if public_only is not None:
+            available.remove(public_only)
+            reserved.add(public_only.username)
+        else:
+            scenario.shortfalls.append(
+                "No demo user remained for the Public-only scenario."
+            )
 
-            if index % 8 != 7:
-                desired.append(
-                    (
-                        groups[index % len(groups)],
-                        False,
-                    )
-                )
-                if index % 3 == 0:
-                    desired.append(
-                        (
-                            groups[(index + 1) % len(groups)],
-                            False,
-                        )
-                    )
+        public_private_group = other_groups[0] if other_groups else None
+        public_private = next(
+            (
+                user
+                for user in available
+                if public_private_group is not None
+                and not LibraryGroupMembership.objects.filter(user=user)
+                .exclude(group__in=[public, public_private_group])
+                .exists()
+            ),
+            None,
+        )
+        if public_private is not None:
+            available.remove(public_private)
+            self._ensure_membership(
+                user=public_private,
+                group=public_private_group,
+                counts=counts,
+            )
+            reserved.add(public_private.username)
+        else:
+            scenario.shortfalls.append(
+                "No demo user remained for the Public-plus-private-Group scenario."
+            )
 
-            for group, is_curator in desired:
-                existing = LibraryGroupMembership.objects.filter(
-                    user=user, group=group
-                ).first()
-                if existing is not None:
-                    counts.memberships_existing += 1
-                    continue
-
-                add_user_to_group(
-                    user=user,
+        multi_private = available.pop(0) if available and len(other_groups) >= 2 else None
+        if multi_private is not None:
+            for group in other_groups[:2]:
+                self._ensure_membership(
+                    user=multi_private,
                     group=group,
-                    is_curator=is_curator,
+                    counts=counts,
                 )
-                counts.memberships_created += 1
+            reserved.add(multi_private.username)
+        elif len(other_groups) < 2:
+            scenario.shortfalls.append(
+                "Multiple-private-Group scenario requires at least three "
+                "non-Public Groups."
+            )
+        else:
+            scenario.shortfalls.append(
+                "No demo user remained for the multiple-private-Group scenario."
+            )
 
-            if username in created_usernames and index % 4 == 2:
-                public_membership = LibraryGroupMembership.objects.filter(
-                    user=user,
-                    group=public,
-                ).first()
-                if public_membership is not None:
-                    remove_user_from_group(user=user, group=public)
+        distribution_groups = other_groups or [exclusive_group]
+        for index, user in enumerate(available):
+            self._ensure_membership(
+                user=user,
+                group=distribution_groups[index % len(distribution_groups)],
+                counts=counts,
+            )
+
+        self._ensure_group_curators(
+            owner=owner,
+            users=users,
+            managed_usernames=managed_usernames,
+            groups=ordered_groups,
+            exclusive_users=exclusive_users,
+            scenario_protected_usernames={
+                user.username
+                for user in (public_only, public_private)
+                if user is not None
+            },
+            roles=roles,
+            seed=seed,
+            counts=counts,
+            scenario=scenario,
+        )
+        return scenario
 
     @staticmethod
-    def _ensure_each_group_has_curator(
+    def _ensure_membership(
+        *,
+        user: Any,
+        group: LibraryGroup,
+        counts: SeedCounts,
+        is_curator: bool = False,
+    ) -> LibraryGroupMembership:
+        existing = LibraryGroupMembership.objects.filter(
+            user=user,
+            group=group,
+        ).first()
+        membership = add_user_to_group(
+            user=user,
+            group=group,
+            is_curator=is_curator,
+        )
+        if existing is None:
+            counts.memberships_created += 1
+        else:
+            counts.memberships_existing += 1
+        return membership
+
+    def _ensure_group_curators(
+        self,
         *,
         owner: Any,
-        users: list[Any],
+        users: dict[str, Any],
+        managed_usernames: set[str],
         groups: list[LibraryGroup],
+        exclusive_users: list[Any],
+        scenario_protected_usernames: set[str],
+        roles: dict[str, str],
+        seed: str,
         counts: SeedCounts,
+        scenario: MembershipScenario,
     ) -> None:
-        for group_index, group in enumerate(groups):
-            if LibraryGroupMembership.objects.filter(
+        protected_usernames = {
+            user.username for user in exclusive_users
+        } | scenario_protected_usernames
+        preferred_roles = [
+            UserProfile.ROLE_READER,
+            UserProfile.ROLE_LIBRARIAN,
+            UserProfile.ROLE_MANAGER,
+        ]
+        for index, group in enumerate(groups):
+            target_role = preferred_roles[index % len(preferred_roles)]
+            if index == 0 and exclusive_users:
+                candidates = [
+                    user
+                    for user in exclusive_users
+                    if roles[user.username] == target_role
+                ] or exclusive_users
+            else:
+                candidates = [
+                    user
+                    for username, user in users.items()
+                    if username in managed_usernames
+                    and username not in protected_usernames
+                    and roles[username] == target_role
+                ]
+                candidates = _stable_order(
+                    seed,
+                    f"curator:{group.pk}:{target_role}",
+                    candidates,
+                )
+                if not candidates:
+                    candidates = _stable_order(
+                        seed,
+                        f"curator-fallback:{group.pk}",
+                        [
+                            user
+                            for username, user in users.items()
+                            if username not in protected_usernames
+                        ],
+                    )
+
+            candidate = candidates[0] if candidates else None
+            if candidate is None:
+                existing = (
+                    LibraryGroupMembership.objects.filter(
+                        group=group,
+                        is_curator=True,
+                    )
+                    .select_related("user__profile")
+                    .order_by("user__username")
+                    .first()
+                )
+                if existing is not None:
+                    candidate = existing.user
+                else:
+                    candidate = owner
+                    scenario.shortfalls.append(
+                        f"Used the Owner as last-resort curator for {group.name}."
+                    )
+
+            self._ensure_membership(
+                user=candidate,
                 group=group,
                 is_curator=True,
-            ).exists():
-                continue
-
-            rotated_users = users[group_index:] + users[:group_index]
-            for user in rotated_users:
-                if LibraryGroupMembership.objects.filter(
-                    user=user,
-                    group=group,
-                ).exists():
-                    continue
-                add_user_to_group(
-                    user=user,
-                    group=group,
-                    is_curator=True,
+                counts=counts,
+            )
+            actual_role = (
+                "owner"
+                if candidate.is_superuser
+                else get_or_create_profile(user=candidate).role
+            )
+            scenario.curators.append(
+                CuratorAssignment(
+                    group_name=group.name,
+                    username=candidate.username,
+                    role=actual_role,
                 )
-                counts.memberships_created += 1
-                break
+            )
+            if actual_role != target_role and not candidate.is_superuser:
+                scenario.shortfalls.append(
+                    f"{group.name} curator role fell back from {target_role} "
+                    f"to {actual_role}."
+                )
+
+    def _ensure_simple_book_assignments(
+        self,
+        *,
+        owner: Any,
+        books: list[Book],
+        public: LibraryGroup,
+        counts: SeedCounts,
+    ) -> BookScenario:
+        for book in books:
+            self._ensure_book_assignment(
+                owner=owner,
+                book=book,
+                group=public,
+                counts=counts,
+            )
+        return BookScenario(shelf_books={public.pk: books})
+
+    def _ensure_advanced_book_assignments(
+        self,
+        *,
+        owner: Any,
+        books: list[Book],
+        groups: list[LibraryGroup],
+        public: LibraryGroup,
+        membership_scenario: MembershipScenario,
+        seed: str,
+        counts: SeedCounts,
+    ) -> BookScenario:
+        scenario = BookScenario()
+        exclusive_group = membership_scenario.exclusive_group
+        if exclusive_group is None:
+            membership_scenario.shortfalls.append(
+                "No exclusive Group was available for Book assignment planning."
+            )
+            return scenario
+
+        metadata_pools = self._book_metadata_pools(books)
+        safe_exclusive = []
+        for book in books:
+            assigned_group_ids = set(
+                BookGroupAssignment.objects.filter(book=book).values_list(
+                    "group_id",
+                    flat=True,
+                )
+            )
+            if not assigned_group_ids or assigned_group_ids == {exclusive_group.pk}:
+                safe_exclusive.append(book)
+
+        exclusive_books, used_metadata = self._select_books(
+            seed=seed,
+            key=f"exclusive:{exclusive_group.pk}",
+            candidates=safe_exclusive,
+            metadata_pools=metadata_pools,
+            target_count=6,
+        )
+        self._record_book_strategy(scenario, used_metadata)
+        for book in exclusive_books:
+            self._ensure_book_assignment(
+                owner=owner,
+                book=book,
+                group=exclusive_group,
+                counts=counts,
+            )
+        scenario.exclusive_books = exclusive_books
+        scenario.shelf_books[exclusive_group.pk] = exclusive_books
+        if not exclusive_books:
+            membership_scenario.shortfalls.append(
+                "No unassigned or already-exclusive Books were safe to assign "
+                f"exclusively to {exclusive_group.name}; existing assignments "
+                "were preserved."
+            )
+
+        exclusive_book_ids = {book.pk for book in exclusive_books}
+        nonexclusive_candidates = [
+            book for book in books if book.pk not in exclusive_book_ids
+        ]
+        other_groups = [group for group in groups if group.pk != exclusive_group.pk]
+        unique_anchors: dict[object, Book] = {}
+        reserved_anchor_ids: set[object] = set()
+        for group in other_groups:
+            safe_anchors = []
+            for book in nonexclusive_candidates:
+                if book.pk in reserved_anchor_ids:
+                    continue
+                assigned_group_ids = set(
+                    BookGroupAssignment.objects.filter(book=book).values_list(
+                        "group_id",
+                        flat=True,
+                    )
+                )
+                if not assigned_group_ids or assigned_group_ids == {group.pk}:
+                    safe_anchors.append(book)
+            ordered_anchors = _stable_order(
+                seed,
+                f"unique-book:{group.pk}",
+                safe_anchors,
+            )
+            if ordered_anchors:
+                unique_anchors[group.pk] = ordered_anchors[0]
+                reserved_anchor_ids.add(ordered_anchors[0].pk)
+            else:
+                membership_scenario.shortfalls.append(
+                    f"No Book was safe to reserve uniquely for {group.name}."
+                )
+
+        selected_by_group: dict[object, list[Book]] = {}
+        for group in other_groups:
+            anchor = unique_anchors.get(group.pk)
+            group_candidates = [
+                book
+                for book in nonexclusive_candidates
+                if book.pk not in reserved_anchor_ids or book == anchor
+            ]
+            selected, used_metadata = self._select_books(
+                seed=seed,
+                key=f"group:{group.pk}",
+                candidates=group_candidates,
+                metadata_pools=metadata_pools,
+                target_count=6,
+            )
+            if anchor is not None and anchor not in selected:
+                selected = [anchor, *selected[:5]]
+            self._record_book_strategy(scenario, used_metadata)
+            for book in selected:
+                self._ensure_book_assignment(
+                    owner=owner,
+                    book=book,
+                    group=group,
+                    counts=counts,
+                )
+            selected_by_group[group.pk] = selected
+            scenario.shelf_books[group.pk] = selected
+            if not selected:
+                membership_scenario.shortfalls.append(
+                    f"No non-exclusive Books were available for {group.name}."
+                )
+
+        shared_candidates_by_id = {
+            book.pk: book
+            for selected in selected_by_group.values()
+            for book in selected
+            if book.pk not in reserved_anchor_ids
+        }
+        shared_candidates = _stable_order(
+            seed,
+            "shared-books",
+            list(shared_candidates_by_id.values()),
+        )
+        shared_candidate = shared_candidates[0] if shared_candidates else None
+        if shared_candidate is not None and len(other_groups) >= 2:
+            for group in other_groups[:2]:
+                self._ensure_book_assignment(
+                    owner=owner,
+                    book=shared_candidate,
+                    group=group,
+                    counts=counts,
+                )
+                if shared_candidate not in scenario.shelf_books[group.pk]:
+                    scenario.shelf_books[group.pk].append(shared_candidate)
+        for book in shared_candidates[:4]:
+            self._ensure_book_assignment(
+                owner=owner,
+                book=book,
+                group=public,
+                counts=counts,
+            )
+        if shared_candidate is None:
+            membership_scenario.shortfalls.append(
+                "Shared-Book scenario requires a non-exclusive Book and at least "
+                "one non-exclusive demo Group."
+            )
+
+        touched_book_ids = {
+            book.pk
+            for selected in selected_by_group.values()
+            for book in selected
+        }
+        scenario.shared_book_count = (
+            Book.objects.filter(pk__in=touched_book_ids)
+            .annotate(group_count=Count("group_assignments__group", distinct=True))
+            .filter(group_count__gte=2)
+            .count()
+        )
+        scenario.shelf_books[public.pk] = list(
+            Book.objects.filter(group_assignments__group=public)
+            .distinct()
+            .order_by("title", "created_at", "id")
+        )
+        return scenario
+
+    @staticmethod
+    def _ensure_book_assignment(
+        *,
+        owner: Any,
+        book: Book,
+        group: LibraryGroup,
+        counts: SeedCounts,
+    ) -> None:
+        exists = BookGroupAssignment.objects.filter(book=book, group=group).exists()
+        add_book_to_group(actor=owner, book=book, group=group)
+        if not exists:
+            counts.book_group_assignments_added += 1
+
+    @staticmethod
+    def _record_book_strategy(scenario: BookScenario, used_metadata: bool) -> None:
+        if used_metadata:
+            scenario.metadata_group_count += 1
+        else:
+            scenario.fallback_group_count += 1
+
+    @staticmethod
+    def _book_metadata_pools(books: list[Book]) -> dict[str, list[Book]]:
+        pools: dict[str, list[Book]] = {}
+        for book in books:
+            for relation in book.book_catalog_tags.all():
+                key = f"tag:{relation.catalog_tag.name.casefold()}"
+                pools.setdefault(key, []).append(book)
+            for relation in book.book_authors.all():
+                key = f"author:{relation.author.name.casefold()}"
+                pools.setdefault(key, []).append(book)
+            try:
+                series_name = book.book_series.series.name
+            except ObjectDoesNotExist:
+                pass
+            else:
+                pools.setdefault(f"series:{series_name.casefold()}", []).append(book)
+        return pools
+
+    @staticmethod
+    def _select_books(
+        *,
+        seed: str,
+        key: str,
+        candidates: list[Book],
+        metadata_pools: dict[str, list[Book]],
+        target_count: int,
+    ) -> tuple[list[Book], bool]:
+        if not candidates:
+            return [], False
+
+        candidate_ids = {book.pk for book in candidates}
+        eligible_pools = []
+        for pool_key, pool_books in sorted(metadata_pools.items()):
+            eligible = [book for book in pool_books if book.pk in candidate_ids]
+            if len(eligible) >= 2:
+                eligible_pools.append((pool_key, eligible))
+
+        selected: list[Book] = []
+        used_metadata = bool(eligible_pools)
+        if eligible_pools:
+            pool_key, pool_books = _stable_order(
+                seed,
+                f"metadata-pool:{key}",
+                eligible_pools,
+            )[0]
+            selected.extend(
+                _stable_order(seed, f"metadata-books:{key}:{pool_key}", pool_books)[
+                    :target_count
+                ]
+            )
+
+        selected_ids = {book.pk for book in selected}
+        remaining = [book for book in candidates if book.pk not in selected_ids]
+        selected.extend(
+            _stable_order(seed, f"book-fallback:{key}", remaining)[
+                : max(0, target_count - len(selected))
+            ]
+        )
+        return selected, used_metadata
 
     def _ensure_shelves(
         self,
@@ -523,16 +1111,25 @@ class Command(BaseCommand):
         users: dict[str, Any],
         groups: list[LibraryGroup],
         public: LibraryGroup,
+        seed: str,
         counts: SeedCounts,
     ) -> list[Shelf]:
         shelves: list[Shelf] = []
+        listed_candidates = [
+            user
+            for user in users.values()
+            if get_or_create_profile(user=user).role == UserProfile.ROLE_LIBRARIAN
+        ] or list(users.values())
+        listed_owner = _stable_order(
+            seed,
+            "listed-personal-shelf",
+            listed_candidates,
+        )[0]
         for user in users.values():
-            profile = get_or_create_profile(user=user)
             for shelf_index, name in enumerate(PERSONAL_SHELF_NAMES):
                 visibility = (
                     Shelf.VISIBILITY_LISTED
-                    if name == "Favorites"
-                    and profile.role == UserProfile.ROLE_LIBRARIAN
+                    if name == "Favorites" and user.pk == listed_owner.pk
                     else Shelf.VISIBILITY_PRIVATE
                 )
                 shelf, created = _get_or_create_shelf(
@@ -560,10 +1157,9 @@ class Command(BaseCommand):
 
         for group in groups:
             for shelf_label in GROUP_SHELF_NAMES:
-                name = f"{group.name}: {shelf_label}"
                 shelf, created = _get_or_create_shelf(
                     actor=owner,
-                    name=name,
+                    name=shelf_label,
                     description=(
                         f"A shared {shelf_label.lower()} shelf for {group.name}."
                     ),
@@ -575,7 +1171,7 @@ class Command(BaseCommand):
         for shelf_label, description in PUBLIC_SHELVES:
             shelf, created = _get_or_create_shelf(
                 actor=owner,
-                name=f"{public.name}: {shelf_label}",
+                name=shelf_label,
                 description=description,
                 owner_type=Shelf.OWNER_TYPE_GROUP,
                 owner_group=public,
@@ -601,23 +1197,47 @@ class Command(BaseCommand):
         *,
         owner: Any,
         shelves: list[Shelf],
-        books: list[Book],
+        book_scenario: BookScenario,
         seed: str,
         counts: SeedCounts,
+        shortfalls: list[str],
     ) -> None:
         for shelf in shelves:
+            if ShelfItem.objects.filter(shelf=shelf).exists():
+                continue
             if shelf.owner_type == Shelf.OWNER_TYPE_USER:
                 shelf_owner = shelf.owner_user
                 if shelf_owner is None:
                     raise ValueError("User-owned shelf is missing owner_user.")
                 owner_key = shelf_owner.username
                 actor = shelf_owner
+                books = list(
+                    visible_books_for_user(actor, cached=False).order_by(
+                        "title",
+                        "created_at",
+                        "id",
+                    )
+                )
             else:
                 shelf_group = shelf.owner_group
                 if shelf_group is None:
                     raise ValueError("Group-owned shelf is missing owner_group.")
                 owner_key = shelf_group.name
                 actor = owner
+                books = [
+                    book
+                    for book in book_scenario.shelf_books.get(shelf_group.pk, [])
+                    if BookGroupAssignment.objects.filter(
+                        book=book,
+                        group=shelf_group,
+                    ).exists()
+                ]
+
+            if not books:
+                message = f"No accessible Books were available for shelf {shelf.name}."
+                if message not in shortfalls:
+                    shortfalls.append(message)
+                continue
 
             rng = _stable_random(
                 seed,
@@ -629,56 +1249,5 @@ class Command(BaseCommand):
             for book in selected:
                 if ShelfItem.objects.filter(shelf=shelf, book=book).exists():
                     continue
-                self._ensure_book_access(
-                    owner=owner,
-                    actor=actor,
-                    shelf=shelf,
-                    book=book,
-                    counts=counts,
-                )
                 add_book_to_shelf(actor, shelf=shelf, book=book)
                 counts.shelf_items_added += 1
-
-    @staticmethod
-    def _ensure_book_access(
-        *,
-        owner: Any,
-        actor: Any,
-        shelf: Shelf,
-        book: Book,
-        counts: SeedCounts,
-    ) -> None:
-        if shelf.owner_type == Shelf.OWNER_TYPE_GROUP:
-            shelf_group = shelf.owner_group
-            if shelf_group is None:
-                raise ValueError("Group-owned shelf is missing owner_group.")
-            already_assigned = BookGroupAssignment.objects.filter(
-                book=book,
-                group=shelf_group,
-            ).exists()
-            add_book_to_group(actor=owner, book=book, group=shelf_group)
-            if not already_assigned:
-                counts.book_group_assignments_added += 1
-            return
-
-        profile = get_or_create_profile(user=actor)
-        if actor.is_superuser or profile.role in {
-            UserProfile.ROLE_MANAGER,
-            UserProfile.ROLE_LIBRARIAN,
-        }:
-            return
-
-        membership = (
-            LibraryGroupMembership.objects.filter(user=actor)
-            .select_related("group")
-            .order_by("group__name", "created_at")
-            .first()
-        )
-        if membership is not None:
-            already_assigned = BookGroupAssignment.objects.filter(
-                book=book,
-                group=membership.group,
-            ).exists()
-            add_book_to_group(actor=owner, book=book, group=membership.group)
-            if not already_assigned:
-                counts.book_group_assignments_added += 1

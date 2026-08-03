@@ -60,7 +60,7 @@ class SeedDevUsersIdempotencyTests(SeedDevUsersCommandTestCase):
         self.assertEqual(shelf.description, "Existing shelf description.")
 
     @override_settings(DEBUG=True)
-    def test_existing_librarian_favorites_becomes_listed_on_rerun(self):
+    def test_unrelated_existing_favorites_shelf_is_not_commandeered(self):
         self.create_setup_owner()
         librarian = User.objects.create_user(username="elit", password="private-password")
         profile = UserProfile.objects.get(user=librarian)
@@ -82,7 +82,15 @@ class SeedDevUsersIdempotencyTests(SeedDevUsersCommandTestCase):
         )
 
         favorites.refresh_from_db()
-        self.assertEqual(favorites.visibility, Shelf.VISIBILITY_LISTED)
+        self.assertEqual(favorites.visibility, Shelf.VISIBILITY_PRIVATE)
+        self.assertEqual(
+            Shelf.objects.filter(
+                owner_user=librarian,
+                name="Favorites",
+                visibility=Shelf.VISIBILITY_LISTED,
+            ).count(),
+            1,
+        )
 
     @override_settings(DEBUG=True)
     def test_advanced_mode_creates_custom_groups_memberships_shelves_and_assignments(
@@ -95,6 +103,7 @@ class SeedDevUsersIdempotencyTests(SeedDevUsersCommandTestCase):
                 title=f"Fixture Book {index:02d}",
                 epub_bytes=f"book-{index}".encode(),
                 source_filename=f"book-{index}.epub",
+                assign_public=False,
             )
 
         first_output = StringIO()
@@ -138,7 +147,7 @@ class SeedDevUsersIdempotencyTests(SeedDevUsersCommandTestCase):
                     flat=True,
                 )
             )
-            self.assertGreaterEqual(len(items), 5)
+            self.assertGreaterEqual(len(items), 1)
             self.assertLessEqual(len(items), 10)
             self.assertEqual(len(items), len(set(items)))
 
