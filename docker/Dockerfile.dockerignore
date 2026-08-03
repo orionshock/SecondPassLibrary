@@ -55,5 +55,4 @@ tools/
 .vscode/
 *.code-workspace
 AGENTS.md
-PROJECT.md
 README.md

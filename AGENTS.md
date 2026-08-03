@@ -1,74 +1,48 @@
 # Agent Instructions
 
-## EXTREMELY HIGH IMPORTANCE: THIS PROJECT IS PRE-RELEASE
+Second Pass Library is a pre-release, self-hosted, SQLite-first EPUB library with durable, exportable user-owned reading data. The Django/DRF backend lives under `backend/`; the React/TypeScript Product UI and first-party SDK workspace live under `frontend/`. Do not add PDF, speculative formats, sync protocols, background-job frameworks, OIDC, or plugins unless explicitly requested.
 
-- The project is pre-release. There is no user base to preserve compatibility for.
-- Do not add compatibility shims, transitional wrappers, legacy aliases, compatibility migrations, or other compatibility machinery.
-- Database migrations are a development convenience. Use them when useful, but expect them to be periodically collapsed; do not treat migration history as a permanent compatibility contract.
-- Churn is highly permitted when it produces a real, desirable effect.
-- Do not block a good change merely because it creates legitimate downstream cleanup. Make the correct change and update affected callers and boundaries directly.
+Repository files, current tests, and observed runtime behavior are authoritative over historical prose or codebase-memory results. Read the targeted documents below only when relevant to the task.
 
-Read `PROJECT.md` before editing. Use the focused documents under `docs/` for domain and operational detail; this file contains only repository-wide guardrails.
+## Runtime and architecture
 
-## Code and architecture
-
-- Prefer boring, conventional Django and explicit code.
-- Put business workflows in service modules. Do not orchestrate them in serializers, views/viewsets, model `save()` methods, signals, admin classes, or management commands.
-- Keep framework glue thin and avoid abstractions that do not solve a current problem.
-- Preserve existing API paths and user-owned reading data unless the task explicitly changes them. Reading history, progress, and annotations must not be silently destroyed when access or active sessions change.
-- Do not add compatibility shims or re-export wrappers for deleted or renamed modules; update callers to the current boundary.
-- Add dependencies only when necessary, maintained, compatible, and not already covered by Python, Django, or an existing dependency.
-
-## Product and security boundaries
-
+- React owns the Product UI. Django-rendered pages are limited to setup, login, logout, optional Admin, errors, and other explicitly retained server pages.
+- Docker builds `frontend/`, installs the generated Product UI at `backend/web/product_ui/`, and collects its static assets.
+- The first-party SDK owns HTTP transport, wire-shape adaptation, and API-error normalization. Orchestrators own SDK calls and server-aware interpretation. Page regions and presentational components remain server-blind. The React/source boundary checker is authoritative for these boundaries.
+- Authorization belongs in backend query/service boundaries and must never rely on React filtering or route guards. Keep views, serializers, admin classes, and management commands thin; put workflows in cohesive services.
+- This project is pre-release. Do not add compatibility shims, legacy aliases, transitional wrappers, or broad abstractions without a concrete current need; update callers directly.
 - Keep REST/JSON APIs under `/api/v1/`. Never expose filesystem paths, storage identities, secrets, or authentication internals.
-- The Product UI source is React under `frontend/`.
-- Use Vite, React Router, and Vitest for the React app. Frontend dependencies are acceptable when they solve established infrastructure problems; do not add GraphQL or a generated API client unless explicitly requested.
-- React routes and components must use the first-party TypeScript API package rather than ad hoc `fetch()` calls or raw API URLs. The package owns server-shape normalization and returns stable app-facing objects. React hooks may wrap it, but the package itself remains framework-light plain TypeScript.
-- Keep React layered: the app orchestrator owns bootstrap and the global frame; branch orchestrators own page assembly; regions own only their local operations; shared components stay server-blind. Communicate through explicit props, callbacks, outlet context, or stable contracts. Only `@second-pass/spl-api` may know server URLs or perform server communication.
-- Name feature route controllers `*Orchestrator`, major page sections `*PageRegion`, and reusable presentational pieces `*Component` (`*SubComponent` only when clearly subordinate). Promote genuinely cross-feature behavior to focused modules under `frontend/src/shared`; do not bury shared behavior in Profile or promote feature-only rules merely to reduce file count.
-- Vite is the primary Product UI development surface and proxies same-origin-style requests to Django. Docker builds `frontend/` and installs the generated Product UI artifact into the Django runtime tree before static collection.
-- React owns `/` and intended Product UI deep links after setup and login. Only first-time setup, `/login/`, `/logout/`, and Django Admin remain Django-rendered application surfaces. Do not add separate Product UI mounts, DRF browsable pages, or Django-rendered Reader Client authorization pages.
-- Selected reader-client APIs use bearer tokens. Do not redesign authentication unless asked.
-- Django Admin is a technical service hatch, not the Product UI.
-- Preserve user ownership and scoping for reading data.
-- The Public group identity is Owner-managed through Server Settings only. Normal Group PATCH must reject attempts to change Public identity.
+- Runtime and user data belongs under ignored `userdata/`, never in source control or database file blobs.
 
-## Files and operations
+## Costly domain invariants
 
-- Runtime and user data belongs under `userdata/` and must not be committed. Do not store uploaded book files in the database.
-- Add operational logging when it materially helps diagnosis or operation. Never log secrets, tokens, passwords, raw uploads, unsafe archive paths, marginalia, request payloads, filesystem paths, hashes, or routine request success.
-- Files under `scripts/` are self-contained local/operator conveniences, not production contracts. Do not use script-behavior tests as production guarantees.
-- Docker deployment behavior and support files belong under `docker/` and `docs/deployment.md`. Docker runs direct Uvicorn against the ASGI application, and WhiteNoise is mandatory in Docker rather than an operator `.env` option.
-- Do not restore retired Product UI routes or preserve their layout/static tests. Keep tests only for retained Django surfaces and backend/API invariants; add React tests with new React behavior.
-- Release version, label, and date belong in checked-in source, not environment files or scripts.
-
-## Scope guardrails
-
-Unless explicitly requested, do not add:
-
-- PDF support
-- a sync protocol
-- background jobs
-- OIDC
-- a plugin system
+- Advanced Library Groups gates only the controls explicitly documented as advanced. It does not invalidate normal Group Shelf or Public-group behavior. Group Shelves, including Public Group shelves, remain valid in both modes. Public Group identity is Owner-managed through Server Settings, not normal Group editing.
+- A Series index is absent or a positive decimal with at most two fractional digits. Storage uses `DecimalField(max_digits=8, decimal_places=2)`; API output is an exact fixed two-decimal string, never a binary float.
+- A Book's primary Author is the lowest-positioned `BookAuthor` row, with through-row identity as deterministic fallback. Secondary Authors do not affect primary-Author sorting.
+- Author and Series UUIDs are identities. Names and normalized names are non-unique descriptive/search values; renaming must preserve identity and relationships.
+- User-owned Marginalia survives later loss of Library visibility. Current visibility may gate opening or new writes, but must not silently destroy history, progress, or annotations.
+- Django Admin is an intentional operator repair surface when enabled, not the Product UI.
 
 ## Tests and verification
 
-- For meaningful code changes, run `python backend/manage.py check` and focused pytest coverage for the changed area. Use the full suite only when the scope or risk warrants it.
-- Classify changed tests as `invariant`, `contract`, `regression`, or `implementation detail` in the final report.
-- Do not weaken invariant or contract tests without explicitly explaining why.
-- Tests cover runtime behavior, not copy or prose. When changing a suite, remove copy-only coverage.
-- Keep every React/Vitest test under `frontend/src/__tests__`; do not colocate Vitest files with runtime components or SDK source.
-- Do not treat local helper scripts as production contracts.
-- Docs-only changes do not require application tests.
-- Do not claim the full suite passed unless it was actually run; report focused and skipped verification accurately.
+- Run the smallest relevant modules, classes, or cases first, with generous timeouts for integration-heavy tests. Do not run the full suite automatically unless the scope or focused failures justify it.
+- For meaningful backend changes, normally run focused pytest, Django system checks, migration consistency, and Ruff. For frontend/SDK changes, run focused Vitest, TypeScript checks, the production build, and the React/source boundary checker as applicable. Finish with static hygiene and `git diff --check`.
+- Tests protect runtime behavior and contracts, not prose wording or deployment-file text unless that text is executable input.
+- List every changed test in the final report and classify it as `invariant`, `contract`, `regression`, or `implementation detail`. Do not weaken an invariant test without explicitly calling it out.
+- Report focused and skipped verification accurately; never imply the full suite ran when it did not.
 
-## Use focused docs for details
+## Logging and maintenance
 
-- `docs/architecture.md`
-- `docs/api.md`
-- `docs/permissions.md`
-- `docs/development.md`
-- `docs/deployment.md`
-- `docs/react-ui.md`
+- Log meaningful lifecycle success, conflict, retry, cleanup failure, and unexpected failure at appropriate levels with bounded context. Never log passwords, tokens, session identifiers, payload contents, or unnecessary personal data. Avoid noisy per-request or per-poll logging.
+- Give touched modules and files descriptive purpose/role names. Avoid unrelated broad rename sweeps, speculative general abstractions, and compatibility layers.
+
+## Read when relevant
+
+- Deployment, runtime, and security settings: [docs/deployment.md](docs/deployment.md)
+- Development commands and focused checks: [docs/development.md](docs/development.md)
+- Roles, Groups, Books, Shelves, and visibility: [docs/permissions.md](docs/permissions.md)
+- Library imports and metadata: [docs/imports.md](docs/imports.md)
+- Marginalia: [docs/marginalia.md](docs/marginalia.md) and relevant [specs](docs/specs/)
+- React/SDK work: [docs/react-ui.md](docs/react-ui.md) and [docs/react-ui-rules.md](docs/react-ui-rules.md)
+- External Reader pairing and bearer authentication: [docs/client-api-auth.md](docs/client-api-auth.md)
+- Broad architecture: [docs/architecture.md](docs/architecture.md)

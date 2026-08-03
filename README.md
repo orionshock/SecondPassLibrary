@@ -102,7 +102,6 @@ Importing Marginalia back into the system supports canonical SPL Marginalia arch
 
 Useful docs:
 
-- [Project overview](PROJECT.md)
 - [Development setup](docs/development.md)
 - [Production startup](docs/deployment.md)
 - [Architecture](docs/architecture.md)
