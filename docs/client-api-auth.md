@@ -60,7 +60,7 @@ High-level: the reader client creates a login request, a human authorizes it in 
 Notes:
 
 - The bearer token is a **client credential**, not a browser session token.
-- The browser never receives the bearer token; only the reader client receives it from the poll endpoint.
+- The browser never receives the bearer token; only the reader client receives it from the anonymous POST consumption request after GET polling reports approval.
 
 ## Models
 

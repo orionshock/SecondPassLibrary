@@ -32,7 +32,7 @@ remains recoverable through `cleanup_marginalia_import_stages`.
 
 ## Canonical archive codec
 
-`marginalia.archives` owns the strict executable contract shared by future
+`marginalia.archives` owns the strict executable contract shared by
 Marginalia Import and Export. Its runtime schema lives beside that code; the
 application and tests do not load documentation schemas from `docs/`.
 
@@ -56,8 +56,8 @@ sessions** choice. Missing Book checksums and duplicate hashes across distinct
 Books fail the complete serialization as integrity errors.
 
 The session-authenticated Export API uses this codec for complete and selected
-JSON attachments. Import preview uses the same codec before creating a
-user-bound stage. Apply remains deferred.
+JSON attachments. Import preview validates the same contract before creating a
+user-bound stage, and Apply imports selected staged Sessions.
 
 ## Owned-Marginalia Books
 
@@ -333,7 +333,7 @@ Empty Sessions have no non-deleted Annotations. They are omitted by default;
 `include_empty_sessions=true` includes them. The choice is stored on the stage
 and is the authority for Apply and unmatched download. Source `active`
 and `closed` Sessions are reviewable, but both report `will_import_as_status`
-as `closed`. Unmatched Sessions remain reviewable and counted for a future
+as `closed`. Unmatched Sessions remain reviewable and counted for the unmatched
 download, but cannot be selected for Apply. `can_apply` is true only when a
 matched Session survives the staged policy.
 
@@ -712,5 +712,5 @@ on Sessions or Annotations. Authenticated `/api/v1/server/info/` exposes it as
 
 Request idempotency remains an API concern and is deliberately not domain model
 state. The archive codec maps `Annotation.client_id` to
-`clientAnnotationId`; database Import and HTTP attachment routes remain
-deferred.
+`clientAnnotationId`; database Import and HTTP attachment routes use this
+contract.

@@ -158,9 +158,9 @@ and LibraryGroup authorization. External authentication, if added later, should
 map into local Django users rather than replace the account and permission
 model.
 
-Notes for future browser UI:
+Browser Product UI:
 
-- Session/CSRF behavior matters; any future web UI should account for CSRF when using session auth.
+- The active React Product UI uses Django session authentication and must preserve CSRF protection for authenticated mutations.
 - HTTP Basic authentication is not part of the product auth model.
 
 Session revocation rules and terminology are documented in `docs/session-management.md`.

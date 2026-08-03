@@ -223,7 +223,7 @@ server on port 5174.
 
 Django continues to render `/setup/`, `/login/`, `/logout/`, and the optional
 `/admin/` service hatch. DRF browsable pages and `/api-auth/` are disabled. The old Reader Client
-authorization webpage is retired pending a React replacement.
+authorization webpage is retired; React owns pairing approval at `/profile/client-pairing`.
 There are no alternate Product UI mounts or compatibility routes.
 
 ## Error-handling checks
@@ -355,8 +355,9 @@ The command:
 - creates personal shelves and Common Room shelves
 - deterministically adds 5-10 existing books to each shelf when books are available
 - when advanced library groups are enabled, additionally creates five non-Public
-  demo groups, varied ordinary memberships, reader curators, group-owned
-  shelves, and custom group book assignments
+  demo groups, varied intentional memberships, curators distributed across
+  Reader, Librarian, and Manager roles where possible, group-owned shelves, and
+  custom group book assignments
 
 The command is non-destructive by default. Existing users with matching
 usernames retain their names, email addresses, passwords, flags, and profile
@@ -416,10 +417,12 @@ python backend/manage.py cleanup_marginalia_import_stages
 
 Stages live under `userdata/imports/staged/marginalia/`. Runtime token access
 expires after exactly two hours; this command only reclaims abandoned files
-and records. Successful Apply deletes its staged file after database commit;
-if that deletion fails, the applied database result remains authoritative and
-this command removes the safe digest-named leftover. It is repeat-safe and may
-be scheduled weekly by the host.
+and records. Successful Apply deletes its staged file after database commit
+only when no unmatched content remains downloadable. Partial Apply retains the
+file until expiry so its unmatched artifact remains available. If post-commit
+deletion fails, the applied database result remains authoritative and this
+command removes the safe digest-named leftover. It is repeat-safe and may be
+scheduled weekly by the host.
 
 Import a single local EPUB, a ZIP archive, or a non-recursive directory
 (operator-only host/container path):

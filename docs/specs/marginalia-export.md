@@ -66,6 +66,6 @@ Foreign formats must be converted by a Reader client or dedicated tool. The
 Library server does not parse EPUB content, repair CFIs, or produce
 `locationLabel` values.
 
-A complete or selected archive is a JSON attachment. A future unmatched
-workflow may package one complete single-Session archive per JSON file inside
-a ZIP; each contained JSON document uses this same envelope and contract.
+A complete or selected archive is a JSON attachment. The unmatched download
+packages one complete single-Session archive per JSON file inside a ZIP; each
+contained JSON document uses this same envelope and contract.

@@ -72,11 +72,16 @@ import. Arbitrary sidecar assets are not imported. See
 Application limits are enforced before untrusted input reaches expensive
 parser or checksum work:
 
-- single EPUB upload: 200 MiB
-- ZIP upload: 1 GiB
-- ZIP entries: 5,000
-- EPUB member in a ZIP: 200 MiB uncompressed
-- total EPUB members in a ZIP: 2 GiB uncompressed
+- compressed EPUB, whether uploaded directly or read from a batch ZIP: 200 MiB
+- EPUB entries: 2,000
+- expanded EPUB member: 100 MiB
+- aggregate expanded EPUB contents: 1 GiB
+- per-member EPUB compression ratio: 100:1
+- encrypted EPUB members, unsafe member names, and normalized duplicate names are rejected
+- batch ZIP upload: 1 GiB
+- batch ZIP entries: 5,000
+- EPUB member expanded from a batch ZIP: 200 MiB
+- total EPUB members expanded from a batch ZIP: 2 GiB
 - marginalia JSON import: 25 MiB
 
 Large migrations should be split into smaller ZIP batches. Reverse-proxy
