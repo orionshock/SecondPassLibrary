@@ -13,6 +13,7 @@ from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
 from library.models import Book
+from library.queries import visible_books_for_user
 from marginalia.archives import (
     ArchiveBookmark,
     ArchiveHighlight,
@@ -22,6 +23,7 @@ from marginalia.archives import (
     UnsupportedArchiveProfileError,
     parse_archive,
 )
+from marginalia.exceptions import BookAccessRequiredError
 from marginalia.models import Annotation, ImportStage, ReadingSession
 
 from .staging import (
@@ -33,6 +35,9 @@ from .staging import (
 
 
 logger = logging.getLogger(__name__)
+MAX_INACCESSIBLE_BOOK_TITLES = 10
+MAX_INACCESSIBLE_BOOK_TITLE_LENGTH = 200
+UNTITLED_BOOK = "Untitled Book"
 
 
 class ImportApplyError(Exception):
@@ -51,10 +56,18 @@ class StagedArchiveInvalidError(ImportApplyError):
     pass
 
 
+class ImportBookAccessRequiredError(BookAccessRequiredError):
+    def __init__(self, *, titles: tuple[str, ...], total_count: int) -> None:
+        super().__init__()
+        self.titles = titles
+        self.total_count = total_count
+
+
 @dataclass(frozen=True, slots=True)
 class _SelectedSession:
     candidate_id: str
     book_id: str
+    staged_book_title: object
     source: ArchiveReadingSession
     name: str
     notes: str
@@ -111,7 +124,6 @@ def _apply_import_once(
         selections=selections,
         preview_candidates=preview_candidates,
     )
-    _validate_local_books(selected)
 
     try:
         imported = _create_sessions(user=user, selected=selected)
@@ -146,6 +158,7 @@ def _preview_candidates(preview: dict) -> dict[str, dict]:
                 candidates[session["candidate_id"]] = {
                     **session,
                     "book_id": match.get("book_id"),
+                    "staged_book_title": book.get("title"),
                     "matched": match["status"] == "matched",
                 }
     except (KeyError, TypeError) as exc:
@@ -204,6 +217,7 @@ def _resolve_selected_sessions(
             _SelectedSession(
                 candidate_id=selection["candidate_id"],
                 book_id=candidate["book_id"],
+                staged_book_title=candidate["staged_book_title"],
                 source=source,
                 name=selection["name"],
                 notes=selection["notes"],
@@ -222,6 +236,8 @@ def _validate_local_books(selected: tuple[_SelectedSession, ...]) -> None:
 def _create_sessions(
     *, user, selected: tuple[_SelectedSession, ...]
 ) -> list[tuple[_SelectedSession, ReadingSession]]:
+    _validate_local_books(selected)
+    _require_current_book_access(user=user, selected=selected)
     pairs = []
     for item in selected:
         source = item.source
@@ -259,6 +275,53 @@ def _create_sessions(
     )
     _create_annotations(pairs)
     return pairs
+
+
+def _require_current_book_access(
+    *, user, selected: tuple[_SelectedSession, ...]
+) -> None:
+    """Recheck uncached Library authority at the import mutation boundary."""
+    book_ids = {item.book_id for item in selected}
+    visible_ids = {
+        str(book_id)
+        for book_id in visible_books_for_user(user, cached=False)
+        .filter(pk__in=book_ids)
+        .values_list("pk", flat=True)
+    }
+    inaccessible_ids = book_ids - visible_ids
+    if not inaccessible_ids:
+        return
+    inaccessible_titles = []
+    seen_book_ids = set()
+    for item in selected:
+        if item.book_id not in inaccessible_ids or item.book_id in seen_book_ids:
+            continue
+        seen_book_ids.add(item.book_id)
+        if len(inaccessible_titles) < MAX_INACCESSIBLE_BOOK_TITLES:
+            inaccessible_titles.append(
+                _normalized_staged_book_title(item.staged_book_title)
+            )
+    total_count = len(seen_book_ids)
+    logger.info(
+        "Marginalia import apply rejected after Library access changed. "
+        "user_id=%s book_ref=%s inaccessible_count=%s",
+        user.pk,
+        sorted(inaccessible_ids)[0][:8],
+        total_count,
+    )
+    raise ImportBookAccessRequiredError(
+        titles=tuple(inaccessible_titles),
+        total_count=total_count,
+    )
+
+
+def _normalized_staged_book_title(value: object) -> str:
+    if not isinstance(value, str):
+        return UNTITLED_BOOK
+    normalized = " ".join(value.split())
+    if not normalized:
+        return UNTITLED_BOOK
+    return normalized[:MAX_INACCESSIBLE_BOOK_TITLE_LENGTH].rstrip()
 
 
 def _create_annotations(

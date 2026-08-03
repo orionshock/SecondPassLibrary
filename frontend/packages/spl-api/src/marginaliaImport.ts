@@ -1,5 +1,9 @@
 import { apiClient, type ApiClient, type AttachmentApiClient, type AttachmentDownload } from "./client";
+import { ApiError, apiErrorFromPayload } from "./errors";
 import type { MarginaliaSessionStatus } from "./marginalia";
+
+const MAX_INACCESSIBLE_BOOK_TITLES = 10;
+const MAX_INACCESSIBLE_BOOK_TITLE_LENGTH = 200;
 
 export interface MarginaliaImportWarning {
   code: string;
@@ -74,6 +78,31 @@ export interface MarginaliaImportApplyResult {
   importedAnnotationCount: number;
   readingSessions: MarginaliaImportedSessionResult[];
   warnings: MarginaliaImportWarning[];
+}
+
+export interface MarginaliaImportInaccessibleBook {
+  title: string;
+}
+
+export class MarginaliaImportAccessError extends ApiError {
+  readonly inaccessibleBooks: MarginaliaImportInaccessibleBook[];
+  readonly inaccessibleBookCount: number;
+  readonly inaccessibleBooksTruncated: boolean;
+
+  constructor(input: {
+    message: string;
+    status: number;
+    code?: string;
+    inaccessibleBooks: MarginaliaImportInaccessibleBook[];
+    inaccessibleBookCount: number;
+    inaccessibleBooksTruncated: boolean;
+  }) {
+    super(input.message, input.status, { code: input.code });
+    this.name = "MarginaliaImportAccessError";
+    this.inaccessibleBooks = input.inaccessibleBooks;
+    this.inaccessibleBookCount = input.inaccessibleBookCount;
+    this.inaccessibleBooksTruncated = input.inaccessibleBooksTruncated;
+  }
 }
 
 interface ImportWarningResponse {
@@ -194,6 +223,7 @@ export async function applyMarginaliaImport(
         ...(session.notes !== undefined ? { notes: session.notes } : {}),
       })),
     }),
+    marginaliaImportErrorFromPayload,
   );
   return {
     importedReadingSessionCount: response.imported_reading_session_count,
@@ -207,6 +237,47 @@ export async function applyMarginaliaImport(
     })),
     warnings: response.warnings.map(mapImportWarning),
   };
+}
+
+function marginaliaImportErrorFromPayload(status: number, payload: unknown): ApiError {
+  const fallback = apiErrorFromPayload(status, payload);
+  if (status !== 403 || fallback.code !== "PERMISSION_DENIED" || !isRecord(payload)) {
+    return fallback;
+  }
+  const error = payload.error;
+  if (!isRecord(error)) return fallback;
+  const books = error.inaccessible_books;
+  const count = error.inaccessible_book_count;
+  const truncated = error.inaccessible_books_truncated;
+  if (
+    !Array.isArray(books)
+    || books.length > MAX_INACCESSIBLE_BOOK_TITLES
+    || typeof count !== "number"
+    || !Number.isInteger(count)
+    || count < 1
+    || count < books.length
+    || typeof truncated !== "boolean"
+    || truncated !== (count > books.length)
+  ) return fallback;
+  const inaccessibleBooks: MarginaliaImportInaccessibleBook[] = [];
+  for (const book of books) {
+    if (!isRecord(book) || typeof book.title !== "string" || !book.title || book.title.length > MAX_INACCESSIBLE_BOOK_TITLE_LENGTH) {
+      return fallback;
+    }
+    inaccessibleBooks.push({ title: book.title });
+  }
+  return new MarginaliaImportAccessError({
+    message: fallback.message,
+    status,
+    code: fallback.code,
+    inaccessibleBooks,
+    inaccessibleBookCount: count,
+    inaccessibleBooksTruncated: truncated,
+  });
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 export function downloadUnmatchedMarginaliaImport(

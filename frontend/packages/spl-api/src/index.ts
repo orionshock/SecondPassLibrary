@@ -71,10 +71,12 @@ export {
 export {
   applyMarginaliaImport,
   downloadUnmatchedMarginaliaImport,
+  MarginaliaImportAccessError,
   previewMarginaliaImport,
   type MarginaliaImportApplyInput,
   type MarginaliaImportApplyResult,
   type MarginaliaImportBookMatch,
+  type MarginaliaImportInaccessibleBook,
   type MarginaliaImportedSessionResult,
   type MarginaliaImportPreview,
   type MarginaliaImportPreviewBook,

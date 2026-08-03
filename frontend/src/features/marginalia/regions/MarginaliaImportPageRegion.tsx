@@ -2,7 +2,7 @@ import type { MarginaliaImportApplyResult, MarginaliaImportPreview } from "@seco
 import { useEffect, useRef, type FormEvent, type RefObject } from "react";
 import { Link } from "react-router";
 
-import { Badge, Button, FormField, Surface } from "../../../components/ui";
+import { Badge, Button, ErrorPanel, FormField, Surface } from "../../../components/ui";
 import { HelpPopoverComponent } from "../../../components/HelpPopoverComponent";
 import { BookCoverComponent } from "../../../shared/books/BookCoverComponent";
 import { marginaliaSessionDisplayName } from "../../../shared/marginaliaSessionDisplayName";
@@ -11,13 +11,21 @@ import { fieldError, type MutationState } from "../../../shared/feedback/mutatio
 import { ActionRowComponent } from "../../../shared/forms/ActionRowComponent";
 import { marginaliaImportBookSelectionState, marginaliaImportSelectedCount, type MarginaliaImportBookSelectionState, type MarginaliaImportDraft, type MarginaliaImportSessionDraft } from "../marginaliaImportDraft";
 
-export function MarginaliaImportPageRegion({ preview, draft, result, editingSessionKeys, previewState, applyState, downloadState, inputRef, includeEmptySessions, onIncludeEmptySessionsChange, onFileChange, onPreview, onDraftChange, onBookSelectionChange, onEditingChange, onDownloadUnmatched, onApply }: {
+export interface MarginaliaImportAccessFailure {
+  message: string;
+  books: Array<{ title: string }>;
+  totalCount: number;
+  truncated: boolean;
+}
+
+export function MarginaliaImportPageRegion({ preview, draft, result, editingSessionKeys, previewState, applyState, applyAccessFailure, downloadState, inputRef, includeEmptySessions, onIncludeEmptySessionsChange, onFileChange, onPreview, onDraftChange, onBookSelectionChange, onEditingChange, onDownloadUnmatched, onApply }: {
   preview?: MarginaliaImportPreview;
   draft: MarginaliaImportDraft;
   editingSessionKeys: ReadonlySet<string>;
   result?: MarginaliaImportApplyResult;
   previewState: MutationState;
   applyState: MutationState;
+  applyAccessFailure?: MarginaliaImportAccessFailure;
   downloadState: MutationState;
   inputRef: RefObject<HTMLInputElement | null>;
   includeEmptySessions: boolean;
@@ -44,17 +52,18 @@ export function MarginaliaImportPageRegion({ preview, draft, result, editingSess
         </div>
       </form>
     </Surface>
-    {preview && !result ? <MarginaliaImportReview preview={preview} draft={draft} editingSessionKeys={editingSessionKeys} selectedCount={selectedCount} applyState={applyState} downloadState={downloadState} onDraftChange={onDraftChange} onBookSelectionChange={onBookSelectionChange} onEditingChange={onEditingChange} onDownloadUnmatched={onDownloadUnmatched} onApply={onApply} /> : null}
+    {preview && !result ? <MarginaliaImportReview preview={preview} draft={draft} editingSessionKeys={editingSessionKeys} selectedCount={selectedCount} applyState={applyState} applyAccessFailure={applyAccessFailure} downloadState={downloadState} onDraftChange={onDraftChange} onBookSelectionChange={onBookSelectionChange} onEditingChange={onEditingChange} onDownloadUnmatched={onDownloadUnmatched} onApply={onApply} /> : null}
     {result ? <MarginaliaImportResultRegion result={result} /> : null}
   </div>;
 }
 
-function MarginaliaImportReview({ preview, draft, editingSessionKeys, selectedCount, applyState, downloadState, onDraftChange, onBookSelectionChange, onEditingChange, onDownloadUnmatched, onApply }: {
+function MarginaliaImportReview({ preview, draft, editingSessionKeys, selectedCount, applyState, applyAccessFailure, downloadState, onDraftChange, onBookSelectionChange, onEditingChange, onDownloadUnmatched, onApply }: {
   preview: MarginaliaImportPreview;
   draft: MarginaliaImportDraft;
   editingSessionKeys: ReadonlySet<string>;
   selectedCount: number;
   applyState: MutationState;
+  applyAccessFailure?: MarginaliaImportAccessFailure;
   downloadState: MutationState;
   onDraftChange: (key: string, value: MarginaliaImportSessionDraft) => void;
   onBookSelectionChange: (bookCandidateId: string, selected: boolean) => void;
@@ -63,6 +72,7 @@ function MarginaliaImportReview({ preview, draft, editingSessionKeys, selectedCo
   onApply: () => void;
 }) {
   const summaryWarnings = preview.warnings.filter((warning) => warning.candidateId === undefined);
+  const actionState = applyAccessFailure ? { ...applyState, error: undefined } : applyState;
 
   return <section className="marginalia-import-review" aria-labelledby="marginalia-import-review-heading">
     <header className="marginalia-import-review__header">
@@ -120,12 +130,23 @@ function MarginaliaImportReview({ preview, draft, editingSessionKeys, selectedCo
         </div>
       </section>)}
     </div>
-    <ActionRowComponent state={applyState}>
+    {applyAccessFailure ? <MarginaliaImportAccessFeedback failure={applyAccessFailure} /> : null}
+    <ActionRowComponent state={actionState}>
       {preview.unmatchedDownloadableReadingSessionCount > 0 ? <span className="marginalia-import-download-action"><ActionFeedbackComponent state={downloadState} /><Button type="button" tone="secondary" disabled={downloadState.pending || applyState.pending} onClick={onDownloadUnmatched}>{downloadState.pending ? "Downloading..." : `Download Unmatched Sessions (${preview.unmatchedDownloadableReadingSessionCount})`}</Button></span> : null}
       <span className="muted">{selectedCount} {selectedCount === 1 ? "session" : "sessions"} selected</span>
       <Button type="button" disabled={!preview.canApply || selectedCount === 0 || applyState.pending || downloadState.pending} onClick={onApply}>{applyState.pending ? "Importing..." : "Import Selected Sessions"}</Button>
     </ActionRowComponent>
   </section>;
+}
+
+function MarginaliaImportAccessFeedback({ failure }: { failure: MarginaliaImportAccessFailure }) {
+  const omittedCount = failure.totalCount - failure.books.length;
+  return <ErrorPanel>
+    <p>{failure.message}</p>
+    <p>Restore Library access or deselect these Books, then try again:</p>
+    <ul>{failure.books.map((book, index) => <li key={`${index}:${book.title}`}>{book.title}</li>)}</ul>
+    {failure.truncated ? <p>{omittedCount} additional {omittedCount === 1 ? "Book is" : "Books are"} not shown.</p> : null}
+  </ErrorPanel>;
 }
 
 function BookSelectionCheckbox({ label, state, disabled, onChange }: { label: string; state: MarginaliaImportBookSelectionState; disabled: boolean; onChange: (selected: boolean) => void }) {

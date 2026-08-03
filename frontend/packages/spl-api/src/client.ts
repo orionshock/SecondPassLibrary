@@ -1,8 +1,10 @@
 import { ApiError, NetworkError, apiErrorFromPayload } from "./errors";
 
 export interface ApiClient {
-  request<T>(path: string, init?: RequestInit): Promise<T>;
+  request<T>(path: string, init?: RequestInit, errorMapper?: ApiErrorMapper): Promise<T>;
 }
+
+export type ApiErrorMapper = (status: number, payload: unknown) => ApiError;
 
 export interface AttachmentDownload {
   blob: Blob;
@@ -41,11 +43,15 @@ export function createApiClient(
   }
 
   return {
-    async request<T>(path: string, init: RequestInit = {}): Promise<T> {
+    async request<T>(
+      path: string,
+      init: RequestInit = {},
+      errorMapper: ApiErrorMapper = apiErrorFromPayload,
+    ): Promise<T> {
       const response = await send(path, init, "application/json");
       const payload = await parseJson(response);
 
-      if (!response.ok) throw apiErrorFromPayload(response.status, payload);
+      if (!response.ok) throw errorMapper(response.status, payload);
       return payload as T;
     },
     async requestAttachment(path: string, init: RequestInit = {}, fallbackFilename = "download") {

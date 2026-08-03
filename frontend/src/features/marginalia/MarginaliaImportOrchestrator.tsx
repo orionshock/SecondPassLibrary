@@ -1,4 +1,4 @@
-import { applyMarginaliaImport, downloadUnmatchedMarginaliaImport, previewMarginaliaImport, type MarginaliaImportApplyResult, type MarginaliaImportPreview } from "@second-pass/spl-api";
+import { applyMarginaliaImport, downloadUnmatchedMarginaliaImport, MarginaliaImportAccessError, previewMarginaliaImport, type MarginaliaImportApplyResult, type MarginaliaImportPreview } from "@second-pass/spl-api";
 import { useRef, useState, type FormEvent } from "react";
 
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
@@ -8,7 +8,7 @@ import { saveDownloadedFile } from "../../shared/browser/saveDownloadedFile";
 import { createMarginaliaImportDraft, buildMarginaliaImportApplyInput, marginaliaImportSelectedCount, withMarginaliaImportBookSelection, type MarginaliaImportDraft, type MarginaliaImportSessionDraft } from "./marginaliaImportDraft";
 import { marginaliaImportBreadcrumbFallback } from "./marginaliaBreadcrumbs";
 import { MarginaliaSectionActionsComponent } from "./components/MarginaliaSectionActionsComponent";
-import { MarginaliaImportPageRegion } from "./regions/MarginaliaImportPageRegion";
+import { MarginaliaImportPageRegion, type MarginaliaImportAccessFailure } from "./regions/MarginaliaImportPageRegion";
 
 export function MarginaliaImportOrchestrator() {
   usePageBreadcrumbs(marginaliaImportBreadcrumbFallback);
@@ -98,8 +98,10 @@ export function MarginaliaImportOrchestrator() {
     }
   }
 
+  const applyAccessFailure = marginaliaImportAccessFailure(applyState.error);
+
   return <ProductPageShellComponent className="marginalia-import-shell" title="Import Marginalia" actions={<MarginaliaSectionActionsComponent activeSection="import" />}>
-    <MarginaliaImportPageRegion preview={preview} draft={draft} result={result} editingSessionKeys={editingSessionKeys} previewState={previewState} applyState={applyState} downloadState={downloadState} inputRef={inputRef} includeEmptySessions={includeEmptySessions} onIncludeEmptySessionsChange={changeIncludeEmptySessions} onFileChange={changeFile} onPreview={(event) => void submitPreview(event)} onDraftChange={(key, value: MarginaliaImportSessionDraft) => setDraft((current) => ({ ...current, [key]: value }))} onBookSelectionChange={(bookCandidateId, selected) => setDraft((current) => preview ? withMarginaliaImportBookSelection(preview, current, bookCandidateId, selected) : current)} onEditingChange={(key, editing) => setEditingSessionKeys((current) => {
+    <MarginaliaImportPageRegion preview={preview} draft={draft} result={result} editingSessionKeys={editingSessionKeys} previewState={previewState} applyState={applyState} applyAccessFailure={applyAccessFailure} downloadState={downloadState} inputRef={inputRef} includeEmptySessions={includeEmptySessions} onIncludeEmptySessionsChange={changeIncludeEmptySessions} onFileChange={changeFile} onPreview={(event) => void submitPreview(event)} onDraftChange={(key, value: MarginaliaImportSessionDraft) => setDraft((current) => ({ ...current, [key]: value }))} onBookSelectionChange={(bookCandidateId, selected) => setDraft((current) => preview ? withMarginaliaImportBookSelection(preview, current, bookCandidateId, selected) : current)} onEditingChange={(key, editing) => setEditingSessionKeys((current) => {
       const next = new Set(current);
       if (editing) next.add(key); else next.delete(key);
       return next;
@@ -126,6 +128,18 @@ export class MarginaliaImportRequestGuard {
   accepts(version: number): boolean {
     return version === this.version;
   }
+}
+
+export function marginaliaImportAccessFailure(
+  error: Error | undefined,
+): MarginaliaImportAccessFailure | undefined {
+  if (!(error instanceof MarginaliaImportAccessError)) return undefined;
+  return {
+    message: error.message,
+    books: error.inaccessibleBooks,
+    totalCount: error.inaccessibleBookCount,
+    truncated: error.inaccessibleBooksTruncated,
+  };
 }
 
 export function previewSelectedMarginaliaImport(

@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from core.errors import ErrorCode, api_error_response
-from marginalia.api import invalid_request_response
+from marginalia.api import book_access_required_response, invalid_request_response
 from marginalia.archives import (
     ArchiveValidationError,
     MalformedArchiveError,
@@ -14,6 +14,7 @@ from marginalia.archives import (
 )
 
 from .apply import (
+    ImportBookAccessRequiredError,
     ImportCandidateError,
     ImportReplayConflictError,
     StagedArchiveInvalidError,
@@ -102,6 +103,18 @@ class MarginaliaImportApplyView(APIView):
             return invalid_request_response(
                 message="A selected Reading Session is not importable."
             )
+        except ImportBookAccessRequiredError as exc:
+            response = book_access_required_response()
+            response.data["error"].update(
+                message=(
+                    "Current Library access is required for one or more "
+                    "selected Books."
+                ),
+                inaccessible_books=[{"title": title} for title in exc.titles],
+                inaccessible_book_count=exc.total_count,
+                inaccessible_books_truncated=exc.total_count > len(exc.titles),
+            )
+            return response
         except ImportReplayConflictError:
             return invalid_request_response(
                 message="The import stage was already applied with a different request.",

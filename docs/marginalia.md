@@ -347,6 +347,19 @@ staged policy cannot be introduced at Apply time.
 Apply locks the stage and validates the complete selection and staged canonical
 archive before creating data. All selected Sessions, direct progress fields,
 and Annotations are created in one database transaction with fresh local UUIDs.
+Immediately before those writes, Apply rechecks every selected Book through the
+uncached Library visibility query. If an existing selected Book is no longer
+visible, the all-or-nothing Apply returns the standard Book-access `403`, creates
+no data, and leaves the stage ready for a corrected retry. A missing Book is a
+stale-stage integrity failure and retains the bounded `409` response. Marginalia
+created by earlier valid activity is unaffected.
+
+The `403` error includes the total number of distinct inaccessible selected
+Books and up to 10 normalized titles from the caller-owned staged preview, in
+staged candidate order. Multiple selected Sessions for one Book produce one
+entry. Titles are capped at 200 characters and use `Untitled Book` when empty or
+malformed. A truncation flag reports whether further inaccessible Books were
+omitted. Apply never looks up hidden Book metadata to populate this response.
 Archive `clientAnnotationId` values become Session-scoped `Annotation.client_id`
 values. Location strings and Annotation content are preserved unchanged; the
 server does not parse CFI or inspect EPUB content.

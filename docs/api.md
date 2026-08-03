@@ -306,6 +306,33 @@ unmatched, or policy-hidden candidates are rejected before writes. Invalid,
 expired, foreign, and missing-file stages share the same no-leakage `404`.
 
 All selected Sessions, progress, and Annotations are imported atomically.
+Apply rechecks current uncached Library visibility for every selected Book at
+the mutation boundary. Loss of access rejects the whole selection with the
+standard Book-access `403`, creates no Marginalia, and leaves the stage ready.
+The denial identifies up to 10 distinct inaccessible selected Books using only
+titles stored in the caller-owned preview:
+
+```json
+{
+  "error": {
+    "code": "PERMISSION_DENIED",
+    "message": "Current Library access is required for one or more selected Books.",
+    "detail": "",
+    "hint": "",
+    "inaccessible_books": [{"title": "Example Book"}],
+    "inaccessible_book_count": 1,
+    "inaccessible_books_truncated": false
+  }
+}
+```
+
+`inaccessible_book_count` counts distinct inaccessible Books, not selected
+Sessions. Repeated candidates for one Book produce one title entry. Entries
+follow staged candidate order; whitespace is normalized, titles are limited to
+200 characters, and empty or malformed staged titles become `Untitled Book`.
+`inaccessible_books_truncated` is true when the total exceeds the 10 returned
+entries. Missing Books remain staged-integrity failures and do not receive this
+title list.
 Imported Sessions always have status `closed`; source closed Sessions preserve
 `closedAt`, while source active Sessions use source `updatedAt` as their
 deterministic close timestamp. Import preserves other canonical timestamps and

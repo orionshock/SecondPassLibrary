@@ -1,10 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { ApiClient, AttachmentApiClient, AttachmentDownload } from "../client";
+import { createApiClient, type ApiClient, type AttachmentApiClient, type AttachmentDownload } from "../client";
 import { ApiError } from "../errors";
 import {
   applyMarginaliaImport,
   downloadUnmatchedMarginaliaImport,
+  MarginaliaImportAccessError,
   previewMarginaliaImport,
 } from "../marginaliaImport";
 
@@ -158,6 +159,38 @@ describe("Marginalia Import SDK", () => {
       readingSessions: [{ candidateId: "reading-session-000001", readingSessionId: "local-session", status: "closed", name: "Edited", annotationCount: 3 }],
       warnings: [{ code: "POSSIBLE_DUPLICATE_SESSION", message: "Possible duplicate.", candidateId: "reading-session-000001" }],
     });
+  });
+
+  it("maps lost Book access details into the typed Apply error", async () => {
+    const client = createApiClient(async () => new Response(JSON.stringify({
+      error: {
+        code: "PERMISSION_DENIED",
+        message: "Current Library access is required for one or more selected Books.",
+        detail: "",
+        hint: "",
+        inaccessible_books: [{ title: "First Book" }, { title: "Second Book" }],
+        inaccessible_book_count: 4,
+        inaccessible_books_truncated: true,
+      },
+    }), {
+      status: 403,
+      headers: { "Content-Type": "application/json" },
+    }), () => undefined);
+
+    const promise = applyMarginaliaImport({
+      importToken: "opaque-preview-token",
+      readingSessions: [{ candidateId: "reading-session-000001" }],
+    }, client);
+
+    await expect(promise).rejects.toEqual(expect.objectContaining({
+      name: "MarginaliaImportAccessError",
+      status: 403,
+      code: "PERMISSION_DENIED",
+      inaccessibleBooks: [{ title: "First Book" }, { title: "Second Book" }],
+      inaccessibleBookCount: 4,
+      inaccessibleBooksTruncated: true,
+    }));
+    await expect(promise).rejects.toBeInstanceOf(MarginaliaImportAccessError);
   });
 
   it("downloads unmatched Sessions through attachment transport with the backend filename", async () => {
