@@ -44,6 +44,8 @@ ENV DJANGO_SETTINGS_MODULE=secondpass.settings \
     SECOND_PASS_ENABLE_WHITENOISE=1 \
     SECOND_PASS_USERDATA_DIR=/tmp/secondpass-userdata
 
+WORKDIR /runtime
+
 COPY manage.py ./
 COPY accounts/ accounts/
 COPY core/ core/
@@ -57,7 +59,12 @@ COPY web/static/ web/static/
 COPY web/templates/ web/templates/
 COPY --from=frontend-build /build/web/react/dist/ web/react/dist/
 
-RUN python manage.py collectstatic --noinput --clear
+RUN python manage.py collectstatic --noinput --clear \
+    && find var/static -type f -name '*.map' -delete \
+    && mv web/react/dist/index.html /tmp/react-index.html \
+    && rm -rf web/react/dist web/static \
+    && mkdir -p web/react/dist \
+    && mv /tmp/react-index.html web/react/dist/index.html
 
 
 FROM python:3.13-slim AS runtime
@@ -80,23 +87,13 @@ RUN groupadd --gid "${APP_GID}" secondpass \
     && apt-get update \
     && apt-get install --yes --no-install-recommends gosu \
     && rm -rf /var/lib/apt/lists/* \
-    && mkdir -p /app/userdata/db /app/userdata/media /app/userdata/imports /app/var/static /app/web/react/dist \
+    && mkdir -p /app/userdata/db /app/userdata/media /app/userdata/imports \
     && chown -R secondpass:secondpass /app/userdata
 
 COPY --from=python-runtime-dependencies /opt/venv/ /opt/venv/
-COPY --from=static-collection /app/manage.py ./manage.py
-COPY --from=static-collection /app/accounts/ accounts/
-COPY --from=static-collection /app/core/ core/
-COPY --from=static-collection /app/library/ library/
-COPY --from=static-collection /app/marginalia/ marginalia/
-COPY --from=static-collection /app/secondpass/ secondpass/
-COPY --from=static-collection /app/shelves/ shelves/
-COPY --from=static-collection /app/templates/ templates/
-COPY --from=static-collection /app/web/*.py web/
-COPY --from=static-collection /app/web/templates/ web/templates/
-COPY --from=static-collection /app/web/react/dist/index.html web/react/dist/index.html
-COPY --from=static-collection /app/var/static/ var/static/
 COPY --chmod=755 docker/entrypoint.sh /app/docker/entrypoint.sh
+COPY --from=static-collection /runtime/ /app/
+
 
 EXPOSE 8000
 
