@@ -195,25 +195,29 @@ class AccountOperationalLoggingTests(APITestCase):
         self.client.force_login(self.reader)
 
         with self.assertLogs("accounts.operational_logging", level="INFO") as logs:
-            approved = self.client.post(
-                "/api/v1/client-api/pairing/decision/",
-                data={"code": code, "action": "approve", "client_name": "Phone Reader"},
-                format="json",
-            )
-            polled = assert_response(
-                self.client.get(f"/api/v1/client-api/login-requests/{request_id}/poll/")
-            )
+            with self.captureOnCommitCallbacks(execute=True):
+                approved = self.client.post(
+                    "/api/v1/client-api/pairing/decision/",
+                    data={"code": code, "action": "approve", "client_name": "Phone Reader"},
+                    format="json",
+                )
+                consumed = assert_response(
+                    self.client.post(
+                        f"/api/v1/client-api/login-requests/{request_id}/poll/"
+                    )
+                )
 
         self.assertEqual(approved.status_code, status.HTTP_200_OK)
-        self.assertEqual(polled.status_code, status.HTTP_200_OK)
+        self.assertEqual(consumed.status_code, status.HTTP_200_OK)
         joined = "\n".join(logs.output)
         self.assertIn("Client pairing approved", joined)
         self.assertIn("Client session created from pairing", joined)
-        self.assertIn(request_id, joined)
+        self.assertIn(request_id.replace("-", "")[:12], joined)
+        self.assertNotIn(request_id, joined)
         self.assertIn("client_type=reader", joined)
         self.assertNotIn(code, joined)
-        self.assertNotIn("Phone Reader", joined)
-        self.assertNotIn(str(response_data_dict(polled)["access_token"]), joined)
+        self.assertIn("client_name=Phone Reader", joined)
+        self.assertNotIn(str(response_data_dict(consumed)["access_token"]), joined)
 
     def test_client_pairing_denial_logs_safe_info(self):
         response = assert_response(post_login_request(self.client))
@@ -230,7 +234,8 @@ class AccountOperationalLoggingTests(APITestCase):
 
         self.assertEqual(denied.status_code, status.HTTP_200_OK)
         self.assertIn("Client pairing denied", logs.output[0])
-        self.assertIn(str(body["id"]), logs.output[0])
+        self.assertIn(str(body["id"]).replace("-", "")[:12], logs.output[0])
+        self.assertNotIn(str(body["id"]), logs.output[0])
         self.assertNotIn(code, logs.output[0])
         self.assertNotIn("Phone Reader", logs.output[0])
 

@@ -69,6 +69,7 @@ try {
         "--host", $UvicornHost,
         "--port", $UvicornPort,
         "--workers", "1",
+        "--no-proxy-headers",
         "--no-access-log"
     )
 

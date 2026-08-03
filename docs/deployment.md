@@ -74,7 +74,7 @@ Startup performs:
 
 1. `python manage.py check --deploy`
 2. `python manage.py migrate --noinput`
-3. `python -m uvicorn secondpass.asgi:application --host 0.0.0.0 --port 8000 --workers 1 --no-access-log`
+3. `python -m uvicorn secondpass.asgi:application --host 0.0.0.0 --port 8000 --workers 1 --no-proxy-headers --no-access-log`
 
 The healthcheck calls `/api/v1/health/` with the first configured allowed host.
 Readiness requires a working database query, the built React index, and writable
@@ -160,15 +160,33 @@ DJANGO_TRUST_X_FORWARDED_PROTO=1
 DJANGO_SECURE_COOKIES=1
 ```
 
+Uvicorn proxy-header rewriting is disabled in every supported startup path, so
+the ASGI direct peer remains Django's `REMOTE_ADDR`. Pairing request throttling
+uses that peer by default and ignores `X-Forwarded-For`. To use forwarded client
+addresses, explicitly enable Django's interpretation and list the exact direct
+proxy peers that may supply the header:
+
+```env
+DJANGO_TRUST_X_FORWARDED_FOR=1
+DJANGO_TRUSTED_PROXY_IPS=127.0.0.1,::1
+```
+
+The application walks the forwarded chain from the trusted peer toward the
+client and uses the rightmost untrusted address. Missing or malformed peer
+addresses share one bounded anonymous source bucket. Do not enable this unless
+the listed reverse proxy owns or correctly appends `X-Forwarded-For`.
+
 A direct HTTP LAN deployment may leave secure cookies and forwarded-header
 trust disabled. Never enable forwarded host/protocol trust for an untrusted or
 pass-through proxy. Django's deploy check may report HTTPS/HSTS warnings whose
 resolution depends on the deployment boundary.
 
-Uvicorn retains its safe proxy-header defaults. The supplied startup command
-does not broaden which proxy addresses are trusted. Configure any different
-trusted proxy address or network deliberately together with Django's forwarded
-protocol and forwarded-host settings.
+Forwarded protocol remains owned by Django through
+`DJANGO_TRUST_X_FORWARDED_PROTO` and `SECURE_PROXY_SSL_HEADER`; Uvicorn does not
+rewrite either the client peer or request scheme. Enable forwarded protocol
+only when the application port is reachable exclusively through a proxy that
+removes untrusted forwarded headers and supplies its own. Forwarded host is
+likewise a separate explicit Django option and is normally unnecessary.
 
 ## Operator-controlled storage
 

@@ -112,8 +112,12 @@ ALLOWED_HOSTS = _env_list("DJANGO_ALLOWED_HOSTS", LOCAL_ALLOWED_HOSTS)
 
 CSRF_TRUSTED_ORIGINS = _env_list("DJANGO_CSRF_TRUSTED_ORIGINS", [])
 
+# Supported Uvicorn startup disables proxy-header rewriting. Django therefore
+# owns forwarded scheme/host trust and pairing owns forwarded client-IP trust.
 SECURE_PROXY_SSL_HEADER = _secure_proxy_ssl_header()
 USE_X_FORWARDED_HOST = env.bool("DJANGO_USE_X_FORWARDED_HOST", default=False)
+TRUST_X_FORWARDED_FOR = env.bool("DJANGO_TRUST_X_FORWARDED_FOR", default=False)
+TRUSTED_PROXY_IPS = _env_list("DJANGO_TRUSTED_PROXY_IPS", [])
 
 
 # Application definition

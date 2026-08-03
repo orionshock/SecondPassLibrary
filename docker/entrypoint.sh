@@ -35,4 +35,5 @@ exec gosu secondpass python -m uvicorn secondpass.asgi:application \
     --host 0.0.0.0 \
     --port 8000 \
     --workers 1 \
+    --no-proxy-headers \
     --no-access-log

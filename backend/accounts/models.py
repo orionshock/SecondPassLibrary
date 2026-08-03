@@ -161,14 +161,56 @@ class ClientLoginRequest(TimeStampedModel):
     approved_at = models.DateTimeField(null=True, blank=True)
     consumed_at = models.DateTimeField(null=True, blank=True)
 
-    request_user_agent = models.TextField(blank=True)
-    request_ip = models.GenericIPAddressField(null=True, blank=True)
+    request_user_agent = models.CharField(max_length=256, blank=True)
+    request_fingerprint = models.CharField(max_length=64, blank=True, db_index=True)
+    request_ip = models.GenericIPAddressField(
+        null=True,
+        blank=True,
+        help_text=(
+            "Retained only while pending for outstanding-request limits and cleared "
+            "on terminal transitions."
+        ),
+    )
 
     class Meta:
         ordering = ["-created_at"]
 
     def __str__(self):
         return f"{self.client_name} ({self.client_type}) [{self.status}]"
+
+
+class ClientPairingThrottleSlot(models.Model):
+    BUCKET_SOURCE = "source"
+    BUCKET_FINGERPRINT = "fingerprint"
+
+    BUCKET_CHOICES = [
+        (BUCKET_SOURCE, "Source"),
+        (BUCKET_FINGERPRINT, "Fingerprint"),
+    ]
+
+    login_request = models.ForeignKey(
+        ClientLoginRequest,
+        on_delete=models.CASCADE,
+        related_name="throttle_slots",
+    )
+    bucket_type = models.CharField(max_length=16, choices=BUCKET_CHOICES)
+    bucket_key = models.CharField(max_length=64)
+    slot = models.PositiveSmallIntegerField()
+    expires_at = models.DateTimeField()
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["bucket_type", "bucket_key", "slot"],
+                name="unique_pairing_throttle_slot",
+            )
+        ]
+        indexes = [
+            models.Index(
+                fields=["bucket_type", "bucket_key", "expires_at"],
+                name="acct_pair_bucket_exp_idx",
+            )
+        ]
 
 
 class UserClientSession(TimeStampedModel):

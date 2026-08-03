@@ -15,7 +15,7 @@ User = get_user_model()
 
 
 class ClientApiAuthenticationTests(ClientApiTestCase):
-    def test_approve_then_poll_returns_token_once_and_allows_me(self):
+    def test_approve_then_post_consumes_token_once_and_allows_me(self):
         user = User.objects.create_user(
             username="u", password="pw", email="u@example.com"
         )
@@ -43,32 +43,33 @@ class ClientApiAuthenticationTests(ClientApiTestCase):
         self.assertEqual(obj.status, ClientLoginRequest.STATUS_APPROVED)
         self.assertEqual(obj.approved_by, user)
 
-        # Client polls without auth and receives token once.
-        poll1 = assert_response(
-            self.client.get(f"/api/v1/client-api/login-requests/{req_id}/poll/")
+        # Client consumes without auth and receives token once.
+        self.client.logout()
+        consumed = assert_response(
+            self.client.post(f"/api/v1/client-api/login-requests/{req_id}/poll/")
         )
-        self.assertEqual(poll1.status_code, 200)
-        poll1_data = response_data_dict(poll1)
-        self.assertEqual(poll1_data.get("status"), "approved")
-        token = poll1_data.get("access_token")
+        self.assertEqual(consumed.status_code, 200)
+        consumed_data = response_data_dict(consumed)
+        self.assertEqual(consumed_data.get("status"), "consumed")
+        token = consumed_data.get("access_token")
         self.assertTrue(token)
-        self.assertEqual(poll1_data.get("token_type"), "Bearer")
-        self.assertTrue(poll1_data.get("client_session"))
+        self.assertEqual(consumed_data.get("token_type"), "Bearer")
+        self.assertTrue(consumed_data.get("client_session"))
 
         # Token is stored hashed only.
-        session = UserClientSession.objects.get(pk=poll1_data["client_session"]["id"])
+        session = UserClientSession.objects.get(pk=consumed_data["client_session"]["id"])
         self.assertNotEqual(session.token_hash, token)
         self.assertEqual(session.token_hash, hash_client_secret(str(token)))
         self.assertEqual(session.name, "Second Pass Reader")
 
-        # Second poll does not return token again.
-        poll2 = assert_response(
-            self.client.get(f"/api/v1/client-api/login-requests/{req_id}/poll/")
+        # Second consume does not return token again.
+        replay = assert_response(
+            self.client.post(f"/api/v1/client-api/login-requests/{req_id}/poll/")
         )
-        self.assertEqual(poll2.status_code, 200)
-        poll2_data = response_data_dict(poll2)
-        self.assertEqual(poll2_data.get("status"), "consumed")
-        self.assertFalse("access_token" in poll2_data)
+        self.assertEqual(replay.status_code, 200)
+        replay_data = response_data_dict(replay)
+        self.assertEqual(replay_data.get("status"), "consumed")
+        self.assertFalse("access_token" in replay_data)
 
         # Bearer token works for /api/v1/accounts/me/ only.
         api = APIClient()

@@ -28,6 +28,9 @@ class ClientPairingApprovalApiTests(ClientApiTestCase):
         paired = ClientLoginRequest.objects.get(pk=request_id)
         self.assertEqual(paired.client_name, "My Reader")
         self.assertEqual(paired.approved_by, self.bootstrap_owner)
+        self.assertEqual(paired.request_user_agent, "")
+        self.assertEqual(paired.request_fingerprint, "")
+        self.assertIsNone(paired.request_ip)
 
     def test_pairing_approval_requires_session_authentication(self):
         created = post_login_request(self.client)

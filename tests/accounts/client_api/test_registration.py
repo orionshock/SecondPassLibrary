@@ -34,6 +34,10 @@ class ClientApiRegistrationTests(ClientApiTestCase):
             body.get("poll_endpoint_template"),
             "http://testserver/api/v1/client-api/login-requests/%7Bid%7D/poll/",
         )
+        self.assertEqual(
+            body.get("consume_endpoint_template"),
+            "http://testserver/api/v1/client-api/login-requests/%7Bid%7D/poll/",
+        )
         self.assertEqual(body.get("token_type"), "Bearer")
         self.assertEqual(body.get("server_base_url"), "http://testserver/")
 
@@ -51,6 +55,7 @@ class ClientApiRegistrationTests(ClientApiTestCase):
             f"http://testserver/profile/client-pairing?code={code}",
         )
         self.assertIn("poll_url", body)
+        self.assertEqual(body.get("consume_url"), body.get("poll_url"))
 
         obj = ClientLoginRequest.objects.get(pk=req_id)
         self.assertEqual(obj.status, ClientLoginRequest.STATUS_PENDING)
@@ -78,17 +83,17 @@ class ClientApiRegistrationTests(ClientApiTestCase):
         )
         self.assertEqual(approve.status_code, 200)
 
-        poll1 = assert_response(
-            self.client.get(f"/api/v1/client-api/login-requests/{req_id}/poll/")
+        consumed = assert_response(
+            self.client.post(f"/api/v1/client-api/login-requests/{req_id}/poll/")
         )
-        poll1_data = response_data_dict(poll1)
-        self.assertEqual(poll1_data.get("status"), "approved")
-        token = poll1_data.get("access_token")
+        consumed_data = response_data_dict(consumed)
+        self.assertEqual(consumed_data.get("status"), "consumed")
+        token = consumed_data.get("access_token")
         self.assertTrue(token)
 
-        session = UserClientSession.objects.get(pk=poll1_data["client_session"]["id"])
+        session = UserClientSession.objects.get(pk=consumed_data["client_session"]["id"])
         self.assertEqual(session.name, "My Phone Reader")
-        self.assertEqual(poll1_data["client_session"]["name"], "My Phone Reader")
+        self.assertEqual(consumed_data["client_session"]["name"], "My Phone Reader")
 
     def test_blank_edited_client_name_is_rejected_and_request_remains_pending(self):
         user = User.objects.create_user(

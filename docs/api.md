@@ -443,10 +443,13 @@ Login request / authorization:
 
 - `POST /api/v1/client-api/login-requests/` (anonymous allowed)
 - Login-request creation returns `authorize_url` rooted at `/profile/client-pairing` with the human code prefilled.
+- Login-request creation returns `interval`, the recommended poll interval in seconds.
 - React pairing approval looks up and approves/denies a code through the authenticated pairing endpoints. Client API discovery and login-request responses do not advertise a separate browser authorization page.
 - `GET /api/v1/client-api/login-requests/<id>/poll/` (anonymous allowed; request id is an unguessable UUID)
-  - `status=approved` always includes `access_token`; after the token is delivered once, polling returns `status=consumed`.
-  - Login request creation returns `interval`, the recommended poll interval in seconds.
+  - State inspection only. It never creates a client session or returns an access token.
+- `POST /api/v1/client-api/login-requests/<id>/poll/` (anonymous allowed; request id is the capability)
+  - Consumes an approved request and returns `status=consumed` with `access_token` once. Repeated POSTs return `status=consumed` without a token.
+  - Pairing state and consumption responses explicitly use private, no-store cache headers.
 
 User-management payload notes:
 

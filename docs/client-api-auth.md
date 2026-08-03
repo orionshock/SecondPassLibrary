@@ -22,7 +22,7 @@ This document describes the **Client API** pairing flow (human code + browser ap
 
 ## Pairing flow (code + approve + poll)
 
-High-level: the reader client creates a login request, a human authorizes it in the browser, then the reader client polls until it receives a bearer token **once**.
+High-level: the reader client creates a login request, a human authorizes it in the browser, then the reader client inspects state with GET and consumes the approved request with POST to receive a bearer token **once**.
 
 ### Reader client
 
@@ -33,6 +33,7 @@ High-level: the reader client creates a login request, a human authorizes it in 
    - `code` (short human code; not a bearer credential)
    - `authorize_url` (browser URL the user can open; may include the code as a query param)
    - `poll_url`
+   - `consume_url` (currently the same URL as `poll_url`, used with POST)
    - `expires_at`
    - `interval` (recommended poll interval in seconds)
 4. Client displays the authorize URL and/or the code.
@@ -48,12 +49,13 @@ High-level: the reader client creates a login request, a human authorizes it in 
 
 ### Reader client
 
-1. Client polls `poll_url` using the request id.
-2. Server returns a status:
-   - `pending`: not approved yet
-   - `approved`: returns a bearer token **once** (then the request becomes `consumed`)
-   - `denied` / `expired`: terminal
-3. Client stores a connection profile and uses `Authorization: Bearer <token>` for future Client API requests.
+1. Client polls `poll_url` with GET using the request id. GET reports only
+   `pending`, `approved`, `denied`, `expired`, or `consumed`; it never creates a
+   session or returns a credential.
+2. Once GET reports `approved`, the client POSTs to `consume_url`.
+3. A successful POST returns the bearer token once and transitions the request
+   to `consumed`. Repeated POSTs report `consumed` without a token.
+4. Client stores a connection profile and uses `Authorization: Bearer <token>` for future Client API requests.
 
 Notes:
 
@@ -71,6 +73,8 @@ Key fields (conceptual):
 - `client_name`, `client_type`
 - `status` (`pending|approved|denied|consumed|expired`)
 - `expires_at`, `approved_at`, `consumed_at`
+- bounded User-Agent metadata, a hashed client fingerprint, and the normalized
+  source IP used for short-lived outstanding-request limits
 
 ### `UserClientSession`
 
@@ -221,9 +225,27 @@ Management endpoints reject Client API tokens unless explicitly allowed.
 
 - The human code expires quickly.
 - The code and bearer token are stored hashed server-side; raw values are never stored.
-- Poll returns the bearer token only once (approval transitions to `consumed` after delivery).
+- POST consumption returns the bearer token only once (approval transitions to `consumed` after delivery).
+- GET polling is state-only. Only POST may consume an approved request.
+- Pairing responses use `Cache-Control: no-store, private` and `Pragma: no-cache`.
+- At most five active pending requests are accepted per normalized source IP
+  and at most three per bounded client fingerprint during the ten-minute
+  request lifetime. A database-backed slot claim enforces both limits atomically.
+  Missing or malformed source addresses share one bounded source bucket, and
+  IPv4-mapped IPv6 addresses normalize to IPv4. The source bucket is the primary
+  abuse limit; the secondary fingerprint uses bounded normalized client
+  name/type and User-Agent metadata, so punctuation or metadata changes may
+  produce a different fingerprint.
 - Approving requires an authenticated Django web session.
+- If the approving account is deleted or disabled before consumption, the
+  request expires without creating a client session.
 - Denied/expired/consumed requests cannot be reused.
+
+Expired pending/approved rows can be removed immediately with
+`python backend/manage.py cleanup_client_pairing_requests`. Denied, consumed,
+and explicitly expired rows are retained for 24 hours before cleanup eligibility.
+The command supports `--dry-run` and `--limit` and reports eligible, selected,
+deleted, limit-skipped, and retained counts; scheduling is operator-owned.
 
 ## Product UI integration
 
