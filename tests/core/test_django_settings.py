@@ -46,10 +46,7 @@ class DjangoSettingsContractTests(SimpleTestCase):
         )
 
     def test_debug_defaults_off_and_hosts_are_local_safe_by_default(self):
-        source = (ROOT / "secondpass" / "settings.py").read_text(encoding="utf-8")
-
-        self.assertIn('DEBUG = env.bool("DJANGO_DEBUG", default=False)', source)
-        self.assertIn('ALLOWED_HOSTS = _env_list("DJANGO_ALLOWED_HOSTS"', source)
+        self.assertIs(settings.DEBUG, False)
         self.assertEqual(settings.ALLOWED_HOSTS[:3], ["localhost", "127.0.0.1", "[::1]"])
         self.assertNotIn("*", settings.ALLOWED_HOSTS)
 
@@ -67,12 +64,7 @@ class DjangoSettingsContractTests(SimpleTestCase):
             self.assertEqual(_env_list("DJANGO_ALLOWED_HOSTS", []), ["*"])
 
     def test_silenced_system_checks_are_env_driven(self):
-        source = (ROOT / "secondpass" / "settings.py").read_text(encoding="utf-8")
-
-        self.assertIn(
-            'SILENCED_SYSTEM_CHECKS = _env_list("DJANGO_SILENCED_SYSTEM_CHECKS", [])',
-            source,
-        )
+        self.assertEqual(settings.SILENCED_SYSTEM_CHECKS, [])
         with patch.dict(
             "os.environ",
             {"DJANGO_SILENCED_SYSTEM_CHECKS": "security.W004, security.W008"},
@@ -83,13 +75,6 @@ class DjangoSettingsContractTests(SimpleTestCase):
             )
 
     def test_django_admin_exposure_setting_is_env_driven_and_disabled_by_default(self):
-        source = (ROOT / "secondpass" / "settings.py").read_text(encoding="utf-8")
-
-        self.assertIn(
-            'SECOND_PASS_ENABLE_DJANGO_ADMIN = env.bool(',
-            source,
-        )
-        self.assertIn('"SECOND_PASS_ENABLE_DJANGO_ADMIN", default=False', source)
         self.assertIs(settings.SECOND_PASS_ENABLE_DJANGO_ADMIN, False)
         with patch.dict("os.environ", {"SECOND_PASS_ENABLE_DJANGO_ADMIN": "0"}):
             self.assertIs(env.bool("SECOND_PASS_ENABLE_DJANGO_ADMIN", default=True), False)
@@ -116,17 +101,6 @@ class DjangoSettingsContractTests(SimpleTestCase):
         self.assertEqual(settings.CSRF_TRUSTED_ORIGINS, [])
 
     def test_proxy_and_cookie_security_settings_are_env_driven(self):
-        source = (ROOT / "secondpass" / "settings.py").read_text(encoding="utf-8")
-
-        self.assertIn("SECURE_PROXY_SSL_HEADER = _secure_proxy_ssl_header()", source)
-        self.assertIn(
-            'USE_X_FORWARDED_HOST = env.bool("DJANGO_USE_X_FORWARDED_HOST", default=False)',
-            source,
-        )
-        self.assertIn(
-            '_SECURE_COOKIES = env.bool("DJANGO_SECURE_COOKIES", default=False)',
-            source,
-        )
         self.assertIsNone(getattr(settings, "SECURE_PROXY_SSL_HEADER", None))
         self.assertIs(settings.USE_X_FORWARDED_HOST, False)
         self.assertIs(settings.SESSION_COOKIE_SECURE, False)

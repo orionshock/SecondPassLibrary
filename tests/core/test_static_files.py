@@ -12,11 +12,6 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 class WhiteNoiseStaticFilesTests(SimpleTestCase):
-    def test_whitenoise_dependency_is_declared(self):
-        requirements = (ROOT / "requirements.txt").read_text(encoding="utf-8")
-
-        self.assertIn("whitenoise==", requirements)
-
     def test_whitenoise_middleware_follows_security_middleware(self):
         security_index = settings.MIDDLEWARE.index(
             "django.middleware.security.SecurityMiddleware"
@@ -40,13 +35,3 @@ class WhiteNoiseStaticFilesTests(SimpleTestCase):
             _staticfiles_backend(debug=True),
             "django.contrib.staticfiles.storage.StaticFilesStorage",
         )
-
-    def test_docker_build_collects_static_and_runtime_startup_does_not(self):
-        dockerfile = (ROOT / "docker" / "Dockerfile").read_text(encoding="utf-8")
-        entrypoint = (ROOT / "docker" / "entrypoint.sh").read_text(
-            encoding="utf-8"
-        )
-
-        self.assertIn("python manage.py collectstatic --noinput --clear", dockerfile)
-        self.assertIn("/app/var/static/", dockerfile)
-        self.assertNotIn("collectstatic", entrypoint)

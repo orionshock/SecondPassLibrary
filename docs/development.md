@@ -47,6 +47,9 @@ Do not add compatibility re-export modules or wrapper imports for deleted or
 renamed modules. Update callers to the current module boundary instead.
 
 Runtime files belong under `userdata/` or a test-isolated temporary root.
+Development and other non-Docker deployments may set
+`SECOND_PASS_USERDATA_DIR` to a different runtime root. The standard Docker
+image deliberately fixes its internal runtime root at `/app/userdata`.
 Committed files under `TestFiles/` or `tests/fixtures/` are fixtures only, not
 runtime storage or a destination for generated artifacts.
 

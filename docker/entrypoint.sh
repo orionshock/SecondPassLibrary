@@ -2,16 +2,7 @@
 set -e
 
 export SECOND_PASS_ENABLE_WHITENOISE=1
-
-if [ -z "${SECOND_PASS_USERDATA_DIR:-}" ]; then
-    echo "SECOND_PASS_USERDATA_DIR must be set." >&2
-    exit 1
-fi
-
-if [ "$SECOND_PASS_USERDATA_DIR" != "/app/userdata" ]; then
-    echo "SECOND_PASS_USERDATA_DIR must be /app/userdata in Docker." >&2
-    exit 1
-fi
+export SECOND_PASS_USERDATA_DIR=/app/userdata
 
 for dir in \
     "$SECOND_PASS_USERDATA_DIR" \

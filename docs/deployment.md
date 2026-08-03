@@ -1,10 +1,10 @@
 # Deployment
 
 Second Pass Library supports one Docker Compose application instance with
-SQLite and a bind-mounted runtime directory. The image builds the React Product
-UI, collects immutable static assets, applies migrations at container startup,
-and runs Uvicorn directly. No host-side React build, migration, static
-collection, directory creation, or ownership preparation is required.
+SQLite and persistent Docker storage. The image builds the React Product UI,
+collects immutable static assets, applies migrations at container startup, and
+runs Uvicorn directly. No host-side React build, migration, static collection,
+directory creation, or ownership preparation is required.
 
 The database schema must exist before the web process accepts requests. The
 first-run setup wizard configures the application after migrations; it does not
@@ -27,8 +27,8 @@ unrelated media files.
 ## Docker Compose
 
 The example runs one Django/Uvicorn service named `secondpasslibrary`, uses
-SQLite, and bind-mounts repository `userdata/` at `/app/userdata`. The
-entrypoint initializes that bind mount before dropping privileges; Django and
+SQLite, and mounts the named volume `secondpass_userdata` at `/app/userdata`.
+The entrypoint initializes that storage before dropping privileges; Django and
 Uvicorn run as the non-root `secondpass` user. Uvicorn serves
 `secondpass.asgi:application` with exactly one worker. Do not scale this service
 or increase its worker count while it uses SQLite.
@@ -51,14 +51,13 @@ These values are required:
 ```text
 DJANGO_SECRET_KEY=<generated-secret>
 DJANGO_ALLOWED_HOSTS=<hostnames-or-lan-ips>
-SECOND_PASS_USERDATA_DIR=/app/userdata
 ```
 
-`SECOND_PASS_USERDATA_DIR` must remain `/app/userdata`; startup rejects any
-other value so SQLite and media cannot be redirected outside mounted storage.
-The image initializes the host bind mount as UID/GID `1000:1000` by default.
-Advanced deployments may edit the Docker build arguments in
-`docker/compose.yml`; they are deliberately not runtime environment variables.
+The standard Docker image always sets `SECOND_PASS_USERDATA_DIR` to
+`/app/userdata`; it is not an operator setting. The image initializes mounted
+storage as UID/GID `1000:1000` by default. Advanced deployments may edit the
+Docker build arguments in `docker/compose.yml`; they are deliberately not
+runtime environment variables.
 
 Optional values and defaults are documented inline in `docker/.env.example`.
 Set `SECOND_PASS_READING_CLIENT_BASE_URL` to an HTTP(S) Reader Client root only
@@ -109,21 +108,27 @@ docker compose -f docker/compose.yml up -d
 
 ## Runtime data and backups
 
-Durable runtime state belongs under `userdata/`:
+Durable runtime state belongs under `/app/userdata` in the container:
 
-- `userdata/db/` contains the SQLite database;
-- `userdata/media/` contains EPUB and cover files;
-- `userdata/imports/` contains temporary or staged import data.
+- `/app/userdata/db/` contains the SQLite database;
+- `/app/userdata/media/` contains EPUB and cover files;
+- `/app/userdata/imports/` contains temporary or staged import data.
 
-Back up the complete `userdata/` directory and stable deployment secrets.
-Database and durable media must be restored as one consistent snapshot. For a
-filesystem copy, stop the service first so SQLite and media are quiescent:
+Back up the complete volume and stable deployment secrets. Database and durable
+media must be restored as one consistent snapshot. Stop the service first so
+SQLite and media are quiescent. For the default named volume, create an archive
+through a temporary Compose container:
 
 ```powershell
+New-Item -ItemType Directory -Force backups
 docker compose -f docker/compose.yml stop secondpasslibrary
-# Copy userdata/ and the stable deployment secret to backup storage.
+docker compose -f docker/compose.yml run --rm --no-deps -v ./backups:/backup --entrypoint python secondpasslibrary -c "import tarfile; archive=tarfile.open('/backup/secondpass-userdata.tar.gz','w:gz'); archive.add('/app/userdata', arcname='userdata'); archive.close()"
 docker compose -f docker/compose.yml start secondpasslibrary
 ```
+
+For a bind mount, stop the service, copy the complete host directory to backup
+storage, and then restart the service. The database and media must be copied
+together.
 
 An operator who cannot stop the service must use SQLite's online backup tooling
 and coordinate the resulting database snapshot with media storage. Copying a
@@ -162,21 +167,25 @@ does not broaden which proxy addresses are trusted. Configure any different
 trusted proxy address or network deliberately together with Django's forwarded
 protocol and forwarded-host settings.
 
-## Advanced bind-mount location
+## Operator-controlled storage
 
-The default host storage is repository `userdata/`. To store it elsewhere,
-change only the source side of this line in deployment-owned
-`docker/compose.yml`:
+The default Compose file uses the Docker-managed `secondpass_userdata` named
+volume. To control the physical host location directly, replace only the volume
+source in deployment-owned `docker/compose.yml`:
 
 ```yaml
 volumes:
   - /srv/secondpass/userdata:/app/userdata
 ```
 
-Keep the container target and `SECOND_PASS_USERDATA_DIR` set to
-`/app/userdata`. The entrypoint creates required subdirectories and establishes
-application ownership. Back up the selected host directory exactly as described
-above.
+Keep the container target `/app/userdata`. Do not add or change
+`SECOND_PASS_USERDATA_DIR`; the Docker image fixes that internal path. The
+entrypoint creates required subdirectories and establishes application
+ownership. Back up the selected host directory exactly as described above.
+
+Development and non-Docker deployments retain the normal configurable
+`SECOND_PASS_USERDATA_DIR` setting. The fixed path applies only to the standard
+Docker image and entrypoint.
 
 ## Service Hatch and logging
 
