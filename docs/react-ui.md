@@ -18,9 +18,12 @@ Dashboard (`/`) shows the configured server banner, recent active reading, and c
 
 The current Dashboard presentation is cover-forward: recent Sessions use native horizontal scrolling, snap points, hover/focus-revealed edge controls without a visible scrollbar, and lower-cover metadata overlays revealed by hover or focus and retained on touch layouts. Each cover opens Session Detail and shows stored progress when available. View all appears only when recent Sessions exist. My Marginalia, My Shelves, and Browse Library use large action tiles with action-count-aware grids that avoid empty cells; the Shelf card links to Personal, Shared by Others, optional advanced Group Shelves, and creation through the canonical Shelf routes. Authorized Import Books, Users, and Server Settings actions sit in a full-width secondary Server Tools strip. The launch cards remain responsive across three-, two-, and one-column page layouts. `DashboardOrchestrator` still owns the canonical Marginalia SDK request; the PageRegion and feature-local components remain server-blind, and route/data ownership is unchanged.
 
-## Deferred production integration
+## Production integration
 
-The current local build and root-shell integration may be used for smoke checks. Docker and production React build integration are explicitly deferred.
+The multi-stage Docker image installs the locked npm workspace, builds the React
+application, and supplies its output to Django static collection. The final
+runtime image retains the built shell and collected assets, but not Node,
+frontend source, or development dependencies.
 
 First-time setup, `/login/`, `/logout/`, and the Django `/admin/` service hatch are the only retained Django-rendered application surfaces. DRF browsable pages and `/api-auth/` are disabled. The old Reader Client authorization webpage is retired. React pairing approval uses authenticated JSON endpoints under `/api/v1/client-api/`; token delivery remains confined to external-client polling. Dashboard, library/catalog, books, groups, shelves, users, imports, and Product UI server settings are React scope.
 

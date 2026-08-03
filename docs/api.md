@@ -1353,7 +1353,10 @@ and Product UI workflow. The designated Public group cannot be deleted.
 
 ## Core
 
-- Health check: `GET /api/v1/health/`
+- Readiness check: `GET /api/v1/health/`
+  - returns `200` only when the database responds, the built Product UI index
+    exists, and required userdata directories are writable;
+  - returns `503` with the same bounded boolean check map when unavailable.
 - Authenticated server context: `GET /api/v1/server/info/`
   - accepts session or Client API bearer authentication
   - `server_name`

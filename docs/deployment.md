@@ -1,9 +1,10 @@
 # Deployment
 
-Second Pass Library supports a single-instance Docker Compose deployment with
-SQLite and a bind-mounted runtime directory. The Windows production-mode
-helper is available for local operator testing; it is not a substitute for a
-managed deployment.
+Second Pass Library supports one Docker Compose application instance with
+SQLite and a bind-mounted runtime directory. The image builds the React Product
+UI, collects immutable static assets, applies migrations at container startup,
+and runs Uvicorn directly. No host-side React build, migration, static
+collection, directory creation, or ownership preparation is required.
 
 The database schema must exist before the web process accepts requests. The
 first-run setup wizard configures the application after migrations; it does not
@@ -25,75 +26,86 @@ unrelated media files.
 
 ## Docker Compose
 
-The example deployment runs one Django/Uvicorn service named
-`secondpasslibrary`, uses SQLite, and bind-mounts `./userdata` at
-`/app/userdata`. Uvicorn serves `secondpass.asgi:application` directly with one
-worker. The container entrypoint always enables WhiteNoise; this is not an
-operator-configurable Docker setting. Reverse proxy and TLS configuration
-remain deployment-owned.
+The example runs one Django/Uvicorn service named `secondpasslibrary`, uses
+SQLite, and bind-mounts repository `userdata/` at `/app/userdata`. The
+entrypoint initializes that bind mount before dropping privileges; Django and
+Uvicorn run as the non-root `secondpass` user. Uvicorn serves
+`secondpass.asgi:application` with exactly one worker. Do not scale this service
+or increase its worker count while it uses SQLite.
 
-First run:
+The multi-stage image builds React and runs `collectstatic`. WhiteNoise serves
+that immutable collected tree. Reverse proxy and TLS configuration remain
+operator-owned.
+
+From the repository root:
 
 ```powershell
 copy docker\.env.example docker\.env
 copy docker\compose.example.yml docker\compose.yml
-.\.venv\Scripts\python.exe -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"
-docker compose -f docker/compose.yml up --build
+docker compose -f docker/compose.yml up -d --build
 ```
 
-Set at least these values in `.env`:
+Before starting, replace the secret and hostname placeholder in `docker/.env`.
+These values are required:
 
 ```text
-DJANGO_DEBUG=0
 DJANGO_SECRET_KEY=<generated-secret>
 DJANGO_ALLOWED_HOSTS=<hostnames-or-lan-ips>
 SECOND_PASS_USERDATA_DIR=/app/userdata
-SECOND_PASS_ENABLE_DJANGO_ADMIN=0
-SECOND_PASS_READING_CLIENT_BASE_URL=
 ```
 
-Set `SECOND_PASS_READING_CLIENT_BASE_URL` to an HTTP(S) Reading Client root URL
-only when deployment configuration should override and lock the editable Server
+`SECOND_PASS_USERDATA_DIR` must remain `/app/userdata`; startup rejects any
+other value so SQLite and media cannot be redirected outside mounted storage.
+The image initializes the host bind mount as UID/GID `1000:1000` by default.
+Advanced deployments may edit the Docker build arguments in
+`docker/compose.yml`; they are deliberately not runtime environment variables.
+
+Optional values and defaults are documented inline in `docker/.env.example`.
+Set `SECOND_PASS_READING_CLIENT_BASE_URL` to an HTTP(S) Reader Client root only
+when deployment configuration should override and lock the editable Server
 Settings value. Leave it blank to use the stored setting.
 
-The image runs as the non-root `secondpass` user. Its default UID/GID is
-`1000:1000`; set `APP_UID` and `APP_GID` before building if the host requires
-different ownership. On native Linux, prepare the bind mount accordingly:
-
-```bash
-mkdir -p userdata
-sudo chown -R 1000:1000 userdata
-```
-
-On Windows Docker Desktop, bind-mount permissions are normally handled by
-Docker Desktop.
-
 The example binds host `127.0.0.1:8000` for a reverse proxy on the same host.
-Direct LAN or public exposure requires an intentional `docker/compose.yml`
-change.
+Direct LAN or public exposure requires an intentional Compose port change. The
+supplied Compose file does not provide TLS or a reverse proxy.
 Startup performs:
 
 1. `python manage.py check --deploy`
 2. `python manage.py migrate --noinput`
-3. `python manage.py collectstatic --noinput`
-4. `python -m uvicorn secondpass.asgi:application --host 0.0.0.0 --port 8000 --workers 1 --no-access-log`
+3. `python -m uvicorn secondpass.asgi:application --host 0.0.0.0 --port 8000 --workers 1 --no-access-log`
 
-The healthcheck calls `/api/v1/health/` inside the container. Docker does not
-generate `DJANGO_SECRET_KEY`; startup fails when it is missing or still uses
-the documented placeholder. Uvicorn access logs are disabled to match the
-Windows production-like path and avoid routine request noise; startup,
-shutdown, application, and error output still use stdout/stderr.
+The healthcheck calls `/api/v1/health/` with the first configured allowed host.
+Readiness requires a working database query, the built React index, and writable
+userdata/database/media/import directories. Docker does not generate
+`DJANGO_SECRET_KEY`; startup fails when it is missing or uses the documented
+placeholder. Uvicorn access logs are disabled; startup, shutdown, application,
+and error output still use stdout/stderr.
+
+Inspect status and logs with:
+
+```powershell
+docker compose -f docker/compose.yml ps
+docker compose -f docker/compose.yml logs --tail 200 secondpasslibrary
+docker inspect --format '{{json .State.Health}}' (docker compose -f docker/compose.yml ps -q secondpasslibrary)
+```
 
 Update with:
 
 ```powershell
 git pull
-docker compose -f docker/compose.yml up --build
+docker compose -f docker/compose.yml up -d --build
 ```
 
 Review `docker/.env.example` and `docker/compose.example.yml` during updates.
 Local `docker/.env` and `docker/compose.yml` files remain deployment-owned and
 untracked.
+
+For a deliberately clean image rebuild:
+
+```powershell
+docker compose -f docker/compose.yml build --no-cache --pull
+docker compose -f docker/compose.yml up -d
+```
 
 ## Runtime data and backups
 
@@ -104,9 +116,20 @@ Durable runtime state belongs under `userdata/`:
 - `userdata/imports/` contains temporary or staged import data.
 
 Back up the complete `userdata/` directory and stable deployment secrets.
-Database and durable media must be restored as one consistent snapshot.
+Database and durable media must be restored as one consistent snapshot. For a
+filesystem copy, stop the service first so SQLite and media are quiescent:
+
+```powershell
+docker compose -f docker/compose.yml stop secondpasslibrary
+# Copy userdata/ and the stable deployment secret to backup storage.
+docker compose -f docker/compose.yml start secondpasslibrary
+```
+
+An operator who cannot stop the service must use SQLite's online backup tooling
+and coordinate the resulting database snapshot with media storage. Copying a
+live `db.sqlite3` file is not a supported backup procedure.
 Generated `var/static/` output is not user data and can be regenerated with
-`collectstatic`.
+an image rebuild.
 
 Do not expose `userdata/` or all of `userdata/media/` through a web server.
 WhiteNoise serves packaged application assets under `/static/`. Django exposes
@@ -134,11 +157,26 @@ trust disabled. Never enable forwarded host/protocol trust for an untrusted or
 pass-through proxy. Django's deploy check may report HTTPS/HSTS warnings whose
 resolution depends on the deployment boundary.
 
-Uvicorn retains its safe proxy-header defaults. The supplied startup commands
-do not broaden which proxy addresses are trusted. If a deployment needs a
-different trusted proxy address or network, configure that deliberately at the
-deployment boundary together with Django's forwarded-protocol and forwarded-
-host settings.
+Uvicorn retains its safe proxy-header defaults. The supplied startup command
+does not broaden which proxy addresses are trusted. Configure any different
+trusted proxy address or network deliberately together with Django's forwarded
+protocol and forwarded-host settings.
+
+## Advanced bind-mount location
+
+The default host storage is repository `userdata/`. To store it elsewhere,
+change only the source side of this line in deployment-owned
+`docker/compose.yml`:
+
+```yaml
+volumes:
+  - /srv/secondpass/userdata:/app/userdata
+```
+
+Keep the container target and `SECOND_PASS_USERDATA_DIR` set to
+`/app/userdata`. The entrypoint creates required subdirectories and establishes
+application ownership. Back up the selected host directory exactly as described
+above.
 
 ## Service Hatch and logging
 

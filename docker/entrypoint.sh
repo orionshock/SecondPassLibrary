@@ -8,6 +8,11 @@ if [ -z "${SECOND_PASS_USERDATA_DIR:-}" ]; then
     exit 1
 fi
 
+if [ "$SECOND_PASS_USERDATA_DIR" != "/app/userdata" ]; then
+    echo "SECOND_PASS_USERDATA_DIR must be /app/userdata in Docker." >&2
+    exit 1
+fi
+
 for dir in \
     "$SECOND_PASS_USERDATA_DIR" \
     "$SECOND_PASS_USERDATA_DIR/db" \
@@ -19,19 +24,23 @@ do
         exit 1
     fi
 
-    if [ ! -w "$dir" ]; then
+    if ! chown secondpass:secondpass "$dir"; then
+        echo "Could not set required userdata directory ownership: $dir" >&2
+        exit 1
+    fi
+
+    if ! gosu secondpass test -w "$dir"; then
         echo "Required userdata directory is not writable: $dir" >&2
         exit 1
     fi
 done
 
-echo "Starting Second Pass Library with userdata at $SECOND_PASS_USERDATA_DIR as uid=$(id -u) gid=$(id -g)"
+echo "Starting Second Pass Library as uid=$(gosu secondpass id -u) gid=$(gosu secondpass id -g)"
 
-python manage.py check --deploy
-python manage.py migrate --noinput
-python manage.py collectstatic --noinput
+gosu secondpass python manage.py check --deploy
+gosu secondpass python manage.py migrate --noinput
 
-exec python -m uvicorn secondpass.asgi:application \
+exec gosu secondpass python -m uvicorn secondpass.asgi:application \
     --host 0.0.0.0 \
     --port 8000 \
     --workers 1 \

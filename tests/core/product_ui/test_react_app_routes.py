@@ -84,7 +84,6 @@ class ReactRootRouteContractTests(TestCase):
                 resolve(path)
         with self.assertRaises(Resolver404):
             resolve("/static/web/app.css")
-        self.assertEqual(self.client.get("/api/v1/health/").status_code, 200)
 
     def test_react_static_prefix_is_discoverable(self):
         with TemporaryDirectory() as directory:

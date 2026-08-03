@@ -41,10 +41,12 @@ class WhiteNoiseStaticFilesTests(SimpleTestCase):
             "django.contrib.staticfiles.storage.StaticFilesStorage",
         )
 
-    def test_production_startup_collects_static_before_asgi_server(self):
-        source = (ROOT / "docker" / "entrypoint.sh").read_text(encoding="utf-8")
-
-        self.assertLess(
-            source.index("manage.py collectstatic --noinput"),
-            source.index("python -m uvicorn secondpass.asgi:application"),
+    def test_docker_build_collects_static_and_runtime_startup_does_not(self):
+        dockerfile = (ROOT / "docker" / "Dockerfile").read_text(encoding="utf-8")
+        entrypoint = (ROOT / "docker" / "entrypoint.sh").read_text(
+            encoding="utf-8"
         )
+
+        self.assertIn("python manage.py collectstatic --noinput --clear", dockerfile)
+        self.assertIn("/app/var/static/", dockerfile)
+        self.assertNotIn("collectstatic", entrypoint)

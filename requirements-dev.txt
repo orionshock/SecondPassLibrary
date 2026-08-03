@@ -1,5 +1,7 @@
 -r requirements.txt
 
+pytest==9.1.1
+pytest-django==4.12.0
 django-types==0.24.0
 django-stubs-ext==6.0.7
 djangorestframework-types==0.9.0

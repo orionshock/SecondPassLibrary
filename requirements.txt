@@ -1,6 +1,4 @@
 Django==6.0.7
-pytest==9.1.1
-pytest-django==4.12.0
 djangorestframework==3.17.1
 EbookLib==0.20
 defusedxml==0.7.1
