@@ -94,6 +94,12 @@ inaccessible items from user-owned shelves and compacts their positions. It
 does not modify Group Shelves or accessible items. Visibility returning before
 `--apply` preserves the retained item.
 
+The command is idempotent for the current visibility state and has no batch
+limit. Review the complete dry-run output before `--apply`, especially after
+membership or Group Book-assignment changes. If unexpected unavailable counts
+appear, repair visibility first and rerun the dry run; restored access keeps
+the original item available for normal Shelf operations.
+
 ## Admin and repair workflows
 
 Django Admin is an optional operator service hatch, disabled by default. Set

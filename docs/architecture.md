@@ -36,7 +36,7 @@ Notes:
 
 ## Shelves
 
-Shelves live in the `shelves` app and are strictly for presentation/organization, not access control. See `docs/shelves.md`.
+Shelves live in the `shelves` app and are strictly for presentation/organization, not access control. See `docs/permissions.md`.
 
 ## Service-layer rule
 

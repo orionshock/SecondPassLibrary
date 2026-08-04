@@ -1,8 +1,8 @@
 # Permissions and visibility
 
-This document defines current role authority and visibility rules. Exact HTTP
-routes and payloads belong in `docs/api.md`; shelf lifecycle and scope behavior
-belong in `docs/shelves.md`; Product UI structure belongs in `docs/react-ui.md`.
+This document defines current role authority, Book visibility, and Shelf
+ownership/visibility rules. Exact HTTP routes and payloads belong in
+`docs/api.md`; Product UI structure belongs in `docs/react-ui.md`.
 
 ## Identity concepts
 
@@ -158,23 +158,66 @@ surfaces for authorized Manager/Owner users.
 
 ## Shelf ownership and visibility authority
 
-Shelves organize Books; they never grant Book access.
+Shelves organize Books; they never grant Book access. Every Shelf has exactly
+one immutable owner: either one user or one Library Group. Its UUID, not its
+display name, is identity; different owners may use the same name.
 
-- A user-owned private shelf is visible/editable only to its owner.
-- A user-owned listed shelf is editable only by its owner and may be read by
-  authenticated users when it has at least one Book visible to that viewer.
-- A group-owned shelf is visible to the owning group's members and broad roles.
-- Owner, Manager, and Librarian may manage group-owned shelves.
-- A Reader curator may manage shelves owned by their exact custom group.
-- Public group shelves cannot have curator authority and are managed by
-  Librarian, Manager, or Owner.
-- Other users' private shelves remain hidden even from broad application roles.
+### Read visibility
 
-Personal shelves and visible group-owned shelves may remain visible when empty.
-Other users' listed shelves are omitted when their viewer-visible `item_count`
-is zero. Detailed scopes and retained-item behavior are in `docs/shelves.md`;
-operator cleanup is documented in
-[Operations](operations.md#unavailable-personal-shelf-items).
+- A user-owned private Shelf is visible and editable only to its owner. Broad
+  application roles do not bypass that privacy boundary.
+- A user-owned listed Shelf remains editable only by its owner. Another
+  authenticated user can discover or open it only when it contains at least
+  one Book currently visible to that viewer.
+- A Group Shelf is visible to the owning Group's members and broad roles,
+  including when empty. Its stored `visibility` is always `private`; visibility
+  comes from Group membership, not a public Shelf setting.
+- A Public Group Shelf follows the ordinary Group rule. "Public" does not mean
+  anonymous: Public membership still controls Reader access.
+- A user's own Shelves and visible Group Shelves remain visible when empty.
+  Other users' listed Shelves with zero viewer-visible items are omitted and
+  direct detail returns the same not-found treatment. List, detail, counts,
+  previews, and item reads use the same viewer visibility boundary.
+
+Normal Shelf reads include only currently visible Books. Counts and previews
+must not disclose hidden Books or their metadata.
+
+### Mutation authority
+
+The user owner alone may create, rename, change visibility, populate, reorder,
+remove from, or delete a personal Shelf. Owner, Manager, and Librarian may do
+the corresponding operations for Group Shelves. A Reader curator may do so
+only for a Shelf owned by their exact custom Group. Public Group Shelves have
+no curator authority and are managed by Librarian, Manager, or Owner.
+
+Advanced Library Groups gates only its documented Product UI navigation and
+management controls. It does not invalidate Group Shelves, Public Group
+behavior, or ordinary Group-scoped reads; Public Group Shelves work in simple
+and advanced modes.
+
+### Item eligibility, order, and later access loss
+
+- An item on a user Shelf must reference a Book currently in that user's
+  visible Book universe when added.
+- An item on a Group Shelf must reference a Book assigned to that exact owning
+  Group. Visibility through another Group is insufficient.
+- A Book can occur at most once on a Shelf. Stored positions are zero-based,
+  contiguous, and updated under the Shelf mutation boundary. Product UI may
+  present positions as one-based; response sorting by title/author does not
+  rewrite stored order.
+- Later loss of Book visibility does not delete a user-owned Shelf item. Normal
+  reads hide it; the owner can see only a safe unavailable placeholder in the
+  editor and can remove it without receiving hidden Book metadata. Direct
+  positioning is disabled while unavailable slots exist; relative moves skip
+  those slots.
+- Removing a Book from a Library Group removes it from Shelves owned by that
+  exact Group and compacts their positions. It does not remove the Book from
+  other Group Shelves or personal Shelves. Deleting a Book removes its Shelf
+  items through the database relationship; deleting a Shelf removes only its
+  items, never Books.
+
+Operator review and optional removal of retained unavailable personal items is
+documented in [Operations](operations.md#unavailable-personal-shelf-items).
 
 ## Client bearer restrictions
 

@@ -5,9 +5,9 @@ session-authenticated workflows for Owner, Manager, and Librarian users.
 Operator-only management commands provide the same import behavior for local
 host or container paths.
 
-Normalized metadata and cover meaning are described in
-[metadata.md](metadata.md). Exact HTTP fields and responses are described in
-[api.md](api.md).
+This document owns import metadata precedence, normalization, duplicate
+advisories, and file/archive safety. Exact HTTP fields and responses are in
+[API](api.md).
 
 ## Book import workflow
 
@@ -20,6 +20,40 @@ Readers cannot import Books. The request accepts:
 Non-EPUB ZIP entries are ignored unless they are a selected OPF sidecar or its
 safely resolved cover image. Imports complete within the request. The system
 does not create import jobs or retain import history.
+
+## Metadata identity and normalization
+
+Author and Series UUIDs are canonical identity; their names are deliberately
+non-unique. Name matching is only an import/editing convenience: Unicode NFKC,
+trimmed and collapsed whitespace, and case-folding produce an advisory
+`normalized_name` while preserving punctuation. Zero normalized matches may
+create an entity, one may be reused, and multiple matches are ambiguous. The
+system never treats normalized equality as authority to merge, rename,
+reassign, or delete records. Renaming an Author or Series preserves its UUID
+and relationships.
+
+Imported titles, names, tags, identifier schemes, and identifier values are
+NFKC-normalized and whitespace-collapsed before persistence or comparison.
+Scheme-specific identifier normalization removes ISBN punctuation, folds DOI
+URL/prefix forms, and applies the stable casing rules used by the import
+service. Display values remain separate from normalized matching values.
+Catalog Tag names use the same name normalization as imports but have unique
+normalized identity; the first persisted display spelling and stable slug are
+retained when later imports reuse a Tag.
+
+The Primary Author is the Author on the lowest `BookAuthor.position`, with the
+through-row UUID as deterministic fallback. Primary-author sorting uses only
+that Author's sort name/name; secondary Authors do not affect it. Import order,
+not alphabetical display order, establishes author positions.
+
+A Series index is absent or an exact positive decimal with at most eight total
+digits and two fractional digits. Storage is `Decimal(8,2)` and the wire value
+is a fixed two-decimal string. Values are validated exactly and never rounded;
+numeric equivalents such as `1`, `1.0`, and `1.00` represent the same index.
+Partial publication dates retain their supplied year, month, or day precision
+rather than inventing missing components.
+
+## Metadata precedence and persistence
 
 ### EPUB and OPF metadata precedence
 
@@ -44,16 +78,20 @@ preview, persistence, and result output. Blank, malformed, zero, negative, or
 over-precision values are treated as an unknown Series position; the Book and
 Series metadata remain importable, and the value is never rounded.
 
-Checksum duplicate detection takes precedence over metadata refresh. A
-duplicate returns the existing Book without changing metadata, identifiers,
-Catalog Tags, EPUB bytes, or cover. A new candidate whose identifiers conflict
-with an existing Book is reported as a conflict rather than partially applied.
+Imports are create-only at the Book boundary. A checksum duplicate returns the
+existing Book without changing metadata, identifiers, Catalog Tags, EPUB bytes,
+or cover; import does not refresh it from newer embedded or sidecar metadata.
+For a new Book, the import may reuse an unambiguous Author, Series, or Catalog
+Tag and creates only the new Book's relationships. An identifier collision with
+another Book is advisory conflict detection, not proof that records should be
+merged, and the candidate is not partially applied.
 
-Author and Series matching applies Unicode NFKC, trim, collapsed whitespace,
-and case-folding while preserving punctuation. No normalized match creates a
-new entity; one match reuses it. Multiple matches are ambiguous, so the item is
-reported as a conflict and no Book is created. Imports never select the first
-duplicate, merge identities, or rewrite existing Book relationships.
+The selected metadata record supplies the new Book's scalar fields, ordered
+Authors, optional Series relationship, identifiers, and Catalog Tags. It is
+not blended with an existing Book. Metadata edits outside import follow their
+own explicit replacement semantics: supplied relationship collections replace
+their prior values, omission preserves them, and an explicit empty collection
+clears them.
 
 ### Cover import behavior
 
@@ -62,10 +100,12 @@ a JPEG, PNG, or WebP cover; OPF 2 guide references are resolved relative to the
 sidecar. A valid sidecar cover takes precedence over an embedded cover.
 
 Missing, unsafe, ambiguous, colliding, invalid, unsupported, or oversized
-sidecar cover input is ignored and embedded extraction is attempted. Cover
-validation or storage failure does not invalidate an otherwise valid Book
-import. Arbitrary sidecar assets are not imported. See
-[metadata.md](metadata.md) for validation, storage, and serving rules.
+sidecar cover input is ignored and embedded extraction is attempted. Covers
+must be valid JPEG, PNG, or WebP images no larger than 10 MiB or 20 million
+decoded pixels. Valid original bytes are stored by content hash and may be
+shared by multiple Books. Cover validation or storage failure does not
+invalidate an otherwise valid Book import. Arbitrary sidecar assets are not
+imported, and duplicate/conflicting Book candidates do not acquire a cover.
 
 ## Limits and archive safety
 

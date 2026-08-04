@@ -15,12 +15,8 @@ pip install -r requirements-dev.txt
 
 Note: `requirements.txt` contains runtime dependencies. `requirements-dev.txt`
 adds local test/type tooling such as Django/DRF typing packages.
-Pillow is included for cover image validation. EPUB import supports embedded
-JPEG, PNG, and WebP covers. ZIP imports also support matching OPF sidecars for
-new Books, including safely resolved JPEG, PNG, or WebP sidecar covers. A valid
-sidecar cover takes precedence over an embedded cover; arbitrary sidecar assets
-are not imported. See [Imports](imports.md) and
-[Metadata and identifiers](metadata.md) for the current precedence rules.
+Pillow is included for cover image validation. Current EPUB, ZIP/OPF metadata,
+cover precedence, normalization, and safety rules are in [Imports](imports.md).
 
 The React Product UI has its npm workspace under `frontend/`; see
 [React Product UI](react-ui.md). There is no repository-root npm project.
@@ -60,7 +56,6 @@ runtime storage or a destination for generated artifacts.
 - [Permissions](permissions.md)
 - [Imports](imports.md)
 - [Marginalia](marginalia.md)
-- [Metadata and identifiers](metadata.md)
 - [Production startup](deployment.md)
 - [Operator maintenance and repair](operations.md)
 - [React Product UI](react-ui.md)
