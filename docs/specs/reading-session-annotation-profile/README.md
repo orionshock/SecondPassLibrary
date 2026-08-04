@@ -1,25 +1,38 @@
-# Second Pass Library Marginalia Profile
+# Reading Session and Annotation Profile
 
-This directory is the canonical specification for Marginalia communication
-between Second Pass Library and Reader clients.
+This directory contains the reusable Marginalia interchange profile for Reader
+clients and portable archives.
 
-Profile URI:
+Current profile URI:
 
 ```text
 https://secondpasslibrary.local/specs/marginalia/0.1.0
 ```
 
-Files:
+## Authorities
 
-- `profile.md` — normative domain and interchange contract.
-- `schema.json` — documentation schema for shared Session, progress, location,
-  highlight, and bookmark shapes, including explicit portable identities.
-- `types.ts` — matching TypeScript reference types.
-- `examples/` — concise canonical examples, including a complete archive.
+- [schema.json](schema.json) is the normative machine-readable schema for
+  Sessions, progress, locations, highlights, and bookmarks.
+- [profile.md](profile.md) defines semantic rules that JSON Schema cannot state
+  clearly, including identity, ordering, deletion, and lifecycle meaning.
+- [marginalia-export.schema.json](../marginalia-export.schema.json) is the
+  normative archive envelope and references this profile.
+- [marginalia-export.md](../marginalia-export.md) explains envelope identity and
+  packaging.
 
-The export envelope is documented in `../marginalia-export.md` and
-`../marginalia-export.schema.json`. It references the shared definitions here;
-it does not define another annotation or Session model.
+The former hand-maintained `types.ts` was removed. The Product UI SDK exposes
+live API models rather than a standalone archive contract, so JSON Schema is the
+only machine-readable interchange authority.
 
-Files under `docs/` are documentation only. Runtime code and tests must not load
-or validate them.
+## Examples
+
+- [complete-export.json](examples/complete-export.json) is the canonical valid
+  end-to-end archive.
+- [closed-session.json](examples/closed-session.json) is a valid illustrative
+  standalone Session showing the closed-state condition and null progress.
+- [invalid-bookmark-with-body.json](examples/invalid-bookmark-with-body.json) is
+  intentionally invalid and must fail because bookmarks cannot contain `body`.
+
+`tests/marginalia/test_archive_spec_contract.py` validates this exact fixture
+set offline and checks semantic parity between both normative schemas and the
+runtime bundled schema.

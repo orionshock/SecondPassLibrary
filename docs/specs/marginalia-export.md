@@ -1,71 +1,61 @@
 # Marginalia Export Archive
 
-This file defines the portable archive envelope around the canonical
-Marginalia objects in
-[`reading-session-annotation-profile/profile.md`](reading-session-annotation-profile/profile.md).
-It does not define alternate Session, progress, location, highlight, or
-bookmark shapes.
+## Scope and authority
 
-Canonical profile URI:
+This specification defines the portable archive envelope around the reusable
+Marginalia objects in the
+[Reading Session and Annotation profile](reading-session-annotation-profile/profile.md).
+It does not define alternate Session, progress, location, or annotation shapes.
+
+[marginalia-export.schema.json](marginalia-export.schema.json) is the normative
+machine-readable envelope schema. It references the normative reusable profile
+[schema](reading-session-annotation-profile/schema.json) by its canonical URI.
+The runtime keeps an offline bundled schema beside the archive codec; the
+focused contract test composes these two documentation schemas and checks their
+semantic parity with that runtime bundle.
+
+The canonical valid end-to-end fixture is
+[complete-export.json](reading-session-annotation-profile/examples/complete-export.json).
+It is validated offline against both documentation schemas and accepted by the
+runtime codec during the focused specification check.
+
+## Version and profile
+
+The current envelope version is `0.1.0`, with profile URI:
 
 ```text
 https://secondpasslibrary.local/specs/marginalia/0.1.0
 ```
 
-The documentation schema is
-[`marginalia-export.schema.json`](marginalia-export.schema.json). A complete
-example is
-[`reading-session-annotation-profile/examples/complete-export.json`](reading-session-annotation-profile/examples/complete-export.json).
-Files under `docs/` are documentation only. The executable schema lives beside
-the runtime archive codec and neither runtime code nor tests load this copy.
+`type`, `schemaVersion`, and `profile` identify this exact contract. Consumers
+must not guess at compatibility when one differs. The schema rejects unknown
+envelope, Book, Session, progress, location, body, and annotation properties.
 
-## Envelope
+## Book identity and review metadata
 
-```json
-{
-  "type": "SecondPassMarginaliaExport",
-  "schemaVersion": "0.1.0",
-  "profile": "https://secondpasslibrary.local/specs/marginalia/0.1.0",
-  "generatedAt": "2026-07-29T12:00:00Z",
-  "generator": "Second Pass Library",
-  "books": []
-}
-```
+`fileHash` is the sole portable Book identity. It is the SHA-256 checksum of the
+exact EPUB bytes because locations and quote context belong to those bytes. A
+hash is unique across one archive; a missing or duplicate hash is an integrity
+failure, not an instruction to merge Books.
 
-The contained Books and Sessions fully describe complete and selected
-archives; the envelope does not duplicate that distinction.
+Title and ordered Author names are bounded review metadata. They are not
+matching fallbacks and do not replace the hash. The archive contains no local
+Book UUID, storage or download data, permission state, Groups, or Shelves.
 
-## Book envelope
+## Archive semantics
 
-```json
-{
-  "fileHash": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
-  "title": "The Example Book",
-  "authors": ["Example Author"],
-  "readingSessions": []
-}
-```
+Complete and selected exports use the same envelope and do not carry a scope
+flag. Sessions without non-deleted annotations are excluded by default; the
+explicit include-empty option changes which Sessions are present, not their
+shape. Deleted annotations are omitted.
 
-`fileHash` is the sole portable Book identity. It is the exact EPUB content
-checksum and is required because locations and quote context belong to those
-bytes. A missing hash is an export data-integrity failure. Distinct Books with
-the same hash are a Library integrity failure and must not be merged.
+Native import consumes this contract. Foreign formats must be converted by a
+Reader client or dedicated tool; the Library server does not parse EPUB content,
+repair CFIs, or invent location labels while importing Marginalia.
 
-Title and authors are bounded review metadata only. They are not matching
-fallbacks. The archive contains no source-system Book id, storage or download
-data, permission state, Groups, or Shelves.
+The Unmatched download is a ZIP packaging operation, not another schema. Each
+JSON member is a complete single-Session archive conforming to this same
+envelope and reusable profile.
 
-## Import and export policy
-
-Sessions with no non-deleted Annotations are excluded by default. Import and
-export workflows expose an explicit `Include empty sessions` option without
-changing the archive object shapes.
-
-Native import consumes this envelope and the canonical Marginalia objects.
-Foreign formats must be converted by a Reader client or dedicated tool. The
-Library server does not parse EPUB content, repair CFIs, or produce
-`locationLabel` values.
-
-A complete or selected archive is a JSON attachment. The unmatched download
-packages one complete single-Session archive per JSON file inside a ZIP; each
-contained JSON document uses this same envelope and contract.
+Product ownership, staged import, replay, and export-limit behavior belong in
+[Marginalia](../marginalia.md), not this interchange specification.

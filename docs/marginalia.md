@@ -254,6 +254,7 @@ overview:
   owns exact Session, progress, location, highlight, bookmark, and portable
   identity shapes.
 
-The executable schema lives beside the backend archive codec. Documentation
-schemas and reference types describe the external contract but are not loaded
-by runtime code or tests.
+The documentation schemas are the normative external machine-readable
+contract. Runtime keeps an offline bundled schema beside the archive codec; a
+focused contract test validates the retained examples and checks semantic
+parity between the split documentation schemas and that runtime bundle.

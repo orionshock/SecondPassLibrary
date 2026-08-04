@@ -206,7 +206,8 @@ Only externally meaningful surfaces receive dedicated prose:
   apply, replay, and bounded export behavior.
 - [Marginalia export archive](specs/marginalia-export.md) and the
   [Reading Session and Annotation profile](specs/reading-session-annotation-profile/README.md)
-  own exact portable interchange schemas.
+  own exact portable interchange schemas. Focused offline checks validate their
+  examples and semantic parity with the runtime bundled schema.
 - [Imports](imports.md) owns Library import metadata and untrusted archive
   handling.
 - [Permissions](permissions.md) owns roles, visibility, Group authority, and

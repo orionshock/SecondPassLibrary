@@ -1,201 +1,105 @@
 # Marginalia Interchange Profile
 
-Version: 0.1.0
+Version: `0.1.0`
+
 Profile: `https://secondpasslibrary.local/specs/marginalia/0.1.0`
 
-## Purpose
+## Scope
 
-Marginalia is the domain root. Users read Books; Books accumulate Marginalia;
-Marginalia contains Reading Sessions; Reading Sessions own progress and
-annotations.
+This profile defines portable Reading Sessions, progress, locations, highlights,
+and bookmarks. Exact fields, types, bounds, required properties, lifecycle
+conditions, and annotation variants are normative in [schema.json](schema.json).
+This document owns semantic meaning that is awkward or impossible to express in
+JSON Schema.
 
-The native objects in this profile are used for Server/Reader communication and
-inside portable archives wherever practical. An export adds a Book envelope,
-but does not translate Sessions or annotations into a competing shape.
+Second Pass Library's product lifecycle, visibility, import, export, and
+preservation policies belong in [Marginalia](../../marginalia.md). The archive
+envelope and Book identity belong in
+[Marginalia Export Archive](../marginalia-export.md).
 
-The API namespace is `/api/v1/marginalia/`. Exact implemented routes and
-authentication are documented in the API reference.
+## Session identity and lifecycle
 
-## Reading Session lifecycle
+A Reading Session is `active` or `closed`. An active Session has a null
+`closedAt`; a closed Session has a date-time `closedAt`. The schema enforces
+those conditions. These values describe the source archive lifecycle;
+destination import policy may deliberately create historical closed Sessions
+as documented in [Marginalia](../../marginalia.md#import-workflow).
 
-A Reading Session is either `active` or `closed`.
+`sourceReadingSessionId` is stable and unique across one source archive. It is
+used for selection, diagnostics, deterministic packaging, and replay-safe
+correlation. It is not a destination database primary key, and the archive does
+not expose a local Session UUID through a generic `id` field.
 
-- A user may have at most one active Session for a Book.
-- Opening a Book with an existing active Session returns that Session.
-- Opening never closes or replaces a Session automatically.
-- Closing is a deliberate operation.
-- Closed Sessions are immutable.
-- A Book may have only closed Sessions and no active Session.
+The canonical complete archive demonstrates an active Session. The separate
+[closed Session fixture](examples/closed-session.json) exists because its
+non-null close time and null progress are materially different conditions.
 
-Canonical Session shape:
+## Locations and progress
 
-```json
-{
-  "sourceReadingSessionId": "source-reading-session-000001",
-  "name": "Current pass",
-  "notes": "",
-  "status": "active",
-  "startedAt": "2026-07-20T12:00:00Z",
-  "closedAt": null,
-  "createdAt": "2026-07-20T12:00:00Z",
-  "updatedAt": "2026-07-29T12:00:00Z",
-  "progress": {
-    "cfi": "epubcfi(/6/8!/4/2)",
-    "locationLabel": "Chapter 08 · 42%",
-    "updatedAt": "2026-07-29T12:00:00Z"
-  },
-  "annotations": []
-}
-```
+Every located value uses an opaque CFI plus an optional Reader-generated
+`locationLabel`. The same pair locates progress, highlights, and bookmarks.
+The server stores and transfers these values without parsing, normalizing,
+repairing, or deriving them from EPUB content.
 
-`sourceReadingSessionId` is a stable identity within one source archive. It is
-used for archive structure, diagnostics, selection, and deterministic
-filenames. It is not a destination database primary key. Live contracts should
-use explicit local names such as `reading_session_id` when exposing server
-identity; the archive never uses a bare `id` property.
+`locationLabel` is a display and sorting companion, not an anchor or numeric
+progress value. A Reader should keep it stable and lexically sortable in reading
+order within one Book and Session. Decorative context may be appended, but the
+label is not selected text, a title, a note, or an annotation category.
 
-## Location
+Progress is the Session's current located state and includes its own update
+time. A percentage may appear as Reader-authored display text in
+`locationLabel`; there is no canonical numeric progression field. Product list
+projections may expose summaries, but those are not interchange fields.
 
-Every located record uses the same object:
+## Annotation semantics
 
-```json
-{
-  "cfi": "epubcfi(/6/8!/4/2)",
-  "locationLabel": "Chapter 08 · 42% · The Blackstaff"
-}
-```
+The only annotation kinds are `highlight` and `bookmark`. Each annotation
+belongs to one Reading Session and inherits that Session's user and Book
+context.
 
-- `cfi` is the opaque machine anchor.
-- `locationLabel` is an optional opaque Reader-generated display and sorting
-  companion.
-- The Reader must keep a label stable and string-sortable in reading order
-  within the same Book and Session.
-- Decorative context may be appended to a label.
-- The server stores, returns, imports, and exports both values unchanged.
-- The server does not parse, normalize, infer, reconstruct, or derive either
-  value from EPUB content.
-- `locationLabel` is not selected text, a title, note, category, or other
-  user-authored annotation content.
+A highlight has a body. Selected `text` and `color` are required. Optional
+prefix and suffix contain immediate quote context for Reader-side anchor
+verification or repair; an optional note is user-authored prose attached to the
+highlight. Supported color tokens are `yellow`, `green`, `blue`, `pink`,
+`purple`, and `orange`. There is no standalone note annotation kind and no
+second selector/body representation.
 
-The same `cfi` and optional `locationLabel` pair locates progress, highlights,
-highlights with notes, and bookmarks. Progress carries the pair directly;
-annotations carry it in `location`. EPUB page numbers are not durable anchors.
+A bookmark has no body. It cannot carry selected text, quote context, color, or
+a note. Its location label is the only human-readable location companion. The
+[invalid bookmark fixture](examples/invalid-bookmark-with-body.json) is retained
+specifically to prove this closed-shape rule.
 
-## Progress
+`clientAnnotationId` is a stable Reader-generated identity unique within one
+Reading Session. It supports correlation and retry-safe synchronization; it is
+not the server's Annotation primary key. Reusing the same identity targets the
+same logical annotation, including restoration after a prior soft deletion.
 
-Progress is the current located state of a Reading Session:
+Soft deletion is server state rather than an interchange variant. Deleted
+annotations are omitted from archives and authoritative current collections.
+Consumers must not invent a portable tombstone shape outside a separately
+defined synchronization contract.
 
-```json
-{
-  "cfi": "epubcfi(/6/8!/4/2)",
-  "locationLabel": "Chapter 08 · 42%",
-  "updatedAt": "2026-07-29T12:00:00Z"
-}
-```
+## Ordering and replay meaning
 
-The canonical interchange representation is not a standalone numeric percent.
-The Reader supplies any percentage-like display text as part of
-`locationLabel`. The server does not derive percentage from CFI.
+Archive arrays are emitted deterministically. Author order is meaningful.
+Sessions and annotations use stable runtime ordering so identical archive input
+and state render consistently. Annotation reading order prefers nonblank
+location labels, then falls back to opaque CFI, creation time, and identity; it
+does not claim to reconstruct EPUB spine order.
 
-List projections may expose separate summary metadata when a product surface
-needs it. Such projection fields are not part of the canonical progress object.
+Portable identities make retries correlatable, but the profile does not define
+a cross-server sync protocol. Product-level import replay and duplicate policy
+are documented in [Marginalia](../../marginalia.md).
 
-## Annotations
+## Compatibility
 
-Annotation kinds are only `highlight` and `bookmark`. An annotation belongs to
-one Reading Session and inherits its user and Book context.
+Consumers must validate against the advertised profile and schema version.
+Unknown properties are rejected rather than ignored. Changes to required
+fields, bounds, lifecycle conditions, annotation variants, or identity meaning
+require coordinated schema, runtime, fixture, and client updates.
 
-### Highlight
-
-```json
-{
-  "clientAnnotationId": "reader-highlight-42",
-  "kind": "highlight",
-  "location": {
-    "cfi": "epubcfi(/6/8!/4/2)",
-    "locationLabel": "Chapter 08 · 42%"
-  },
-  "body": {
-    "text": "The selected passage",
-    "prefix": "Text immediately before ",
-    "suffix": " text immediately after.",
-    "color": "yellow",
-    "note": "This passage explains the central argument."
-  },
-  "createdAt": "2026-07-28T12:00:00Z",
-  "updatedAt": "2026-07-28T12:00:00Z"
-}
-```
-
-Highlight body rules:
-
-- `text` is required and contains the selected text exactly once.
-- `prefix` and `suffix` are optional immediate surrounding text used by a
-  Reader to verify or repair an anchor when the CFI does not resolve cleanly.
-- `color` is highlight presentation metadata. Supported tokens are `yellow`,
-  `green`, `blue`, `pink`, `purple`, and `orange`.
-- `note` is optional user-authored prose attached to the highlight.
-- The server stores these fields; it does not evaluate anchoring quality or
-  search EPUB content during normal runtime.
-
-There is no selector/body duplication and no standalone note annotation kind.
-
-### Bookmark
-
-```json
-{
-  "clientAnnotationId": "reader-bookmark-17",
-  "kind": "bookmark",
-  "location": {
-    "cfi": "epubcfi(/6/10!/4/2)",
-    "locationLabel": "Chapter 09 · 47%"
-  },
-  "createdAt": "2026-07-29T11:00:00Z",
-  "updatedAt": "2026-07-29T11:00:00Z"
-}
-```
-
-A bookmark has no `body`. It cannot carry highlighted text, quote context,
-color, or a note. Its `locationLabel` supplies human-readable location text.
-The intentionally invalid
-[`examples/invalid-bookmark-with-body.json`](examples/invalid-bookmark-with-body.json)
-shows a payload rejected by this rule.
-
-## Storage mapping
-
-The Django model uses snake_case columns while JSON interchange uses camelCase:
-
-| Interchange | Model field |
-| --- | --- |
-| `sourceReadingSessionId` | archive-local only; never a destination primary key |
-| `clientAnnotationId` | `client_id` |
-| `progress.cfi` | `progress_cfi` |
-| `progress.locationLabel` | `progress_location_label` |
-| `progress.updatedAt` | `progress_updated_at` |
-| `location.cfi` | `cfi` |
-| `location.locationLabel` | `location_label` |
-| `body.text` | `highlight_text` |
-| `body.prefix` | `quote_prefix` |
-| `body.suffix` | `quote_suffix` |
-| `body.color` | `highlight_color` |
-| `body.note` | `comment_text` |
-
-Soft deletion is server state. Deleted annotations are omitted from archives.
-`clientAnnotationId` is the stable Reader-generated identity used for client
-correlation and retry-safe synchronization. It is unique within one Reading
-Session and maps to `Annotation.client_id`; it is not the local Annotation
-database primary key.
-
-## Import and export
-
-Native import/export preserves the objects above. Foreign provider formats must
-be converted outside the Library server by a Reader client or dedicated tool.
-The Library server does not repair EPUBs, resolve CFIs, or infer locations while
-importing Marginalia.
-
-Import and export exclude Sessions without non-deleted Annotations by default.
-The workflow-level `Include empty sessions` option includes them explicitly;
-it does not change the canonical Session object.
-
-Archive-only Book identity, envelope, and packaging rules are documented
-in `../marginalia-export.md`.
+The focused specification contract test validates all retained examples and
+semantically composes the reusable profile with the archive envelope before
+comparing it to the runtime's offline bundled schema. Documentation and runtime
+therefore cannot drift silently while preserving their intentionally different
+reference layouts.
