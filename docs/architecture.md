@@ -78,7 +78,8 @@ Position:
 - CORS is open for API/discovery endpoints only, with credentials disabled, so
   independent browser reader clients can use bearer tokens from another origin.
   Product UI session-auth routes are intentionally not CORS-open.
-- Email verification, password reset flows, MFA, and invite systems are not implemented yet.
+- Email verification, self-service/email-based password recovery, MFA, and
+  invite systems are not implemented.
 
 Interactive password login reserves database-backed failure slots before each
 credential check: 10 attempts per normalized source over 10 minutes and 5 per
@@ -86,6 +87,40 @@ NFKC-normalized, case-folded username over 15 minutes. Successful authentication
 clears both relevant buckets. Bucket keys are keyed hashes rather than stored IP
 addresses or usernames; expired slots are removed in bounded batches during
 normal login traffic, so no scheduled cleanup service is required.
+
+### Browser sessions and forced password changes
+
+Django session authentication is the browser authority. Login uses Django's
+normal authentication and session rotation behavior; logout is POST-only and
+CSRF-protected. `accounts.UserWebSession` tracks underlying Django sessions for
+targeted revocation; it is not an authentication mechanism.
+
+Password and credential revocation form one lifecycle:
+
+- A self-service password change verifies the current password and applies
+  Django's validators. Updating the password, clearing `must_change_password`,
+  and revoking every other browser session and all Client API sessions share one
+  transaction. Refreshing the authentication hash retains the current browser
+  session.
+- A managed password reset atomically sets a generated temporary password, sets
+  `must_change_password`, and revokes all existing browser and Client API
+  sessions for that user.
+- Disabling a managed user revokes both credential types. Both authentication
+  boundaries also reject inactive users, independently of revocation cleanup.
+
+`must_change_password` is enforced on the server, after
+`AuthenticationMiddleware` has resolved the Django session user. A flagged
+browser session retains only the bootstrap/current-user, password-change,
+logout, Product UI shell, and supporting public/static surface needed to finish
+the change. Other APIs return JSON `403` with code
+`password_change_required`, never an HTML redirect.
+
+DRF resolves opt-in bearer authentication later at each API boundary. The
+middleware therefore governs Django session users only; it does not mistake a
+bearer-only request for a browser session or extend the browser flag to the
+bearer contract. The credentials remain distinct authorities with coordinated
+revocation. See [Client API authorization](client-api-auth.md) for bearer
+lifecycle details and [Frontend](frontend.md) for Product UI handling.
 
 ### First-run bootstrap
 
@@ -165,8 +200,6 @@ Browser Product UI:
 
 - The active React Product UI uses Django session authentication and must preserve CSRF protection for authenticated mutations.
 - HTTP Basic authentication is not part of the product auth model.
-
-Session revocation rules and terminology are documented in `docs/session-management.md`.
 
 Client API pairing (human code + approval + bearer token) is documented in `docs/client-api-auth.md`.
 

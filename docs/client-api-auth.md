@@ -41,9 +41,8 @@ High-level: the reader client creates a login request, a human authorizes it in 
 ### Human / browser
 
 1. User opens `authorize_url` in a browser. The server returns this URL at `/profile/client-pairing?code=...` on the current origin.
-2. If needed, user logs in through any supported flow that establishes a
-   normal authenticated Django browser session. This is local password login
-   today and may include optional external login in the future.
+2. If needed, user logs in with the normal local-password flow that establishes
+   an authenticated Django browser session.
 3. Server shows an approval screen: "Authorize this device/app?".
 4. User approves or denies.
 
@@ -85,6 +84,28 @@ Key fields:
 - `name`, `client_type`
 - `token_hash` (raw tokens are never stored)
 - `created_at`, `last_seen_at`, `expires_at`, `revoked_at`
+
+## Client-session lifecycle
+
+Successful pairing creates one `UserClientSession` for the approving user. The
+session creation and pairing transition to `consumed` are atomic; concurrent or
+repeated consumption cannot mint another credential or receive the raw token.
+Only the token's keyed hash is stored.
+
+Client sessions do not expire by default: `expires_at` is unset at creation.
+Authentication honors it when present and rejects revoked sessions and inactive
+users. Revocation sets `revoked_at` and immediately invalidates the credential.
+
+Users may list and revoke only their own active client sessions; these controls
+grant no account-management authority. Self-service password changes, managed
+password resets, and managed user disablement revoke the affected user's client
+sessions as part of the coordinated credential lifecycle described in
+[Architecture](architecture.md#browser-sessions-and-forced-password-changes).
+
+The browser-only `must_change_password` middleware does not change the bearer
+contract. Bearer requests remain governed by the endpoint's explicit Client API
+allow-list and object permissions; password change or reset still revokes their
+existing credentials.
 
 ## Endpoints
 
@@ -244,11 +265,6 @@ Management endpoints reject Client API tokens unless explicitly allowed.
 Pairing-row retention and recurring cleanup are documented in
 [Operations](operations.md#client-pairing-requests).
 
-## Product UI integration
-
-- `/profile/` lists active Device/API sessions (Client API sessions) for the current user and allows revoking them.
-- The retired Django profile/authorization pages no longer provide the human side of pairing; `/profile/client-pairing` provides it in React.
-
 ## Non-goals
 
 - No OAuth provider implementation.
@@ -257,9 +273,3 @@ Pairing-row retention and recurring cleanup are documented in
 - No client secrets.
 - No bearer-token access to product UI/admin endpoints.
 - No reader rendering in the server product UI.
-
-## Future possibilities
-
-- Token lifetime/rotation policy (expiring vs non-expiring tokens).
-- Server-side throttling/rate limiting policy for polling.
-- Optional client-session attribution fields on reading data (without changing reading data ownership rules).
