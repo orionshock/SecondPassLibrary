@@ -110,3 +110,4 @@ Useful docs:
 - [Imports](docs/imports.md)
 - [Marginalia](docs/marginalia.md)
 - [Permissions](docs/permissions.md)
+- [Frontend architecture](docs/frontend.md)

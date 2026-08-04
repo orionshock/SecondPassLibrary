@@ -19,7 +19,7 @@ Pillow is included for cover image validation. Current EPUB, ZIP/OPF metadata,
 cover precedence, normalization, and safety rules are in [Imports](imports.md).
 
 The React Product UI has its npm workspace under `frontend/`; see
-[React Product UI](react-ui.md). There is no repository-root npm project.
+[Frontend](frontend.md). There is no repository-root npm project.
 
 ## Pre-release migration reset
 
@@ -58,7 +58,7 @@ runtime storage or a destination for generated artifacts.
 - [Marginalia](marginalia.md)
 - [Production startup](deployment.md)
 - [Operator maintenance and repair](operations.md)
-- [React Product UI](react-ui.md)
+- [Frontend architecture](frontend.md)
 
 ## Application logging
 
@@ -126,7 +126,7 @@ PowerShell helpers define their own environment in the script files.
 The script sets `DJANGO_DEBUG=1`, disables WhiteNoise runtime caching for faster
 template/static iteration, runs `python backend/manage.py migrate --noinput`, and then
 starts Django on port 8000 and the Product UI Vite server on port 5174. Run `npm.cmd --prefix frontend install` before using it for the first time. Vite uses the proxy configuration
-documented in [React Product UI](react-ui.md) and is stopped when the Django
+documented in [Frontend](frontend.md) and is stopped when the Django
 process exits. The script's Python executable and application environment are
 defined in the script and do not inherit configuration choices from the calling
 shell. Edit the values near the top of the script when local settings need to
@@ -260,7 +260,10 @@ Practical notes:
 ```powershell
 python backend/manage.py check
 python -m pytest
+npm --prefix frontend run test:vitest -- src/__tests__/app-bootstrap.test.tsx
+npm --prefix frontend exec -- tsc -b
 npm --prefix frontend run build
+node frontend/scripts/check-boundaries.mjs
 ```
 
 Pyright uses the checked-in `pyrightconfig.json` with `backend/` as the Python

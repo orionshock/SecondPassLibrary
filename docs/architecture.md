@@ -11,6 +11,9 @@ Current apps:
   archive Import/Export, and owned-Marginalia Book projections
 - `shelves`: shelves and shelf items (presentation/organization; not access control)
 
+React/TypeScript layering and Product UI contributor boundaries are documented
+in [Frontend](frontend.md).
+
 Operator recovery workflows in the Django admin are documented in
 [Operations](operations.md#admin-and-repair-workflows).
 

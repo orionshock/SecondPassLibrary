@@ -1,5 +1,8 @@
 # API
 
+This document owns HTTP and wire contracts. React transport, adaptation, and
+presentation boundaries are documented in [Frontend](frontend.md).
+
 All endpoints are under `/api/v1/` and require authentication unless stated otherwise.
 
 ## Authentication
@@ -801,9 +804,8 @@ Shelf payload notes:
   - `GET /api/v1/shelves/<id>/items/?ordering=-author` reverses the author ordering.
   - Invalid ordering values return `400`.
   - Title/author ordering is response/view ordering only and does not mutate stored `ShelfItem.position`; move/reorder endpoints continue to operate on stored positions.
-- Product/UI displays may show one-based labels such as `#1`, `#2`, etc. React
-  reorder controls remain deferred; the editor representation supplies the
-  locked placeholder contract needed for a later safe implementation.
+- Product UI may show one-based position labels, but API position values and
+  move-to mutations remain zero-based.
 - Client API bearer tokens:
   - may read any shelf the token user can view
   - may create/edit/delete shelves and add/remove/reorder items only for the token user's own personal shelves
