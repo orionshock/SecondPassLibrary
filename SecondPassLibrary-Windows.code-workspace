@@ -48,6 +48,7 @@
       "requirements.txt",
       "**/tools/**",
       "backend/web/static/web/favicon.png",
+      "**/backend/web/product_ui/**"
     ],
     "sqltools.connections": [
       {
