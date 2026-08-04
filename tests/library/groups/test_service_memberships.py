@@ -36,6 +36,12 @@ class LibraryGroupMembershipServiceTests(LibraryGroupServiceTestCase):
         self.assertTrue(removed)
         self.assertFalse(LibraryGroupMembership.objects.filter(user=self.user, group=group).exists())
         self.assertTrue(LibraryGroupMembership.objects.filter(user=self.user, group=other).exists())
+        self.assertFalse(
+            LibraryGroupMembership.objects.filter(
+                user=self.user,
+                group=self.public,
+            ).exists()
+        )
 
     def test_removing_user_last_group_restores_public_membership(self):
         group = create_library_group(name="Club")

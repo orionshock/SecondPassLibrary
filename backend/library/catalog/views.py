@@ -14,7 +14,6 @@ from library.catalog.filters import apply_book_filters
 from library.catalog.ordering import apply_book_ordering, parse_book_ordering
 from library.catalog.serializers import BookDetailSerializer, BookListSerializer, BookUpdateSerializer
 from library.groups.book_filters import exclude_books_assigned_to_group
-from library.groups.api_access import groups_available_via_api
 from library.models import BookAuthor, BookCatalogTag
 from library.queries import visible_books_for_user, visible_groups_for_user
 
@@ -42,7 +41,7 @@ def book_detail_queryset(queryset):
 
 def attach_visible_groups_to_book(*, book, user):
     book._visible_groups = list(
-        groups_available_via_api(visible_groups_for_user(user))
+        visible_groups_for_user(user)
         .filter(book_assignments__book=book)
         .order_by("name", "id")
     )

@@ -85,6 +85,10 @@ def add_book_to_shelf(
         locked_shelf, items = _lock_shelf_and_items(shelf)
         if not can_edit_shelf(user=actor, shelf=locked_shelf):
             raise PermissionDenied("Not allowed.")
+        if not visible_books_for_shelf(user=actor, shelf=locked_shelf).filter(
+            pk=book.pk
+        ).exists():
+            raise PermissionDenied("Not allowed.")
         ordered = _canonicalize_locked_items(items)
         visible_ids = _visible_item_ids(actor=actor, shelf=locked_shelf, items=ordered)
         if position is not None and len(visible_ids) != len(ordered):

@@ -31,6 +31,7 @@ import {
   type ShelfDraft,
 } from "./shelfDraft";
 import {
+  canPresentShelfGroupOwnerChoice,
   localManageableShelfGroups,
   readShelfLifecycleSuccessMessage,
   shelfEditBreadcrumbs,
@@ -53,8 +54,17 @@ export function ShelfCreateOrchestrator() {
   const location = useLocation();
   const navigate = useNavigate();
   const groupContext = useMemo(
-    () => authorizedShelfCreateGroupContext(currentUser, location.state),
-    [currentUser, location.state],
+    () => {
+      const candidate = authorizedShelfCreateGroupContext(currentUser, location.state);
+      if (!candidate) return undefined;
+      return canPresentShelfGroupOwnerChoice(
+        candidate,
+        serverInfo.advancedLibraryGroupsEnabled,
+      )
+        ? candidate
+        : undefined;
+    },
+    [currentUser, location.state, serverInfo.advancedLibraryGroupsEnabled],
   );
   const contextGroupChoice = useMemo<LibraryGroup | undefined>(() => (groupContext
     ? {

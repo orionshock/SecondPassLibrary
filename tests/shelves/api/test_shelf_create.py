@@ -140,6 +140,46 @@ class ShelfCreateEndpointTests(BaseShelvesAPITest):
         )
         self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
 
+    def test_custom_group_shelf_workflow_remains_active_in_simple_mode(self):
+        server_settings.set_advanced_library_groups_enabled(False)
+        self.client.login(username="curator", password="pw")
+
+        created = assert_response(
+            self.client.post(
+                "/api/v1/shelves/",
+                data={
+                    "name": "Existing Group Workflow",
+                    "owner_type": "group",
+                    "owner_group": str(self.group.id),
+                    "visibility": "private",
+                },
+                format="json",
+            )
+        )
+        self.assertEqual(created.status_code, status.HTTP_201_CREATED)
+        shelf_id = response_data_dict(created)["id"]
+
+        added = assert_response(
+            self.client.post(
+                f"/api/v1/shelves/{shelf_id}/items/",
+                data={"book": str(self.book_in_group.id)},
+                format="json",
+            )
+        )
+        self.assertEqual(added.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(
+            assert_response(self.client.get(f"/api/v1/shelves/{shelf_id}/")).status_code,
+            status.HTTP_200_OK,
+        )
+        updated = assert_response(
+            self.client.patch(
+                f"/api/v1/shelves/{shelf_id}/",
+                data={"description": "Still editable in Simple Mode."},
+                format="json",
+            )
+        )
+        self.assertEqual(updated.status_code, status.HTTP_200_OK)
+
     def test_create_personal_shelf_when_advanced_groups_disabled(self):
         server_settings.set_advanced_library_groups_enabled(False)
         self.client.login(username="reader", password="pw")

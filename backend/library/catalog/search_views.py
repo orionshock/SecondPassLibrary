@@ -9,7 +9,6 @@ from library.catalog.filters import apply_broad_book_search
 from library.catalog.ordering import apply_book_ordering, parse_ordering_param
 from library.catalog.serializers import BookListSerializer
 from library.catalog.views import book_row_queryset
-from library.groups.api_access import groups_available_via_api
 from library.models import LibraryGroup
 from library.queries import group_is_visible_to_user, visible_books_for_user
 from library.roles import is_curator
@@ -69,7 +68,7 @@ def _exclude_group_books(queryset, *, user, raw_group_id: str):
     group_id = _uuid_or_404(LibraryGroup, raw_group_id)
     if group_id is None:
         return queryset
-    group = groups_available_via_api(LibraryGroup.objects.all()).filter(pk=group_id).first()
+    group = LibraryGroup.objects.filter(pk=group_id).first()
     if (
         group is None
         or not group_is_visible_to_user(user=user, group=group)

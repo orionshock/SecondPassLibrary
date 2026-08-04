@@ -129,15 +129,15 @@ class LibraryCatalogBookViewTests(LibraryCatalogApiFixtureMixin, TestCase):
             {"Common Room", "Hidden"},
         )
 
-    def test_simple_mode_book_detail_exposes_public_but_not_custom_group(self):
+    def test_simple_mode_book_detail_keeps_group_projection_for_frontend_gating(self):
         set_advanced_library_groups_enabled(False)
         self.assertTrue(self.client.login(username="manager", password="pw"))
 
         response = self.client.get(f"/api/v1/library/books/{self.multi_group.id}/")
 
         self.assertEqual(
-            [group["name"] for group in response.json()["groups"]],
-            ["Common Room"],
+            {group["name"] for group in response.json()["groups"]},
+            {"Common Room", "Hidden"},
         )
 
     def test_book_list_rows_do_not_include_groups(self):

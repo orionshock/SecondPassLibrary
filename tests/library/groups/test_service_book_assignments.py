@@ -48,6 +48,12 @@ class LibraryBookAssignmentServiceTests(LibraryGroupServiceTestCase):
         self.assertTrue(removed)
         self.assertFalse(BookGroupAssignment.objects.filter(book=self.book, group=group).exists())
         self.assertTrue(BookGroupAssignment.objects.filter(book=self.book, group=other).exists())
+        self.assertFalse(
+            BookGroupAssignment.objects.filter(
+                book=self.book,
+                group=self.public,
+            ).exists()
+        )
 
     def test_removing_book_last_group_restores_public_assignment(self):
         group = create_library_group(name="Club")

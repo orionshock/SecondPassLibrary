@@ -38,7 +38,7 @@ export function DashboardOrchestrator() {
   return <DashboardPageRegion
     bannerText={serverInfo.bannerText}
     recentReading={recentReading}
-    showGroups={serverInfo.advancedLibraryGroupsEnabled}
+    showAdvancedGroups={serverInfo.advancedLibraryGroupsEnabled}
     showImports={canSeeImports(currentUser)}
     showUsers={canSeeUsers(currentUser)}
     showServerSettings={canSeeServerSettings(currentUser)}

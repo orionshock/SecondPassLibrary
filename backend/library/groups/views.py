@@ -12,8 +12,8 @@ from accounts.roles import is_manager
 from library.api_access import LibraryBearerReadMixin
 from library.catalog.preview_books import parse_preview_book_limit
 from library.groups.api_access import (
-    groups_available_via_api,
     require_group_creation_available,
+    require_group_mutation_available,
 )
 from library.groups.public_group import is_public_group
 from library.groups.querysets import (
@@ -62,7 +62,7 @@ class LibraryGroupListView(LibraryBearerReadMixin, GroupPreviewBooksMixin, ListA
     serializer_class = LibraryGroupSerializer
 
     def get_queryset(self):
-        queryset = groups_available_via_api(visible_groups_for_user(self.request.user))
+        queryset = visible_groups_for_user(self.request.user)
         queryset = filter_groups_by_book(queryset, self.request.query_params)
         queryset = apply_group_search(queryset, self.request.query_params)
         return apply_group_ordering(queryset, parse_group_ordering(self.request))
@@ -102,7 +102,7 @@ class LibraryGroupDetailView(LibraryBearerReadMixin, GroupPreviewBooksMixin, Ret
     lookup_url_kwarg = "group_id"
 
     def get_queryset(self):
-        return groups_available_via_api(visible_groups_for_user(self.request.user))
+        return visible_groups_for_user(self.request.user)
 
     def retrieve(self, request, *args, **kwargs):
         group = self.get_object()
@@ -116,6 +116,7 @@ class LibraryGroupDetailView(LibraryBearerReadMixin, GroupPreviewBooksMixin, Ret
 
     def patch(self, request, *args, **kwargs):
         group = self.get_object()
+        require_group_mutation_available(group)
         if is_public_group(group):
             raise PermissionDenied(
                 "Public group identity is managed through Server Settings."
@@ -145,6 +146,7 @@ class LibraryGroupDetailView(LibraryBearerReadMixin, GroupPreviewBooksMixin, Ret
 
     def delete(self, request, *args, **kwargs):
         group = self.get_object()
+        require_group_mutation_available(group)
         if is_public_group(group):
             raise _drf_validation_error("Public/Common Room group cannot be deleted.")
         if not is_manager(request.user):

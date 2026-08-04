@@ -9,7 +9,7 @@ from rest_framework.response import Response
 
 from accounts.models import UserProfile
 from accounts.roles import is_librarian, is_manager
-from library.groups.api_access import groups_available_via_api
+from library.groups.api_access import require_group_mutation_available
 from library.groups.membership_serializers import (
     LibraryGroupMembershipSerializer,
     MembershipCreateSerializer,
@@ -29,11 +29,9 @@ class LibraryGroupMembershipListView(GenericAPIView):
     group_url_kwarg = "group_id"
 
     def get_group(self):
-        group = (
-            groups_available_via_api(visible_groups_for_user(self.request.user))
-            .filter(pk=self.kwargs[self.group_url_kwarg])
-            .first()
-        )
+        group = visible_groups_for_user(self.request.user).filter(
+            pk=self.kwargs[self.group_url_kwarg]
+        ).first()
         if group is None:
             raise Http404
         return group
@@ -58,6 +56,7 @@ class LibraryGroupMembershipListView(GenericAPIView):
 
     def post(self, request, *args, **kwargs):
         group = self.get_group()
+        require_group_mutation_available(group)
         if not is_manager(request.user):
             raise PermissionDenied("Not allowed to manage group memberships.")
 
@@ -86,11 +85,9 @@ class LibraryGroupMembershipDetailView(GenericAPIView):
     user_url_kwarg = "user_id"
 
     def get_group(self):
-        group = (
-            groups_available_via_api(visible_groups_for_user(self.request.user))
-            .filter(pk=self.kwargs[self.group_url_kwarg])
-            .first()
-        )
+        group = visible_groups_for_user(self.request.user).filter(
+            pk=self.kwargs[self.group_url_kwarg]
+        ).first()
         if group is None:
             raise Http404
         return group
@@ -113,7 +110,8 @@ class LibraryGroupMembershipDetailView(GenericAPIView):
         return membership
 
     def patch(self, request, *args, **kwargs):
-        self.get_group()
+        group = self.get_group()
+        require_group_mutation_available(group)
         if not is_manager(request.user):
             raise PermissionDenied("Not allowed to manage group memberships.")
         membership = self.get_membership()
@@ -135,6 +133,7 @@ class LibraryGroupMembershipDetailView(GenericAPIView):
 
     def delete(self, request, *args, **kwargs):
         group = self.get_group()
+        require_group_mutation_available(group)
         if not is_manager(request.user):
             raise PermissionDenied("Not allowed to manage group memberships.")
         try:

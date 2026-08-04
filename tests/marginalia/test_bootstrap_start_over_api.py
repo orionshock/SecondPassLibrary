@@ -162,6 +162,28 @@ class MarginaliaStartOverBootstrapTests(APITestCase):
         self.assertEqual(ReadingSession.objects.filter(user=self.user, book=self.book).count(), 1)
         self.assertFalse(IdempotencyRecord.objects.filter(user=self.user, key="with-final").exists())
 
+    def test_start_over_creates_a_new_session_without_reopening_closed_history(self):
+        ReadingSession.objects.filter(pk=self.active.pk).update(
+            status=ReadingSession.STATUS_CLOSED,
+            closed_at=timezone.now(),
+        )
+
+        response = self.post({}, key="after-closed")
+        self.active.refresh_from_db()
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.active.status, ReadingSession.STATUS_CLOSED)
+        self.assertIsNotNone(self.active.closed_at)
+        self.assertNotEqual(response.json()["session"]["id"], str(self.active.id))
+        self.assertEqual(
+            ReadingSession.objects.filter(
+                user=self.user,
+                book=self.book,
+                status=ReadingSession.STATUS_ACTIVE,
+            ).count(),
+            1,
+        )
+
     def test_validation_and_lost_authority_leave_lifecycle_unchanged(self):
         invalid = self.post({"progress": {"location_label": "Missing CFI"}}, key="invalid")
         LibraryGroupMembership.objects.filter(user=self.user, group=self.group).delete()

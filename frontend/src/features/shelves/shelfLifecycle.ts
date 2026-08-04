@@ -98,6 +98,13 @@ export function shouldLoadAllShelfGroups(user: CurrentUser, advancedGroupsEnable
   return isAtLeastLibrarian(user) && advancedGroupsEnabled;
 }
 
+export function canPresentShelfGroupOwnerChoice(
+  group: Pick<LibraryGroup, "isPublicGroup">,
+  advancedGroupsEnabled: boolean,
+): boolean {
+  return advancedGroupsEnabled || group.isPublicGroup;
+}
+
 export function confirmShelfDelete(
   confirmAction: (message: string) => boolean = window.confirm,
 ): boolean {

@@ -15,7 +15,7 @@ export type RecentReadingState =
 export function DashboardPageRegion({
   bannerText,
   recentReading,
-  showGroups,
+  showAdvancedGroups,
   showImports,
   showUsers,
   showServerSettings,
@@ -23,7 +23,7 @@ export function DashboardPageRegion({
 }: {
   bannerText: string;
   recentReading: RecentReadingState;
-  showGroups: boolean;
+  showAdvancedGroups: boolean;
   showImports: boolean;
   showUsers: boolean;
   showServerSettings: boolean;
@@ -35,7 +35,7 @@ export function DashboardPageRegion({
   >
     {bannerText.trim() ? <aside className="dashboard-banner" aria-label="Server message">{bannerText}</aside> : null}
     <RecentReadingPageRegion state={recentReading} onRetry={onRetryRecentReading} />
-    <DashboardLaunchPadsPageRegion showGroups={showGroups} />
+    <DashboardLaunchPadsPageRegion showAdvancedGroups={showAdvancedGroups} />
     <DashboardUtilitiesComponent showImports={showImports} showUsers={showUsers} showServerSettings={showServerSettings} />
   </ProductPageShellComponent>;
 }
@@ -69,18 +69,18 @@ const marginaliaActions: DashboardAction[] = [
   { to: "/marginalia/export", label: "Export", icon: "download" },
 ];
 
-function DashboardLaunchPadsPageRegion({ showGroups }: { showGroups: boolean }) {
+function DashboardLaunchPadsPageRegion({ showAdvancedGroups }: { showAdvancedGroups: boolean }) {
   const shelfActions: DashboardAction[] = [
     { to: "/shelves", label: "My Shelves", icon: "shelves" },
     { to: "/shelves?scope=shared", label: "Shared with Me", icon: "share" },
-    ...(showGroups ? [{ to: "/shelves?scope=group", label: "Group Shelves", icon: "group_work" }] : []),
+    { to: "/shelves?scope=group", label: "Group Shelves", icon: "group_work" },
     { to: "/shelves/new", label: "Create Shelf", icon: "add" },
   ];
   const libraryActions: DashboardAction[] = [
     { to: "/library", label: "Books", icon: "book_2" },
     { to: "/library?view=authors", label: "Authors", icon: "person" },
     { to: "/library?view=series", label: "Series", icon: "auto_stories" },
-    ...(showGroups ? [{ to: "/groups", label: "Groups", icon: "groups" }] : []),
+    ...(showAdvancedGroups ? [{ to: "/groups", label: "Groups", icon: "groups" }] : []),
   ];
 
   return <section className="dashboard-launch-pads" aria-label="Dashboard actions">

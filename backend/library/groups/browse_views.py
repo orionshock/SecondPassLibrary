@@ -32,7 +32,6 @@ from library.catalog.serializers import (
     SeriesAxisSerializer,
 )
 from library.catalog.views import book_row_queryset
-from library.groups.api_access import groups_available_via_api
 from library.models import LibraryGroup
 from library.queries import group_is_visible_to_user, visible_books_for_group
 from shelves.models import Shelf
@@ -44,7 +43,7 @@ class GroupBrowseMixin(LibraryBearerReadMixin):
 
     def get_group(self) -> LibraryGroup:
         group = get_object_or_404(
-            groups_available_via_api(LibraryGroup.objects.all()),
+            LibraryGroup.objects.all(),
             pk=self.kwargs[self.group_url_kwarg],
         )
         if not group_is_visible_to_user(user=self.request.user, group=group):

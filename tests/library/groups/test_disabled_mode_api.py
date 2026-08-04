@@ -63,7 +63,7 @@ class AdvancedLibraryGroupsApiModeTests(TestCase):
         BookGroupAssignment.objects.create(book=self.custom_book, group=self.custom)
         BookGroupAssignment.objects.create(book=self.candidate_book, group=self.public)
 
-    def test_disabled_mode_hides_custom_group_api_surfaces_without_rewriting_data(self):
+    def test_disabled_mode_keeps_custom_group_reads_but_rejects_management(self):
         self.client.login(username="manager", password="pw")
         group_url = f"/api/v1/library/groups/{self.custom.id}/"
         books_url = f"{group_url}books/"
@@ -74,28 +74,39 @@ class AdvancedLibraryGroupsApiModeTests(TestCase):
         )
         self.assertEqual(list_response.status_code, 200)
         self.assertEqual(
-            [row["id"] for row in list_response.json()["results"]],
-            [str(self.public.id)],
+            {row["id"] for row in list_response.json()["results"]},
+            {str(self.public.id), str(self.custom.id)},
         )
-        self.assertIn("preview_books", list_response.json()["results"][0])
+        self.assertTrue(
+            all("preview_books" in row for row in list_response.json()["results"])
+        )
 
-        blocked_requests = [
+        readable_requests = [
             self.client.get(group_url),
             self.client.get(f"{group_url}?include_preview_books=true"),
+            self.client.get(books_url),
+            self.client.get(memberships_url),
+            self.client.get(f"{group_url}authors/"),
+            self.client.get(f"{group_url}series/"),
+            self.client.get(f"{group_url}tags/"),
+        ]
+        for response in readable_requests:
+            with self.subTest(path=response.request["PATH_INFO"]):
+                self.assertEqual(response.status_code, 200)
+
+        blocked_requests = [
             self.client.patch(
                 group_url,
                 json.dumps({"description": "No"}),
                 content_type="application/json",
             ),
             self.client.delete(group_url),
-            self.client.get(books_url),
             self.client.post(
                 books_url,
                 json.dumps({"book_id": str(self.candidate_book.id)}),
                 content_type="application/json",
             ),
             self.client.delete(f"{books_url}{self.custom_book.id}/"),
-            self.client.get(memberships_url),
             self.client.post(
                 memberships_url,
                 json.dumps({"user_id": str(self.candidate.profile.id)}),
@@ -107,9 +118,6 @@ class AdvancedLibraryGroupsApiModeTests(TestCase):
                 content_type="application/json",
             ),
             self.client.delete(f"{memberships_url}{self.target.profile.id}/"),
-            self.client.get(f"{group_url}authors/"),
-            self.client.get(f"{group_url}series/"),
-            self.client.get(f"{group_url}tags/"),
         ]
         for response in blocked_requests:
             with self.subTest(path=response.request["PATH_INFO"]):
@@ -183,7 +191,7 @@ class AdvancedLibraryGroupsApiModeTests(TestCase):
         self.assertEqual(self.client.delete(member_url).status_code, 204)
         self.assertEqual(self.client.delete(public_url).status_code, 400)
 
-    def test_disabled_mode_bearer_reads_public_group_catalog_but_custom_group_is_404(self):
+    def test_disabled_mode_bearer_reads_custom_group_under_normal_authority(self):
         public_tag = CatalogTag.objects.create(
             name="Public Tag", normalized_name="public tag", slug="public-tag"
         )
@@ -194,7 +202,7 @@ class AdvancedLibraryGroupsApiModeTests(TestCase):
         BookCatalogTag.objects.create(book=self.custom_book, catalog_tag=custom_tag)
         token = "spl_disabled_group_tag_test"
         UserClientSession.objects.create(
-            user=self.reader,
+            user=self.target,
             name="Reader client",
             client_type="reader",
             token_hash=hash_client_secret(token),
@@ -211,10 +219,10 @@ class AdvancedLibraryGroupsApiModeTests(TestCase):
         )
 
         self.assertEqual(
-            [row["id"] for row in listed.json()["results"]], [str(self.public.id)]
+            [row["id"] for row in listed.json()["results"]], [str(self.custom.id)]
         )
-        self.assertEqual(public_detail.status_code, 200)
-        self.assertEqual(custom_detail.status_code, 404)
+        self.assertEqual(public_detail.status_code, 404)
+        self.assertEqual(custom_detail.status_code, 200)
         for axis in ["books", "authors", "series", "tags"]:
             with self.subTest(axis=axis):
                 public_response = bearer_client.get(
@@ -223,15 +231,39 @@ class AdvancedLibraryGroupsApiModeTests(TestCase):
                 custom_response = bearer_client.get(
                     f"/api/v1/library/groups/{self.custom.id}/{axis}/", **headers
                 )
-                self.assertEqual(public_response.status_code, 200)
-                self.assertEqual(custom_response.status_code, 404)
+                self.assertEqual(public_response.status_code, 404)
+                self.assertEqual(custom_response.status_code, 200)
 
-        public_tags = bearer_client.get(
-            f"/api/v1/library/groups/{self.public.id}/tags/", **headers
+        custom_tags = bearer_client.get(
+            f"/api/v1/library/groups/{self.custom.id}/tags/", **headers
         )
         self.assertEqual(
-            [row["slug"] for row in public_tags.json()["results"]], ["public-tag"]
+            [row["slug"] for row in custom_tags.json()["results"]],
+            ["custom-tag", "public-tag"],
         )
+
+    def test_flag_only_disable_preserves_private_visibility_and_data_for_reenable(self):
+        self.client.login(username="target", password="pw")
+
+        detail = self.client.get(f"/api/v1/library/books/{self.custom_book.id}/")
+        group = self.client.get(f"/api/v1/library/groups/{self.custom.id}/")
+
+        self.assertEqual(detail.status_code, 200)
+        self.assertEqual(group.status_code, 200)
+        self.assertTrue(
+            LibraryGroupMembership.objects.filter(
+                user=self.target, group=self.custom
+            ).exists()
+        )
+        self.assertTrue(
+            BookGroupAssignment.objects.filter(
+                book=self.custom_book, group=self.custom
+            ).exists()
+        )
+
+        set_advanced_library_groups_enabled(True)
+        enabled_group = self.client.get(f"/api/v1/library/groups/{self.custom.id}/")
+        self.assertEqual(enabled_group.status_code, 200)
 
     def test_enabled_mode_keeps_custom_group_api_behavior(self):
         set_advanced_library_groups_enabled(True)

@@ -8,6 +8,7 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 
 from accounts.roles import is_librarian
+from library.groups.api_access import require_group_mutation_available
 from library.groups.book_assignment_serializers import (
     BookGroupAssignmentCreateSerializer,
     BookGroupAssignmentSerializer,
@@ -24,6 +25,7 @@ class GroupBookAssignmentListView(GroupBookListView):
 
     def post(self, request, *args, **kwargs):
         group = self.get_group()
+        require_group_mutation_available(group)
         serializer = BookGroupAssignmentCreateSerializer(data=request.data or {})
         serializer.is_valid(raise_exception=True)
         book = _visible_mutation_book_or_404(
@@ -43,6 +45,7 @@ class GroupBookAssignmentDetailView(GroupBrowseMixin, GenericAPIView):
 
     def delete(self, request, *args, **kwargs):
         group = self.get_group()
+        require_group_mutation_available(group)
         book = _visible_mutation_book_or_404(
             user=request.user,
             book_id=self.kwargs[self.book_url_kwarg],

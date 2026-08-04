@@ -32,7 +32,7 @@ function renderDashboard(
   return renderToStaticMarkup(<MemoryRouter><DashboardPageRegion
     bannerText="Maintenance tonight."
     recentReading={recentReading}
-    showGroups
+    showAdvancedGroups
     showImports
     showUsers
     showServerSettings
@@ -174,11 +174,11 @@ describe("Dashboard", () => {
     ]) expect(advanced).toContain(link);
     expect(advanced.match(/data-action-count="4"/g)).toHaveLength(3);
 
-    const simple = renderDashboard({ status: "ready", items: [] }, { showGroups: false });
-    expect(simple).not.toContain('href="/shelves?scope=group"');
+    const simple = renderDashboard({ status: "ready", items: [] }, { showAdvancedGroups: false });
+    expect(simple).toContain('href="/shelves?scope=group"');
     expect(simple).not.toContain('href="/groups"');
-    expect(simple.match(/data-action-count="3"/g)).toHaveLength(2);
-    expect(simple).toContain("dashboard-action-grid--count-3");
+    expect(simple.match(/data-action-count="4"/g)).toHaveLength(2);
+    expect(simple).toContain("dashboard-action-grid--count-4");
     expect(simple).not.toContain("dashboard-action-placeholder");
   });
 
@@ -196,13 +196,13 @@ describe("Dashboard", () => {
     expect(importsOnly).not.toContain('href="/server"');
 
     const reader = renderDashboard({ status: "ready", items: [] }, {
-      showGroups: false,
+      showAdvancedGroups: false,
       showImports: false,
       showUsers: false,
       showServerSettings: false,
     });
     for (const label of ["Groups", "Import Books", "Users", "Server Settings", "Server tools"]) expect(reader).not.toContain(label);
-    for (const label of ["Books", "Authors", "Series", "By Session", "Import", "Export", "My Shelves", "Shared with Me", "Create Shelf"]) expect(reader).toContain(label);
+    for (const label of ["Books", "Authors", "Series", "By Session", "Import", "Export", "My Shelves", "Shared with Me", "Group Shelves", "Create Shelf"]) expect(reader).toContain(label);
   });
 
   it("calculates carousel end states and scrolls by a useful viewport increment", () => {

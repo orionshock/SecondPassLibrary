@@ -5,7 +5,6 @@ from django.shortcuts import get_object_or_404
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework.exceptions import ValidationError
 
-from library.groups.api_access import groups_available_via_api
 from library.models import LibraryGroup
 from library.queries import group_is_visible_to_user
 
@@ -21,7 +20,7 @@ def exclude_books_assigned_to_group(queryset, *, user, raw_group_id: str):
     except (ValueError, DjangoValidationError) as exc:
         raise ValidationError({"exclude_group": "Invalid id."}) from exc
     group = get_object_or_404(
-        groups_available_via_api(LibraryGroup.objects.all()),
+        LibraryGroup.objects.all(),
         pk=group_id,
     )
     if not group_is_visible_to_user(user=user, group=group):

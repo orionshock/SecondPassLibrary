@@ -22,6 +22,7 @@ import {
   withShelfOwnerType,
 } from "../features/shelves/shelfDraft";
 import {
+  canPresentShelfGroupOwnerChoice,
   confirmShelfDelete,
   confirmUnavailableShelfItemRemoval,
   localManageableShelfGroups,
@@ -116,6 +117,9 @@ describe("Shelf lifecycle contracts", () => {
     };
     expect(localManageableShelfGroups(simpleLibrarian, false).map(({ id }) => id)).toEqual(["public"]);
     expect(shouldLoadAllShelfGroups(simpleLibrarian, true)).toBe(true);
+    expect(canPresentShelfGroupOwnerChoice(publicGroup, false)).toBe(true);
+    expect(canPresentShelfGroupOwnerChoice({ ...publicGroup, isPublicGroup: false }, false)).toBe(false);
+    expect(canPresentShelfGroupOwnerChoice({ ...publicGroup, isPublicGroup: false }, true)).toBe(true);
 
     expect(canCreateShelfForGroup(simpleLibrarian, publicGroup)).toBe(true);
     expect(canCreateShelfForGroup(curator, publicGroup)).toBe(false);

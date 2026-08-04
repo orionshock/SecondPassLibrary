@@ -135,7 +135,7 @@ class LibraryGroupBookFilterTests(LibraryCatalogApiFixtureMixin, TestCase):
             ["Hidden"],
         )
 
-    def test_book_filter_does_not_bypass_simple_mode(self):
+    def test_book_filter_remains_a_read_projection_in_simple_mode(self):
         set_advanced_library_groups_enabled(False)
         self.client.logout()
         self.assertTrue(self.client.login(username="manager", password="pw"))
@@ -148,5 +148,5 @@ class LibraryGroupBookFilterTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             [row["name"] for row in response.json()["results"]],
-            ["Common Room"],
+            ["Common Room", "Hidden", "Readers Club"],
         )

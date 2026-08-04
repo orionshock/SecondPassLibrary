@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.test import TestCase
 
-from library.models import Book, LibraryGroupMembership
+from library.models import Book, BookGroupAssignment, LibraryGroupMembership
+from shelves import item_services
 from shelves.models import Shelf, ShelfItem
 from shelves.item_queries import visible_shelf_items_for_user
 from shelves.item_services import (
@@ -55,6 +58,94 @@ class ShelfServiceItemTests(ShelfServiceFixtureMixin, TestCase):
         ).delete()
         # Book remains on shelf, but is hidden until access returns.
         self.assertEqual(visible_shelf_items_for_user(self.reader, shelf).count(), 0)
+
+    def test_user_shelf_rechecks_book_visibility_inside_locked_mutation(self):
+        shelf = create_shelf(
+            self.reader,
+            name="Private",
+            owner_type=Shelf.OWNER_TYPE_USER,
+            visibility=Shelf.VISIBILITY_PRIVATE,
+        )
+        original_lock = item_services._lock_shelf_and_items
+
+        def remove_access_after_lock(target_shelf):
+            locked = original_lock(target_shelf)
+            LibraryGroupMembership.objects.filter(
+                user=self.reader,
+                group=self.group,
+            ).delete()
+            return locked
+
+        with patch(
+            "shelves.item_services._lock_shelf_and_items",
+            side_effect=remove_access_after_lock,
+        ):
+            with self.assertRaises(PermissionDenied):
+                add_book_to_shelf(
+                    self.reader,
+                    shelf=shelf,
+                    book=self.book_in_group,
+                )
+
+        self.assertFalse(ShelfItem.objects.filter(shelf=shelf).exists())
+
+    def test_group_shelf_rechecks_exact_assignment_inside_locked_mutation(self):
+        shelf = create_shelf(
+            self.owner,
+            name="Group",
+            owner_type=Shelf.OWNER_TYPE_GROUP,
+            owner_group=self.group,
+        )
+        original_lock = item_services._lock_shelf_and_items
+
+        def remove_assignment_after_lock(target_shelf):
+            locked = original_lock(target_shelf)
+            BookGroupAssignment.objects.filter(
+                book=self.book_in_group,
+                group=self.group,
+            ).delete()
+            return locked
+
+        with patch(
+            "shelves.item_services._lock_shelf_and_items",
+            side_effect=remove_assignment_after_lock,
+        ):
+            with self.assertRaises(PermissionDenied):
+                add_book_to_shelf(
+                    self.owner,
+                    shelf=shelf,
+                    book=self.book_in_group,
+                )
+
+        self.assertFalse(ShelfItem.objects.filter(shelf=shelf).exists())
+
+    def test_group_shelf_rechecks_actor_authority_inside_locked_mutation(self):
+        book = create_file_backed_book(title="Curated Book", assign_public=False).book
+        BookGroupAssignment.objects.create(book=book, group=self.curated_group)
+        shelf = create_shelf(
+            self.curator,
+            name="Curated",
+            owner_type=Shelf.OWNER_TYPE_GROUP,
+            owner_group=self.curated_group,
+        )
+        original_lock = item_services._lock_shelf_and_items
+
+        def remove_authority_after_lock(target_shelf):
+            locked = original_lock(target_shelf)
+            LibraryGroupMembership.objects.filter(
+                user=self.curator,
+                group=self.curated_group,
+            ).delete()
+            return locked
+
+        with patch(
+            "shelves.item_services._lock_shelf_and_items",
+            side_effect=remove_authority_after_lock,
+        ):
+            with self.assertRaises(PermissionDenied):
+                add_book_to_shelf(self.curator, shelf=shelf, book=book)
+
+        self.assertFalse(ShelfItem.objects.filter(shelf=shelf).exists())
 
 
 class ShelfPositionServiceTests(IsolatedMediaRootMixin, TestCase):
