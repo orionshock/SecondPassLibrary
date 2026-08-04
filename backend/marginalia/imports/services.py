@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import cast
+
 from django.utils.dateparse import parse_datetime
 
 from library.models import Book
@@ -99,8 +101,10 @@ def _build_preview(
 
     for book_number, (book, sessions) in enumerate(surviving_books, start=1):
         match = matches.get(book.file_hash, {"status": "unmatched", "reason": "not_found"})
-        local_book = match.get("book")
-        matched = match["status"] == "matched"
+        matched_book = (
+            cast(Book, match["book"]) if match["status"] == "matched" else None
+        )
+        matched = matched_book is not None
         matched_book_count += int(matched)
         unmatched_book_count += int(not matched)
         session_rows = []
@@ -109,7 +113,8 @@ def _build_preview(
             count = len(source_session.annotations)
             annotation_count += count
             possible_duplicate = bool(
-                matched and _duplicate_key(local_book.pk, source_session) in duplicates
+                matched_book is not None
+                and _duplicate_key(matched_book.pk, source_session) in duplicates
             )
             if possible_duplicate:
                 warnings.append(
@@ -144,8 +149,8 @@ def _build_preview(
                 "title": book.title,
                 "authors": list(book.authors),
                 "match": (
-                    {"status": "matched", "book_id": str(local_book.pk)}
-                    if matched
+                    {"status": "matched", "book_id": str(matched_book.pk)}
+                    if matched_book is not None
                     else {"status": "unmatched", "reason": match["reason"]}
                 ),
                 "reading_sessions": session_rows,

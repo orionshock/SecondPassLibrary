@@ -47,14 +47,14 @@ def _next_batch(iterator: Iterator[bytes]) -> list[bytes]:
 def asgi_streaming_response_middleware(get_response):
     if iscoroutinefunction(get_response):
 
-        async def middleware(request):
+        async def async_middleware(request):
             response = await get_response(request)
             return _use_async_iterator_under_asgi(request, response)
 
-    else:
+        return async_middleware
 
-        def middleware(request):
-            response = get_response(request)
-            return _use_async_iterator_under_asgi(request, response)
+    def sync_middleware(request):
+        response = get_response(request)
+        return _use_async_iterator_under_asgi(request, response)
 
-    return middleware
+    return sync_middleware
