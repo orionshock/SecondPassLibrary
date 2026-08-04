@@ -200,7 +200,7 @@ Read these only when the task touches their subject:
 
 - broad system boundaries: [Architecture](architecture.md)
 - setup and exact commands: [Development](development.md)
-- HTTP and wire contracts: [API](api.md)
+- shared HTTP conventions and external contracts: [API](api.md)
 - external Reader pairing and bearer authentication:
   [Client API authentication](client-api-auth.md)
 - Marginalia behavior: [Marginalia](marginalia.md)

@@ -1,8 +1,9 @@
 # Permissions and visibility
 
 This document defines current role authority, Book visibility, and Shelf
-ownership/visibility rules. Exact HTTP routes and payloads belong in
-`docs/api.md`; Product UI architecture belongs in `docs/frontend.md`.
+ownership/visibility rules. Shared HTTP conventions belong in `docs/api.md`;
+active routes and payloads belong to URL configuration and serializers. Product
+UI architecture belongs in `docs/frontend.md`.
 
 ## Identity concepts
 

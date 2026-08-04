@@ -51,7 +51,7 @@ runtime storage or a destination for generated artifacts.
 
 ## Related docs
 
-- [API index](api.md)
+- [API conventions and external contracts](api.md)
 - [Architecture](architecture.md)
 - [Permissions](permissions.md)
 - [Imports](imports.md)
@@ -396,5 +396,5 @@ OPF sidecars, uses the same ZIP limits, and does not create durable import
 history.
 
 See also:
-- `docs/api.md` (endpoint index)
+- `docs/api.md` (shared conventions and external contracts)
 - `docs/imports.md` (import workflow)

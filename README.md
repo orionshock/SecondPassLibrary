@@ -106,7 +106,7 @@ Useful docs:
 - [Production startup](docs/deployment.md)
 - [Operations and maintenance](docs/operations.md)
 - [Architecture](docs/architecture.md)
-- [API index](docs/api.md)
+- [API conventions and external contracts](docs/api.md)
 - [Imports](docs/imports.md)
 - [Marginalia](docs/marginalia.md)
 - [Permissions](docs/permissions.md)

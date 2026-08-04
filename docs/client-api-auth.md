@@ -150,8 +150,9 @@ Allowed surface is an explicit allow-list.
 
 Library details:
 
-Exact Library routes, query parameters, and response schemas are owned by
-`docs/api.md`; this section summarizes the bearer-specific client contract.
+This section owns the bearer-specific external contract. Active URL
+configuration and serializers own exact route and response shapes; shared HTTP
+conventions are documented in [API](api.md).
 
 - Bearer credentials are read-only under `/api/v1/library/` regardless of
   account role; mixed endpoint writes still require Django session auth.

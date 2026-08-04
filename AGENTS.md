@@ -44,6 +44,7 @@ Repository files, current tests, and observed runtime behavior are authoritative
 - Roles, Groups, Books, Shelves, and visibility: [docs/permissions.md](docs/permissions.md)
 - Library imports and metadata: [docs/imports.md](docs/imports.md)
 - Marginalia: [docs/marginalia.md](docs/marginalia.md) and relevant [specs](docs/specs/)
+- Cross-API conventions and external contracts: [docs/api.md](docs/api.md)
 - React/SDK work: [docs/frontend.md](docs/frontend.md)
 - External Reader pairing and bearer authentication: [docs/client-api-auth.md](docs/client-api-auth.md)
 - Broad architecture: [docs/architecture.md](docs/architecture.md)

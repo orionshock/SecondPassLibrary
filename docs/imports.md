@@ -6,8 +6,8 @@ Operator-only management commands provide the same import behavior for local
 host or container paths.
 
 This document owns import metadata precedence, normalization, duplicate
-advisories, and file/archive safety. Exact HTTP fields and responses are in
-[API](api.md).
+advisories, and file/archive safety. [API](api.md) owns shared HTTP conventions;
+active serializers own exact upload and result fields.
 
 ## Book import workflow
 
