@@ -277,33 +277,86 @@ When tests change, report each test or coherent test group as an `invariant`,
 `contract`, `regression`, or `implementation detail`. Do not weaken an
 invariant or contract assertion without explicitly identifying and justifying
 the weaker guarantee.
-Use markers to keep routine runs away from known slow integration areas:
+Use the smallest relevant path or node first. The supported broad backend lanes
+are explicit selections; unfiltered pytest still runs every test.
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest tests/library/imports -q
-.\.venv\Scripts\python.exe -m pytest -m "not slow" tests/library -q
-.\.venv\Scripts\python.exe -m pytest tests/core/product_ui -q
-.\.venv\Scripts\python.exe -m pytest tests/marginalia/test_annotation_read_api.py -q --durations=10
+# Broad developer lane: everything except the measured/inherently slow slice.
+.\.venv\Scripts\python.exe -m pytest -m "not slow" -q
+
+# Purpose-based lanes. Markers overlap intentionally.
+.\.venv\Scripts\python.exe -m pytest -m security -q
+.\.venv\Scripts\python.exe -m pytest -m filesystem -q
+.\.venv\Scripts\python.exe -m pytest -m integration -q
+.\.venv\Scripts\python.exe -m pytest -m slow -q
+
+# Full backend release/comprehensive run. No tests are excluded by default.
+.\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Marker intent:
+Marker meanings:
 
-- `unit`: no database, pure logic/static parsing.
-- `db`: database-backed tests.
-- `filesystem`: writes generated files or temp paths.
-- `product_ui`: retained setup/auth and React route-boundary tests.
-- `static_contract`: source/static contract tests that avoid runtime flows.
-- `integration`: broad cross-app or API flow tests.
-- `slow`: tests known to be slow enough to avoid in routine focused runs.
+- `security`: owning authentication, authorization, anti-enumeration,
+  credential, archive-safety, destructive-operation, and immutable-policy
+  boundaries. It is deliberately narrower than every permission assertion.
+- `concurrency`: real threads, executors, barriers, or competing transactions.
+- `subprocess`: a real server, subprocess, or separate interpreter.
+- `filesystem`: behavior whose contract depends on files, media, archive bytes,
+  temporary directories, static output, or storage cleanup.
+- `integration`: several real application layers whose boundary is not replaced
+  by a lower-level test.
+- `slow`: tests measured as expensive or inherently unsuitable for the broad
+  developer lane. Important cheap tests remain in `not slow`.
 
-Targeted pytest examples:
+Run the concurrency lane with SQLite resource warnings promoted to errors:
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest tests/core/product_ui -q
-.\.venv\Scripts\python.exe -m pytest tests/marginalia -q
-.\.venv\Scripts\python.exe -m pytest tests/library -q
+.\.venv\Scripts\python.exe -X dev -m pytest -q -m concurrency `
+  -W "error::ResourceWarning" `
+  -W "error::pytest.PytestUnraisableExceptionWarning"
+```
+
+Coherent backend domain suites:
+
+```powershell
+# Accounts and browser/client security
 .\.venv\Scripts\python.exe -m pytest tests/accounts -q
+
+# Core runtime, settings, server shell, static, and media behavior
+.\.venv\Scripts\python.exe -m pytest tests/core -q
+
+# Library catalog, Groups, bearer reads, models, queries, and Admin
+.\.venv\Scripts\python.exe -m pytest tests/library/catalog tests/library/groups tests/library/bearer `
+  tests/library/test_models.py tests/library/test_queries.py tests/library/test_roles.py `
+  tests/library/test_admin_book_changelist.py tests/library/test_admin_book_group_assignment.py `
+  tests/library/test_admin_book_layout.py tests/library/test_admin_catalog_tag.py -q
+
+# Library imports and stored-file repair
+.\.venv\Scripts\python.exe -m pytest tests/library/imports `
+  tests/library/test_file_repair.py tests/library/test_admin_file_repair.py -q
+
+.\.venv\Scripts\python.exe -m pytest tests/shelves -q
+.\.venv\Scripts\python.exe -m pytest tests/marginalia -q
+.\.venv\Scripts\python.exe -m pytest tests/testenv -q
 ```
+
+Frontend selections remain path-based rather than inventing a second marker
+system:
+
+```powershell
+# Focused file, SDK workspace, Product UI, then complete Vitest.
+npm.cmd --prefix frontend run test:vitest -- --run src/__tests__/app-bootstrap.test.tsx
+npm.cmd --prefix frontend run test:vitest -- --run packages/spl-api
+npm.cmd --prefix frontend run test:vitest -- --run src
+npm.cmd --prefix frontend run test:vitest -- --run
+
+npm.cmd --prefix frontend exec -- tsc -b
+node frontend/scripts/check-boundaries.mjs
+npm.cmd --prefix frontend run build
+```
+
+Use `npm` instead of `npm.cmd` on shells where the executable shim is not
+blocked by PowerShell execution policy.
 
 Hygiene:
 
