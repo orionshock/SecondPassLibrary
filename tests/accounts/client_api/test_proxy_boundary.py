@@ -9,6 +9,8 @@ from urllib.request import Request, urlopen
 from django.test import SimpleTestCase
 import uvicorn
 
+from tests.testenv.database_connections import orm_worker_connection_scope
+
 
 class UvicornProxyBoundaryTests(SimpleTestCase):
     def test_disabled_proxy_headers_preserve_direct_peer_address(self):
@@ -36,17 +38,18 @@ class UvicornProxyBoundaryTests(SimpleTestCase):
                 log_level="critical",
             )
         )
-        thread = Thread(
-            target=server.run,
-            kwargs={"sockets": [server_socket]},
-            daemon=True,
-        )
+        def run_server():
+            with orm_worker_connection_scope():
+                server.run(sockets=[server_socket])
+
+        thread = Thread(target=run_server, daemon=True)
         thread.start()
         deadline = time.monotonic() + 5
         while not server.started and time.monotonic() < deadline:
             time.sleep(0.01)
 
         try:
+            self.assertTrue(server.started)
             request = Request(
                 f"http://127.0.0.1:{port}/",
                 headers={"X-Forwarded-For": "198.51.100.20"},

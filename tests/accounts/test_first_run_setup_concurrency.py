@@ -7,7 +7,7 @@ from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from django.db import close_old_connections, connection
+from django.db import connection
 from django.test import TestCase, TransactionTestCase
 
 from accounts.bootstrap import (
@@ -21,6 +21,7 @@ from core.models import ServerSetting
 from core.server_settings import clear_server_settings_cache
 from library.groups.public_group import get_public_group
 from library.models import LibraryGroup, LibraryGroupMembership
+from tests.testenv.database_connections import orm_worker_connection_scope
 
 
 User = get_user_model()
@@ -58,16 +59,13 @@ class FirstOwnerSetupConcurrencyTests(TransactionTestCase):
         }
 
         def execute(label: str) -> tuple[str, str]:
-            close_old_connections()
-            try:
+            with orm_worker_connection_scope():
                 barrier.wait(timeout=5)
                 try:
                     owner = create_first_owner(**attempts[label])
                 except SetupAlreadyComplete:
                     return label, "lost"
                 return label, f"won:{owner.pk}"
-            finally:
-                close_old_connections()
 
         with ThreadPoolExecutor(max_workers=2) as executor:
             results = list(executor.map(execute, attempts))

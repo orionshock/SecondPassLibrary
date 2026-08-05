@@ -3,7 +3,6 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 
-from django.db import close_old_connections
 from django.test import TransactionTestCase, override_settings
 from rest_framework import status
 from rest_framework.test import APIClient
@@ -15,6 +14,7 @@ from accounts.client_api import (
 )
 from accounts.models import ClientLoginRequest
 from tests.accounts.client_api.helpers import ClientApiTestCase
+from tests.testenv.database_connections import orm_worker_connection_scope
 
 
 class PairingRequestLimitTests(ClientApiTestCase):
@@ -247,18 +247,17 @@ class PairingRequestLimitConcurrencyTests(TransactionTestCase):
         barrier = Barrier(count)
 
         def post(index):
-            close_old_connections()
-            client = APIClient()
-            barrier.wait(timeout=5)
-            response = client.post(
-                self.url,
-                data=payload_for(index),
-                format="json",
-                REMOTE_ADDR=remote_for(index),
-                HTTP_USER_AGENT="ReaderClient/1.0",
-            )
-            close_old_connections()
-            return response.status_code
+            with orm_worker_connection_scope():
+                client = APIClient()
+                barrier.wait(timeout=5)
+                response = client.post(
+                    self.url,
+                    data=payload_for(index),
+                    format="json",
+                    REMOTE_ADDR=remote_for(index),
+                    HTTP_USER_AGENT="ReaderClient/1.0",
+                )
+                return response.status_code
 
         with ThreadPoolExecutor(max_workers=count) as executor:
             return list(executor.map(post, range(count)))

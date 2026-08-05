@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.db import IntegrityError, close_old_connections
+from django.db import IntegrityError
 from django.test import TransactionTestCase
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
@@ -31,6 +31,7 @@ from tests.marginalia.import_helpers import (
     archive_session,
     archive_upload,
 )
+from tests.testenv.database_connections import orm_worker_connection_scope
 from tests.testenv.filesystem import IsolatedUserdataMixin
 
 
@@ -525,16 +526,13 @@ class MarginaliaImportApplyConcurrencyTests(IsolatedUserdataMixin, TransactionTe
         selections = [{"candidate_id": "reading-session-000001"}]
 
         def execute():
-            close_old_connections()
-            try:
+            with orm_worker_connection_scope():
                 thread_user = User.objects.get(pk=user.pk)
                 return apply_import(
                     user=thread_user,
                     import_token=token,
                     reading_sessions=selections,
                 )
-            finally:
-                close_old_connections()
 
         with ThreadPoolExecutor(max_workers=2) as executor:
             results = list(executor.map(lambda _index: execute(), range(2)))

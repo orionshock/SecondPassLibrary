@@ -6,7 +6,6 @@ from threading import Barrier
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.db import close_old_connections
 from django.test import TransactionTestCase
 from django.utils import timezone
 from rest_framework import status
@@ -14,6 +13,7 @@ from rest_framework import status
 from accounts.client_api import consume_login_request, hash_client_secret
 from accounts.models import ClientLoginRequest, UserClientSession
 from tests.accounts.client_api.helpers import ClientApiTestCase, post_login_request
+from tests.testenv.database_connections import orm_worker_connection_scope
 
 
 User = get_user_model()
@@ -184,12 +184,10 @@ class PairingConsumptionConcurrencyTests(TransactionTestCase):
         barrier = Barrier(2)
 
         def consume():
-            close_old_connections()
-            request = ClientLoginRequest.objects.get(pk=login_request.pk)
-            barrier.wait(timeout=5)
-            result = consume_login_request(login_request=request)
-            close_old_connections()
-            return result
+            with orm_worker_connection_scope():
+                request = ClientLoginRequest.objects.get(pk=login_request.pk)
+                barrier.wait(timeout=5)
+                return consume_login_request(login_request=request)
 
         with ThreadPoolExecutor(max_workers=2) as executor:
             results = list(executor.map(lambda _index: consume(), range(2)))

@@ -4,7 +4,6 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
-from django.db import close_old_connections
 from django.test import Client, TestCase, TransactionTestCase, override_settings
 from django.utils import timezone
 
@@ -13,6 +12,7 @@ from accounts.login_throttle import (
     LOGIN_USERNAME_ATTEMPT_LIMIT,
 )
 from accounts.models import BrowserLoginThrottleSlot
+from tests.testenv.database_connections import orm_worker_connection_scope
 
 
 User = get_user_model()
@@ -188,16 +188,13 @@ class ConcurrentBrowserLoginThrottleTests(TransactionTestCase):
 
     @staticmethod
     def _failed_login(index: int) -> int:
-        close_old_connections()
-        try:
+        with orm_worker_connection_scope():
             response = Client().post(
                 "/login/",
                 {"username": f"concurrent-{index}", "password": "wrong-password"},
                 REMOTE_ADDR="192.0.2.80",
             )
             return response.status_code
-        finally:
-            close_old_connections()
 
     def test_concurrent_failures_cannot_exceed_source_slot_limit(self):
         with ThreadPoolExecutor(max_workers=6) as pool:
