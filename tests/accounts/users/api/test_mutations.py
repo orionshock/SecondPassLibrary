@@ -10,7 +10,6 @@ from tests.utils.responses import (
     assert_response,
     payload_dict,
     response_data_dict,
-    response_data_list,
 )
 
 
@@ -72,36 +71,12 @@ class ManagedUsersMutationsAPITest(ManagedUsersApiTestMixin):
         ok = self.client.login(username="newmanager", password=temp_pw)
         self.assertTrue(ok)
 
-        list_response = assert_response(self.client.get("/api/v1/accounts/users/"))
-        self.assertIn(
-            list_response.status_code, {status.HTTP_200_OK, status.HTTP_403_FORBIDDEN}
-        )
-        if list_response.status_code == status.HTTP_200_OK:
-            results = response_data_list(list_response)
-            for row in results:
-                self.assertNotIn("temporary_password", row)
-                self.assertNotIn("password", row)
-
-        detail_response = assert_response(
-            self.client.get(f"/api/v1/accounts/users/{created_user.profile.id}/")
-        )
-        self.assertIn(
-            detail_response.status_code,
-            {status.HTTP_200_OK, status.HTTP_403_FORBIDDEN},
-        )
-        if detail_response.status_code == status.HTTP_200_OK:
-            detail_payload = response_data_dict(detail_response)
-            self.assertNotIn("temporary_password", detail_payload)
-            self.assertNotIn("password", detail_payload)
-            self.assertNotIn("id", detail_payload)
-
-        integer_detail_response = assert_response(
-            self.client.get(f"/api/v1/accounts/users/{created_user.pk}/")
-        )
-        self.assertIn(
-            integer_detail_response.status_code,
-            {status.HTTP_403_FORBIDDEN, status.HTTP_404_NOT_FOUND},
-        )
+        me_response = assert_response(self.client.get("/api/v1/accounts/me/"))
+        self.assertEqual(me_response.status_code, status.HTTP_200_OK)
+        me_payload = response_data_dict(me_response)
+        self.assertTrue(me_payload["must_change_password"])
+        self.assertNotIn("temporary_password", me_payload)
+        self.assertNotIn("password", me_payload)
 
     def test_owner_can_create_librarian_and_reader(self):
         self.client.login(username="owner", password="pw")

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from pathlib import Path
-
+from django.contrib import admin
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth.models import User
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
-from django.test import RequestFactory, TestCase
+from django.test import RequestFactory, TestCase, override_settings
+from django.urls import path, reverse
 
 from library.models import Book, LibraryGroup
 from shelves.admin import (
@@ -18,13 +18,14 @@ from shelves.admin import (
 from shelves.models import Shelf, ShelfItem
 
 
-ROOT = Path(__file__).resolve().parents[2]
+urlpatterns = [path("admin/", admin.site.urls)]
 
 
 class _DummySite(AdminSite):
     pass
 
 
+@override_settings(ROOT_URLCONF=__name__)
 class ShelfAdminSafetyTests(TestCase):
     def setUp(self):
         self.site = _DummySite()
@@ -148,23 +149,28 @@ class ShelfAdminSafetyTests(TestCase):
         self.assertIn(f"/admin/library/book/{self.book.pk}/change/", html)
         self.assertNotIn("Shelf:", html)
 
-    def test_shelf_item_inline_template_omits_original_object_label(self):
-        template = (
-            ROOT
-            / "shelves"
-            / "templates"
-            / "admin"
-            / "shelves"
-            / "shelf"
-            / "edit_inline"
-            / "shelf_items_tabular.html"
-        ).read_text(encoding="utf-8")
+    def test_shelf_item_inline_render_omits_original_object_label(self):
+        shelf = Shelf.objects.create(
+            name="Shelf",
+            owner_type=Shelf.OWNER_TYPE_USER,
+            owner_user=self.user,
+            created_by=self.user,
+        )
+        ShelfItem.objects.create(
+            shelf=shelf,
+            book=self.book,
+            position=0,
+            added_by=self.user,
+        )
+        self.client.force_login(self.superuser)
 
-        self.assertIn("inline_admin_form.pk_field.field", template)
-        self.assertIn("inline_admin_form.fk_field.field", template)
-        self.assertNotIn("{{ inline_admin_form.original }}", template)
-        self.assertNotIn('class="original"', template)
-        self.assertNotIn("<p>{{ field.contents }}</p>", template)
+        response = self.client.get(
+            reverse("admin:shelves_shelf_change", args=[shelf.pk])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Inline Book")
+        self.assertNotContains(response, "Shelf: Inline Book")
 
     def test_shelf_item_inline_delete_canonicalizes_positions(self):
         self.request.user = self.superuser
