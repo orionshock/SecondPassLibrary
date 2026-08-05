@@ -1,9 +1,11 @@
 # Permissions and visibility
 
-This document defines current role authority, Book visibility, and Shelf
-ownership/visibility rules. Shared HTTP conventions belong in `docs/api.md`;
-active routes and payloads belong to URL configuration and serializers. Product
-UI architecture belongs in `docs/frontend.md`.
+This document owns general role, Group-mutation, and Shelf authority. The
+immutable [Library Book Visibility](book-visibility.md) and [Advanced Library
+Groups Mode](advanced-library-groups.md) policies own those detailed
+boundaries; [Marginalia-Linked Books](marginalia-book-visibility.md) owns the
+distinct historical-reading boundary. Shared HTTP conventions belong in
+[API](api.md), and Product UI layering belongs in [Frontend](frontend.md).
 
 ## Identity concepts
 
@@ -56,8 +58,8 @@ Librarian may:
 
 - import Books and edit Book metadata, files, Catalog Tags, and covers;
 - create, edit, and safely delete unattached catalog Authors and Series through
-  session-authenticated management surfaces; attached entities require future
-  reassignment or merge work and cannot be deleted;
+  session-authenticated management surfaces; supported deletion rejects
+  attached entities;
 - assign/remove Books from visible Library Groups through the supported group
   services;
 - update custom-group descriptions;
@@ -79,27 +81,21 @@ Reader has no global library, group, or user-management authority.
 
 ## Book visibility
 
-Library Groups are Book access scopes. A Reader sees a Book when it is assigned
-to at least one group the Reader can see. Librarian, Manager, and Owner retain
-their existing broad library visibility.
-
-Visibility is applied before counts, filters, pagination, previews, search, and
-nested summaries. A visible group or shelf never permits hidden Book metadata
-to leak through its rows, counts, previews, or empty-state behavior.
-
-Reading metadata remains owned by its user. Existing sessions and annotations
-are not deleted when Book access changes, although opening the Book and new
-writes require current visibility.
+The immutable [Library Book Visibility](book-visibility.md) policy defines the
+current Library-visible Book set, strict uncached boundaries, cache behavior,
+and anti-enumeration rules. Shelves never grant Book access. Historical
+Marginalia has a separate ownership and mutation policy; do not infer it from
+general Library visibility. See [Marginalia-Linked Books](marginalia-book-visibility.md).
 
 ## Designated Public group
 
-Public/Common Room is a real designated `LibraryGroup`, identified by the
+Public/Common Room is an explicit designated `LibraryGroup`, identified by the
 stored Public group id rather than its display name. `Common Room` is only its
 default name.
 
 - Public exists in both simple and advanced modes.
-- Public is the default/fallback membership and Book assignment when an object
-  would otherwise have no group.
+- Public is the service-level fallback when removing the final user membership
+  or Book assignment would leave no Group relationship.
 - Public cannot be deleted.
 - Public cannot have `is_curator=true` memberships.
 - Public is not universal access; normal Public membership controls Reader
@@ -115,16 +111,12 @@ Server Settings. Product UI architecture details remain in `docs/frontend.md`.
 
 ## Simple and advanced group modes
 
-Simple mode is the supported one-Public-group Product UI mode. It hides custom
-group navigation, relationship controls, selectors, and management surfaces.
-It does not remove Public from the backend, disable Public group-scoped reads,
-or disable shelves.
-
-Custom groups are an advanced-mode concept. Owner can enable advanced groups
-with explicit confirmation. The normal Product UI does not disable the feature
-after use. Disable/collapse is an operator recovery workflow through the
-Django Admin Service Hatch that consolidates supported custom-group state into
-Public before disabling the feature.
+[Advanced Library Groups Mode](advanced-library-groups.md) is the immutable
+authority for Advanced versus Simple Mode. In summary, Simple Mode reduces
+custom Group management and presentation; it does not erase retained Group
+state, hide authorized custom Group reads, alter Book visibility, or invalidate
+Group Shelves. The supported transition to Simple Mode is the Admin
+consolidation workflow in [Operations](operations.md#admin-and-repair-workflows).
 
 ## Custom group authority
 
@@ -191,15 +183,14 @@ the corresponding operations for Group Shelves. A Reader curator may do so
 only for a Shelf owned by their exact custom Group. Public Group Shelves have
 no curator authority and are managed by Librarian, Manager, or Owner.
 
-Advanced Library Groups gates only its documented Product UI navigation and
-management controls. It does not invalidate Group Shelves, Public Group
-behavior, or ordinary Group-scoped reads; Public Group Shelves work in simple
-and advanced modes.
+Advanced/Simple Mode presentation and mutation policy is defined only by
+[Advanced Library Groups Mode](advanced-library-groups.md). Group Shelf
+authority remains the ownership rule described here in both modes.
 
 ### Item eligibility, order, and later access loss
 
-- An item on a user Shelf must reference a Book currently in that user's
-  visible Book universe when added.
+- An item on a user Shelf must reference a currently Library-visible Book when
+  added, with the final uncached check inside the mutation transaction.
 - An item on a Group Shelf must reference a Book assigned to that exact owning
   Group. Visibility through another Group is insufficient.
 - A Book can occur at most once on a Shelf. Stored positions are zero-based,
@@ -239,13 +230,10 @@ Pairing and the full bearer route surface are documented in
 
 ## Implementation guardrails
 
-- Group assignment changes go through
-  `library.groups.services.add_book_to_group()` and
-  `library.groups.services.remove_book_from_group()`.
-- Group removal/fallback behavior remains centralized in group services.
-- Book and group list/detail queries use the visibility helpers in
-  `library.queries`; do not reproduce visibility policy in serializers or UI
-  JavaScript.
+- Group assignment and Public fallback behavior remain centralized in the
+  owning Group services.
+- Book and Group reads use canonical visibility queries; do not reproduce
+  visibility policy in serializers or React.
 - Prefer 404 for inaccessible group/object detail where existence itself is
   protected.
 - Do not treat capability fields, role names, or `can_edit` response hints as a

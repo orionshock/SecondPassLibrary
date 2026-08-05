@@ -163,10 +163,12 @@ without revealing whether rejected IDs belong to another user. Where existence
 itself is sensitive, missing and inaccessible objects intentionally converge on
 the same `404` treatment.
 
-Library Group, Book, and Shelf policy belongs in
-[Permissions](permissions.md). Marginalia's distinct rule—historical user-owned
-data survives later loss of Library access while new linked activity rechecks
-current authority—belongs in [Marginalia](marginalia.md).
+General role and Shelf authority belongs in [Permissions](permissions.md).
+Detailed current Book authority is immutable policy in [Library Book
+Visibility](book-visibility.md); Advanced/Simple Mode behavior is immutable
+policy in [Advanced Library Groups Mode](advanced-library-groups.md). The
+separate historical-reading boundary is immutable policy in
+[Marginalia-Linked Books](marginalia-book-visibility.md).
 
 ## Attachments, imports, and downloads
 
@@ -210,8 +212,9 @@ Only externally meaningful surfaces receive dedicated prose:
   examples and semantic parity with the runtime bundled schema.
 - [Imports](imports.md) owns Library import metadata and untrusted archive
   handling.
-- [Permissions](permissions.md) owns roles, visibility, Group authority, and
-  Shelf access.
+- [Permissions](permissions.md) owns general roles, Group mutation authority,
+  and Shelf access, with detailed visibility and mode policy delegated to the
+  immutable documents above.
 
 Exact internal Product UI routes and payloads are coordinated through backend
 serializers, SDK adapters, and focused tests. They do not become stable external

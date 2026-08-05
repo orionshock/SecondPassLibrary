@@ -26,10 +26,10 @@ Notes:
 - Settings are cached as a single dict under one Django cache key and invalidated on update.
 - `ServerSetting` is **not** intended for secrets.
 - Server identity is stored as `ServerSetting(server_name)` and `ServerSetting(server_description)` and is editable via an Owner-only UI page (`/server/`) and API endpoint (`/api/v1/server/settings/`).
-- `ServerSetting(advanced_library_groups_enabled)` gates advanced group
-  management. It is off by default, can be enabled from Product UI by an Owner,
-  and disables normal group mutation endpoints while off. Disabling after
-  enablement is an operator recovery action through Django admin.
+- `ServerSetting(advanced_library_groups_enabled)` selects Advanced or Simple
+  Mode. It never defines Book visibility. The immutable [Advanced Library
+  Groups Mode](advanced-library-groups.md) policy owns its UI, API, retained
+  state, and transition contract.
 - The special Public LibraryGroup is identified by `ServerSetting(public_group_id)` (not by a `LibraryGroup.slug` field).
 - The optional Reading Client root URL uses
   `ServerSetting(reading_client_base_url)` unless the nonblank
@@ -173,28 +173,10 @@ Email is optional contact and management metadata:
   user payloads must not expose it.
 - Accounts must not be linked solely by email, especially unverified email.
 
-Invite-by-email, email verification, and SMTP-dependent password-reset or
-account-recovery workflows are not current core requirements. Future versions
-may add them under an explicit policy, but self-hosted deployments must not be
-assumed to have working SMTP.
-
-### External auth reserve (future)
-
-Current user management is local. No OIDC/OAuth/SAML/LDAP provider integration
-is currently implemented.
-
-`accounts.ExternalIdentity` is reserved for possible future external-auth
-support. It is not used by any active login flow, API authentication class, or
-client pairing flow.
-
-Client API bearer pairing is not OAuth/OIDC and does not depend on
-`accounts.ExternalIdentity`. It remains a separate reader-client authorization
-flow tied to local Django users.
-
-Future external auth must preserve local Owner recovery, local role policy,
-and LibraryGroup authorization. External authentication, if added later, should
-map into local Django users rather than replace the account and permission
-model.
+Invite-by-email, email verification, SMTP-dependent recovery, and external
+OIDC/OAuth/SAML/LDAP authentication are not implemented. Self-hosted operation
+does not assume working SMTP. Client API bearer pairing is a separate bounded
+flow tied to local Django users; it is not OAuth/OIDC.
 
 Browser Product UI:
 
@@ -237,21 +219,10 @@ Missing EPUB downloads and primary cover-storage failures return stable bounded
 API errors. Old-cover deletion remains best-effort post-commit cleanup and must
 not turn a successful cover replacement or clear into an API failure.
 
-## Library import services (current)
+## Library import boundary
 
-The library import pipeline follows a focused-module structure:
-
-- `library/imports/dto.py`: normalized import metadata DTOs
-- `library/imports/normalization.py`: SPL metadata normalization rules
-- `library/imports/opf.py`: OPF metadata parsing with safe XML parsing
-- `library/imports/services.py`: persistence boundary for normalized metadata
-- `library/imports/epub.py`: safe single-EPUB import wrapper
-- `library/imports/archives.py`: ZIP member planning and safety
-- `library/imports/batches.py`: ZIP batch orchestration
-- `library/imports/covers.py`: best-effort embedded EPUB cover extraction
-- `library/imports/results.py`: transient import result objects
-
-Library browse/catalog and group code also use focused packages:
-
-- `library/catalog/`: catalog list/detail API and preview-book helpers
-- `library/groups/`: LibraryGroup APIs, public-group helpers, and safe group assignment services
+Library imports validate untrusted files and metadata before persistence, then
+apply changes through cohesive import services rather than views, serializers,
+or model hooks. [Imports](imports.md) owns metadata precedence, normalization,
+duplicate advisories, and archive safety; module layout remains discoverable
+from `backend/library/imports/`.

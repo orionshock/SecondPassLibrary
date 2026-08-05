@@ -12,9 +12,10 @@ conditions, and annotation variants are normative in [schema.json](schema.json).
 This document owns semantic meaning that is awkward or impossible to express in
 JSON Schema.
 
-Second Pass Library's product lifecycle, visibility, import, export, and
-preservation policies belong in [Marginalia](../../marginalia.md). The archive
-envelope and Book identity belong in
+Second Pass Library's general lifecycle, import, and export behavior belongs in
+[Marginalia](../../marginalia.md). Visibility and preservation are immutable
+policy in [Marginalia-Linked Books](../../marginalia-book-visibility.md). The
+archive envelope and Book identity belong in
 [Marginalia Export Archive](../marginalia-export.md).
 
 ## Session identity and lifecycle

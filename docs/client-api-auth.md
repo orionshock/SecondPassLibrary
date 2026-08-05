@@ -1,276 +1,128 @@
 # Client API authorization
 
-This document describes the **Client API** pairing flow (human code + browser approval) and bearer token semantics for reader clients.
+This document owns the external Reader pairing and bearer-client lifecycle. It
+does not define browser sessions, general API conventions, or domain policy;
+those belong to [Architecture](architecture.md), [API](api.md), and the linked
+domain authorities.
 
-## Current behavior
+## Pairing contract
 
-### Goals
+A Reader client requests a short-lived pairing capability, a signed-in human
+approves or denies it in the Product UI, and the client consumes an approval
+once. This is deliberately not OAuth or OIDC.
 
-- Keep human authentication as normal Django web login/session.
-- Avoid redirect URI / custom URL scheme complexity for early reader clients.
-- Support "server and client may be on different devices" (copy/paste a URL or type a short code).
-- This is not an OAuth/OIDC provider.
+1. The client posts bounded client name/type metadata to
+   `/api/v1/client-api/login-requests/`.
+2. The response supplies a request ID, short human code, browser authorization
+   URL, polling/consumption URL, expiry, and recommended polling interval.
+3. The human signs in normally and approves or denies the request at the React
+   Product UI pairing surface.
+4. Anonymous `GET` polling reports only `pending`, `approved`, `denied`,
+   `expired`, or `consumed`. It never creates a client session or returns a
+   credential.
+5. Once approved, one anonymous `POST` to the consumption URL atomically creates
+   the client session, transitions the request to `consumed`, and returns the
+   raw bearer token exactly once. Repeated or concurrent consumption cannot
+   mint or return another token.
 
-### Terms
+The browser never receives the bearer token. The unguessable request capability
+authorizes polling and consumption; browser approval still requires an
+authenticated Django session. All pairing responses, including errors, use
+`Cache-Control: no-store, private` and `Pragma: no-cache`.
 
-- **Client API**: a subset of the server API intended for non-browser clients. Authenticated via server-issued bearer tokens.
-- **Reader client**: a separate app (mobile/desktop/etc.) that connects to a Second Pass Library server and uses the Client API.
-- **ClientLoginRequest**: a short-lived server-side object representing a pending "pair this client" request, created by a reader client and authorized by a human in a browser session.
-- **UserClientSession**: a server-side record representing a bearer token granted to a reader client for a specific user.
-- **Django web session**: browser/product UI login session managed by Django sessions (cookie + server-side session rows).
-- **ReadingSession**: a reading/progress Session through a Book in the `marginalia` domain. Not related to authentication.
+Public `/.well-known/secondpass` supplies compact server discovery and the API
+root. Client API discovery advertises the active pairing URLs. Authenticated
+`/api/v1/server/info/` refreshes server display context; `/api/v1/accounts/me/`
+supplies current-user identity, memberships, and sparse user capability flags.
+Exact fields remain serializer-owned.
 
-## Pairing flow (code + approve + poll)
+## Stored state and abuse bounds
 
-High-level: the reader client creates a login request, a human authorizes it in the browser, then the reader client inspects state with GET and consumes the approved request with POST to receive a bearer token **once**.
+`ClientLoginRequest` stores hashed code material, bounded client metadata, a
+hashed fingerprint, normalized source information needed for the short-lived
+limit, state timestamps, and the approving user. It never stores the raw code
+or bearer token. Requests expire after ten minutes.
 
-### Reader client
+Creation atomically permits at most five active requests per normalized source
+bucket and three per bounded client fingerprint. Missing or malformed source
+addresses share one bounded bucket; IPv4-mapped IPv6 normalizes to IPv4. The
+source bucket is primary abuse resistance. The fingerprint is secondary
+duplicate suppression and may change when punctuation or client metadata
+changes. Proxy interpretation reuses the Django-owned trust boundary in
+[Deployment](deployment.md#reverse-proxy-contract).
 
-1. User enters the server base URL (e.g. `https://example-server/`).
-2. Client calls `POST /api/v1/client-api/login-requests/` with basic client metadata.
-3. Server returns:
-   - `id` (request UUID)
-   - `code` (short human code; not a bearer credential)
-   - `authorize_url` (browser URL the user can open; may include the code as a query param)
-   - `poll_url`
-   - `consume_url` (currently the same URL as `poll_url`, used with POST)
-   - `expires_at`
-   - `interval` (recommended poll interval in seconds)
-4. Client displays the authorize URL and/or the code.
-
-### Human / browser
-
-1. User opens `authorize_url` in a browser. The server returns this URL at `/profile/client-pairing?code=...` on the current origin.
-2. If needed, user logs in with the normal local-password flow that establishes
-   an authenticated Django browser session.
-3. Server shows an approval screen: "Authorize this device/app?".
-4. User approves or denies.
-
-### Reader client
-
-1. Client polls `poll_url` with GET using the request id. GET reports only
-   `pending`, `approved`, `denied`, `expired`, or `consumed`; it never creates a
-   session or returns a credential.
-2. Once GET reports `approved`, the client POSTs to `consume_url`.
-3. A successful POST returns the bearer token once and transitions the request
-   to `consumed`. Repeated POSTs report `consumed` without a token.
-4. Client stores a connection profile and uses `Authorization: Bearer <token>` for future Client API requests.
-
-Notes:
-
-- The bearer token is a **client credential**, not a browser session token.
-- The browser never receives the bearer token; only the reader client receives it from the anonymous POST consumption request after GET polling reports approval.
-
-## Models
-
-### `ClientLoginRequest`
-
-Key fields (conceptual):
-
-- `id` (UUID)
-- `code_hash` (code is never stored in plaintext)
-- `client_name`, `client_type`
-- `status` (`pending|approved|denied|consumed|expired`)
-- `expires_at`, `approved_at`, `consumed_at`
-- bounded User-Agent metadata, a hashed client fingerprint, and the normalized
-  source IP used for short-lived outstanding-request limits
-
-### `UserClientSession`
-
-Key fields:
-
-- `id` (UUID)
-- `user`
-- `name`, `client_type`
-- `token_hash` (raw tokens are never stored)
-- `created_at`, `last_seen_at`, `expires_at`, `revoked_at`
-
-## Client-session lifecycle
-
-Successful pairing creates one `UserClientSession` for the approving user. The
-session creation and pairing transition to `consumed` are atomic; concurrent or
-repeated consumption cannot mint another credential or receive the raw token.
-Only the token's keyed hash is stored.
-
-Client sessions do not expire by default: `expires_at` is unset at creation.
-Authentication honors it when present and rejects revoked sessions and inactive
-users. Revocation sets `revoked_at` and immediately invalidates the credential.
-
-Users may list and revoke only their own active client sessions; these controls
-grant no account-management authority. Self-service password changes, managed
-password resets, and managed user disablement revoke the affected user's client
-sessions as part of the coordinated credential lifecycle described in
-[Architecture](architecture.md#browser-sessions-and-forced-password-changes).
-
-The browser-only `must_change_password` middleware does not change the bearer
-contract. Bearer requests remain governed by the endpoint's explicit Client API
-allow-list and object permissions; password change or reset still revokes their
-existing credentials.
-
-## Endpoints
-
-Client API (JSON):
-
-- `GET /.well-known/secondpass` returns compact server identity and `api_base_url`.
-- `{api_base_url}client-api/discovery/`
-- `{api_base_url}client-api/login-requests/`
-- `{api_base_url}client-api/login-requests/{id}/poll/`
-- `{api_base_url}client-api/pairing/lookup/` (session authenticated)
-- `{api_base_url}client-api/pairing/decision/` (session authenticated)
-
-`/.well-known/secondpass` is public server identity/discovery only. It includes
-`server_description`, but not banner text, advanced library group state,
-capabilities, route manifests, or the removed `server_release` field. Reader
-clients should use authenticated `GET /api/v1/server/info/` for refreshable
-server display context after pairing. It accepts bearer authentication and
-includes banner text, advanced-library-group mode, Public group identity,
-server version, and release date. `/me` remains limited to current-user identity,
-role, membership, and user-specific capability facts. Capability flags in `/me`
-are sparse and appear only when true; clients must treat omitted flags as false.
-
-Product UI (React):
-
-- Code-entry and pairing approval UI is React-only at `/profile/client-pairing`. Its authenticated lookup/decision endpoints and the external client create/poll workflow remain under `/api/v1/client-api/`; there is no separate browser authorization-page URL.
-
-## Permissions / API surface
-
-Client API bearer tokens are **reader/client tokens**, not admin/management tokens.
-
-Allowed surface is an explicit allow-list.
-
-| Domain | Bearer access | Notes |
-| --- | --- | --- |
-| `GET /api/v1/accounts/me/` | read-only | Refreshes current user, role, group membership summary, and user-specific capabilities. Bearer `PATCH` is rejected. |
-| `GET /api/v1/server/info/` | read-only | Refreshes authenticated server-wide display context and Public group identity; it grants no membership or mutation authority. |
-| `/api/v1/library/` Books, broad book search, Authors, Series, Tags | read-only | List/detail/search endpoints are visibility-scoped. Book detail exposes `file.download_url` and visibility-scoped `groups` summaries; Book list/search rows do not include groups. |
-| `/api/v1/library/books/<book_id>/download/` | read-only | Streams the complete visible canonical EPUB as an `application/epub+zip` attachment. Byte Range responses are not currently supported. |
-| `/api/v1/library/groups/` and group-scoped Books/Auth/Series/Tags | read-only | Group reads require group visibility. Simple mode exposes Public/Common Room only. |
-| `/api/v1/marginalia/` Books/Sessions/progress/annotations | read/write for owned Marginalia | Bearer mutations are limited to the token owner's Sessions, progress, and annotations. Live writes require current Book authority. Import and Export are session-only. |
-| `/api/v1/shelves/` | read visible shelves; mutate own personal shelves only | Bearer may create/edit/delete the token user's personal shelves and add/move/remove items there. Group shelves and other users' shelves are read-only when visible. |
-
-Library details:
-
-This section owns the bearer-specific external contract. Active URL
-configuration and serializers own exact route and response shapes; shared HTTP
-conventions are documented in [API](api.md).
-
-- Bearer credentials are read-only under `/api/v1/library/` regardless of
-  account role; mixed endpoint writes still require Django session auth.
-- Books, Authors, Series, Catalog Tags, visible LibraryGroups, and visible
-  group-scoped Books/Auth/Series/Tags are bearer-readable.
-- `/api/v1/library/books/?q=<term>` remains the title-only Books axis search.
-  `/api/v1/library/search?q=<term>` is the broad Books-only library search
-  across title, sort title, subtitle, author names, series name, identifier
-  values, Catalog Tag names, publisher, and description. It is not a
-  mixed-result endpoint. Missing or blank `q` returns an empty paginated
-  response.
-  It supports title/author/series ordering in either direction plus manageable
-  `exclude_shelf` and `exclude_group` suppressors. Rows use the ordinary Book
-  list shape and omit download, checksum, storage/source, and group data.
-- Book, Author, and Series browse filters use `tag=<slug>`; UUID tag
-  filters are not part of the client contract. `tag` is the compact query
-  parameter for filtering by Catalog Tag slug.
-- All results, counts, filters, and pagination are scoped to books visible to
-  the token owner; inaccessible details and groups return `404`.
-- Book detail `groups` contains the same visibility-scoped group summaries as
-  session-authenticated detail (`id`, `name`, `description`, and
-  `is_public_group`). It contains no membership or user data. In simple mode,
-  only Public/Common Room can appear. Reader clients may use that API context;
-  the Product UI itself hides the Book Detail Groups tab in simple mode.
-- Book list, broad-search, and group-scoped Book rows use `catalog_tags` and
-  top-level `file_format`; they omit `identifiers`, `groups`, and the detail
-  `file` object.
-- Book detail uses `catalog_tags`, `identifiers`, visibility-scoped `groups`,
-  and the singular `file` object. It does not include top-level `file_format`.
-  When no stored file exists, `file` is `null`.
-- Author, Series, Group, and Shelf list/detail payloads may opt into
-  `preview_books` with `include_preview_books=true`; preview items contain only
-  `id`, `title`, and `cover_url`, never file/download URLs. Group-scoped Author
-  and Series lists also support the same opt-in. These preview-bearing surfaces
-  share `preview_limit=0..24`: zero omits previews, positive values imply the
-  preview payload, and an omitted limit defaults to six when previews are
-  requested. Tag endpoints do not currently attach preview books.
-- Book endpoints do not need preview items because their results are already
-  Books. Tag endpoints are count/filter facets and do not support
-  `include_preview_books`.
-- Reader clients use Book detail `file.download_url` and the authenticated
-  download endpoint for EPUB bytes.
-  The endpoint accepts bearer GET for visible Books, returns the complete file
-  rather than a byte range, and uses the established bounded unavailable-file
-  error. Storage names and paths are never returned. Cover URLs remain public
-  display assets under `/media/covers/`.
-
-Marginalia details:
-
-- Bearer clients may use the owner-scoped Book and Session reads, lifecycle
-  commands, progress read/write, complete Session Annotation read, and atomic
-  Annotation batch synchronization under `/api/v1/marginalia/`.
-- Annotation batch synchronization accepts 1–100 operations, validates the
-  complete request, and returns the authoritative non-deleted collection.
-- `POST /api/v1/marginalia/books/<book_id>/start-over/` requires an
-  `Idempotency-Key`; its retry protocol is owned by Marginalia.
-- For recent Sessions, use
-  `GET /api/v1/marginalia/sessions/recent/?limit=10`.
-- Archive Import and Export are **session-only** and reject bearer tokens:
-  - `GET/POST /api/v1/marginalia/export/`
-  - `POST /api/v1/marginalia/import/preview/`
-  - `POST /api/v1/marginalia/import/apply/`
-  - `GET /api/v1/marginalia/import/unmatched/?import_token=<token>`
-
-Shelves details:
-
-- Bearer tokens may read any shelf the user can view.
-- Visible shelf list/detail payloads may opt into `preview_books` with
-  `include_preview_books=true`; shelves still do not grant book access.
-- Bearer tokens may create/edit/delete **only** the user's own personal shelves.
-- Bearer tokens may add/remove/reorder items only in the user's own personal
-  shelves.
-- Group-owned shelves are read-only via bearer tokens and report
-  `can_edit: false`.
-- Other users' shelves are read-only when visible/listed and report
-  `can_edit: false`.
-- Shelf item book lists still filter each book through normal book access;
-  shelves do not grant book access.
-
-Explicitly session-only or bearer-denied surfaces:
-
-- Library mutations: Book metadata/tag PATCH, Author/Series POST/PATCH/DELETE, cover
-  upload/clear, Library import upload, group create/update/delete, group book
-  assignment mutation, and group membership list/mutation.
-- Account/user management: managed users, user choices, password changes, web
-  session management, and Product UI/admin endpoints.
-- Reading marginalia import/export listed above.
-
-Management endpoints reject Client API tokens unless explicitly allowed.
-
-## Security rules
-
-- The human code expires quickly.
-- The code and bearer token are stored hashed server-side; raw values are never stored.
-- POST consumption returns the bearer token only once (approval transitions to `consumed` after delivery).
-- GET polling is state-only. Only POST may consume an approved request.
-- Pairing responses use `Cache-Control: no-store, private` and `Pragma: no-cache`.
-- At most five active pending requests are accepted per normalized source IP
-  and at most three per bounded client fingerprint during the ten-minute
-  request lifetime. A database-backed slot claim enforces both limits atomically.
-  Missing or malformed source addresses share one bounded source bucket, and
-  IPv4-mapped IPv6 addresses normalize to IPv4. The source bucket is the primary
-  abuse limit; the secondary fingerprint uses bounded normalized client
-  name/type and User-Agent metadata, so punctuation or metadata changes may
-  produce a different fingerprint.
-- Approving requires an authenticated Django web session.
-- If the approving account is deleted or disabled before consumption, the
-  request expires without creating a client session.
-- Denied/expired/consumed requests cannot be reused.
-
-Pairing-row retention and recurring cleanup are documented in
+If the approving account is inactive or gone at consumption time, the request
+expires without creating a session. Denied, expired, and consumed requests are
+terminal. Retention and cleanup are documented in
 [Operations](operations.md#client-pairing-requests).
+
+## Bearer-session lifecycle
+
+Successful consumption creates one `UserClientSession` for the approving user.
+Only a keyed token hash is stored. Client sessions do not expire by default;
+authentication honors `expires_at` when one is present and always rejects
+revoked sessions or inactive users. Revocation records `revoked_at` and makes
+the credential unusable immediately.
+
+Users may list and revoke only their own active client sessions. Self-service
+password changes, managed password resets, and managed user disablement revoke
+the affected user's bearer sessions as part of the coordinated credential
+lifecycle in [Architecture](architecture.md#browser-sessions-and-forced-password-changes).
+
+The browser-only `must_change_password` middleware does not apply the flag to a
+bearer-only request. Bearer access remains controlled by the explicit Client
+API allow-list and its normal object permissions. A password change or reset
+still revokes credentials that already exist.
+
+## Bearer authority
+
+Bearer tokens are Reader-client credentials, not browser or management
+credentials. The stable authority boundary is:
+
+| Domain | Bearer authority |
+| --- | --- |
+| Current user and server context | Read only |
+| Library Books, axes, Groups, and EPUB download | Visibility-scoped read only |
+| Marginalia | Owner-scoped reads and supported live Session/progress/annotation writes |
+| Shelves | Read visible Shelves; mutate only the token user's personal Shelves |
+| Library/Group/user management, imports, exports, passwords, browser sessions, Product UI, Admin | Denied; Django session required |
+
+An account's broad role does not expand a bearer credential into management
+authority. Library reads and EPUB downloads use the same canonical visibility
+boundary as browser sessions, and download rechecks uncached authority. Advanced
+versus Simple Mode does not alter that Book set or suppress authorized custom
+Group reads. See the immutable [Library Book Visibility](book-visibility.md)
+and [Advanced Library Groups Mode](advanced-library-groups.md) policies.
+
+Shelf access follows [Permissions](permissions.md). Group Shelves and other
+users' listed Shelves are read-only through bearer authentication, even if the
+same person could manage a Group Shelf through a browser session. A Shelf never
+grants Book visibility.
+
+Marginalia remains user-owned. The exact distinction between current Library
+visibility, historical Marginalia, openability, and allowed writes is immutable
+policy in [Marginalia-Linked Books](marginalia-book-visibility.md). Archive
+import and export are session-only workflows; general lifecycle and replay
+rules belong in [Marginalia](marginalia.md).
+
+## Security and privacy rules
+
+- Pairing codes and bearer tokens are stored only as keyed hashes; raw values
+  are returned only at their one permitted boundary.
+- Pairing codes, capability URLs, request UUIDs, tokens, cookies, CSRF values,
+  full headers, and full User-Agent strings are never logged.
+- Approval and denial are browser-session actions; polling and consumption are
+  capability-authorized anonymous operations.
+- Hidden objects follow the owning domain's anti-enumeration behavior. A bearer
+  credential never makes storage paths, Group internals, or another user's data
+  externally visible.
+- Cross-origin Reader clients use bearer authentication without credentialed
+  cookies. The same-origin Product UI continues to use session authentication
+  and CSRF.
 
 ## Non-goals
 
-- No OAuth provider implementation.
-- No OIDC.
-- No redirect URI / custom scheme requirement.
-- No client secrets.
-- No bearer-token access to product UI/admin endpoints.
-- No reader rendering in the server product UI.
+There is no OAuth/OIDC provider, redirect-URI/custom-scheme protocol, client
+secret, bearer access to Product UI/Admin, or server-hosted Reader application.
+Do not generalize this bounded pairing flow into an identity platform without a
+new explicit product decision.

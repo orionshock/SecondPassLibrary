@@ -20,9 +20,8 @@ https://secondpasslibrary.local/specs/marginalia/0.1.0
 - [marginalia-export.md](../marginalia-export.md) explains envelope identity and
   packaging.
 
-The former hand-maintained `types.ts` was removed. The Product UI SDK exposes
-live API models rather than a standalone archive contract, so JSON Schema is the
-only machine-readable interchange authority.
+The JSON Schemas are the only machine-readable interchange authority. Product
+UI SDK models describe live API data and are not portable archive types.
 
 ## Examples
 

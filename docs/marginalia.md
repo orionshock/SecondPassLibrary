@@ -8,28 +8,11 @@ Book; every annotation belongs through its Session and does not duplicate user
 or Book ownership.
 
 Ownership of historical Marginalia and current authority over the linked Book
-are separate:
-
-- the owner may read their existing Sessions, progress, and annotations after
-  losing Library visibility;
-- current visibility determines whether the Book can be opened and whether new
-  linked reading activity may be created;
-- writes that establish a new location or annotation recheck current Book
-  authority at the service boundary;
-- historical ownership never grants EPUB download, Book mutation, Group,
-  Shelf, or general Library access.
-
-Marginalia reads expose a bounded Book identity needed to understand owned
-history. `can_open` is computed independently from current uncached Library
-visibility. Missing Books and Books without caller-owned history use the same
-not-found treatment, and historical projections do not expose EPUB/file data,
-checksums, download URLs, Groups, Shelves, or permission internals. Broader
-Book and Group visibility is defined in [Permissions](permissions.md).
-
-Loss of visibility is not deletion. Removing Group membership or a Book
-assignment must not destroy user-owned Marginalia. Deleting the actual user,
-Book, or Session is different: database relationships cascade through its
-Sessions or annotations and is therefore an operator-level destructive action.
+are separate. The immutable [Marginalia-Linked Books](marginalia-book-visibility.md)
+policy owns that exact read, open, mutation, import, export, access-loss, and
+Book-deletion boundary. [Library Book Visibility](book-visibility.md) owns the
+current Library-visible Book set. This document owns the general lifecycle and
+must not be used to broaden either policy.
 
 ## Reading Session lifecycle
 
@@ -48,8 +31,7 @@ start-over idempotency keys are retained for 24 hours: an identical replay
 returns the stored success, while reuse for changed input or an in-progress
 operation is a conflict.
 
-Only active Sessions accept metadata, progress, or annotation changes. Session
-name and notes may be updated on the owned active Session. Progress is one
+Only active Sessions accept title, note, progress, or annotation changes. Progress is one
 complete saved location stored on the Session: an opaque CFI, an optional
 display label, and a server/source timestamp. Marginalia does not parse,
 normalize, derive, or assign numeric meaning to CFIs or labels.
@@ -98,27 +80,13 @@ after Book visibility changes, but closed Sessions cannot be synchronized.
 
 ## Visibility and preservation
 
-Owned Marginalia is durable personal history. Current Library visibility is
-required for opening a Book, creating a linked active Session, starting over,
-writing progress, and synchronizing annotations. Each such mutation asks the
-canonical uncached Library visibility query at its service boundary; React
-state, an earlier query, or a cached preview is never authority.
-
-Reading existing Sessions, progress, and current annotations depends on
-ownership, not current Book visibility. Closing without a new progress value
-also preserves this distinction. `can_open=false` communicates that the Book is
-not currently available without hiding or deleting the owner's history.
-
-This historical projection is deliberately bounded. It may retain the linked
-Book's identity, title, authors, Series, and public cover needed to recognize
-owned history, but it does not broaden Library permissions. Other users'
-Sessions and annotations are filtered before search, counts, ordering, or
-nested data are calculated. Missing, foreign, and otherwise unowned objects use
-the established no-enumeration response.
-
-Exports include owned historical Marginalia even when `can_open` is false.
-Imports are stricter because they create new linked history: the Book must be
-currently visible at the mutation boundary.
+Owned Marginalia is durable personal history, while current Book authority is a
+separate property. [Marginalia-Linked Books](marginalia-book-visibility.md) is
+the sole detailed policy for `can_open`, access loss and restoration, mutation
+exceptions, historical metadata projection, anti-enumeration, exports, and
+Book deletion. In particular, do not reduce that contract to “every mutation
+requires current visibility”: owned active-Session title/note edits and closing
+without new progress are documented exceptions.
 
 ## Import workflow
 

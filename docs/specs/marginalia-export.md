@@ -57,5 +57,7 @@ The Unmatched download is a ZIP packaging operation, not another schema. Each
 JSON member is a complete single-Session archive conforming to this same
 envelope and reusable profile.
 
-Product ownership, staged import, replay, and export-limit behavior belong in
-[Marginalia](../marginalia.md), not this interchange specification.
+Product lifecycle, staged import, replay, and export-limit behavior belong in
+[Marginalia](../marginalia.md). Visibility and preservation are immutable policy
+in [Marginalia-Linked Books](../marginalia-book-visibility.md), not this
+interchange specification.

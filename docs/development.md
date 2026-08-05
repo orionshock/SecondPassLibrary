@@ -53,9 +53,10 @@ runtime storage or a destination for generated artifacts.
 
 - [API conventions and external contracts](api.md)
 - [Architecture](architecture.md)
-- [Permissions](permissions.md)
+- [Permissions](permissions.md), with immutable [Advanced/Simple Mode](advanced-library-groups.md)
+  and [Book visibility](book-visibility.md) policy
 - [Imports](imports.md)
-- [Marginalia](marginalia.md)
+- [Marginalia](marginalia.md), with immutable [visibility and preservation](marginalia-book-visibility.md)
 - [Production startup](deployment.md)
 - [Operator maintenance and repair](operations.md)
 - [Frontend architecture](frontend.md)
@@ -215,9 +216,9 @@ authenticated React shell at `/`; ordinary development should use the Vite
 server on port 5174.
 
 Django continues to render `/setup/`, `/login/`, `/logout/`, and the optional
-`/admin/` service hatch. DRF browsable pages and `/api-auth/` are disabled. The old Reader Client
-authorization webpage is retired; React owns pairing approval at `/profile/client-pairing`.
-There are no alternate Product UI mounts or compatibility routes.
+`/admin/` service hatch. DRF browsable pages and `/api-auth/` are disabled.
+React owns pairing approval at `/profile/client-pairing`; there are no alternate
+Product UI mounts or compatibility routes.
 
 ## Error-handling checks
 
@@ -279,7 +280,7 @@ the weaker guarantee.
 Use markers to keep routine runs away from known slow integration areas:
 
 ```powershell
-.\.venv\Scripts\python.exe -m pytest tests/library/imports/api -q
+.\.venv\Scripts\python.exe -m pytest tests/library/imports -q
 .\.venv\Scripts\python.exe -m pytest -m "not slow" tests/library -q
 .\.venv\Scripts\python.exe -m pytest tests/core/product_ui -q
 .\.venv\Scripts\python.exe -m pytest tests/marginalia/test_annotation_read_api.py -q --durations=10

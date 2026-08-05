@@ -204,5 +204,10 @@ Read these only when the task touches their subject:
 - external Reader pairing and bearer authentication:
   [Client API authentication](client-api-auth.md)
 - Marginalia behavior: [Marginalia](marginalia.md)
-- roles, Groups, Books, Shelves, and visibility: [Permissions](permissions.md)
+- general roles, Group mutations, and Shelves: [Permissions](permissions.md)
+- Advanced/Simple Mode presentation: [Advanced Library Groups
+  Mode](advanced-library-groups.md)
+- current Book authority: [Library Book Visibility](book-visibility.md)
+- Marginalia-linked Book authority and preservation: [Marginalia-Linked
+  Books](marginalia-book-visibility.md)
 - focused product contracts and archive formats: [Specifications](specs/)
