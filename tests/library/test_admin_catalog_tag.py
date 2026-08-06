@@ -42,6 +42,8 @@ class CatalogTagAdminTests(TestCase):
         )
         self.assertEqual(list(form_class.base_fields), ["name", "sort_name"])
         self.assertEqual(self.model_admin.inlines, [CatalogTagBookInline])
+        self.assertEqual(self.model_admin.list_display, ["name", "book_count"])
+        self.assertEqual(self.model_admin.list_display_links, ["name"])
 
     def test_submitted_normalized_name_is_ignored(self):
         form_class = self.model_admin.get_form(self.request)
@@ -204,3 +206,30 @@ class CatalogTagAdminTests(TestCase):
             list(tag.books.values_list("title", flat=True)),
             ["Keep me"],
         )
+
+    def test_changelist_shows_sortable_book_counts(self):
+        used = CatalogTag.objects.create(
+            name="Used tag",
+            normalized_name="used tag",
+            slug="used-tag",
+        )
+        CatalogTag.objects.create(
+            name="Unused tag",
+            normalized_name="unused tag",
+            slug="unused-tag",
+        )
+        books = [Book.objects.create(title=f"Book {index}") for index in range(2)]
+        BookCatalogTag.objects.bulk_create(
+            [BookCatalogTag(book=book, catalog_tag=used) for book in books]
+        )
+        self.assertTrue(self.client.login(username="owner", password="pw"))
+
+        response = self.client.get(reverse("admin:library_catalogtag_changelist"))
+
+        self.assertEqual(response.status_code, 200)
+        counts = {
+            result.name: result._book_count
+            for result in response.context["cl"].result_list
+        }
+        self.assertEqual(counts, {"Unused tag": 0, "Used tag": 2})
+        self.assertContains(response, '<th scope="col" class="sortable column-book_count">')

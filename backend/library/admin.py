@@ -5,7 +5,7 @@ from django.contrib import admin, messages
 from django.contrib.admin.widgets import FilteredSelectMultiple, RelatedFieldWidgetWrapper
 from django.core.exceptions import PermissionDenied
 from django.http import Http404, HttpResponseRedirect
-from django.db.models import Prefetch
+from django.db.models import Count, Prefetch
 from django.utils.html import format_html
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
@@ -699,8 +699,17 @@ class CatalogTagAdmin(admin.ModelAdmin):
     form = CatalogTagAdminForm
     fields = ["name", "sort_name", "normalized_name", "slug"]
     inlines = [CatalogTagBookInline]
+    list_display = ["name", "book_count"]
+    list_display_links = ["name"]
     readonly_fields = ["normalized_name", "slug"]
     search_fields = ["name", "normalized_name"]
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(_book_count=Count("book_catalog_tags"))
+
+    @admin.display(description="Books", ordering="_book_count")
+    def book_count(self, obj):
+        return obj._book_count
 
 
 @admin.register(LibraryGroupMembership)
