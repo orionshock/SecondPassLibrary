@@ -4,7 +4,15 @@ from django.test import RequestFactory, TestCase, override_settings
 from django.urls import path, reverse
 
 from library.admin import CatalogTagAdmin, CatalogTagBookInline
-from library.models import Book, BookCatalogTag, CatalogTag
+from library.models import (
+    Author,
+    Book,
+    BookAuthor,
+    BookCatalogTag,
+    BookSeries,
+    CatalogTag,
+    Series,
+)
 
 
 urlpatterns = [path("admin/", admin.site.urls)]
@@ -120,6 +128,12 @@ class CatalogTagAdminTests(TestCase):
             slug="imported-clutter",
         )
         book = Book.objects.create(title="Tagged book")
+        secondary = Author.objects.create(name="Secondary author")
+        primary = Author.objects.create(name="Primary author")
+        BookAuthor.objects.create(book=book, author=secondary, position=2)
+        BookAuthor.objects.create(book=book, author=primary, position=1)
+        series = Series.objects.create(name="Example series")
+        BookSeries.objects.create(book=book, series=series, series_index="2.50")
         BookCatalogTag.objects.create(book=book, catalog_tag=tag)
         self.assertTrue(self.client.login(username="owner", password="pw"))
 
@@ -130,9 +144,21 @@ class CatalogTagAdminTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Books carrying this tag")
         self.assertContains(response, "Tagged book")
+        self.assertContains(response, "Primary author")
+        self.assertNotContains(response, "Secondary author")
+        self.assertContains(response, "Example series")
+        self.assertContains(response, "#2.50")
         self.assertContains(
             response,
             reverse("admin:library_book_change", args=[book.pk]),
+        )
+        self.assertContains(
+            response,
+            reverse("admin:library_author_change", args=[primary.pk]),
+        )
+        self.assertContains(
+            response,
+            reverse("admin:library_series_change", args=[series.pk]),
         )
         self.assertContains(response, 'name="book_catalog_tags-0-DELETE"')
         self.assertContains(response, "library/admin/catalog_tag_books.js")

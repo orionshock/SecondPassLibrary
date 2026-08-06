@@ -3,14 +3,59 @@
     display: none;
 }
 
+.inline-group fieldset.catalog-tag-books-inline tr.has_original td,
+.catalog-tag-books-inline .form-row td {
+    height: auto;
+    padding: 0.2rem 0.5rem;
+    vertical-align: middle;
+}
+
+.catalog-tag-books-inline .form-row td p {
+    line-height: 1.35;
+    margin: 0;
+}
+
+.catalog-tag-books-inline .form-row td.delete input {
+    margin: 0;
+}
+
 .catalog-tag-books-controls {
-    padding: 0.75rem 1rem;
+    padding: 0.5rem 1rem;
 }
 
 .catalog-tag-books-controls p {
-    margin: 0 0 0.75rem;
+    margin: 0 0 0.5rem;
 }
 
 .catalog-tag-books-controls .button + .button {
     margin-left: 0.5rem;
+}
+
+.catalog-tag-sort {
+    appearance: none;
+    background: none;
+    border: 0;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    font-weight: inherit;
+    padding: 0;
+    text-transform: inherit;
+}
+
+.catalog-tag-sort:hover,
+.catalog-tag-sort:focus {
+    text-decoration: underline;
+}
+
+th[aria-sort="ascending"] .catalog-tag-sort::after {
+    content: " ↑";
+}
+
+th[aria-sort="descending"] .catalog-tag-sort::after {
+    content: " ↓";
+}
+
+.catalog-tag-series-index {
+    white-space: nowrap;
 }

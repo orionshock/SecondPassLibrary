@@ -630,8 +630,8 @@ class CatalogTagAdminForm(forms.ModelForm):
 
 class CatalogTagBookInline(admin.TabularInline):
     model = BookCatalogTag
-    fields = ["book_link"]
-    readonly_fields = ["book_link"]
+    fields = ["book_link", "primary_author_link", "series_link"]
+    readonly_fields = ["book_link", "primary_author_link", "series_link"]
     extra = 0
     classes = ["catalog-tag-books-inline"]
     verbose_name = "Tagged book"
@@ -642,7 +642,20 @@ class CatalogTagBookInline(admin.TabularInline):
         js = ["library/admin/catalog_tag_books.js"]
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related("book")
+        return (
+            super()
+            .get_queryset(request)
+            .select_related("book__book_series__series", "catalog_tag")
+            .prefetch_related(
+                Prefetch(
+                    "book__book_authors",
+                    queryset=BookAuthor.objects.select_related("author").order_by(
+                        "position", "id"
+                    ),
+                    to_attr="_admin_tag_book_authors",
+                )
+            )
+        )
 
     def has_add_permission(self, request, obj=None):
         return False
@@ -651,6 +664,34 @@ class CatalogTagBookInline(admin.TabularInline):
     def book_link(self, obj):
         url = reverse("admin:library_book_change", args=[obj.book_id])
         return format_html('<a href="{}">{}</a>', url, obj.book.title)
+
+    @admin.display(description="Primary author")
+    def primary_author_link(self, obj):
+        rows = getattr(obj.book, "_admin_tag_book_authors", None)
+        if rows is None:
+            rows = obj.book.book_authors.select_related("author").order_by(
+                "position", "id"
+            )
+        primary = next(iter(rows), None)
+        if primary is None:
+            return "-"
+        url = reverse("admin:library_author_change", args=[primary.author_id])
+        return format_html('<a href="{}">{}</a>', url, primary.author.name)
+
+    @admin.display(description="Series")
+    def series_link(self, obj):
+        book_series = getattr(obj.book, "book_series", None)
+        if book_series is None:
+            return "-"
+        url = reverse("admin:library_series_change", args=[book_series.series_id])
+        if book_series.series_index is None:
+            return format_html('<a href="{}">{}</a>', url, book_series.series.name)
+        return format_html(
+            '<a href="{}">{}</a> <span class="catalog-tag-series-index">#{}</span>',
+            url,
+            book_series.series.name,
+            book_series.series_index,
+        )
 
 
 @admin.register(CatalogTag)
