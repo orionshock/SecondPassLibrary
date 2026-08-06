@@ -31,10 +31,13 @@ import {
   libraryStateFromSearchParams,
   withLibraryChange,
   withLibrarySelectedContext,
+  type LibraryUrlState,
+  type LibraryView,
 } from "./libraryQuery";
 import { readSelectedLibraryContextDisplay } from "./libraryPresentation";
 import { AuthorListPageRegion } from "./regions/AuthorListPageRegion";
 import { BookListPageRegion } from "./regions/BookListPageRegion";
+import { CatalogBrowserPageRegion } from "./regions/CatalogBrowserPageRegion";
 import { CatalogTagRailPageRegion } from "./regions/CatalogTagRailPageRegion";
 import { LibraryAxesPageRegion } from "./regions/LibraryAxesPageRegion";
 import { LibraryAxisControlsPageRegion } from "./regions/LibraryAxisControlsPageRegion";
@@ -209,6 +212,7 @@ export function LibraryOrchestrator() {
     onPageSizeChange: (pageSize: number) => changeQuery({ pageSize }),
     onRetry: () => setListRetry((value) => value + 1),
   };
+  const catalogLayoutKey = catalogLayoutStabilityKey(requestView, queryState);
 
   return <ProductPageShellComponent className="library-page">
     <LibraryAxesPageRegion
@@ -225,16 +229,17 @@ export function LibraryOrchestrator() {
       onSearch={() => changeQuery({ q: searchDraft.trim() })}
       onOrderingChange={(ordering) => changeQuery({ ordering })}
     />
-    <div className="library-browser">
-      <CatalogTagRailPageRegion
+    <CatalogBrowserPageRegion
+      key={catalogLayoutKey}
+      tagRail={<CatalogTagRailPageRegion
         tags={tags.tags}
         activeTag={queryState.tag}
         loading={tags.loading}
         error={tags.error}
         onTagChange={(tag) => changeQuery({ tag })}
         onRetry={() => setTagRetry((value) => value + 1)}
-      />
-      <div className="library-results-column">
+      />}
+    >
         {selectedContextKind ? <SelectedLibraryContextPageRegion
           kind={selectedContextKind}
           entityId={queryState.authorId ?? queryState.seriesId}
@@ -279,13 +284,27 @@ export function LibraryOrchestrator() {
           contextPathFor={(item) => libraryPath(withLibrarySelectedContext(queryState, { kind: "series", id: item.id }))}
           {...commonListProps}
         /> : null}
-      </div>
-    </div>
+    </CatalogBrowserPageRegion>
   </ProductPageShellComponent>;
 }
 
 export function unknownCatalogTag(activeTag: string | undefined, tags: readonly CatalogTag[] | undefined): boolean {
   return Boolean(activeTag && tags && !tags.some(({ slug }) => slug === activeTag));
+}
+
+export function catalogLayoutStabilityKey(
+  requestView: LibraryView,
+  state: Pick<LibraryUrlState, "pageSize" | "q" | "tag" | "ordering" | "authorId" | "seriesId">,
+): string {
+  return JSON.stringify([
+    requestView,
+    state.pageSize,
+    state.q,
+    state.tag,
+    state.ordering,
+    state.authorId,
+    state.seriesId,
+  ]);
 }
 
 export async function loadSelectedLibraryContextDetails(

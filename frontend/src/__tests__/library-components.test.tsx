@@ -12,6 +12,7 @@ import { readSelectedLibraryContextDisplay } from "../features/library/libraryPr
 import { libraryStateFromSearchParams } from "../features/library/libraryQuery";
 import { AuthorListPageRegion } from "../features/library/regions/AuthorListPageRegion";
 import { BookListPageRegion } from "../features/library/regions/BookListPageRegion";
+import { CatalogBrowserPageRegion, retainTallestCatalogResultsHeight } from "../features/library/regions/CatalogBrowserPageRegion";
 import { BookEditAuthorsSeriesPageRegion } from "../features/library/regions/BookEditAuthorsSeriesPageRegion";
 import { BookEditGroupsPageRegion } from "../features/library/regions/BookEditGroupsPageRegion";
 import { BookEditGroupShelvesPageRegion } from "../features/library/regions/BookEditGroupShelvesPageRegion";
@@ -150,19 +151,48 @@ describe("Library Books components", () => {
     expect(markup).toContain("Showing 1-20 of 65");
   });
 
-  it("renders viewer-scoped Catalog Tag counts, All tags, and independent failure", () => {
-    const tags: CatalogTag[] = [{ id: "tag", name: "Fantasy and Extremely Long Adventures", slug: "fantasy", bookCount: 12 }];
+  it("renders viewer-scoped Catalog Tag counts before their paired names", () => {
+    const tags: CatalogTag[] = [
+      { id: "tag-1", name: "Fantasy and Extremely Long Adventures", slug: "fantasy", bookCount: 12 },
+      { id: "tag-2", name: "History", slug: "history", bookCount: 304 },
+    ];
     const markup = renderToStaticMarkup(<CatalogTagRailPageRegion tags={tags} activeTag="fantasy" loading={false} onTagChange={vi.fn()} onRetry={vi.fn()} />);
     expect(markup).toContain("All tags");
-    expect(markup).toContain("Fantasy and Extremely Long Adventures");
+    expect(markup).toContain('<span class="catalog-tag-rail__count">(12)</span><span class="catalog-tag-rail__name" title="Fantasy and Extremely Long Adventures">Fantasy and Extremely Long Adventures</span>');
+    expect(markup).toContain('<span class="catalog-tag-rail__count">(304)</span><span class="catalog-tag-rail__name" title="History">History</span>');
     expect(markup).toContain('title="Fantasy and Extremely Long Adventures"');
-    expect(markup).toContain("12");
     expect(markup).toContain('aria-pressed="true"');
+    expect(markup).toContain('data-minimum-visible-rows="15"');
+    expect(markup).not.toMatch(/Add Catalog Tag|Edit Catalog Tag|Delete Catalog Tag|Merge Catalog Tags/);
     const failed = renderToStaticMarkup(<CatalogTagRailPageRegion loading={false} error={new Error("Tags unavailable")} onTagChange={vi.fn()} onRetry={vi.fn()} />);
     expect(failed).toContain("Tags unavailable");
     expect(failed).toContain("Retry tags");
     expect(catalogTagSelection("fantasy", "fantasy")).toBeUndefined();
     expect(catalogTagSelection("mystery", "fantasy")).toBe("fantasy");
+  });
+
+  it("keeps only the tag-list body scrollable and exposes the 15-row responsive minimum", () => {
+    const tags: CatalogTag[] = Array.from({ length: 18 }, (_, index) => ({
+      id: `tag-${index}`,
+      name: `Tag ${index}`,
+      slug: `tag-${index}`,
+      bookCount: index,
+    }));
+    const markup = renderToStaticMarkup(<CatalogTagRailPageRegion tags={tags} loading={false} onTagChange={vi.fn()} onRetry={vi.fn()} />);
+    expect(markup).toMatch(/catalog-tag-rail__all[^>]*>All tags<\/button><div class="catalog-tag-rail__list" data-minimum-visible-rows="15">/);
+    expect(markup.match(/class="catalog-tag-rail__list"/g)).toHaveLength(2);
+
+    const shortMarkup = renderToStaticMarkup(<CatalogTagRailPageRegion tags={tags.slice(0, 2)} loading={false} onTagChange={vi.fn()} onRetry={vi.fn()} />);
+    expect(shortMarkup).toContain('data-minimum-visible-rows="15"');
+  });
+
+  it("retains the tallest results height across Book pages and resets through a remounted layout", () => {
+    expect(retainTallestCatalogResultsHeight(640, 390)).toBe(640);
+    expect(retainTallestCatalogResultsHeight(640, 780)).toBe(780);
+    const markup = renderToStaticMarkup(<CatalogBrowserPageRegion tagRail={<aside>Tags</aside>}><section>Book pager</section></CatalogBrowserPageRegion>);
+    expect(markup).toContain('class="library-browser"');
+    expect(markup).toContain('class="library-results-column"');
+    expect(markup).toMatch(/<aside>Tags<\/aside><div class="library-results-column"><section>Book pager/);
   });
 
   it("keeps all real axis controls and context-sensitive controls in the stable shell", () => {
@@ -194,12 +224,9 @@ describe("Library Books components", () => {
   });
 
   it("lets All tags clear the active tag on every Library axis", () => {
-    const onTagChange = vi.fn();
-    const rail = CatalogTagRailPageRegion({ tags: [], activeTag: "fantasy", loading: false, onTagChange, onRetry: vi.fn() }) as ReactElement<{ children: ReactElement[] }>;
-    const desktop = rail.props.children[1] as ReactElement<{ children: ReactElement<{ children: ReactElement[] }> }>;
-    const allTags = desktop.props.children.props.children[0] as ReactElement<{ onClick: () => void }>;
-    allTags.props.onClick();
-    expect(onTagChange).toHaveBeenCalledWith(undefined);
+    expect(catalogTagSelection("fantasy", "fantasy")).toBeUndefined();
+    const markup = renderToStaticMarkup(<CatalogTagRailPageRegion tags={[]} activeTag="fantasy" loading={false} onTagChange={vi.fn()} onRetry={vi.fn()} />);
+    expect(markup).toMatch(/catalog-tag-rail__all" aria-pressed="false">All tags/);
   });
 });
 

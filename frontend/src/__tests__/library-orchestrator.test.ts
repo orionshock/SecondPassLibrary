@@ -3,7 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import { ApiError, type CompactBook, type LibraryAxisQuery, type LibraryBooksQuery, type Page } from "@second-pass/spl-api";
 import { appRoutes, sectionRoutes } from "../app/router";
 import { loadPageWithRecovery } from "../app/routing/pageRecovery";
-import { libraryBreadcrumbFallback, loadSelectedLibraryContextDetails, unknownCatalogTag } from "../features/library/LibraryOrchestrator";
+import { catalogLayoutStabilityKey, libraryBreadcrumbFallback, loadSelectedLibraryContextDetails, unknownCatalogTag } from "../features/library/LibraryOrchestrator";
+import type { LibraryUrlState } from "../features/library/libraryQuery";
 
 const page = (count: number): Page<CompactBook> => ({ items: [], count, next: null, previous: null });
 
@@ -61,6 +62,15 @@ describe("Library Orchestrator contracts", () => {
     expect(unknownCatalogTag("missing", undefined)).toBe(false);
     expect(unknownCatalogTag("missing", [{ id: "tag", name: "Fantasy", slug: "fantasy", bookCount: 2 }])).toBe(true);
     expect(unknownCatalogTag("fantasy", [{ id: "tag", name: "Fantasy", slug: "fantasy", bookCount: 2 }])).toBe(false);
+  });
+
+  it("retains Catalog height between Book pages but resets it for a changed result set", () => {
+    const state: LibraryUrlState = { view: "books", page: 1, pageSize: 20, q: "", ordering: "title" };
+    const laterPage: LibraryUrlState = { ...state, page: 3 };
+    const firstPage = catalogLayoutStabilityKey("books", state);
+    expect(catalogLayoutStabilityKey("books", laterPage)).toBe(firstPage);
+    expect(catalogLayoutStabilityKey("books", { ...state, q: "history" })).not.toBe(firstPage);
+    expect(catalogLayoutStabilityKey("books", { ...state, pageSize: 40 })).not.toBe(firstPage);
   });
 
   it("loads role-scoped selected Author and Series details through their existing SDK boundaries", async () => {

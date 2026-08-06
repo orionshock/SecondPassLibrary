@@ -299,10 +299,16 @@ describe("Library SDK", () => {
     const calls: string[] = [];
     const client: ApiClient = { request: async <T>(path: string) => {
       calls.push(path);
-      return { count: 1, next: null, previous: null, results: [{ id: "tag", name: "Fantasy", slug: "fantasy", book_count: 7 }] } as T;
+      return { count: 2, next: null, previous: null, results: [
+        { id: "fantasy", name: "Fantasy", slug: "fantasy", book_count: 7 },
+        { id: "history", name: "History", slug: "history", book_count: 31 },
+      ] } as T;
     } };
     await expect(listCatalogTags({ ordering: "-book_count", page: 2, pageSize: 50 }, client)).resolves.toMatchObject({
-      items: [{ id: "tag", name: "Fantasy", slug: "fantasy", bookCount: 7 }],
+      items: [
+        { id: "fantasy", name: "Fantasy", slug: "fantasy", bookCount: 7 },
+        { id: "history", name: "History", slug: "history", bookCount: 31 },
+      ],
     });
     expect(calls).toEqual(["/api/v1/library/tags/?ordering=-book_count&page=2&page_size=50"]);
   });
