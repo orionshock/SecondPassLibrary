@@ -125,6 +125,10 @@ Important repair flows are superuser-only:
   Book UUID, metadata, relationships, Shelves, Sessions, progress, and
   annotations. Replacing with a different checksum requires explicit
   confirmation because existing EPUB CFI anchors may no longer match.
+- **Clean up Catalog Tags:** open a Catalog Tag to review every Book carrying
+  it. Mark individual relationships, or mark all displayed relationships, for
+  removal and save the tag. This removes only the tag relationships; it does
+  not delete Books or reading data.
 
 Take a verified backup before structural repair. Do not delete and re-import a
 Book merely to restore its file: Book deletion cascades through Shelf,

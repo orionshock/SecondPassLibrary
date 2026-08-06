@@ -628,10 +628,36 @@ class CatalogTagAdminForm(forms.ModelForm):
         return tag
 
 
+class CatalogTagBookInline(admin.TabularInline):
+    model = BookCatalogTag
+    fields = ["book_link"]
+    readonly_fields = ["book_link"]
+    extra = 0
+    classes = ["catalog-tag-books-inline"]
+    verbose_name = "Tagged book"
+    verbose_name_plural = "Books carrying this tag"
+
+    class Media:
+        css = {"all": ["library/admin/catalog_tag_books.css"]}
+        js = ["library/admin/catalog_tag_books.js"]
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("book")
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    @admin.display(description="Book", ordering="book__title")
+    def book_link(self, obj):
+        url = reverse("admin:library_book_change", args=[obj.book_id])
+        return format_html('<a href="{}">{}</a>', url, obj.book.title)
+
+
 @admin.register(CatalogTag)
 class CatalogTagAdmin(admin.ModelAdmin):
     form = CatalogTagAdminForm
     fields = ["name", "sort_name", "normalized_name", "slug"]
+    inlines = [CatalogTagBookInline]
     readonly_fields = ["normalized_name", "slug"]
     search_fields = ["name", "normalized_name"]
 

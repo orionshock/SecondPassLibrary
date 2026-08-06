@@ -1,0 +1,16 @@
+.catalog-tag-books-inline th.original,
+.catalog-tag-books-inline td.original {
+    display: none;
+}
+
+.catalog-tag-books-controls {
+    padding: 0.75rem 1rem;
+}
+
+.catalog-tag-books-controls p {
+    margin: 0 0 0.75rem;
+}
+
+.catalog-tag-books-controls .button + .button {
+    margin-left: 0.5rem;
+}

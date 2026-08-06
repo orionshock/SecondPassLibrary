@@ -1,11 +1,16 @@
 from django.contrib import admin
 from django.contrib.auth import get_user_model
-from django.test import RequestFactory, TestCase
+from django.test import RequestFactory, TestCase, override_settings
+from django.urls import path, reverse
 
-from library.admin import CatalogTagAdmin
-from library.models import CatalogTag
+from library.admin import CatalogTagAdmin, CatalogTagBookInline
+from library.models import Book, BookCatalogTag, CatalogTag
 
 
+urlpatterns = [path("admin/", admin.site.urls)]
+
+
+@override_settings(ROOT_URLCONF=__name__)
 class CatalogTagAdminTests(TestCase):
     def setUp(self):
         self.owner = get_user_model().objects.create_superuser(
@@ -28,6 +33,7 @@ class CatalogTagAdminTests(TestCase):
             {"normalized_name", "slug"},
         )
         self.assertEqual(list(form_class.base_fields), ["name", "sort_name"])
+        self.assertEqual(self.model_admin.inlines, [CatalogTagBookInline])
 
     def test_submitted_normalized_name_is_ignored(self):
         form_class = self.model_admin.get_form(self.request)
@@ -105,4 +111,70 @@ class CatalogTagAdminTests(TestCase):
         self.assertEqual(
             form.errors["name"],
             ["A Catalog Tag with this normalized name already exists."],
+        )
+
+    def test_change_page_lists_linked_books_with_single_and_bulk_remove_controls(self):
+        tag = CatalogTag.objects.create(
+            name="Imported clutter",
+            normalized_name="imported clutter",
+            slug="imported-clutter",
+        )
+        book = Book.objects.create(title="Tagged book")
+        BookCatalogTag.objects.create(book=book, catalog_tag=tag)
+        self.assertTrue(self.client.login(username="owner", password="pw"))
+
+        response = self.client.get(
+            reverse("admin:library_catalogtag_change", args=[tag.pk])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Books carrying this tag")
+        self.assertContains(response, "Tagged book")
+        self.assertContains(
+            response,
+            reverse("admin:library_book_change", args=[book.pk]),
+        )
+        self.assertContains(response, 'name="book_catalog_tags-0-DELETE"')
+        self.assertContains(response, "library/admin/catalog_tag_books.js")
+        self.assertContains(response, "library/admin/catalog_tag_books.css")
+
+    def test_save_removes_selected_book_relationships_only(self):
+        tag = CatalogTag.objects.create(
+            name="Imported clutter",
+            normalized_name="imported clutter",
+            slug="imported-clutter",
+        )
+        books = [
+            Book.objects.create(title="Keep me"),
+            Book.objects.create(title="Remove me"),
+        ]
+        relationships = [
+            BookCatalogTag.objects.create(book=book, catalog_tag=tag)
+            for book in books
+        ]
+        self.assertTrue(self.client.login(username="owner", password="pw"))
+
+        response = self.client.post(
+            reverse("admin:library_catalogtag_change", args=[tag.pk]),
+            {
+                "name": tag.name,
+                "sort_name": "",
+                "book_catalog_tags-TOTAL_FORMS": "2",
+                "book_catalog_tags-INITIAL_FORMS": "2",
+                "book_catalog_tags-MIN_NUM_FORMS": "0",
+                "book_catalog_tags-MAX_NUM_FORMS": "1000",
+                "book_catalog_tags-0-id": str(relationships[0].pk),
+                "book_catalog_tags-0-catalog_tag": str(tag.pk),
+                "book_catalog_tags-1-id": str(relationships[1].pk),
+                "book_catalog_tags-1-catalog_tag": str(tag.pk),
+                "book_catalog_tags-1-DELETE": "on",
+                "_continue": "Save and continue editing",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(Book.objects.count(), 2)
+        self.assertEqual(
+            list(tag.books.values_list("title", flat=True)),
+            ["Keep me"],
         )
