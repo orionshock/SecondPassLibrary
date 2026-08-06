@@ -128,7 +128,12 @@ Important repair flows are superuser-only:
 - **Clean up Catalog Tags:** open a Catalog Tag to review every Book carrying
   it. Mark individual relationships, or mark all displayed relationships, for
   removal and save the tag. This removes only the tag relationships; it does
-  not delete Books or reading data.
+  not delete Books or reading data. To consolidate redundant tags, select two
+  or more tags in the Catalog Tag list and choose **Merge selected Catalog
+  Tags**. Review the relationship and overlap counts, choose the surviving tag
+  identity, set its final name and sort name, and confirm. The survivor keeps
+  its UUID and slug; overlapping Book relationships are collapsed and the
+  other selected tags are deleted.
 
 Take a verified backup before structural repair. Do not delete and re-import a
 Book merely to restore its file: Book deletion cascades through Shelf,

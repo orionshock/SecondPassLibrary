@@ -4,6 +4,7 @@ from django.test import RequestFactory, TestCase, override_settings
 from django.urls import path, reverse
 
 from library.admin import CatalogTagAdmin, CatalogTagBookInline
+from library.catalog.tag_services import build_catalog_tag_merge_plan
 from library.models import (
     Author,
     Book,
@@ -233,3 +234,121 @@ class CatalogTagAdminTests(TestCase):
         }
         self.assertEqual(counts, {"Unused tag": 0, "Used tag": 2})
         self.assertContains(response, '<th scope="col" class="sortable column-book_count">')
+
+    def test_merge_action_previews_selected_tags_counts_and_recommended_survivor(self):
+        first = CatalogTag.objects.create(
+            name="Action & Adventure",
+            normalized_name="action & adventure",
+            slug="action-adventure",
+        )
+        second = CatalogTag.objects.create(
+            name="Action/Adventure",
+            normalized_name="action/adventure",
+            slug="action-adventure-alt",
+        )
+        books = [Book.objects.create(title=f"Book {index}") for index in range(3)]
+        BookCatalogTag.objects.bulk_create(
+            [
+                BookCatalogTag(book=books[0], catalog_tag=first),
+                BookCatalogTag(book=books[1], catalog_tag=first),
+                BookCatalogTag(book=books[1], catalog_tag=second),
+                BookCatalogTag(book=books[2], catalog_tag=second),
+            ]
+        )
+        self.assertTrue(self.client.login(username="owner", password="pw"))
+
+        response = self.client.post(
+            reverse("admin:library_catalogtag_changelist"),
+            {
+                "action": "merge_selected_tags",
+                "_selected_action": [str(first.pk), str(second.pk)],
+                "select_across": "0",
+                "index": "0",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(
+            response,
+            "admin/library/catalogtag/merge_selected.html",
+        )
+        self.assertContains(response, "Existing relationships: 4")
+        self.assertContains(response, "Unique Books preserved: 3")
+        self.assertContains(response, "Overlapping relationships collapsed: 1")
+        self.assertContains(response, "Action &amp; Adventure")
+        self.assertContains(response, "Action/Adventure")
+        self.assertEqual(response.context["recommended_survivor_id"], str(first.pk))
+        self.assertEqual(str(response.context["form"].initial["survivor"]), str(first.pk))
+
+    def test_confirmed_merge_preserves_survivor_and_redirects_with_success(self):
+        survivor = CatalogTag.objects.create(
+            name="Science Fiction",
+            sort_name="Fiction, Science",
+            normalized_name="science fiction",
+            slug="science-fiction",
+        )
+        source = CatalogTag.objects.create(
+            name="Sci-Fi",
+            normalized_name="sci-fi",
+            slug="sci-fi",
+        )
+        book = Book.objects.create(title="Merged Book")
+        BookCatalogTag.objects.create(book=book, catalog_tag=source)
+        plan = build_catalog_tag_merge_plan([survivor.pk, source.pk])
+        self.assertTrue(self.client.login(username="owner", password="pw"))
+
+        response = self.client.post(
+            reverse("admin:library_catalogtag_changelist"),
+            {
+                "action": "merge_selected_tags",
+                "_selected_action": [str(survivor.pk), str(source.pk)],
+                "select_across": "0",
+                "confirm_merge": "1",
+                "fingerprint": plan.fingerprint,
+                "survivor": str(survivor.pk),
+                "name": "Speculative Fiction",
+                "sort_name": "Fiction, Speculative",
+                "confirm": "on",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("admin:library_catalogtag_changelist"),
+        )
+        survivor.refresh_from_db()
+        self.assertEqual(survivor.name, "Speculative Fiction")
+        self.assertEqual(survivor.slug, "science-fiction")
+        self.assertFalse(CatalogTag.objects.filter(pk=source.pk).exists())
+        self.assertTrue(
+            BookCatalogTag.objects.filter(book=book, catalog_tag=survivor).exists()
+        )
+
+    def test_merge_rejects_select_across_without_changing_tags(self):
+        tags = [
+            CatalogTag.objects.create(
+                name=f"Tag {index}",
+                normalized_name=f"tag {index}",
+                slug=f"tag-{index}",
+            )
+            for index in range(2)
+        ]
+        self.assertTrue(self.client.login(username="owner", password="pw"))
+
+        response = self.client.post(
+            reverse("admin:library_catalogtag_changelist"),
+            {
+                "action": "merge_selected_tags",
+                "_selected_action": [str(tag.pk) for tag in tags],
+                "select_across": "1",
+                "index": "0",
+            },
+            follow=True,
+        )
+
+        self.assertContains(
+            response,
+            "Select the Catalog Tags explicitly; merging across every result page "
+            "is not supported.",
+        )
+        self.assertEqual(CatalogTag.objects.count(), 2)

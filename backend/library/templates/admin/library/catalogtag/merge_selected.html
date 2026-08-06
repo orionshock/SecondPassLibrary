@@ -1,0 +1,94 @@
+{% extends "admin/base_site.html" %}
+
+{% block content %}
+  <div id="content-main">
+    <p>
+      Choose the Catalog Tag identity to preserve, then set the final display
+      and sort names. The surviving tag keeps its UUID and slug. Books, EPUBs,
+      Shelves, reading sessions, progress, and annotations are not deleted.
+    </p>
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+      <input type="hidden" name="action" value="merge_selected_tags">
+      <input type="hidden" name="select_across" value="0">
+      <input type="hidden" name="confirm_merge" value="1">
+      {% for tag_id in selected_ids %}
+        <input type="hidden" name="{{ action_checkbox_name }}" value="{{ tag_id }}">
+      {% endfor %}
+      {{ form.fingerprint }}
+
+    <h2>Selected Catalog Tags</h2>
+    {{ form.non_field_errors }}
+    {{ form.survivor.errors }}
+    <table>
+      <thead>
+        <tr>
+          <th scope="col">Survivor</th>
+          <th scope="col">Name</th>
+          <th scope="col">Sort name</th>
+          <th scope="col">Books</th>
+          <th scope="col">Slug</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for tag in plan.tags %}
+          <tr>
+            <td>
+              <input
+                type="radio"
+                name="survivor"
+                value="{{ tag.id }}"
+                aria-label="Preserve {{ tag.name }}"
+                {% if form.survivor.value|stringformat:"s" == tag.id %}checked{% endif %}
+              >
+              {% if tag.id == recommended_survivor_id %}Recommended{% endif %}
+            </td>
+            <td>{{ tag.name }}</td>
+            <td>{{ tag.sort_name|default:"-" }}</td>
+            <td>{{ tag.book_count }}</td>
+            <td>{{ tag.slug }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <h2>Merge result</h2>
+    <ul>
+      <li>Existing relationships: {{ plan.total_relationships }}</li>
+      <li>Unique Books preserved: {{ plan.unique_books }}</li>
+      <li>Overlapping relationships collapsed: {{ plan.duplicate_relationships }}</li>
+      <li>Source tags deleted: {{ plan.tags|length|add:"-1" }}</li>
+    </ul>
+
+      <fieldset class="module aligned">
+        <div class="form-row">
+          {{ form.name.errors }}
+          <div>
+            {{ form.name.label_tag }}
+            {{ form.name }}
+          </div>
+        </div>
+        <div class="form-row">
+          {{ form.sort_name.errors }}
+          <div>
+            {{ form.sort_name.label_tag }}
+            {{ form.sort_name }}
+          </div>
+        </div>
+        <div class="form-row">
+          {{ form.confirm.errors }}
+          <div class="checkbox-row">
+            {{ form.confirm }}
+            {{ form.confirm.label_tag }}
+          </div>
+        </div>
+      </fieldset>
+
+      <div class="submit-row">
+        <input type="submit" value="Merge Catalog Tags" class="deletelink">
+        <a href="{% url 'admin:library_catalogtag_changelist' %}">Cancel</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}

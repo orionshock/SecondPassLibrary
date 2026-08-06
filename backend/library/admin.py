@@ -2,6 +2,7 @@ from types import MethodType
 
 from django import forms
 from django.contrib import admin, messages
+from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 from django.contrib.admin.widgets import FilteredSelectMultiple, RelatedFieldWidgetWrapper
 from django.core.exceptions import PermissionDenied
 from django.http import Http404, HttpResponseRedirect
@@ -25,8 +26,15 @@ from library.cover_services import (
     validate_book_cover_upload,
 )
 from library.catalog.tag_services import (
+    CatalogTagMergeError,
+    CatalogTagMergeNameConflict,
+    CatalogTagMergePlanStale,
+    CatalogTagMergeSelectionError,
     available_catalog_tag_slug,
+    build_catalog_tag_merge_plan,
+    merge_catalog_tags,
     normalize_catalog_tag_name,
+    normalize_catalog_tag_sort_name,
 )
 from library.groups import memberships as membership_services
 from library.groups import book_assignments as book_assignment_services
@@ -617,6 +625,12 @@ class CatalogTagAdminForm(forms.ModelForm):
         self._normalized_name = normalized_name
         return display_name
 
+    def clean_sort_name(self):
+        try:
+            return normalize_catalog_tag_sort_name(self.cleaned_data["sort_name"])
+        except forms.ValidationError as exc:
+            raise forms.ValidationError("Enter a valid sort name.") from exc
+
     def save(self, commit=True):
         tag = super().save(commit=False)
         tag.normalized_name = self._normalized_name
@@ -626,6 +640,69 @@ class CatalogTagAdminForm(forms.ModelForm):
             tag.save()
             self.save_m2m()
         return tag
+
+
+class CatalogTagMergeAdminForm(forms.Form):
+    fingerprint = forms.CharField(widget=forms.HiddenInput)
+    survivor = forms.ModelChoiceField(
+        queryset=CatalogTag.objects.none(),
+        widget=forms.RadioSelect,
+        label="Surviving identity",
+    )
+    name = forms.CharField(max_length=255, label="Final name")
+    sort_name = forms.CharField(max_length=255, required=False, label="Final sort name")
+    confirm = forms.BooleanField(
+        required=True,
+        label=(
+            "I understand that the non-surviving Catalog Tags will be deleted "
+            "after their Book relationships are merged."
+        ),
+    )
+
+    def __init__(self, *args, plan, **kwargs):
+        super().__init__(*args, **kwargs)
+        selected_ids = [item.id for item in plan.tags]
+        self.fields["survivor"].queryset = CatalogTag.objects.filter(
+            pk__in=selected_ids
+        )
+        self._selected_ids = selected_ids
+        if not self.is_bound:
+            recommended = sorted(
+                plan.tags,
+                key=lambda item: (
+                    -item.book_count,
+                    (item.sort_name or item.name).casefold(),
+                    item.name.casefold(),
+                    item.id,
+                ),
+            )[0]
+            self.initial.update(
+                {
+                    "fingerprint": plan.fingerprint,
+                    "survivor": recommended.id,
+                    "name": recommended.name,
+                    "sort_name": recommended.sort_name,
+                }
+            )
+
+    def clean_name(self):
+        try:
+            display_name, normalized_name = normalize_catalog_tag_name(
+                self.cleaned_data["name"]
+            )
+        except forms.ValidationError as exc:
+            raise forms.ValidationError("Enter a valid Catalog Tag name.") from exc
+        conflict = (
+            CatalogTag.objects.exclude(pk__in=self._selected_ids)
+            .filter(normalized_name=normalized_name)
+            .first()
+        )
+        if conflict is not None:
+            raise forms.ValidationError(
+                f'Catalog Tag "{conflict.name}" already uses that normalized name. '
+                "Include it in the selection and choose it as the survivor."
+            )
+        return display_name
 
 
 class CatalogTagBookInline(admin.TabularInline):
@@ -703,6 +780,7 @@ class CatalogTagAdmin(admin.ModelAdmin):
     list_display_links = ["name"]
     readonly_fields = ["normalized_name", "slug"]
     search_fields = ["name", "normalized_name"]
+    actions = ["merge_selected_tags"]
 
     def get_queryset(self, request):
         return super().get_queryset(request).annotate(_book_count=Count("book_catalog_tags"))
@@ -710,6 +788,103 @@ class CatalogTagAdmin(admin.ModelAdmin):
     @admin.display(description="Books", ordering="_book_count")
     def book_count(self, obj):
         return obj._book_count
+
+    def get_actions(self, request):
+        actions = super().get_actions(request)
+        if not request.user.is_superuser:
+            actions.pop("merge_selected_tags", None)
+        return actions
+
+    @admin.action(description="Merge selected Catalog Tags")
+    def merge_selected_tags(self, request, queryset):
+        if not request.user.is_superuser:
+            raise PermissionDenied
+        if request.POST.get("select_across") == "1":
+            self.message_user(
+                request,
+                "Select the Catalog Tags explicitly; merging across every result "
+                "page is not supported.",
+                level=messages.ERROR,
+            )
+            return None
+        selected_ids = request.POST.getlist(ACTION_CHECKBOX_NAME)
+        try:
+            plan = build_catalog_tag_merge_plan(selected_ids)
+        except CatalogTagMergeSelectionError as exc:
+            self.message_user(request, str(exc), level=messages.ERROR)
+            return None
+
+        if request.POST.get("confirm_merge"):
+            form = CatalogTagMergeAdminForm(request.POST, plan=plan)
+            if form.is_valid():
+                try:
+                    result = merge_catalog_tags(
+                        tag_ids=selected_ids,
+                        survivor_id=form.cleaned_data["survivor"].pk,
+                        final_name=form.cleaned_data["name"],
+                        final_sort_name=form.cleaned_data["sort_name"],
+                        expected_fingerprint=form.cleaned_data["fingerprint"],
+                        actor=request.user,
+                    )
+                except CatalogTagMergePlanStale as exc:
+                    self.message_user(request, str(exc), level=messages.ERROR)
+                    form = CatalogTagMergeAdminForm(plan=plan)
+                except CatalogTagMergeNameConflict as exc:
+                    form.add_error("name", str(exc))
+                except CatalogTagMergeError as exc:
+                    form.add_error(None, str(exc))
+                else:
+                    self.log_change(
+                        request,
+                        result.survivor,
+                        (
+                            f"Merged {result.source_tags_deleted} Catalog Tag(s); "
+                            f"preserved {result.books_affected} Book relationship(s); "
+                            "collapsed "
+                            f"{result.duplicate_relationships_collapsed} overlap(s)."
+                        ),
+                    )
+                    self.message_user(
+                        request,
+                        (
+                            f'Merged into "{result.survivor.name}": '
+                            f"{result.source_tags_deleted} source tag(s) deleted, "
+                            f"{result.books_affected} Book(s) preserved, and "
+                            f"{result.duplicate_relationships_collapsed} "
+                            "overlap(s) collapsed."
+                        ),
+                        level=messages.SUCCESS,
+                    )
+                    return HttpResponseRedirect(
+                        reverse("admin:library_catalogtag_changelist")
+                    )
+        else:
+            form = CatalogTagMergeAdminForm(plan=plan)
+
+        recommended = sorted(
+            plan.tags,
+            key=lambda item: (
+                -item.book_count,
+                (item.sort_name or item.name).casefold(),
+                item.name.casefold(),
+                item.id,
+            ),
+        )[0]
+        context = {
+            **self.admin_site.each_context(request),
+            "opts": self.model._meta,
+            "title": "Merge Catalog Tags",
+            "plan": plan,
+            "form": form,
+            "selected_ids": selected_ids,
+            "action_checkbox_name": ACTION_CHECKBOX_NAME,
+            "recommended_survivor_id": recommended.id,
+        }
+        return TemplateResponse(
+            request,
+            "admin/library/catalogtag/merge_selected.html",
+            context,
+        )
 
 
 @admin.register(LibraryGroupMembership)
