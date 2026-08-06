@@ -19,8 +19,8 @@ export function ShelfSummaryRowComponent({ name, description, itemCount, detailP
   owner?: ShelfOwnerBadge;
 }) {
   const hasPreviews = previewBooks.length > 0;
-  return <article className={`shelf-summary-row-component${hasPreviews ? "" : " shelf-summary-row-component--without-previews"}`}>
-    <div className="shelf-summary-row-component__identity">
+  return <article className={`shelf-summary-row-component compact-cover-preview-row${hasPreviews ? "" : " compact-cover-preview-row--without-previews"}`}>
+    <div className="shelf-summary-row-component__identity compact-cover-preview-row__primary">
       <div className="shelf-summary-row-component__title">
         <h2><Link to={detailPath} state={navigationState}>{name}</Link></h2>
         <span className="css-dot" aria-hidden="true" />

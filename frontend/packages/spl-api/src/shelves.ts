@@ -239,12 +239,14 @@ export async function listShelfEditorItems(
 
 export async function listAllShelvesForBook(
   bookId: string,
+  previewLimit: number,
   client: ApiClient = apiClient,
 ): Promise<ShelfSummary[]> {
   const parameters = new URLSearchParams({
     book: bookId,
     ordering: "name",
     include_preview_books: "true",
+    preview_limit: String(previewLimit),
     page_size: "200",
   });
   return collectPaginatedResults(

@@ -23,6 +23,8 @@ describe("ShelfSummaryRowComponent", () => {
     expect(markup.match(/class="css-dot"/g)).toHaveLength(1);
     expect(markup).toContain('aria-label="Book previews"');
     expect(markup).toContain('aria-label="Open Preview Book"');
+    expect(markup).toContain("shelf-summary-row-component compact-cover-preview-row");
+    expect(markup).toContain("shelf-summary-row-component__identity compact-cover-preview-row__primary");
     expect(markup).not.toContain('aria-label="User:');
     expect(markup).not.toContain('aria-label="Group:');
     expect(markup).not.toContain('aria-label="Public group:');

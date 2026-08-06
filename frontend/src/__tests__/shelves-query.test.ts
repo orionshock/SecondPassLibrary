@@ -24,7 +24,8 @@ describe("Shelves URL state", () => {
     const defaults = shelvesListStateFromSearchParams(new URLSearchParams());
     expect(shelvesListPath(defaults)).toBe("/shelves");
     expect(shelvesListSdkQuery(defaults)).toEqual({
-      scope: "personal", ordering: "name", includePreviewBooks: true, page: 1, pageSize: 20,
+      scope: "personal", ordering: "name", includePreviewBooks: true,
+      previewLimit: 12, page: 1, pageSize: 20,
     });
 
     const state = shelvesListStateFromSearchParams(new URLSearchParams(
@@ -32,6 +33,10 @@ describe("Shelves URL state", () => {
     ));
     expect(shelvesListSearchParams(state).toString()).toBe("scope=group&ordering=-item_count&page=3&page_size=40");
     expect(shelvesListPath(state)).toBe("/shelves?scope=group&ordering=-item_count&page=3&page_size=40");
+    expect(shelvesListSdkQuery(state)).toEqual({
+      scope: "group", ordering: "-item_count", includePreviewBooks: true,
+      previewLimit: 12, page: 3, pageSize: 40,
+    });
     expect(shelvesListStateFromSearchParams(new URLSearchParams("ordering=-name")).ordering).toBe("-name");
     expect(shelvesListStateFromSearchParams(new URLSearchParams("ordering=item_count")).ordering).toBe("item_count");
     expect(shelvesListStateFromSearchParams(new URLSearchParams("scope=all&ordering=bad&page=0&page_size=99"))).toEqual(defaults);

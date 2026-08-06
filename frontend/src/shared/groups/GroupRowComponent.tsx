@@ -17,8 +17,9 @@ export function GroupRowComponent({ group, detailPath, navigationState, isCurato
   isCurator: boolean;
   previewBooks: readonly BookCoverPreviewItem[];
 }) {
-  return <article className="group-row-component">
-    <div className="group-row-component__identity">
+  const hasPreviews = previewBooks.length > 0;
+  return <article className={`group-row-component compact-cover-preview-row${hasPreviews ? "" : " compact-cover-preview-row--without-previews"}`}>
+    <div className="group-row-component__identity compact-cover-preview-row__primary">
       <div className="group-row-component__title">
         <h2><Link to={detailPath} state={navigationState}>{group.name}</Link></h2>
         {group.isPublicGroup ? <Badge tone="success">Public</Badge> : null}
@@ -26,6 +27,6 @@ export function GroupRowComponent({ group, detailPath, navigationState, isCurato
       </div>
       {group.description ? <p>{group.description}</p> : null}
     </div>
-    <BookCoverPreviewStripComponent books={previewBooks} />
+    {hasPreviews ? <BookCoverPreviewStripComponent books={previewBooks} /> : null}
   </article>;
 }

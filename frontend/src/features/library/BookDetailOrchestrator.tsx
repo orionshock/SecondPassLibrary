@@ -7,6 +7,7 @@ import {
   listAllShelvesForBook,
   type BookDetail,
 } from "@second-pass/spl-api";
+import { COMPACT_BOOK_COVER_PREVIEW_SOURCE_LIMIT } from "../../shared/books/bookCoverPreview";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useOutletContext, useParams } from "react-router";
 
@@ -107,7 +108,7 @@ export function BookDetailOrchestrator() {
     const requestedBookId = bookId;
     shelvesRequestActive.current = true;
     setShelvesLoad({ status: "loading" });
-    listAllShelvesForBook(requestedBookId)
+    listAllShelvesForBook(requestedBookId, COMPACT_BOOK_COVER_PREVIEW_SOURCE_LIMIT)
       .then((shelves) => {
         if (shelvesBookId.current === requestedBookId) setShelvesLoad({ status: "ready", shelves });
       })
@@ -126,7 +127,7 @@ export function BookDetailOrchestrator() {
     const requestedBookId = bookId;
     groupsRequestActive.current = true;
     setGroupsLoad({ status: "loading" });
-    listAllGroupsForBook(requestedBookId)
+    listAllGroupsForBook(requestedBookId, COMPACT_BOOK_COVER_PREVIEW_SOURCE_LIMIT)
       .then((groups) => {
         if (groupsBookId.current === requestedBookId) setGroupsLoad({ status: "ready", groups });
       })

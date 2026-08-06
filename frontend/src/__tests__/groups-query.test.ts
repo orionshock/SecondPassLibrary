@@ -23,7 +23,7 @@ describe("Groups URL state", () => {
     const defaults = groupsListStateFromSearchParams(new URLSearchParams());
     expect(groupsListPath(defaults)).toBe("/groups");
     expect(groupsListSdkQuery(defaults)).toEqual({
-      ordering: "name", includePreviewBooks: true, page: 1, pageSize: 20,
+      ordering: "name", includePreviewBooks: true, previewLimit: 12, page: 1, pageSize: 20,
     });
     const state = groupsListStateFromSearchParams(new URLSearchParams(
       "q=readers&page_size=40&page=3&ordering=-name",
@@ -61,7 +61,7 @@ describe("Groups URL state", () => {
     expect(groupDetailSearchParams(shelves).toString()).toBe("tab=shelves&page_size=30");
     expect(groupShelvesSdkQuery("group/id", shelves)).toEqual({
       scope: "group", ownerGroupId: "group/id", ordering: "name", includePreviewBooks: true,
-      page: 1, pageSize: 30,
+      previewLimit: 12, page: 1, pageSize: 30,
     });
     expect(groupDetailStateFromSearchParams(new URLSearchParams("tab=shelves&q=hidden&ordering=-author"))).toMatchObject({
       tab: "shelves", q: "", ordering: "title",

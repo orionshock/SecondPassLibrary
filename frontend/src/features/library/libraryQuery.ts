@@ -1,4 +1,5 @@
 import type { BookOrdering, LibraryAxisOrdering, LibraryAxisQuery, LibraryBooksQuery } from "@second-pass/spl-api";
+import { COMPACT_BOOK_COVER_PREVIEW_SOURCE_LIMIT } from "../../shared/books/bookCoverPreview";
 
 export type LibraryView = "books" | "authors" | "series";
 export type LibrarySelectedContextKind = "author" | "series";
@@ -180,6 +181,7 @@ export function libraryAxisSdkQuery(state: LibraryUrlState): LibraryAxisQuery {
     ...(state.tag ? { tag: state.tag } : {}),
     ordering: state.ordering as LibraryAxisOrdering,
     includePreviewBooks: true,
+    previewLimit: COMPACT_BOOK_COVER_PREVIEW_SOURCE_LIMIT,
     page: state.page,
     pageSize: state.pageSize,
   };

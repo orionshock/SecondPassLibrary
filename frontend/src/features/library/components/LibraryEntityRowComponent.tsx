@@ -15,11 +15,12 @@ export function LibraryEntityRowComponent({
   navigationState?: unknown;
   previewBooks: readonly BookCoverPreviewItem[];
 }) {
-  return <article className="library-axis-row-component">
-    <div className="library-axis-row-component__identity">
+  const hasPreviews = previewBooks.length > 0;
+  return <article className={`library-axis-row-component compact-cover-preview-row${hasPreviews ? "" : " compact-cover-preview-row--without-previews"}`}>
+    <div className="library-axis-row-component__identity compact-cover-preview-row__primary">
       <h2><Link to={href} state={navigationState}>{title}</Link></h2>
       <span>{subtitle}</span>
     </div>
-    <BookCoverPreviewStripComponent books={previewBooks} />
+    {hasPreviews ? <BookCoverPreviewStripComponent books={previewBooks} /> : null}
   </article>;
 }

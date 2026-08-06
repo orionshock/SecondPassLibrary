@@ -104,6 +104,9 @@ describe("Library URL state", () => {
 
   it("builds preview-enabled SDK queries for Authors and Series without a tag", () => {
     const state = libraryStateFromSearchParams(new URLSearchParams("view=series&ordering=-name&page=2&page_size=30&q=saga&tag=ignored"));
-    expect(libraryAxisSdkQuery(state)).toEqual({ q: "saga", tag: "ignored", ordering: "-name", includePreviewBooks: true, page: 2, pageSize: 30 });
+    expect(libraryAxisSdkQuery(state)).toEqual({
+      q: "saga", tag: "ignored", ordering: "-name", includePreviewBooks: true,
+      previewLimit: 12, page: 2, pageSize: 30,
+    });
   });
 });

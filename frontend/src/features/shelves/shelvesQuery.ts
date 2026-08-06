@@ -5,6 +5,7 @@ import type {
   ShelfScope,
   ShelvesQuery,
 } from "@second-pass/spl-api";
+import { COMPACT_BOOK_COVER_PREVIEW_SOURCE_LIMIT } from "../../shared/books/bookCoverPreview";
 
 import { resolveTabQuery, withTabQuery } from "../../app/routing/tabQuery";
 
@@ -65,6 +66,7 @@ export function shelvesListSdkQuery(state: ShelvesListUrlState): ShelvesQuery {
     scope: state.scope,
     ordering: state.ordering,
     includePreviewBooks: true,
+    previewLimit: COMPACT_BOOK_COVER_PREVIEW_SOURCE_LIMIT,
     page: state.page,
     pageSize: state.pageSize,
   };

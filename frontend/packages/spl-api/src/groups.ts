@@ -275,12 +275,14 @@ export async function listAllLibraryGroups(client: ApiClient = apiClient): Promi
 
 export async function listAllGroupsForBook(
   bookId: string,
+  previewLimit: number,
   client: ApiClient = apiClient,
 ): Promise<LibraryGroup[]> {
   const parameters = new URLSearchParams({
     book: bookId,
     ordering: "name",
     include_preview_books: "true",
+    preview_limit: String(previewLimit),
     page_size: "200",
   });
   return collectPaginatedResults(

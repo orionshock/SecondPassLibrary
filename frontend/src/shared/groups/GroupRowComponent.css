@@ -1,8 +1,4 @@
 .group-row-component {
-  display: grid;
-  grid-template-columns: minmax(12rem, 0.8fr) minmax(0, 1fr);
-  align-items: center;
-  gap: 0.8rem;
   min-height: 5.1rem;
   padding: 0.55rem 0.65rem;
   border: 1px solid var(--border);
@@ -42,12 +38,4 @@
   line-height: 1.4;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
-}
-
-.group-row-component .book-cover-preview-strip-component { justify-content: flex-end; }
-
-@media (max-width: 760px) {
-  .group-row-component { grid-template-columns: 1fr; }
-
-  .group-row-component .book-cover-preview-strip-component { justify-content: flex-start; }
 }

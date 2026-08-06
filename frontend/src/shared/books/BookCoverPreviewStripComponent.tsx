@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 
 import { BookCoverComponent } from "./BookCoverComponent";
+import { COMPACT_BOOK_COVER_PREVIEW_SOURCE_LIMIT } from "./bookCoverPreview";
 
 export interface BookCoverPreviewItem {
   id: string;
@@ -13,7 +14,7 @@ export interface BookCoverPreviewItem {
 export function BookCoverPreviewStripComponent({ books }: { books: readonly BookCoverPreviewItem[] }) {
   if (books.length === 0) return null;
   return <div className="book-cover-preview-strip-component" aria-label="Book previews">
-    {books.slice(0, 6).map((book) => <Link
+    {books.slice(0, COMPACT_BOOK_COVER_PREVIEW_SOURCE_LIMIT).map((book) => <Link
       key={book.id}
       to={book.href}
       state={book.navigationState}

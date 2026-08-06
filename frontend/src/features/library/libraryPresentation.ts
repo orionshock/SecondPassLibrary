@@ -2,6 +2,7 @@ import type { BookPreview, CompactBook } from "@second-pass/spl-api";
 
 import { breadcrumbNavigationState } from "../../app/navigation/breadcrumbs";
 import type { BookCoverPreviewItem } from "../../shared/books/BookCoverPreviewStripComponent";
+import { COMPACT_BOOK_COVER_PREVIEW_SOURCE_LIMIT } from "../../shared/books/bookCoverPreview";
 import type { LibrarySelectedContextKind, LibraryUrlState } from "./libraryQuery";
 
 export interface SelectedLibraryContextDisplay {
@@ -32,7 +33,7 @@ export function visibleCatalogTags(book: CompactBook, limit = 6) {
 }
 
 export function previewBooksForLibrary(books: readonly BookPreview[] | undefined, libraryPath: string): BookCoverPreviewItem[] {
-  return (books ?? []).slice(0, 6).map((book) => ({
+  return (books ?? []).slice(0, COMPACT_BOOK_COVER_PREVIEW_SOURCE_LIMIT).map((book) => ({
     ...book,
     href: `/library/books/${encodeURIComponent(book.id)}`,
     navigationState: breadcrumbNavigationState([

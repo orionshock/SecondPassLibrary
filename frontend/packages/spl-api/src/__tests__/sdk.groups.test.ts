@@ -154,7 +154,7 @@ describe("Library Groups SDK", () => {
     const responses = [
       {
         count: 2,
-        next: "/api/v1/library/groups/?book=book-id&ordering=name&include_preview_books=true&page=2&page_size=200",
+        next: "/api/v1/library/groups/?book=book-id&ordering=name&include_preview_books=true&preview_limit=12&page=2&page_size=200",
         previous: null,
         results: [{ id: "g1", name: "First", description: "", is_public_group: false, preview_books: [] }],
       },
@@ -170,13 +170,13 @@ describe("Library Groups SDK", () => {
       return responses.shift() as T;
     } };
 
-    await expect(listAllGroupsForBook("book-id", client)).resolves.toEqual([
+    await expect(listAllGroupsForBook("book-id", 12, client)).resolves.toEqual([
       { id: "g1", name: "First", description: "", isPublicGroup: false, previewBooks: [] },
       { id: "g2", name: "Second", description: "", isPublicGroup: false, previewBooks: [{ id: "preview", title: "Preview", coverUrl: null }] },
     ]);
     expect(calls).toEqual([
-      "/api/v1/library/groups/?book=book-id&ordering=name&include_preview_books=true&page_size=200",
-      "/api/v1/library/groups/?book=book-id&ordering=name&include_preview_books=true&page=2&page_size=200",
+      "/api/v1/library/groups/?book=book-id&ordering=name&include_preview_books=true&preview_limit=12&page_size=200",
+      "/api/v1/library/groups/?book=book-id&ordering=name&include_preview_books=true&preview_limit=12&page=2&page_size=200",
     ]);
   });
 

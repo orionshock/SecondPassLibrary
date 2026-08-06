@@ -39,6 +39,23 @@ describe("Groups read-only regions", () => {
     expect(markup).not.toContain("1 Book");
   });
 
+  it("keeps Group identity structurally primary beside the shared compact preview", () => {
+    const markup = renderToStaticMarkup(<MemoryRouter><GroupRowComponent
+      group={group}
+      detailPath="/groups/group"
+      isCurator={false}
+      previewBooks={[{
+        id: book.id, title: book.title, coverUrl: null, href: "/library/books/book",
+      }]}
+    /></MemoryRouter>);
+
+    expect(markup).toContain("group-row-component compact-cover-preview-row");
+    expect(markup).toContain("group-row-component__identity compact-cover-preview-row__primary");
+    expect(markup).toContain("book-cover-preview-strip-component");
+    expect(markup).toContain('href="/groups/group"');
+    expect(markup).toContain('href="/library/books/book"');
+  });
+
   it("renders all read-only Group detail sections", () => {
     const markup = renderToStaticMarkup(<GroupHeaderPageRegion
       group={group}
@@ -214,6 +231,8 @@ describe("Groups read-only regions", () => {
     expect(markup).toContain('aria-label="Shelves pagination, bottom"');
     expect(markup.match(/aria-label="Shelves per page"/g)).toHaveLength(1);
     expect(markup).toContain('aria-label="Open Visible Book"');
+    expect(markup).toContain("shelf-summary-row-component compact-cover-preview-row");
+    expect(markup).toContain("shelf-summary-row-component__identity compact-cover-preview-row__primary");
     expect(markup).not.toContain('aria-label="Delete');
     expect(markup).not.toContain("<form");
 

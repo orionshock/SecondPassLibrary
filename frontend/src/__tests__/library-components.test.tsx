@@ -248,6 +248,8 @@ describe("Library Author and Series components", () => {
     expect(authorMarkup).toContain("No cover available for Preview Book");
     expect(authorMarkup).toContain('href="/library/books/book%2Fid"');
     expect(authorMarkup).toContain('href="/library?view=authors&amp;author=author-1"');
+    expect(authorMarkup).toContain("library-axis-row-component compact-cover-preview-row");
+    expect(authorMarkup).toContain("library-axis-row-component__identity compact-cover-preview-row__primary");
 
     const seriesMarkup = renderToStaticMarkup(<MemoryRouter><SeriesRowComponent series={series} libraryPath="/library?view=series" contextPath="/library?view=series&series=series-1" /></MemoryRouter>);
     expect(seriesMarkup).toContain("Visible Series");

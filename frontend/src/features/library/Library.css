@@ -350,10 +350,6 @@
 }
 
 .library-axis-row-component {
-  display: grid;
-  grid-template-columns: minmax(11rem, 0.65fr) minmax(0, 1fr);
-  align-items: center;
-  gap: 0.65rem;
   padding: 0.35rem 0.55rem;
   border: 1px solid var(--border);
   border-radius: 0.55rem;
@@ -389,10 +385,6 @@
 .library-axis-row-component__identity > span {
   color: #a9b8c9;
   font-size: 0.79rem;
-}
-
-.library-axis-row-component .book-cover-preview-strip-component {
-  justify-content: flex-end;
 }
 
 .library-axis-list-region > .pager-component {
@@ -474,14 +466,6 @@
 }
 
 @media (max-width: 38rem) {
-  .library-axis-row-component {
-    grid-template-columns: 1fr;
-  }
-
-  .library-axis-row-component .book-cover-preview-strip-component {
-    justify-content: flex-start;
-  }
-
   .selected-library-context-region {
     align-items: flex-start;
     flex-direction: column;
