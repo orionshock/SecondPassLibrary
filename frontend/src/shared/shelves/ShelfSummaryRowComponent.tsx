@@ -27,11 +27,12 @@ export function ShelfSummaryRowComponent({ name, description, itemCount, detailP
         {owner ? <span className="shelf-summary-row-component__owner-relation">
           {owner.kind === "user" ? "shared by" : "from"}
         </span> : null}
-        {owner?.kind === "group" ? <GroupBadgeComponent
-          name={owner.label}
-          isPublicGroup={owner.isPublicGroup}
-        /> : null}
-        {owner?.kind === "user" ? <UserInlineIdentityComponent username={owner.username} /> : null}
+        {owner ? <span className="shelf-summary-row-component__source">
+          {owner.kind === "group" ? <GroupBadgeComponent
+            name={owner.label}
+            isPublicGroup={owner.isPublicGroup}
+          /> : <UserInlineIdentityComponent username={owner.username} />}
+        </span> : null}
         {owner ? <span className="css-dot" aria-hidden="true" /> : null}
         <span className="shelf-summary-row-component__count">
           {itemCount} {itemCount === 1 ? "book" : "books"}

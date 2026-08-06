@@ -34,6 +34,28 @@
   font-size: 0.78rem;
 }
 
+.shelf-summary-row-component__source {
+  display: inline-flex;
+  align-items: center;
+}
+
+.shelf-summary-row-component__source .user-inline-identity-component,
+.shelf-summary-row-component__source .group-badge-component .badge {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.shelf-summary-row-component__source .group-badge-component .badge {
+  border-color: rgb(125 211 252 / 35%);
+  background: rgb(125 211 252 / 8%);
+}
+
+.shelf-summary-row-component__source .group-badge-component .badge--success {
+  border-color: rgb(74 222 128 / 65%);
+  color: #d1fae5;
+  background: rgb(74 222 128 / 12%);
+}
+
 .shelf-summary-row-component h2 {
   margin: 0;
   font-size: 1rem;

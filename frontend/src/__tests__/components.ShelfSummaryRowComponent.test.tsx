@@ -41,6 +41,7 @@ describe("ShelfSummaryRowComponent", () => {
     /></MemoryRouter>);
 
     expect(markup).toContain('aria-label="Public group: Common Room"');
+    expect(markup).toMatch(/shelf-summary-row-component__source[^>]*>.*Public group: Common Room/);
     expect(markup).toContain("from");
     expect(markup).toContain("1 book");
     expect(markup.match(/class="css-dot"/g)).toHaveLength(2);
@@ -59,6 +60,7 @@ describe("ShelfSummaryRowComponent", () => {
     /></MemoryRouter>);
 
     expect(markup).toContain('aria-label="User reader"');
+    expect(markup).toMatch(/shelf-summary-row-component__source[^>]*>.*User reader/);
     expect(markup).toContain("reader");
     expect(markup).not.toContain("@reader");
     expect(markup).not.toContain('class="badge');
