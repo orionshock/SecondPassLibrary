@@ -1449,21 +1449,11 @@ class Command(BaseCommand):
         book_scenario: BookScenario,
     ) -> list[Shelf]:
         shelves: list[Shelf] = []
-        listed_candidates = [
-            user
-            for user in users.values()
-            if get_or_create_profile(user=user).role == UserProfile.ROLE_LIBRARIAN
-        ] or list(users.values())
-        listed_owner = _stable_order(
-            seed,
-            "listed-personal-shelf",
-            listed_candidates,
-        )[0]
         for user in users.values():
             for shelf_index, name in enumerate(PERSONAL_SHELF_NAMES):
                 visibility = (
                     Shelf.VISIBILITY_LISTED
-                    if name == "Favorites" and user.pk == listed_owner.pk
+                    if name == "Favorites"
                     else Shelf.VISIBILITY_PRIVATE
                 )
                 shelf, created = _get_or_create_shelf(
@@ -1478,14 +1468,11 @@ class Command(BaseCommand):
                     owner_user=user,
                     visibility=visibility,
                 )
-                if (
-                    visibility == Shelf.VISIBILITY_LISTED
-                    and shelf.visibility != Shelf.VISIBILITY_LISTED
-                ):
+                if shelf.visibility != visibility:
                     shelf = update_shelf(
                         user,
                         shelf,
-                        visibility=Shelf.VISIBILITY_LISTED,
+                        visibility=visibility,
                     )
                 self._record_shelf(shelf, created, shelves, counts)
 

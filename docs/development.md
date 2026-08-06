@@ -402,7 +402,8 @@ The command:
 - keeps Manager and Librarian demo accounts as broad-role users with their
   normal default Common Room membership
 - never assigns curator flags to the Public/Common Room group
-- creates personal shelves and Common Room shelves
+- creates one private `Reading Queue` and one listed `Favorites` shelf for each
+  demo user, plus Common Room shelves
 - populates managed personal and Group shelves with small, varied selections of
   visible or exact-Group Books when Books are available
 - when advanced library groups are enabled, additionally creates five non-Public
