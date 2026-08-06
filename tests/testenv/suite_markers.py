@@ -156,7 +156,6 @@ _NODE_MARKERS: dict[str, tuple[str, ...]] = {
         "tests/accounts/client_api/test_pairing_limits.py::PairingRequestLimitConcurrencyTests::",
         "tests/accounts/client_api/test_pairing_lifecycle.py::PairingConsumptionConcurrencyTests::",
         "tests/accounts/client_api/test_proxy_boundary.py::UvicornProxyBoundaryTests::",
-        "tests/accounts/management/test_seed_dev_users_",
         "tests/accounts/test_browser_auth.py::BrowserLoginThrottleTests::",
         "tests/accounts/test_browser_auth.py::ConcurrentBrowserLoginThrottleTests::",
         "tests/accounts/test_first_run_setup_concurrency.py::FirstOwnerSetupConcurrencyTests::",

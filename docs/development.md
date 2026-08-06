@@ -403,11 +403,15 @@ The command:
   normal default Common Room membership
 - never assigns curator flags to the Public/Common Room group
 - creates personal shelves and Common Room shelves
-- deterministically adds 5-10 existing books to each shelf when books are available
+- populates managed personal and Group shelves with small, varied selections of
+  visible or exact-Group Books when Books are available
 - when advanced library groups are enabled, additionally creates five non-Public
-  demo groups, varied intentional memberships, curators distributed across
-  Reader, Librarian, and Manager roles where possible, group-owned shelves, and
-  custom group book assignments
+  demo groups by default, varied intentional memberships, curators distributed
+  across Reader, Librarian, and Manager roles where possible, and 3-4
+  group-owned shelves per Group
+- gives the named demo Groups simple thematic Catalog Tag profiles; a Book is
+  assigned when a normalized profile keyword occurs anywhere in one of its
+  normalized tag names, with deterministic fallback Books for small catalogs
 
 The command is non-destructive by default. Existing users with matching
 usernames retain their names, email addresses, passwords, flags, and profile
