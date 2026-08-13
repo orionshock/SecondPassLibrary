@@ -352,6 +352,13 @@ export async function updateMarginaliaSession(
   return mapSessionEnvelope(response);
 }
 
+export async function deleteMarginaliaSession(
+  sessionId: string,
+  client: ApiClient = apiClient,
+): Promise<void> {
+  await client.request<void>(sessionPath(sessionId), { method: "DELETE" });
+}
+
 export async function closeMarginaliaSession(
   sessionId: string,
   input: MarginaliaSessionCloseInput = {},

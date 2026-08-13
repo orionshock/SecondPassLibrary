@@ -34,6 +34,7 @@ export {
 export { toPage, type ApiPage, type Page } from "./pagination";
 export {
   closeMarginaliaSession,
+  deleteMarginaliaSession,
   downloadCompleteMarginaliaExport,
   downloadSelectedMarginaliaExport,
   getMarginaliaBook,

@@ -1,8 +1,10 @@
 import { describe, expect, it } from "vitest";
 
+import { createApiClient } from "../client";
 import { ApiError } from "../errors";
 import {
   closeMarginaliaSession,
+  deleteMarginaliaSession,
   getMarginaliaSession,
   listMarginaliaSessionAnnotations,
   updateMarginaliaSession,
@@ -68,6 +70,38 @@ describe("Marginalia Product UI Session detail and close SDK", () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ notes: " replacement " }),
       },
+    });
+  });
+
+  it("DELETEs one encoded Session resource without a body and resolves 204 as void", async () => {
+    const calls: Array<{ input: RequestInfo | URL; init?: RequestInit }> = [];
+    const client = createApiClient(async (input, init) => {
+      calls.push({ input, init });
+      return new Response(null, { status: 204 });
+    }, () => "csrf-token");
+
+    const result = await deleteMarginaliaSession("session/id", client);
+
+    expect(result).toBeUndefined();
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.input).toBe("/api/v1/marginalia/sessions/session%2Fid/");
+    expect(calls[0]?.init?.method).toBe("DELETE");
+    expect(calls[0]?.init?.body).toBeUndefined();
+  });
+
+  it("preserves the shared typed 404 error contract for Session deletion", async () => {
+    const client = createApiClient(async () => new Response(
+      JSON.stringify({ detail: "Not found." }),
+      { status: 404, headers: { "Content-Type": "application/json" } },
+    ));
+
+    const error = await deleteMarginaliaSession("missing", client).catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({
+      name: "ApiError",
+      message: "Not found.",
+      status: 404,
     });
   });
 
