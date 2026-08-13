@@ -185,7 +185,7 @@ export function MarginaliaSessionDeleteDialog({ sessionName, bookTitle, pending,
         {exportState.error ? <span className="field-error" role="alert">{exportState.error.message}</span> : null}
       </div>
       <div className="marginalia-session-delete-dialog__actions">
-        <Button type="button" tone="secondary" disabled={pending || exportState.pending} onClick={onExport}><MaterialIcon name="download" />{exportState.pending ? "Exporting…" : "Export Session"}</Button>
+        <Button type="button" tone="secondary" className="marginalia-session-delete-dialog__export" disabled={pending || exportState.pending} onClick={onExport}><MaterialIcon name="download" />{exportState.pending ? "Exporting…" : "Export Session"}</Button>
         <Button ref={cancelButton} type="button" tone="secondary" disabled={pending} onClick={onCancel}>Cancel</Button>
         <Button type="button" tone="danger" disabled={pending || exportState.pending} onClick={onContinue}>Continue to delete</Button>
       </div>

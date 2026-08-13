@@ -730,6 +730,24 @@
   gap: 0.3rem;
 }
 
+.marginalia-session-delete-dialog__export {
+  border-color: rgb(74 222 128 / 80%);
+  color: #dcfce7;
+  background: rgb(34 197 94 / 20%);
+}
+
+.marginalia-session-delete-dialog__export:hover,
+.marginalia-session-delete-dialog__export:focus-visible {
+  border-color: rgb(134 239 172 / 95%);
+  color: #f0fdf4;
+  background: rgb(34 197 94 / 32%);
+}
+
+.marginalia-session-delete-dialog__export:focus-visible {
+  outline: 2px solid rgb(74 222 128 / 75%);
+  outline-offset: 2px;
+}
+
 .marginalia-session-delete-dialog__actions .material-icon {
   font-size: 1rem;
 }
