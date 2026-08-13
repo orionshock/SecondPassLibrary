@@ -143,6 +143,12 @@ change ownership or visibility; prefer Product UI/services and the dedicated
 recovery actions. Review Django's affected-object confirmation before any Admin
 delete.
 
+The normal owner-facing API may permanently delete one owned Marginalia Session
+and its cascading annotations as the single server-owned operation documented
+in [Marginalia](marginalia.md#reading-session-lifecycle). That narrow workflow
+does not replace or constrain Django Admin's independent destructive repair
+authority. Bulk and delete-all Session/history operations remain unsupported.
+
 The Admin **Application Log Level** setting controls Second Pass Library
 application namespaces. `INFO` is the normal level; use `DEBUG` temporarily
 and return it to `INFO` after diagnosis. It does not reduce Django security or

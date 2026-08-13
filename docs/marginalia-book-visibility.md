@@ -95,7 +95,7 @@ The Book link/action is suppressed when `can_open=false`. A public cover URL rem
 | Close without new progress | Yes | Yes | No | Allowed |
 | Close with new progress | Yes | Yes | Yes | Denied atomically |
 | Reopen a closed Session | Not supported | Closed cannot become active | Not applicable | Not supported |
-| Normal API deletion | Not supported | Not applicable | Not applicable | Not supported |
+| Delete one Session | Yes | No; active and closed are eligible | No | Allowed |
 | Export | Yes | No | No | Allowed |
 
 ### Durable Session rules
@@ -111,6 +111,34 @@ The Book link/action is suppressed when `can_open=false`. A public cover URL rem
 - Closing with progress rechecks visibility before committing any supplied metadata or progress; denial rolls the whole close attempt back.
 - A repeated identical close may return the already-closed result under the existing idempotent retry contract. It does not reopen or rewrite history.
 - Start over finalizes an active Session and creates a new blank active Session. When only closed history exists, it may create a new Session; it never changes a closed Session back to active.
+- An owner may permanently delete exactly one active or closed Session per
+  request. This is an ownership-only lifecycle operation and does not require
+  current Book visibility.
+
+### Owner Session deletion
+
+The normal server API supports permanent deletion of one owned Reading Session
+as a single-resource operation, with the intended shape
+`DELETE /api/v1/marginalia/sessions/{session_id}/`. There is no bulk Session
+deletion API and no delete-all-Sessions or delete-all-history operation.
+
+The server owns the complete destructive transaction. One request authorizes
+the Session by ownership and atomically deletes that Session together with all
+of its annotations through the relational cascade. The client must not delete
+annotations separately, issue multiple destructive requests for one Session,
+or infer whether cascade cleanup completed. Success means the complete
+Session-owned collection was deleted; failure must not expose a partially
+deleted Session collection.
+
+Deletion may target an active or closed Session. It is permanent and cannot be
+undone. It does not delete the associated Book, another Session, or annotations
+owned by another Session. Deletion does not close, reopen, replace, or create a
+Session.
+
+Current Book visibility is not deletion authority. The owner may delete a
+Session after losing visibility to its linked Book, while a foreign user may
+not delete it regardless of their Book visibility or role. Missing and foreign
+Session identities follow the normal bounded anti-enumeration contract.
 
 ## Annotation operation matrix
 
@@ -125,6 +153,11 @@ The Book link/action is suppressed when `can_open=false`. A public cover URL rem
 | Export | Yes | No | No | Allowed |
 
 Annotation deletion is a mutation even though it is represented as soft deletion. A user who lost Book visibility may read retained annotations but cannot delete, restore, or modify them until visibility returns and the owning Session is active.
+
+Those individual annotation-mutation rules do not restrict owner deletion of
+the entire Session. Session deletion is the separate server-owned lifecycle
+operation above; its cascade permanently removes the Session's annotations
+without client-orchestrated annotation requests.
 
 Batch operations are atomic. A mixed batch must not partially commit around a lifecycle or visibility failure. Portable/client identifiers support replay and upsert semantics but are scoped to the owning Session; they are not global capabilities.
 
@@ -147,6 +180,7 @@ When that happens:
 - title/note editing remains possible only for an active owned Session;
 - close without new progress remains possible;
 - close with new progress is denied without partial metadata persistence;
+- owner deletion of one active or closed Session remains possible;
 - export remains available;
 - previously valid personal Shelf retention follows [Library Book Visibility](book-visibility.md), not Marginalia ownership.
 
@@ -164,7 +198,9 @@ If Group membership, Book assignment, or broad role authority later restores Lib
 - retained unavailable personal Shelf items may become available again;
 - an Unmatched import artifact can be re-imported and matched normally.
 
-Restoration does not undo an operator cleanup that already removed a retained Shelf item, and it does not recreate data destroyed by Book deletion.
+Restoration does not undo an operator cleanup that already removed a retained
+Shelf item, and it does not recreate data destroyed by owner Session deletion,
+Book deletion, user deletion, or Admin repair.
 
 ## Import matching and privacy
 
@@ -259,9 +295,10 @@ Exact archive structure and version linkage belong to the [export envelope speci
 | Library access lost | Preserved and readable | Preserved and readable | `false` | Only ownership-only exceptions | Allowed |
 | Library access restored | Preserved | Preserved | `true` | Resume where Session lifecycle permits | Allowed |
 | Session closed | Historical/readable | Historical/readable | Based on current Book visibility | Session/annotation mutations remain closed | Allowed |
+| Session deleted by owner | Removed | Cascades | Book may remain linked through other Sessions | Other Sessions follow normal rules | Remaining owned data only |
 | Book deleted | Cascades away | Cascades through Sessions | Not applicable | Impossible | No surviving linked data |
 | User deleted | Cascades owned Sessions | Cascades through Sessions | Not applicable | Impossible | No owned data |
-| Session deleted by repair | Removed | Cascades | Book may remain linked through other Sessions | Other Sessions follow normal rules | Remaining owned data only |
+| Session deleted by Admin repair | Removed | Cascades | Book may remain linked through other Sessions | Other Sessions follow normal rules | Remaining owned data only |
 
 ## Deletion boundary
 
@@ -274,10 +311,18 @@ Current model behavior is deliberately relational:
 - Session deletion cascades to annotations;
 - user deletion cascades owned Reading Sessions and their annotations;
 - no detached, orphaned, or null-Book Marginalia state exists;
-- normal Product UI APIs do not provide Session deletion;
-- Django Admin deletion is a destructive repair action, not ordinary history management.
+- the normal server API may delete exactly one owned Session per request,
+  including after current Book visibility is lost;
+- no bulk or delete-all Session/history operation exists;
+- Django Admin deletion remains an independent destructive repair action, not
+  an owner-facing history-management workflow.
 
-Do not change the required relationship or invent detached-history behavior without an explicit product decision outside normal implementation work. Do not claim that the access-loss preservation invariant protects against deliberate Book or user deletion.
+Durable owned history remains preserved across access loss until the owner
+explicitly deletes an individual Session or another documented lifecycle event
+removes it. Do not change the required relationship or invent detached-history
+behavior without an explicit product decision outside normal implementation
+work. Do not claim that the access-loss preservation invariant protects against
+deliberate Session, Book, or user deletion.
 
 ## Privacy, anti-enumeration, and logging
 
@@ -290,6 +335,8 @@ Durable privacy rules:
 - staged matching never returns fresh hidden Book metadata;
 - `can_open` exposes only the current yes/no openability of a Book already linked through the user's own history;
 - Marginalia ownership does not expose EPUB bytes, storage paths, Group assignments, or another user's history;
+- Session deletion authorizes against ownership on the server and never trusts
+  Product UI filtering or current Book visibility;
 - apply and export must not trust Product UI selection as authority.
 
 Domain logs may contain bounded lifecycle summaries, user identifiers, short stage references, counts, and expected conflict reasons where operationally useful. They must not contain titles, annotations, archive payloads, staged filenames or paths, full stage tokens, hidden Book identifiers, Group details, credentials, or response bodies. Expected inaccessible/unmatched outcomes are normal product events, not exception-level failures.
@@ -316,4 +363,3 @@ Domain logs may contain bounded lifecycle summaries, user identifiers, short sta
 - [Operations](operations.md) owns cleanup and destructive repair procedures.
 - [Marginalia export specification](specs/marginalia-export.md) owns the export envelope.
 - [Reading Session and Annotation profile](specs/reading-session-annotation-profile/README.md) owns reusable interchange semantics and schema links.
-

@@ -75,6 +75,14 @@ limits before expensive queries or serialization; those limits belong in the
 relevant domain contract. Idempotency keys and replay fingerprints are likewise
 operation-specific rather than a universal API mechanism.
 
+Marginalia Session deletion is deliberately not a bulk or selected-ID
+operation. Its intended shape is the single-resource request
+`DELETE /api/v1/marginalia/sessions/{session_id}/`. One authenticated request
+represents the complete permanent deletion of one Session and its Session-owned
+annotations. There is no delete-all-Sessions or delete-all-history endpoint.
+The server must enforce ownership and the complete destructive lifecycle;
+current visibility of the linked Book is not required.
+
 ## Response and wire conventions
 
 There is no universal success envelope. Detail objects, collection pages,
@@ -155,6 +163,15 @@ different visibility universes merely because they serialize different shapes.
 Authorization belongs to backend query and service boundaries. React route
 guards, capability flags, `can_edit` hints, and objects fetched earlier in a
 workflow are never mutation authority.
+
+For owner-initiated Marginalia Session deletion, the backend authorizes the
+target Session by ownership even when the owner no longer has current visibility
+to the linked Book. A successful operation deletes only that Session and its
+cascading annotations; it does not delete the Book or unrelated Marginalia.
+Foreign and missing Session identities follow the domain's bounded
+anti-enumeration behavior. The destructive operation is atomic from the API
+contract's perspective: failure does not leave a partially deleted
+Session-owned collection.
 
 The same current visibility or ownership rule must be applied to lists,
 details, mutations, attachments, downloads, counts, filters, and previews.

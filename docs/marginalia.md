@@ -44,6 +44,21 @@ progress still requires current access because it is a live location write.
 An identical close retry is safe, while an attempt to alter an already-closed
 Session is rejected.
 
+An owner may permanently delete exactly one of their active or closed Sessions
+through one normal server request, with the intended single-resource shape
+`DELETE /api/v1/marginalia/sessions/{session_id}/`. Deletion depends on Session
+ownership, not current visibility of the linked Book, so owned history remains
+deletable after Book access is lost. Foreign Sessions are never deletable by
+the requester. There is no bulk Session deletion API and no delete-all-history
+operation.
+
+The server owns the entire destructive operation. It atomically deletes the
+Session and all annotations owned through that Session's existing relational
+cascade. A client must not delete annotations separately or coordinate a
+multi-request deletion. The associated Book, unrelated Sessions, and their
+annotations remain untouched. Session deletion is permanent, cannot be undone,
+and does not introduce a closed-to-active transition.
+
 History is ordered by latest meaningful activity: Session metadata, saved
 progress, or a current non-deleted annotation, with stable start/id fallbacks.
 Reads do not update activity timestamps.
@@ -80,13 +95,16 @@ after Book visibility changes, but closed Sessions cannot be synchronized.
 
 ## Visibility and preservation
 
-Owned Marginalia is durable personal history, while current Book authority is a
-separate property. [Marginalia-Linked Books](marginalia-book-visibility.md) is
+Owned Marginalia is durable personal history, retained until the owner
+explicitly deletes an individual Session or another documented lifecycle event
+removes it. Current Book authority is a separate property.
+[Marginalia-Linked Books](marginalia-book-visibility.md) is
 the sole detailed policy for `can_open`, access loss and restoration, mutation
 exceptions, historical metadata projection, anti-enumeration, exports, and
-Book deletion. In particular, do not reduce that contract to “every mutation
-requires current visibility”: owned active-Session title/note edits and closing
-without new progress are documented exceptions.
+deletion. In particular, do not reduce that contract to “every mutation
+requires current visibility”: owned active-Session title/note edits, closing
+without new progress, and owner deletion of one Session are documented
+exceptions.
 
 ## Import workflow
 

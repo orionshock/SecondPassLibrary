@@ -154,6 +154,15 @@ must be visually distinguishable and receive confirmation where the current
 product policy requires it. Shared controls remain server-blind and require
 caller-supplied accessible labels and operation callbacks.
 
+A future Marginalia Session delete control is only an intent and confirmation
+surface. The Product UI may ask the owner to confirm, send the one
+single-Session delete request, display pending/error/success state, and navigate
+away after success. It must not delete annotations individually, infer whether
+the server-side cascade completed, issue multiple destructive requests for one
+Session, implement bulk Session deletion, or reproduce server ownership and
+visibility rules. Authorization and the complete destructive lifecycle remain
+server-owned.
+
 Prefer native form and control semantics. Labels, validation messages, live
 status, and disabled state must remain available to assistive technology. Do
 not encode essential meaning only through color, iconography, hover, or layout.
