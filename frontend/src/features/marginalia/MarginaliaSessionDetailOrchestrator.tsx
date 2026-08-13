@@ -1,12 +1,13 @@
 import {
   closeMarginaliaSession,
+  deleteMarginaliaSession,
   getMarginaliaSession,
   listMarginaliaSessionAnnotations,
   updateMarginaliaSession,
   type MarginaliaSessionEnvelope,
 } from "@second-pass/spl-api";
-import { useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router";
 
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { Button, ErrorPanel } from "../../components/ui";
@@ -52,8 +53,18 @@ export function closeMarginaliaSessionFromProductUi(
   return close(detail.session.id);
 }
 
+export async function deleteMarginaliaSessionFromProductUi(
+  sessionId: string,
+  navigateToMarginalia: (to: string, options: { replace: boolean }) => void,
+  remove: typeof deleteMarginaliaSession = deleteMarginaliaSession,
+): Promise<void> {
+  await remove(sessionId);
+  navigateToMarginalia("/marginalia", { replace: true });
+}
+
 export function MarginaliaSessionDetailOrchestrator() {
   const { sessionId = "" } = useParams();
+  const navigate = useNavigate();
   const [sessionRetry, setSessionRetry] = useState(0);
   const [annotationsRetry, setAnnotationsRetry] = useState(0);
   const [sessionLoad, setSessionLoad] = useState<SessionLoadState>({ status: "loading" });
@@ -65,6 +76,8 @@ export function MarginaliaSessionDetailOrchestrator() {
   const [noteDraft, setNoteDraft] = useState("");
   const [noteState, setNoteState] = useState<MutationState>(idleMutationState);
   const [closeState, setCloseState] = useState<MutationState>(idleMutationState);
+  const [deleteState, setDeleteState] = useState<MutationState>(idleMutationState);
+  const deletePending = useRef(false);
   const loadedSessionId = sessionLoad.status === "ready" ? sessionLoad.detail.session.id : undefined;
   const breadcrumbFallback = useMemo(
     () => marginaliaSessionBreadcrumbFallback(sessionLoad.status === "ready" ? sessionLoad.detail.session : undefined),
@@ -84,6 +97,8 @@ export function MarginaliaSessionDetailOrchestrator() {
     setNoteDraft("");
     setNoteState(idleMutationState);
     setCloseState(idleMutationState);
+    setDeleteState(idleMutationState);
+    deletePending.current = false;
     setSessionLoad({ status: "loading" });
     setAnnotationsLoad({ loading: true });
     getMarginaliaSession(sessionId).then((detail) => {
@@ -163,7 +178,7 @@ export function MarginaliaSessionDetailOrchestrator() {
   }
 
   async function closeSession() {
-    if (sessionLoad.status !== "ready" || sessionLoad.detail.session.status !== "active" || closeState.pending) return;
+    if (sessionLoad.status !== "ready" || sessionLoad.detail.session.status !== "active" || closeState.pending || deletePending.current) return;
     setCloseState({ pending: true });
     try {
       const detail = await closeMarginaliaSessionFromProductUi(sessionLoad.detail);
@@ -173,6 +188,22 @@ export function MarginaliaSessionDetailOrchestrator() {
       setCloseState({ pending: false, message: "Session closed." });
     } catch (error: unknown) {
       setCloseState({ pending: false, error: normalizeMutationError(error) });
+    }
+  }
+
+  async function deleteSession() {
+    if (sessionLoad.status !== "ready" || closeState.pending || deletePending.current) return;
+    deletePending.current = true;
+    setDeleteState({ pending: true });
+    try {
+      await deleteMarginaliaSessionFromProductUi(
+        sessionLoad.detail.session.id,
+        navigate,
+        deleteMarginaliaSession,
+      );
+    } catch (error: unknown) {
+      deletePending.current = false;
+      setDeleteState({ pending: false, error: normalizeMutationError(error) });
     }
   }
 
@@ -214,7 +245,9 @@ export function MarginaliaSessionDetailOrchestrator() {
       annotations={annotationsLoad}
       sessionNote={noteEditor}
       closeState={closeState}
+      deleteState={deleteState}
       onClose={() => void closeSession()}
+      onDelete={() => void deleteSession()}
       onRetryAnnotations={() => setAnnotationsRetry((value) => value + 1)}
     />
   </ProductPageShellComponent>;

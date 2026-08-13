@@ -1,5 +1,5 @@
 import type { MarginaliaAnnotation, MarginaliaSessionEnvelope } from "@second-pass/spl-api";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 import { Link } from "react-router";
 
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
@@ -45,32 +45,56 @@ export function MarginaliaSessionDetailPageRegion({
   annotations,
   sessionNote,
   closeState,
+  deleteState,
   onClose,
+  onDelete,
   onRetryAnnotations,
 }: {
   detail: MarginaliaSessionEnvelope;
   annotations: MarginaliaAnnotationsLoadState;
   sessionNote: ReactNode;
   closeState: MutationState;
+  deleteState: MutationState;
   onClose: () => void;
+  onDelete: () => void;
   onRetryAnnotations: () => void;
 }) {
   return <div className="marginalia-session-detail">
-    <SessionSummaryRegion detail={detail} sessionNote={sessionNote} closeState={closeState} onClose={onClose} />
+    <SessionSummaryRegion detail={detail} sessionNote={sessionNote} closeState={closeState} deleteState={deleteState} onClose={onClose} onDelete={onDelete} />
     <AnnotationsRegion state={annotations} onRetry={onRetryAnnotations} />
   </div>;
 }
 
-function SessionSummaryRegion({ detail, sessionNote, closeState, onClose }: {
+function SessionSummaryRegion({ detail, sessionNote, closeState, deleteState, onClose, onDelete }: {
   detail: MarginaliaSessionEnvelope;
   sessionNote: ReactNode;
   closeState: MutationState;
+  deleteState: MutationState;
   onClose: () => void;
+  onDelete: () => void;
 }) {
+  const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
+  const deleteButton = useRef<HTMLButtonElement>(null);
   const { book, session } = detail;
+  const lifecyclePending = closeState.pending || deleteState.pending;
   const progressLabel = session.progress
     ? session.progress.locationLabel.trim() ? session.progress.locationLabel : "Saved location"
     : "No saved progress";
+
+  function cancelDeleteConfirmation() {
+    if (deleteState.pending) return;
+    setDeleteConfirmationOpen(false);
+    deleteButton.current?.focus();
+  }
+
+  function continueDelete() {
+    if (lifecyclePending) return;
+    setDeleteConfirmationOpen(false);
+    const confirmed = confirmPermanentSessionDeletion(onDelete);
+    if (!confirmed) {
+      deleteButton.current?.focus();
+    }
+  }
 
   return <Surface>
     <div className="marginalia-session-summary">
@@ -88,9 +112,11 @@ function SessionSummaryRegion({ detail, sessionNote, closeState, onClose }: {
         <div className="marginalia-session-summary__session">
           <div className="marginalia-session-summary__status-actions">
             <Badge tone={session.status === "active" ? "success" : "default"}>{session.status === "active" ? "Active" : "Closed"}</Badge>
-            {session.status === "active" ? <Button type="button" size="small" tone="danger" disabled={closeState.pending} onClick={onClose}>{closeState.pending ? "Closing..." : "Close Session"}</Button> : null}
+            {session.status === "active" ? <Button type="button" size="small" tone="secondary" className="marginalia-session-summary__lifecycle-action" disabled={lifecyclePending} onClick={onClose}><MaterialIcon name="close" />{closeState.pending ? "Closing..." : "Close Session"}</Button> : null}
+            <Button ref={deleteButton} type="button" size="small" tone="danger" className="marginalia-session-summary__lifecycle-action" disabled={lifecyclePending} onClick={() => setDeleteConfirmationOpen(true)}><MaterialIcon name="delete" />{deleteState.pending ? "Deleting…" : "Delete"}</Button>
             {closeState.error ? <span className="field-error" role="alert">{closeState.error.message}</span> : null}
             {closeState.message ? <span className="success-message" role="status">{closeState.message}</span> : null}
+            {deleteState.error ? <span className="field-error" role="alert">{deleteState.error.message}</span> : null}
           </div>
           <div className="marginalia-session-summary__stats">
             <span>{formatCount(session.annotationCount, "annotation")}</span>
@@ -105,7 +131,64 @@ function SessionSummaryRegion({ detail, sessionNote, closeState, onClose }: {
       </div>
       {sessionNote}
     </div>
+    {deleteConfirmationOpen ? <MarginaliaSessionDeleteDialog
+      sessionName={session.name}
+      bookTitle={book.title || "Untitled Book"}
+      pending={lifecyclePending}
+      onCancel={cancelDeleteConfirmation}
+      onContinue={continueDelete}
+    /> : null}
   </Surface>;
+}
+
+export function MarginaliaSessionDeleteDialog({ sessionName, bookTitle, pending, onCancel, onContinue }: {
+  sessionName: string;
+  bookTitle: string;
+  pending: boolean;
+  onCancel: () => void;
+  onContinue: () => void;
+}) {
+  const cancelButton = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => { cancelButton.current?.focus(); }, []);
+
+  function handleDialogKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      onCancel();
+    }
+  }
+
+  function handleBackdropClick(event: MouseEvent<HTMLDivElement>) {
+    if (event.target === event.currentTarget) onCancel();
+  }
+
+  return <div className="marginalia-session-delete-dialog-backdrop" onClick={handleBackdropClick}>
+    <div className="marginalia-session-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="marginalia-session-delete-dialog-title" aria-describedby="marginalia-session-delete-dialog-description" onKeyDown={handleDialogKeyDown}>
+      <h2 id="marginalia-session-delete-dialog-title">Delete this reading session?</h2>
+      <div id="marginalia-session-delete-dialog-description" className="marginalia-session-delete-dialog__body">
+        {sessionName.trim() ? <p>Session: <strong>{sessionName}</strong></p> : null}
+        <p>Book: <strong>{bookTitle}</strong></p>
+        <p>This permanently deletes this Session and all annotations attached to it.</p>
+        <p>This cannot be undone.</p>
+      </div>
+      <div className="marginalia-session-delete-dialog__actions">
+        <Button ref={cancelButton} type="button" tone="secondary" disabled={pending} onClick={onCancel}>Cancel</Button>
+        <Button type="button" tone="danger" disabled={pending} onClick={onContinue}>Continue to delete</Button>
+      </div>
+    </div>
+  </div>;
+}
+
+export const permanentSessionDeletionWarning = "Permanently delete this Session and all of its annotations? This cannot be undone.";
+
+export function confirmPermanentSessionDeletion(
+  onConfirm: () => void,
+  confirm: (message: string) => boolean = window.confirm,
+): boolean {
+  const confirmed = confirm(permanentSessionDeletionWarning);
+  if (confirmed) onConfirm();
+  return confirmed;
 }
 
 function AnnotationsRegion({ state, onRetry }: { state: MarginaliaAnnotationsLoadState; onRetry: () => void }) {

@@ -661,11 +661,61 @@
 
 .marginalia-session-summary__status-actions {
   display: flex;
-  justify-content: flex-end;
+  justify-content: flex-start;
   align-items: center;
   flex-wrap: wrap;
   gap: 0.5rem;
   min-height: 2rem;
+}
+
+.marginalia-session-summary__lifecycle-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.marginalia-session-summary__lifecycle-action .material-icon {
+  font-size: 1rem;
+}
+
+.marginalia-session-delete-dialog-backdrop {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(0 0 0 / 72%);
+}
+
+.marginalia-session-delete-dialog {
+  width: min(100%, 32rem);
+  padding: 1rem;
+  border: 1px solid rgb(251 113 133 / 55%);
+  border-radius: 0.8rem;
+  background: var(--surface-raised);
+  box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 45%);
+}
+
+.marginalia-session-delete-dialog h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.marginalia-session-delete-dialog__body {
+  display: grid;
+  gap: 0.55rem;
+  margin-block: 0.9rem 1rem;
+}
+
+.marginalia-session-delete-dialog__body p {
+  margin: 0;
+}
+
+.marginalia-session-delete-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.55rem;
 }
 
 .marginalia-session-summary__stats {

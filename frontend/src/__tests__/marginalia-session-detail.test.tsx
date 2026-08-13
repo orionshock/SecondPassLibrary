@@ -8,6 +8,7 @@ import { appRoutes } from "../app/router";
 import { marginaliaSessionBreadcrumbFallback } from "../features/marginalia/marginaliaBreadcrumbs";
 import {
   closeMarginaliaSessionFromProductUi,
+  deleteMarginaliaSessionFromProductUi,
   renameMarginaliaSession,
   updateMarginaliaSessionNote,
 } from "../features/marginalia/MarginaliaSessionDetailOrchestrator";
@@ -16,6 +17,9 @@ import { MarginaliaSessionTitleEditorComponent } from "../features/marginalia/co
 import {
   marginaliaAnnotationOrderingOptions,
   MarginaliaSessionDetailPageRegion,
+  MarginaliaSessionDeleteDialog,
+  confirmPermanentSessionDeletion,
+  permanentSessionDeletionWarning,
   orderMarginaliaAnnotations,
 } from "../features/marginalia/regions/MarginaliaSessionDetailPageRegion";
 import { idleMutationState } from "../shared/feedback/mutationState";
@@ -93,7 +97,9 @@ function renderDetail(overrides: Partial<Parameters<typeof MarginaliaSessionDeta
       onCancel={vi.fn()}
     />}
     closeState={idleMutationState}
+    deleteState={idleMutationState}
     onClose={vi.fn()}
+    onDelete={vi.fn()}
     onRetryAnnotations={vi.fn()}
     {...overrides}
   /></MemoryRouter>);
@@ -245,6 +251,10 @@ describe("My Marginalia Session Detail", () => {
     const onClose = vi.fn();
     const activeMarkup = renderDetail({ onClose });
     expect(activeMarkup).toContain("Close Session");
+    expect(activeMarkup.indexOf("Active")).toBeLessThan(activeMarkup.indexOf("Close Session"));
+    expect(activeMarkup.indexOf("Close Session")).toBeLessThan(activeMarkup.indexOf("Delete"));
+    expect(activeMarkup).toContain(">close</span>Close Session");
+    expect(activeMarkup).toContain(">delete</span>Delete");
 
     const closed = {
       ...detail,
@@ -262,8 +272,69 @@ describe("My Marginalia Session Detail", () => {
       />,
     });
     expect(closedMarkup).toContain("Closed");
+    expect(closedMarkup).toContain(">delete</span>Delete");
     expect(closedMarkup).not.toContain("Close Session");
     expect(closedMarkup).not.toContain("Edit session note");
+  });
+
+  it("requires the native final confirmation after the application confirmation", () => {
+    const confirm = vi.fn().mockReturnValue(false);
+    const remove = vi.fn();
+    expect(confirmPermanentSessionDeletion(remove, confirm)).toBe(false);
+    expect(confirm).toHaveBeenCalledOnce();
+    expect(confirm).toHaveBeenCalledWith(permanentSessionDeletionWarning);
+    expect(remove).not.toHaveBeenCalled();
+
+    confirm.mockReturnValue(true);
+    expect(confirmPermanentSessionDeletion(remove, confirm)).toBe(true);
+    expect(confirm).toHaveBeenCalledTimes(2);
+    expect(remove).toHaveBeenCalledOnce();
+  });
+
+  it("presents an accessible application confirmation with bounded Session and Book context", () => {
+    const markup = renderToStaticMarkup(<MarginaliaSessionDeleteDialog
+      sessionName={detail.session.name}
+      bookTitle={detail.book.title}
+      pending={false}
+      onCancel={vi.fn()}
+      onContinue={vi.fn()}
+    />);
+    expect(markup).toContain('role="dialog"');
+    expect(markup).toContain('aria-modal="true"');
+    expect(markup).toContain("Delete this reading session?");
+    expect(markup).toContain("Imported history");
+    expect(markup).toContain("Visible Book");
+    expect(markup).toContain("all annotations attached to it");
+    expect(markup).toContain("This cannot be undone.");
+    expect(markup).toContain("Cancel");
+    expect(markup).toContain("Continue to delete");
+  });
+
+  it("deletes exactly one Session and navigates only after SDK success", async () => {
+    const remove = vi.fn().mockResolvedValue(undefined);
+    const navigate = vi.fn();
+    await expect(deleteMarginaliaSessionFromProductUi(detail.session.id, navigate, remove)).resolves.toBeUndefined();
+    expect(remove).toHaveBeenCalledOnce();
+    expect(remove).toHaveBeenCalledWith(detail.session.id);
+    expect(navigate).toHaveBeenCalledOnce();
+    expect(navigate).toHaveBeenCalledWith("/marginalia", { replace: true });
+
+    const failure = new Error("Deletion failed");
+    remove.mockRejectedValueOnce(failure);
+    navigate.mockClear();
+    await expect(deleteMarginaliaSessionFromProductUi(detail.session.id, navigate, remove)).rejects.toBe(failure);
+    expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it("disables both lifecycle controls and shows bounded feedback while deletion is pending or failed", () => {
+    const pending = renderDetail({ deleteState: { pending: true } });
+    expect(pending).toContain("Deleting…");
+    expect(pending.match(/disabled=""/g)).toHaveLength(2);
+
+    const failed = renderDetail({ deleteState: { pending: false, error: new Error("Session deletion failed") } });
+    expect(failed).toContain("Session deletion failed");
+    expect(failed).toContain("Close Session");
+    expect(failed).toContain(">delete</span>Delete");
   });
 
   it("keeps annotation and close failures bounded without discarding loaded content", () => {
