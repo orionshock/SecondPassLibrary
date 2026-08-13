@@ -712,10 +712,26 @@
   margin: 0;
 }
 
+.marginalia-session-delete-dialog__export-note {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 .marginalia-session-delete-dialog__actions {
   display: flex;
   justify-content: flex-end;
   gap: 0.55rem;
+}
+
+.marginalia-session-delete-dialog__actions .button:first-child {
+  display: inline-flex;
+  align-items: center;
+  margin-right: auto;
+  gap: 0.3rem;
+}
+
+.marginalia-session-delete-dialog__actions .material-icon {
+  font-size: 1rem;
 }
 
 .marginalia-session-summary__stats {

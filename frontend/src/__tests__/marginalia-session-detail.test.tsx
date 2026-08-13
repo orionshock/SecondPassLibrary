@@ -9,6 +9,7 @@ import { marginaliaSessionBreadcrumbFallback } from "../features/marginalia/marg
 import {
   closeMarginaliaSessionFromProductUi,
   deleteMarginaliaSessionFromProductUi,
+  exportMarginaliaSessionFromProductUi,
   renameMarginaliaSession,
   updateMarginaliaSessionNote,
 } from "../features/marginalia/MarginaliaSessionDetailOrchestrator";
@@ -98,8 +99,10 @@ function renderDetail(overrides: Partial<Parameters<typeof MarginaliaSessionDeta
     />}
     closeState={idleMutationState}
     deleteState={idleMutationState}
+    exportState={idleMutationState}
     onClose={vi.fn()}
     onDelete={vi.fn()}
+    onExport={vi.fn()}
     onRetryAnnotations={vi.fn()}
     {...overrides}
   /></MemoryRouter>);
@@ -296,8 +299,10 @@ describe("My Marginalia Session Detail", () => {
       sessionName={detail.session.name}
       bookTitle={detail.book.title}
       pending={false}
+      exportState={idleMutationState}
       onCancel={vi.fn()}
       onContinue={vi.fn()}
+      onExport={vi.fn()}
     />);
     expect(markup).toContain('role="dialog"');
     expect(markup).toContain('aria-modal="true"');
@@ -308,6 +313,63 @@ describe("My Marginalia Session Detail", () => {
     expect(markup).toContain("This cannot be undone.");
     expect(markup).toContain("Cancel");
     expect(markup).toContain("Continue to delete");
+    expect(markup).toContain(">download</span>Export Session");
+  });
+
+  it("uses the selected-Session archive and existing browser download path for exactly the current Session", async () => {
+    const attachment = { blob: new Blob(["archive"]), filename: "20260812-second-pass-marginalia.json" };
+    const download = vi.fn().mockResolvedValue(attachment);
+    const save = vi.fn();
+
+    await expect(exportMarginaliaSessionFromProductUi(detail.session.id, download, save)).resolves.toBeUndefined();
+
+    expect(download).toHaveBeenCalledOnce();
+    expect(download).toHaveBeenCalledWith({
+      readingSessionIds: [detail.session.id],
+      includeEmptySessions: true,
+    });
+    expect(save).toHaveBeenCalledOnce();
+    expect(save).toHaveBeenCalledWith(attachment);
+  });
+
+  it("keeps export feedback independent and blocks overlapping export and deletion progression", () => {
+    const exporting = renderToStaticMarkup(<MarginaliaSessionDeleteDialog
+      sessionName={detail.session.name}
+      bookTitle={detail.book.title}
+      pending={false}
+      exportState={{ pending: true }}
+      onCancel={vi.fn()}
+      onContinue={vi.fn()}
+      onExport={vi.fn()}
+    />);
+    expect(exporting).toContain("Exporting…");
+    expect(exporting.match(/disabled=""/g)).toHaveLength(2);
+    expect(exporting).not.toMatch(/disabled=""[^>]*>Cancel/);
+
+    const failed = renderToStaticMarkup(<MarginaliaSessionDeleteDialog
+      sessionName={detail.session.name}
+      bookTitle={detail.book.title}
+      pending={false}
+      exportState={{ pending: false, error: new Error("Archive unavailable") }}
+      onCancel={vi.fn()}
+      onContinue={vi.fn()}
+      onExport={vi.fn()}
+    />);
+    expect(failed).toContain("Archive unavailable");
+    expect(failed).toContain("Export Session");
+    expect(failed).toContain("Cancel");
+    expect(failed).toContain("Continue to delete");
+
+    const deleting = renderToStaticMarkup(<MarginaliaSessionDeleteDialog
+      sessionName={detail.session.name}
+      bookTitle={detail.book.title}
+      pending
+      exportState={idleMutationState}
+      onCancel={vi.fn()}
+      onContinue={vi.fn()}
+      onExport={vi.fn()}
+    />);
+    expect(deleting).toMatch(/disabled=""[^>]*><span[^>]*>download<\/span>Export Session/);
   });
 
   it("deletes exactly one Session and navigates only after SDK success", async () => {

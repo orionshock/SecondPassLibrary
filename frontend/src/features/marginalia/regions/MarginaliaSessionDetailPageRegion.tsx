@@ -46,8 +46,10 @@ export function MarginaliaSessionDetailPageRegion({
   sessionNote,
   closeState,
   deleteState,
+  exportState,
   onClose,
   onDelete,
+  onExport,
   onRetryAnnotations,
 }: {
   detail: MarginaliaSessionEnvelope;
@@ -55,23 +57,27 @@ export function MarginaliaSessionDetailPageRegion({
   sessionNote: ReactNode;
   closeState: MutationState;
   deleteState: MutationState;
+  exportState: MutationState;
   onClose: () => void;
   onDelete: () => void;
+  onExport: () => void;
   onRetryAnnotations: () => void;
 }) {
   return <div className="marginalia-session-detail">
-    <SessionSummaryRegion detail={detail} sessionNote={sessionNote} closeState={closeState} deleteState={deleteState} onClose={onClose} onDelete={onDelete} />
+    <SessionSummaryRegion detail={detail} sessionNote={sessionNote} closeState={closeState} deleteState={deleteState} exportState={exportState} onClose={onClose} onDelete={onDelete} onExport={onExport} />
     <AnnotationsRegion state={annotations} onRetry={onRetryAnnotations} />
   </div>;
 }
 
-function SessionSummaryRegion({ detail, sessionNote, closeState, deleteState, onClose, onDelete }: {
+function SessionSummaryRegion({ detail, sessionNote, closeState, deleteState, exportState, onClose, onDelete, onExport }: {
   detail: MarginaliaSessionEnvelope;
   sessionNote: ReactNode;
   closeState: MutationState;
   deleteState: MutationState;
+  exportState: MutationState;
   onClose: () => void;
   onDelete: () => void;
+  onExport: () => void;
 }) {
   const [deleteConfirmationOpen, setDeleteConfirmationOpen] = useState(false);
   const deleteButton = useRef<HTMLButtonElement>(null);
@@ -88,7 +94,7 @@ function SessionSummaryRegion({ detail, sessionNote, closeState, deleteState, on
   }
 
   function continueDelete() {
-    if (lifecyclePending) return;
+    if (lifecyclePending || exportState.pending) return;
     setDeleteConfirmationOpen(false);
     const confirmed = confirmPermanentSessionDeletion(onDelete);
     if (!confirmed) {
@@ -135,18 +141,22 @@ function SessionSummaryRegion({ detail, sessionNote, closeState, deleteState, on
       sessionName={session.name}
       bookTitle={book.title || "Untitled Book"}
       pending={lifecyclePending}
+      exportState={exportState}
       onCancel={cancelDeleteConfirmation}
       onContinue={continueDelete}
+      onExport={onExport}
     /> : null}
   </Surface>;
 }
 
-export function MarginaliaSessionDeleteDialog({ sessionName, bookTitle, pending, onCancel, onContinue }: {
+export function MarginaliaSessionDeleteDialog({ sessionName, bookTitle, pending, exportState, onCancel, onContinue, onExport }: {
   sessionName: string;
   bookTitle: string;
   pending: boolean;
+  exportState: MutationState;
   onCancel: () => void;
   onContinue: () => void;
+  onExport: () => void;
 }) {
   const cancelButton = useRef<HTMLButtonElement>(null);
 
@@ -171,10 +181,13 @@ export function MarginaliaSessionDeleteDialog({ sessionName, bookTitle, pending,
         <p>Book: <strong>{bookTitle}</strong></p>
         <p>This permanently deletes this Session and all annotations attached to it.</p>
         <p>This cannot be undone.</p>
+        <p className="marginalia-session-delete-dialog__export-note">You may export this Session before deleting it.</p>
+        {exportState.error ? <span className="field-error" role="alert">{exportState.error.message}</span> : null}
       </div>
       <div className="marginalia-session-delete-dialog__actions">
+        <Button type="button" tone="secondary" disabled={pending || exportState.pending} onClick={onExport}><MaterialIcon name="download" />{exportState.pending ? "Exporting…" : "Export Session"}</Button>
         <Button ref={cancelButton} type="button" tone="secondary" disabled={pending} onClick={onCancel}>Cancel</Button>
-        <Button type="button" tone="danger" disabled={pending} onClick={onContinue}>Continue to delete</Button>
+        <Button type="button" tone="danger" disabled={pending || exportState.pending} onClick={onContinue}>Continue to delete</Button>
       </div>
     </div>
   </div>;

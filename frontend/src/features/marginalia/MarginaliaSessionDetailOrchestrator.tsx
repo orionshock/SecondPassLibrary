@@ -1,6 +1,7 @@
 import {
   closeMarginaliaSession,
   deleteMarginaliaSession,
+  downloadSelectedMarginaliaExport,
   getMarginaliaSession,
   listMarginaliaSessionAnnotations,
   updateMarginaliaSession,
@@ -11,6 +12,7 @@ import { useNavigate, useParams } from "react-router";
 
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { Button, ErrorPanel } from "../../components/ui";
+import { saveDownloadedFile, type BrowserDownload } from "../../shared/browser/saveDownloadedFile";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
 import { useAutoDismissMutationMessage } from "../../shared/feedback/useAutoDismissMutationMessage";
 import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
@@ -62,6 +64,18 @@ export async function deleteMarginaliaSessionFromProductUi(
   navigateToMarginalia("/marginalia", { replace: true });
 }
 
+export async function exportMarginaliaSessionFromProductUi(
+  sessionId: string,
+  download: typeof downloadSelectedMarginaliaExport = downloadSelectedMarginaliaExport,
+  save: (attachment: BrowserDownload) => void = saveDownloadedFile,
+): Promise<void> {
+  const attachment = await download({
+    readingSessionIds: [sessionId],
+    includeEmptySessions: true,
+  });
+  save(attachment);
+}
+
 export function MarginaliaSessionDetailOrchestrator() {
   const { sessionId = "" } = useParams();
   const navigate = useNavigate();
@@ -77,7 +91,9 @@ export function MarginaliaSessionDetailOrchestrator() {
   const [noteState, setNoteState] = useState<MutationState>(idleMutationState);
   const [closeState, setCloseState] = useState<MutationState>(idleMutationState);
   const [deleteState, setDeleteState] = useState<MutationState>(idleMutationState);
+  const [exportState, setExportState] = useState<MutationState>(idleMutationState);
   const deletePending = useRef(false);
+  const exportPending = useRef(false);
   const loadedSessionId = sessionLoad.status === "ready" ? sessionLoad.detail.session.id : undefined;
   const breadcrumbFallback = useMemo(
     () => marginaliaSessionBreadcrumbFallback(sessionLoad.status === "ready" ? sessionLoad.detail.session : undefined),
@@ -98,7 +114,9 @@ export function MarginaliaSessionDetailOrchestrator() {
     setNoteState(idleMutationState);
     setCloseState(idleMutationState);
     setDeleteState(idleMutationState);
+    setExportState(idleMutationState);
     deletePending.current = false;
+    exportPending.current = false;
     setSessionLoad({ status: "loading" });
     setAnnotationsLoad({ loading: true });
     getMarginaliaSession(sessionId).then((detail) => {
@@ -192,7 +210,7 @@ export function MarginaliaSessionDetailOrchestrator() {
   }
 
   async function deleteSession() {
-    if (sessionLoad.status !== "ready" || closeState.pending || deletePending.current) return;
+    if (sessionLoad.status !== "ready" || closeState.pending || deletePending.current || exportPending.current) return;
     deletePending.current = true;
     setDeleteState({ pending: true });
     try {
@@ -204,6 +222,20 @@ export function MarginaliaSessionDetailOrchestrator() {
     } catch (error: unknown) {
       deletePending.current = false;
       setDeleteState({ pending: false, error: normalizeMutationError(error) });
+    }
+  }
+
+  async function exportSession() {
+    if (sessionLoad.status !== "ready" || deletePending.current || exportPending.current) return;
+    exportPending.current = true;
+    setExportState({ pending: true });
+    try {
+      await exportMarginaliaSessionFromProductUi(sessionLoad.detail.session.id);
+      exportPending.current = false;
+      setExportState(idleMutationState);
+    } catch (error: unknown) {
+      exportPending.current = false;
+      setExportState({ pending: false, error: normalizeMutationError(error) });
     }
   }
 
@@ -246,8 +278,10 @@ export function MarginaliaSessionDetailOrchestrator() {
       sessionNote={noteEditor}
       closeState={closeState}
       deleteState={deleteState}
+      exportState={exportState}
       onClose={() => void closeSession()}
       onDelete={() => void deleteSession()}
+      onExport={() => void exportSession()}
       onRetryAnnotations={() => setAnnotationsRetry((value) => value + 1)}
     />
   </ProductPageShellComponent>;
