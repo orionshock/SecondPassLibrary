@@ -37,6 +37,7 @@ from .serializers import (
 )
 from .services import (
     ClosedSessionMutationError,
+    delete_owned_session,
     replace_progress,
     update_session_metadata,
 )
@@ -160,6 +161,13 @@ class MarginaliaSessionDetailView(MarginaliaReadMixin, APIView):
             session_detail_envelope(request=request, session_id=session.pk),
             status=status.HTTP_200_OK,
         )
+
+    def delete(self, request, session_id):
+        try:
+            delete_owned_session(user=request.user, session_id=session_id)
+        except ReadingSession.DoesNotExist as exc:
+            raise NotFound from exc
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class MarginaliaSessionProgressView(MarginaliaReadMixin, APIView):

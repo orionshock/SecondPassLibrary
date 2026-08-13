@@ -10,7 +10,13 @@ from rest_framework.test import APIClient, APITestCase
 
 from accounts.client_api import generate_bearer_token, hash_client_secret
 from accounts.models import UserClientSession
-from library.models import Book
+from library.models import (
+    Book,
+    BookGroupAssignment,
+    LibraryGroup,
+    LibraryGroupMembership,
+)
+from library.queries import visible_books_for_user
 from marginalia.sessions.serializers import MarginaliaSessionDetailEnvelopeSerializer
 from marginalia.models import Annotation, ReadingSession
 from marginalia.books.queries import marginalia_books_for_user
@@ -208,8 +214,79 @@ class MarginaliaSessionDetailAPITests(APITestCase):
         self.assertEqual(patched.status_code, status.HTTP_200_OK)
         self.assertEqual(patched.json()["session"]["notes"], "Bearer update")
 
-    def test_delete_permission_allows_browser_session_and_denies_bearer(self):
-        browser = self.client.delete(self.url(self.active))
+    def test_owner_deletes_active_session_with_isolated_cascade(self):
+        active_id = self.active.pk
+        active_annotation = Annotation.objects.create(
+            session=self.active,
+            client_id="delete-active",
+            kind=Annotation.KIND_BOOKMARK,
+            cfi="epubcfi(/6/2)",
+        )
+        closed_annotation = Annotation.objects.create(
+            session=self.closed,
+            client_id="keep-closed",
+            kind=Annotation.KIND_BOOKMARK,
+            cfi="epubcfi(/6/4)",
+        )
+
+        response = self.client.delete(self.url(self.active))
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.content, b"")
+        self.assertFalse(ReadingSession.objects.filter(pk=active_id).exists())
+        self.assertFalse(Annotation.objects.filter(pk=active_annotation.pk).exists())
+        self.assertTrue(Book.objects.filter(pk=self.book.pk).exists())
+        self.assertTrue(ReadingSession.objects.filter(pk=self.closed.pk).exists())
+        self.assertTrue(Annotation.objects.filter(pk=closed_annotation.pk).exists())
+
+    def test_owner_deletes_closed_session(self):
+        closed_id = self.closed.pk
+
+        response = self.client.delete(self.url(self.closed))
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(ReadingSession.objects.filter(pk=closed_id).exists())
+        self.assertTrue(ReadingSession.objects.filter(pk=self.active.pk).exists())
+
+    def test_owner_deletes_after_losing_book_visibility(self):
+        group = LibraryGroup.objects.create(name="Temporary access")
+        membership = LibraryGroupMembership.objects.create(user=self.user, group=group)
+        BookGroupAssignment.objects.create(book=self.book, group=group)
+        self.assertTrue(
+            visible_books_for_user(self.user, cached=False)
+            .filter(pk=self.book.pk)
+            .exists()
+        )
+        membership.delete()
+        self.assertFalse(
+            visible_books_for_user(self.user, cached=False)
+            .filter(pk=self.book.pk)
+            .exists()
+        )
+
+        response = self.client.delete(self.url(self.active))
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(ReadingSession.objects.filter(pk=self.active.pk).exists())
+
+    def test_delete_foreign_missing_and_repeated_ids_share_not_found_boundary(self):
+        foreign = self.client.delete(self.url(self.foreign))
+        missing = self.client.delete(
+            "/api/v1/marginalia/sessions/"
+            "00000000-0000-0000-0000-000000000000/"
+        )
+        first = self.client.delete(self.url(self.closed))
+        repeated = self.client.delete(self.url(self.closed))
+
+        self.assertEqual(first.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(foreign.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(missing.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(repeated.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(foreign.json(), missing.json())
+        self.assertEqual(missing.json(), repeated.json())
+        self.assertTrue(ReadingSession.objects.filter(pk=self.foreign.pk).exists())
+
+    def test_bearer_and_anonymous_delete_are_denied_without_mutation(self):
         token = generate_bearer_token()
         UserClientSession.objects.create(
             user=self.user,
@@ -221,13 +298,14 @@ class MarginaliaSessionDetailAPITests(APITestCase):
             self.url(self.active),
             HTTP_AUTHORIZATION=f"Bearer {token}",
         )
+        anonymous = APIClient().delete(self.url(self.active))
 
-        self.assertEqual(browser.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
         self.assertEqual(bearer.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(
             bearer.json(),
             {"detail": "Client bearer credentials cannot delete Reading Sessions."},
         )
+        self.assertEqual(anonymous.status_code, status.HTTP_403_FORBIDDEN)
         self.assertTrue(ReadingSession.objects.filter(pk=self.active.pk).exists())
 
     def test_get_is_read_only(self):
