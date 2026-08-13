@@ -87,6 +87,10 @@ credentials. The stable authority boundary is:
 | Shelves | Read visible Shelves; mutate only the token user's personal Shelves |
 | Library/Group/user management, imports, exports, passwords, browser sessions, Product UI, Admin | Denied; Django session required |
 
+Bearer capabilities are an explicit allow-list. Permanent Reading Session
+deletion is not an allowed client operation and requires browser-session
+authentication.
+
 An account's broad role does not expand a bearer credential into management
 authority. Library reads and EPUB downloads use the same canonical visibility
 boundary as browser sessions, and download rechecks uncached authority. Advanced

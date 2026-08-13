@@ -9,6 +9,7 @@ from rest_framework.views import APIView
 
 from marginalia.api import (
     MarginaliaReadMixin,
+    SessionAuthenticationRequiredForSessionDelete,
     book_access_required_response,
     session_closed_response,
 )
@@ -116,6 +117,11 @@ class MarginaliaRecentSessionListView(MarginaliaReadMixin, APIView):
 
 
 class MarginaliaSessionDetailView(MarginaliaReadMixin, APIView):
+    permission_classes = [
+        *MarginaliaReadMixin.permission_classes,
+        SessionAuthenticationRequiredForSessionDelete,
+    ]
+
     def get_session(self):
         return get_object_or_404(
             marginalia_session_for_user(

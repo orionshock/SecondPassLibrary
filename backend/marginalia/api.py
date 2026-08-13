@@ -1,5 +1,5 @@
 from rest_framework.authentication import SessionAuthentication
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework import status
 
 from accounts.authentication import ClientBearerAuthentication
@@ -9,6 +9,17 @@ from core.errors import ErrorCode, api_error_response
 class MarginaliaReadMixin:
     authentication_classes = [SessionAuthentication, ClientBearerAuthentication]
     permission_classes = [IsAuthenticated]
+
+
+class SessionAuthenticationRequiredForSessionDelete(BasePermission):
+    """Keep Reading Session deletion outside the client bearer allow-list."""
+
+    message = "Client bearer credentials cannot delete Reading Sessions."
+
+    def has_permission(self, request, view) -> bool:
+        if request.method != "DELETE":
+            return True
+        return isinstance(request.successful_authenticator, SessionAuthentication)
 
 
 def session_closed_response():

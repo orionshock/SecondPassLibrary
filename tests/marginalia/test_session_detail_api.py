@@ -208,6 +208,28 @@ class MarginaliaSessionDetailAPITests(APITestCase):
         self.assertEqual(patched.status_code, status.HTTP_200_OK)
         self.assertEqual(patched.json()["session"]["notes"], "Bearer update")
 
+    def test_delete_permission_allows_browser_session_and_denies_bearer(self):
+        browser = self.client.delete(self.url(self.active))
+        token = generate_bearer_token()
+        UserClientSession.objects.create(
+            user=self.user,
+            name="Reader",
+            client_type="reader",
+            token_hash=hash_client_secret(token),
+        )
+        bearer = APIClient().delete(
+            self.url(self.active),
+            HTTP_AUTHORIZATION=f"Bearer {token}",
+        )
+
+        self.assertEqual(browser.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+        self.assertEqual(bearer.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(
+            bearer.json(),
+            {"detail": "Client bearer credentials cannot delete Reading Sessions."},
+        )
+        self.assertTrue(ReadingSession.objects.filter(pk=self.active.pk).exists())
+
     def test_get_is_read_only(self):
         before = self.active.updated_at
 
