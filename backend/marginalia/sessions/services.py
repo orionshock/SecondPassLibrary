@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from collections.abc import Mapping
 from datetime import datetime
 
@@ -7,12 +8,16 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 
+from core.operational_logging import info_on_commit, user_uuid
 from library.models import Book
 from library.queries import visible_books_for_user
 from marginalia.exceptions import BookAccessRequiredError, SessionClosedError
-from marginalia.models import ReadingSession
+from marginalia.models import Annotation, ReadingSession
 
 from .queries import active_session_for_user_book
+
+
+logger = logging.getLogger(__name__)
 
 
 class ClosedSessionMutationError(Exception):
@@ -39,6 +44,28 @@ def _locked_accessible_book(*, user, book_id) -> Book:
     book = Book.objects.select_for_update().get(pk=book_id)
     _require_book_access(user=user, book_id=book.pk)
     return book
+
+
+@transaction.atomic
+def delete_owned_session(*, user, session_id) -> None:
+    session = _locked_owned_session(user=user, session_id=session_id)
+    deleted_session_id = str(session.pk)
+    book_id = str(session.book_id)
+    previous_status = session.status
+    owner_id = user_uuid(user)
+
+    _, deleted_by_model = session.delete()
+    annotation_count = deleted_by_model.get(Annotation._meta.label, 0)
+    info_on_commit(
+        logger,
+        "Marginalia Reading Session deleted: session=%s owner=%s book=%s "
+        "previous_status=%s annotation_count=%d",
+        deleted_session_id,
+        owner_id,
+        book_id,
+        previous_status,
+        annotation_count,
+    )
 
 
 @transaction.atomic
