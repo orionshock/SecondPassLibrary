@@ -30,9 +30,9 @@ The Product UI has three practical layers:
 2. App and feature Orchestrators own SDK calls, route/query state, workflow
    state, server-aware error interpretation, and assembly of page sections.
    Runtime SDK operations and SDK error classes belong at this boundary.
-3. Page Regions and Components render plain application or presentation models
-   and emit user intent through callbacks. They do not know endpoints, perform
-   requests, inspect wire fields, or interpret runtime SDK error classes.
+3. Page Regions and other presentational roles render plain application or
+   presentation models and emit user intent through callbacks. They do not know
+   endpoints, perform requests, inspect wire fields, or interpret runtime SDK error classes.
    Type-only imports of stable application-facing SDK models are acceptable;
    runtime SDK imports are not.
 
@@ -56,19 +56,31 @@ The durable source layout is:
 - `frontend/src/app/`: bootstrap, global frame, router, route modules, and
   application-wide navigation/error boundaries;
 - `frontend/src/features/`: feature Orchestrators plus their local Page Regions,
-  Components, presentation helpers, query state, and styles;
+  concrete presentation roles, behavior/state modules, and styles, grouped by
+  workflow when a feature owns multiple meaningful screens;
 - `frontend/src/components/`: reusable server-blind UI primitives;
 - `frontend/src/shared/`: cross-feature server-blind behavior and layout;
 - `frontend/src/domain/`: application-facing domain presentation helpers;
 - `frontend/packages/spl-api/`: the first-party transport and adaptation package;
-- `frontend/src/__tests__/`: Product UI tests;
-- `frontend/packages/spl-api/src/__tests__/`: SDK contract tests.
+- `frontend/src/__tests__/`: current dedicated Product UI test root;
+- `frontend/packages/spl-api/src/__tests__/`: current SDK contract test root;
+- `frontend/tests/`: approved normalization target for all frontend tests,
+  mirroring `src/` and SDK domain ownership while remaining physically separate
+  from production source.
 
 Feature route controllers use the `*Orchestrator` suffix. Major local page
-sections use `*PageRegion`; reusable presentational pieces use `*Component`
-(`*SubComponent` only for a clearly subordinate piece). Prefer descriptive
-responsibility names over extra directory depth. A feature may contain several
-focused files without creating a folder for every route or operation.
+sections use `*PageRegion`. Other React files use PascalCase names matching
+their primary export and prefer concrete roles such as `Dialog`, `Panel`,
+`Toolbar`, `Row`, `Item`, `Card`, `Editor`, `Frame`, `Button`, `Icon`, `Layout`,
+`Shell`, or `Guard`; use `Component` only when no clearer role exists. Preserve
+this project-native vocabulary rather than introducing dotted filenames. A
+feature with multiple meaningful workflows should use workflow folders; do not
+create a directory for every trivial operation.
+
+Tests never live inside runtime feature directories. During normalization,
+current tests will move only after Vitest and the test TypeScript project are
+prepared for `frontend/tests/`; until then the two current dedicated test roots
+remain authoritative.
 
 Keep feature-specific drafts, messages, and policy presentation with their
 feature. Promote code only when it has a real cross-feature owner. Frontend
@@ -85,7 +97,7 @@ route / user intent
   -> Django API
   -> SDK validation and wire adaptation
   -> Orchestrator presentation state
-  -> Page Region / Component
+  -> Page Region / concrete presentation role
 ```
 
 Mutations return through the same boundary. Orchestrators convert successful
@@ -191,7 +203,7 @@ component composition, prose, styling trivia, or private SDK implementation.
 
 ## Common prohibited drift
 
-- A Page Region or Component importing SDK runtime operations or error classes.
+- A Page Region or other presentational file importing SDK runtime operations or error classes.
 - A component issuing `fetch`, constructing raw API URLs, or handling CSRF.
 - React reimplementing authorization, visibility, or sparse wire semantics.
 - Snake-case response or field-error names escaping the SDK.

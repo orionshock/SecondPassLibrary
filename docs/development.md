@@ -355,6 +355,12 @@ node frontend/scripts/check-boundaries.mjs
 npm.cmd --prefix frontend run build
 ```
 
+These commands use the current dedicated test roots under `frontend/src/__tests__/`
+and `frontend/packages/spl-api/src/__tests__/`. The organization normalization
+target is a physically separate, production-mirroring `frontend/tests/` tree.
+Do not move tests until a dedicated tooling slice updates Vitest discovery and
+the test TypeScript project; update these command examples in that same slice.
+
 Use `npm` instead of `npm.cmd` on shells where the executable shim is not
 blocked by PowerShell execution policy.
 
