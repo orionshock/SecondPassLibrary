@@ -357,7 +357,8 @@ npm.cmd --prefix frontend run build
 
 These commands use the current dedicated test roots under `frontend/src/__tests__/`
 and `frontend/packages/spl-api/src/__tests__/`. The organization normalization
-target is a physically separate, production-mirroring `frontend/tests/` tree.
+target is a physically separate `frontend/tests/` tree mirroring meaningful
+production ownership without reproducing path layers that add no test value.
 Do not move tests until a dedicated tooling slice updates Vitest discovery and
 the test TypeScript project; update these command examples in that same slice.
 

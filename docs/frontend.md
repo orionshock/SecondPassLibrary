@@ -56,8 +56,8 @@ The durable source layout is:
 - `frontend/src/app/`: bootstrap, global frame, router, route modules, and
   application-wide navigation/error boundaries;
 - `frontend/src/features/`: feature Orchestrators plus their local Page Regions,
-  concrete presentation roles, behavior/state modules, and styles, grouped by
-  workflow when a feature owns multiple meaningful screens;
+  concrete presentation roles, behavior/state modules, and styles; use workflow
+  folders only when they form a useful ownership/dependency cluster;
 - `frontend/src/components/`: reusable server-blind UI primitives;
 - `frontend/src/shared/`: cross-feature server-blind behavior and layout;
 - `frontend/src/domain/`: application-facing domain presentation helpers;
@@ -65,8 +65,8 @@ The durable source layout is:
 - `frontend/src/__tests__/`: current dedicated Product UI test root;
 - `frontend/packages/spl-api/src/__tests__/`: current SDK contract test root;
 - `frontend/tests/`: approved normalization target for all frontend tests,
-  mirroring `src/` and SDK domain ownership while remaining physically separate
-  from production source.
+  mirroring meaningful `src/` and SDK ownership while remaining physically
+  separate from production source.
 
 Feature route controllers use the `*Orchestrator` suffix. Major local page
 sections use `*PageRegion`. Other React files use PascalCase names matching
@@ -74,8 +74,8 @@ their primary export and prefer concrete roles such as `Dialog`, `Panel`,
 `Toolbar`, `Row`, `Item`, `Card`, `Editor`, `Frame`, `Button`, `Icon`, `Layout`,
 `Shell`, or `Guard`; use `Component` only when no clearer role exists. Preserve
 this project-native vocabulary rather than introducing dotted filenames. A
-feature with multiple meaningful workflows should use workflow folders; do not
-create a directory for every trivial operation.
+workflow folder must materially improve ownership, dependency direction,
+navigation, or future placement; route variants alone do not justify one.
 
 Tests never live inside runtime feature directories. During normalization,
 current tests will move only after Vitest and the test TypeScript project are
