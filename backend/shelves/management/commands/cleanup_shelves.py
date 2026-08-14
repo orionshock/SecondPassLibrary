@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from shelves.cleanup import (
+from shelves.unavailable_item_cleanup import (
     cleanup_unavailable_user_shelf_items,
     plan_unavailable_user_shelf_items,
 )

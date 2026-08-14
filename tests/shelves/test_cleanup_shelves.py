@@ -4,7 +4,7 @@ from django.core.management import call_command
 from django.test import TestCase
 
 from library.models import LibraryGroupMembership
-from shelves.cleanup import cleanup_unavailable_user_shelf_items
+from shelves.unavailable_item_cleanup import cleanup_unavailable_user_shelf_items
 from shelves.models import Shelf, ShelfItem
 from shelves.services import create_shelf
 from tests.shelves.service_helpers import ShelfServiceFixtureMixin

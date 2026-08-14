@@ -9,7 +9,7 @@ from core.operational_logging import info_on_commit, safe_log_label, user_log_la
 from library.groups.public_group import get_public_group
 from library.models import Book, BookGroupAssignment, LibraryGroup
 from library.queries import invalidate_visible_books_cache_on_commit
-from shelves.library_hooks import remove_book_from_group_owned_shelves
+from shelves.group_book_removal import remove_book_from_group_owned_shelves
 
 
 logger = logging.getLogger(__name__)

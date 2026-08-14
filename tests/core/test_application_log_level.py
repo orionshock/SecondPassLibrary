@@ -116,7 +116,10 @@ class ApplicationLogLevelAdminTests(TestCase):
         self.model_admin.save_model(self.request, obj, form, change=True)
 
         self.assertEqual(server_settings.get_application_log_level(), "ERROR")
-        self.assertEqual(logging.getLogger("shelves.cleanup").getEffectiveLevel(), logging.ERROR)
+        self.assertEqual(
+            logging.getLogger("shelves.unavailable_item_cleanup").getEffectiveLevel(),
+            logging.ERROR,
+        )
 
     def test_admin_rejects_values_outside_the_four_choices(self):
         form_class = self.model_admin.get_form(self.request, self.setting)
