@@ -2,7 +2,7 @@ import type { LibrarySeries, Page } from "@second-pass/spl-api";
 
 import { Button, ErrorPanel } from "../../../components/UiPrimitives";
 import { Pager } from "../../../shared/pagination/Pager";
-import { SeriesRow } from "../components/SeriesRow";
+import { SeriesRow } from "./SeriesRow";
 
 export function SeriesListPageRegion({ page, pageNumber, pageSize, loading, error, searching, tagged, libraryPath, contextPathFor, onPageChange, onPageSizeChange, onRetry }: {
   page?: Page<LibrarySeries>;

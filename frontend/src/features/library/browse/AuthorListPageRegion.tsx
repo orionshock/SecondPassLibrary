@@ -2,7 +2,7 @@ import type { LibraryAuthor, Page } from "@second-pass/spl-api";
 
 import { Button, ErrorPanel } from "../../../components/UiPrimitives";
 import { Pager } from "../../../shared/pagination/Pager";
-import { AuthorRow } from "../components/AuthorRow";
+import { AuthorRow } from "./AuthorRow";
 
 export function AuthorListPageRegion({ page, pageNumber, pageSize, loading, error, searching, tagged, libraryPath, contextPathFor, onPageChange, onPageSizeChange, onRetry }: {
   page?: Page<LibraryAuthor>;

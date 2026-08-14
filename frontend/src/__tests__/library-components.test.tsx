@@ -5,23 +5,23 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { CatalogTag, CompactBook, LibraryAuthor, LibrarySeries, Page, ShelfSummary } from "@second-pass/spl-api";
 import { BookCoverEditor } from "../features/library/bookEdit/BookCoverEditor";
-import { AuthorRow } from "../features/library/components/AuthorRow";
+import { AuthorRow } from "../features/library/browse/AuthorRow";
 import { CompactBookRow } from "../shared/books/CompactBookRow";
-import { SeriesRow } from "../features/library/components/SeriesRow";
+import { SeriesRow } from "../features/library/browse/SeriesRow";
 import { readSelectedLibraryContextDisplay } from "../features/library/libraryPresentation";
 import { libraryStateFromSearchParams } from "../features/library/libraryQuery";
-import { AuthorListPageRegion } from "../features/library/regions/AuthorListPageRegion";
-import { BookListPageRegion } from "../features/library/regions/BookListPageRegion";
-import { CatalogBrowserPageRegion, retainTallestCatalogResultsHeight } from "../features/library/regions/CatalogBrowserPageRegion";
+import { AuthorListPageRegion } from "../features/library/browse/AuthorListPageRegion";
+import { BookListPageRegion } from "../features/library/browse/BookListPageRegion";
+import { CatalogBrowserPageRegion, retainTallestCatalogResultsHeight } from "../features/library/browse/CatalogBrowserPageRegion";
 import { BookEditAuthorsSeriesPageRegion } from "../features/library/bookEdit/BookEditAuthorsSeriesPageRegion";
 import { BookEditGroupsPageRegion } from "../features/library/bookEdit/BookEditGroupsPageRegion";
 import { BookEditGroupShelvesPageRegion } from "../features/library/bookEdit/BookEditGroupShelvesPageRegion";
 import { BookEditTabsPageRegion } from "../features/library/bookEdit/BookEditTabsPageRegion";
-import { CatalogTagRailPageRegion, catalogTagSelection } from "../features/library/regions/CatalogTagRailPageRegion";
-import { LibraryAxesPageRegion } from "../features/library/regions/LibraryAxesPageRegion";
-import { LibraryAxisControlsPageRegion } from "../features/library/regions/LibraryAxisControlsPageRegion";
-import { SeriesListPageRegion } from "../features/library/regions/SeriesListPageRegion";
-import { SelectedLibraryContextPageRegion } from "../features/library/regions/SelectedLibraryContextPageRegion";
+import { CatalogTagRailPageRegion, catalogTagSelection } from "../features/library/browse/CatalogTagRailPageRegion";
+import { LibraryAxesPageRegion } from "../features/library/browse/LibraryAxesPageRegion";
+import { LibraryAxisControlsPageRegion } from "../features/library/browse/LibraryAxisControlsPageRegion";
+import { SeriesListPageRegion } from "../features/library/browse/SeriesListPageRegion";
+import { SelectedLibraryContextPageRegion } from "../features/library/browse/SelectedLibraryContextPageRegion";
 
 const book: CompactBook = {
   id: "book/id", title: "Visible Title", sortTitle: "Visible Title", subtitle: "HIDDEN SUBTITLE",

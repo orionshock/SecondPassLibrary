@@ -16,11 +16,11 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useOutletContext, useSearchParams } from "react-router";
 
-import type { AppOutletContext } from "../../app/layout/AppOrchestrator";
-import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { loadPageWithRecovery } from "../../app/routing/pageRecovery";
-import { normalizeMutationError } from "../../shared/feedback/mutationState";
-import { ProductPageShell } from "../../shared/layout/ProductPageShell";
+import type { AppOutletContext } from "../../../app/layout/AppOrchestrator";
+import { usePageBreadcrumbs } from "../../../app/navigation/usePageBreadcrumbs";
+import { loadPageWithRecovery } from "../../../app/routing/pageRecovery";
+import { normalizeMutationError } from "../../../shared/feedback/mutationState";
+import { ProductPageShell } from "../../../shared/layout/ProductPageShell";
 import {
   libraryAxisBasePath,
   libraryAxisSdkQuery,
@@ -33,17 +33,17 @@ import {
   withLibrarySelectedContext,
   type LibraryUrlState,
   type LibraryView,
-} from "./libraryQuery";
-import { readSelectedLibraryContextDisplay } from "./libraryPresentation";
-import { AuthorListPageRegion } from "./regions/AuthorListPageRegion";
-import { BookListPageRegion } from "./regions/BookListPageRegion";
-import { CatalogBrowserPageRegion } from "./regions/CatalogBrowserPageRegion";
-import { CatalogTagRailPageRegion } from "./regions/CatalogTagRailPageRegion";
-import { LibraryAxesPageRegion } from "./regions/LibraryAxesPageRegion";
-import { LibraryAxisControlsPageRegion } from "./regions/LibraryAxisControlsPageRegion";
-import { SeriesListPageRegion } from "./regions/SeriesListPageRegion";
-import { SelectedLibraryContextPageRegion } from "./regions/SelectedLibraryContextPageRegion";
+} from "../libraryQuery";
+import { readSelectedLibraryContextDisplay } from "../libraryPresentation";
+import { AuthorListPageRegion } from "./AuthorListPageRegion";
+import { BookListPageRegion } from "./BookListPageRegion";
+import { CatalogBrowserPageRegion } from "./CatalogBrowserPageRegion";
+import { CatalogTagRailPageRegion } from "./CatalogTagRailPageRegion";
 import "./Library.css";
+import { LibraryAxesPageRegion } from "./LibraryAxesPageRegion";
+import { LibraryAxisControlsPageRegion } from "./LibraryAxisControlsPageRegion";
+import { SelectedLibraryContextPageRegion } from "./SelectedLibraryContextPageRegion";
+import { SeriesListPageRegion } from "./SeriesListPageRegion";
 
 interface LoadState<Item> {
   page?: Page<Item>;

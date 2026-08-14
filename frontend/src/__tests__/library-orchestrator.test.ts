@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ApiError, type CompactBook, type LibraryAxisQuery, type LibraryBooksQuery, type Page } from "@second-pass/spl-api";
 import { appRoutes, sectionRoutes } from "../app/router";
 import { loadPageWithRecovery } from "../app/routing/pageRecovery";
-import { catalogLayoutStabilityKey, libraryBreadcrumbFallback, loadSelectedLibraryContextDetails, unknownCatalogTag } from "../features/library/LibraryOrchestrator";
+import { catalogLayoutStabilityKey, libraryBreadcrumbFallback, loadSelectedLibraryContextDetails, unknownCatalogTag } from "../features/library/browse/LibraryOrchestrator";
 import type { LibraryUrlState } from "../features/library/libraryQuery";
 
 const page = (count: number): Page<CompactBook> => ({ items: [], count, next: null, previous: null });

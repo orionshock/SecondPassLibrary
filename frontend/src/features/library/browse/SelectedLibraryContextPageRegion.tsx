@@ -1,8 +1,8 @@
 import { Link } from "react-router";
 import { Button, ErrorPanel } from "../../../components/UiPrimitives";
 import { libraryEntityBreadcrumbs, libraryEntityEditPath, libraryEntityNavigationState } from "../authorSeriesLifecycle";
-import { ClampedLibraryText } from "../components/ClampedLibraryText";
 import type { LibrarySelectedContextKind } from "../libraryQuery";
+import { ClampedLibraryText } from "./ClampedLibraryText";
 
 export function SelectedLibraryContextPageRegion({ kind, entityId, name, blurb, bookCount, loading = false, unavailable = false, error, canEdit = false, returnTo, onRetry }: {
   kind: LibrarySelectedContextKind;
