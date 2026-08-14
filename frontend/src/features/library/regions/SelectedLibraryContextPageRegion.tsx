@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { Button, ErrorPanel } from "../../../components/ui";
+import { Button, ErrorPanel } from "../../../components/UiPrimitives";
 import { libraryEntityBreadcrumbs, libraryEntityEditPath, libraryEntityNavigationState } from "../authorSeriesLifecycle";
 import { ClampedLibraryText } from "../components/ClampedLibraryText";
 import type { LibrarySelectedContextKind } from "../libraryQuery";

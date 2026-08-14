@@ -1,7 +1,7 @@
 import type { RecentMarginaliaSession } from "@second-pass/spl-api";
 import { Link } from "react-router";
 
-import { Button, ErrorPanel } from "../../../components/ui";
+import { Button, ErrorPanel } from "../../../components/UiPrimitives";
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
 import { ProductPageShell } from "../../../shared/layout/ProductPageShell";
 import { DashboardActionTile, type DashboardAction } from "../components/DashboardActionTile";

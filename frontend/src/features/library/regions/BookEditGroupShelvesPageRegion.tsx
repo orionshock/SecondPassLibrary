@@ -2,7 +2,7 @@ import type { ShelfSummary } from "@second-pass/spl-api";
 import { Link } from "react-router";
 
 import { RemoveIconButton } from "../../../components/icons/RemoveIconButton";
-import { Button, ErrorPanel } from "../../../components/ui";
+import { Button, ErrorPanel } from "../../../components/UiPrimitives";
 import { ActionFeedback } from "../../../shared/feedback/ActionFeedback";
 import type { MutationState } from "../../../shared/feedback/mutationState";
 import { GroupBadge } from "../../../shared/groups/GroupBadge";

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { PageHeader } from "../../components/ui";
+import { PageHeader } from "../../components/UiPrimitives";
 import "./ProductPageShell.css";
 
 export interface ProductPageShellProps {

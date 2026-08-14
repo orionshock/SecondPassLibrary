@@ -1,6 +1,6 @@
 import type { ManagedPasswordResetResult } from "@second-pass/spl-api";
 
-import { Button } from "../../../components/ui";
+import { Button } from "../../../components/UiPrimitives";
 import { ActionFeedback } from "../../../shared/feedback/ActionFeedback";
 import { ActionRow } from "../../../shared/forms/ActionRow";
 import type { MutationState } from "../../../shared/feedback/mutationState";

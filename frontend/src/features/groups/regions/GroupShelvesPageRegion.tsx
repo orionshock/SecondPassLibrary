@@ -1,7 +1,7 @@
 import type { Page, ShelfSummary } from "@second-pass/spl-api";
 
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
-import { Button, ErrorPanel } from "../../../components/ui";
+import { Button, ErrorPanel } from "../../../components/UiPrimitives";
 import type { BookCoverPreviewItem } from "../../../shared/books/BookCoverPreviewStrip";
 import { PaginatedListFrame } from "../../../shared/pagination/PaginatedListFrame";
 import { ShelfSummaryRow } from "../../../shared/shelves/ShelfSummaryRow";

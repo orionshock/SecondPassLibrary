@@ -5,7 +5,7 @@ import type { LibraryAuthor, LibrarySeries } from "@second-pass/spl-api";
 import { AddIconButton } from "../../../components/icons/AddIconButton";
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
 import { RemoveIconButton } from "../../../components/icons/RemoveIconButton";
-import { Button, FormField, IconButton } from "../../../components/ui";
+import { Button, FormField, IconButton } from "../../../components/UiPrimitives";
 import type { BreadcrumbItem } from "../../../app/navigation/breadcrumbs";
 import { fieldError } from "../../../shared/feedback/mutationState";
 import type { BookEditDraft } from "../bookEditDraft";

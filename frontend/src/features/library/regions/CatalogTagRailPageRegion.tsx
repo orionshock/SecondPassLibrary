@@ -1,7 +1,7 @@
 import type { CatalogTag } from "@second-pass/spl-api";
 import { useEffect, useRef, type CSSProperties, type RefObject } from "react";
 
-import { Button, ErrorPanel } from "../../../components/ui";
+import { Button, ErrorPanel } from "../../../components/UiPrimitives";
 
 export const CATALOG_TAG_MINIMUM_VISIBLE_ROWS = 15;
 

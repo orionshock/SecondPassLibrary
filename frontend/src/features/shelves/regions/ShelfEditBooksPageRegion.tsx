@@ -3,7 +3,7 @@ import type { ShelfEditorItem, ShelfEditorItemsPage, ShelfScope } from "@second-
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
 import { RemoveIconButton } from "../../../components/icons/RemoveIconButton";
-import { Button, ErrorPanel, IconButton } from "../../../components/ui";
+import { Button, ErrorPanel, IconButton } from "../../../components/UiPrimitives";
 import { CompactBookRow } from "../../../shared/books/CompactBookRow";
 import { Pager } from "../../../shared/pagination/Pager";
 import { shelfBookBreadcrumbs } from "../shelvesBreadcrumbs";

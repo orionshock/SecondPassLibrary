@@ -1,4 +1,4 @@
-import { FormField } from "../../../components/ui";
+import { FormField } from "../../../components/UiPrimitives";
 import { fieldError } from "../../../shared/feedback/mutationState";
 import type { BookEditDraft } from "../bookEditDraft";
 

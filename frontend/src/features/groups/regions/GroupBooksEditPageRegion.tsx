@@ -2,7 +2,7 @@ import type { CompactBook, Page } from "@second-pass/spl-api";
 
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { RemoveIconButton } from "../../../components/icons/RemoveIconButton";
-import { Button, ErrorPanel } from "../../../components/ui";
+import { Button, ErrorPanel } from "../../../components/UiPrimitives";
 import { CompactBookRow } from "../../../shared/books/CompactBookRow";
 import { Pager } from "../../../shared/pagination/Pager";
 import { groupBookBreadcrumbs } from "../groupsBreadcrumbs";

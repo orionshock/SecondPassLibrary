@@ -1,8 +1,8 @@
 import type { CurrentUser, UpdateCurrentUserInput } from "@second-pass/spl-api";
 import { useEffect, useReducer, useState, type FormEvent } from "react";
 
-import { Badge, Button, FormField, KeyValueList, Surface } from "../../../components/ui";
-import { displayUserRole } from "../../../domain/users/presentation";
+import { Badge, Button, FormField, KeyValueList, Surface } from "../../../components/UiPrimitives";
+import { displayUserRole } from "../../../domain/users/userPresentation";
 import { ActionFeedback } from "../../../shared/feedback/ActionFeedback";
 import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";
 import { SaveCancelActionRow } from "../../../shared/forms/ActionRow";

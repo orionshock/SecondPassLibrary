@@ -1,6 +1,6 @@
 import type { BookDetail, BookPreview, LibraryGroup, ShelfSummary } from "@second-pass/spl-api";
 
-import { ErrorPanel } from "../../../components/ui";
+import { ErrorPanel } from "../../../components/UiPrimitives";
 import type { BookCoverPreviewItem } from "../../../shared/books/BookCoverPreviewStrip";
 import { GroupRow } from "../../../shared/groups/GroupRow";
 import { ShelfSummaryRow, type ShelfOwnerBadge } from "../../../shared/shelves/ShelfSummaryRow";

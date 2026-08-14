@@ -1,6 +1,6 @@
 import { Component, type ReactNode } from "react";
 
-import { Button, ErrorPanel } from "../../components/ui";
+import { Button, ErrorPanel } from "../../components/UiPrimitives";
 
 export function RouteModuleLoading() {
   return <section className="page-panel" data-route-state="loading" aria-live="polite" aria-busy="true">

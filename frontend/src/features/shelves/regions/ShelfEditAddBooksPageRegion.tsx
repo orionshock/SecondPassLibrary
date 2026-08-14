@@ -2,7 +2,7 @@ import type { CompactBook, Page, ShelfScope } from "@second-pass/spl-api";
 import type { FormEvent } from "react";
 
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
-import { Button, ErrorPanel } from "../../../components/ui";
+import { Button, ErrorPanel } from "../../../components/UiPrimitives";
 import { CompactBookRow } from "../../../shared/books/CompactBookRow";
 import { Pager } from "../../../shared/pagination/Pager";
 import { shelfBookBreadcrumbs } from "../shelvesBreadcrumbs";

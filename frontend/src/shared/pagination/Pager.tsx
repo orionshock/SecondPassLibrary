@@ -1,6 +1,6 @@
 import "./Pager.css";
 
-import { Button } from "../../components/ui";
+import { Button } from "../../components/UiPrimitives";
 
 export type PagerDensity = "compact" | "full";
 

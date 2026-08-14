@@ -1,10 +1,10 @@
 import type { ManagedUser, ManagedUserRole, UpdateManagedUserInput } from "@second-pass/spl-api";
 import { useEffect, useReducer, type FormEvent } from "react";
 
-import { FormField } from "../../../components/ui";
+import { FormField } from "../../../components/UiPrimitives";
 import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";
 import { SaveCancelActionRow } from "../../../shared/forms/ActionRow";
-import { displayUserRole, displayUserRoleName } from "../../../domain/users/presentation";
+import { displayUserRole, displayUserRoleName } from "../../../domain/users/userPresentation";
 import { userEditDraftFromUser, userEditDraftReducer, userEditInputFromDraft } from "../userEditForm";
 
 export function UserDetailsPageRegion({ user, roles, canEdit, canChangeActive, state, onSave, onClearStatus }: {

@@ -1,6 +1,6 @@
 import type { FormEvent } from "react";
 
-import { Button } from "../../../components/ui";
+import { Button } from "../../../components/UiPrimitives";
 import { OrderMenu } from "../../../shared/forms/OrderMenu";
 import { libraryOrderingOptions, type LibrarySelectedContextKind, type LibraryUiOrdering, type LibraryView } from "../libraryQuery";
 

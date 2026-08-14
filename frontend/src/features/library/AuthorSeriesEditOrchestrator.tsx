@@ -20,7 +20,7 @@ import { Link, useBlocker, useLocation, useNavigate, useParams } from "react-rou
 
 import { breadcrumbNavigationState, resolveBreadcrumbTrail } from "../../app/navigation/breadcrumbs";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { Button, ErrorPanel } from "../../components/ui";
+import { Button, ErrorPanel } from "../../components/UiPrimitives";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
 import { ProductPageShell } from "../../shared/layout/ProductPageShell";
 import {

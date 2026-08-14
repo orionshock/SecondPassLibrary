@@ -2,7 +2,7 @@ import type { RecentMarginaliaSession } from "@second-pass/spl-api";
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
-import { IconButton } from "../../../components/ui";
+import { IconButton } from "../../../components/UiPrimitives";
 import { RecentSessionCoverCard } from "./RecentSessionCoverCard";
 
 interface ScrollerState {

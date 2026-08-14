@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { displayUserRole, displayUserRoleName } from "../domain/users/presentation";
+import { displayUserRole, displayUserRoleName } from "../domain/users/userPresentation";
 
 describe("displayUserRole", () => {
   it("presents Owner as the highest role regardless of the separate API role field", () => {

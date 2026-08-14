@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { Button, IconButton } from "../components/ui";
+import { Button, IconButton } from "../components/UiPrimitives";
 
 describe("Button primitives", () => {
   it("uses the medium primary contract by default and accepts small danger treatment", () => {

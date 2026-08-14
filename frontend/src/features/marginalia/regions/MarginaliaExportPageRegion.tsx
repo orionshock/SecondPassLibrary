@@ -1,7 +1,7 @@
 import type { FormEvent } from "react";
 import type { MarginaliaSessionListItem, Page } from "@second-pass/spl-api";
 
-import { Badge, Button, ErrorPanel, Surface } from "../../../components/ui";
+import { Badge, Button, ErrorPanel, Surface } from "../../../components/UiPrimitives";
 import { BookCover } from "../../../shared/books/BookCover";
 import { marginaliaSessionDisplayName } from "../../../shared/marginaliaSessionDisplayName";
 import { ActionFeedback } from "../../../shared/feedback/ActionFeedback";

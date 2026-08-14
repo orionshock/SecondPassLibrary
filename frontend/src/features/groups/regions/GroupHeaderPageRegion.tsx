@@ -2,7 +2,7 @@ import type { LibraryGroup } from "@second-pass/spl-api";
 import { Link } from "react-router";
 
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
-import { Badge, Button, ErrorPanel, PageHeader } from "../../../components/ui";
+import { Badge, Button, ErrorPanel, PageHeader } from "../../../components/UiPrimitives";
 import { TabList, type TabItem } from "../../../shared/tabs/TabList";
 import type { GroupDetailTab } from "../groupsQuery";
 

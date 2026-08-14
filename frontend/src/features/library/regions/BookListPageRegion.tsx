@@ -1,6 +1,6 @@
 import type { CompactBook, Page } from "@second-pass/spl-api";
 
-import { Button, ErrorPanel } from "../../../components/ui";
+import { Button, ErrorPanel } from "../../../components/UiPrimitives";
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { CompactBookRow } from "../../../shared/books/CompactBookRow";
 import { Pager } from "../../../shared/pagination/Pager";

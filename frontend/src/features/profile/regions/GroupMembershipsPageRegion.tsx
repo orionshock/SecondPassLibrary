@@ -1,6 +1,6 @@
 import type { CurrentUser } from "@second-pass/spl-api";
 
-import { Badge, Surface } from "../../../components/ui";
+import { Badge, Surface } from "../../../components/UiPrimitives";
 import { GroupBadge } from "../../../shared/groups/GroupBadge";
 
 export function GroupMembershipsPageRegion({ user, advancedGroupsEnabled }: { user: CurrentUser; advancedGroupsEnabled: boolean }) {

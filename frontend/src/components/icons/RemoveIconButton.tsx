@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes } from "react";
 
-import { IconButton } from "../ui";
+import { IconButton } from "../UiPrimitives";
 import { MaterialIcon } from "./MaterialIcon";
 
 export function RemoveIconButton({

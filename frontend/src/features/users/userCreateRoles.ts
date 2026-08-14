@@ -1,6 +1,6 @@
 import type { CreateUserRole, ManagedUser, ManagedUserRole } from "@second-pass/spl-api";
 
-import { displayUserRoleName, type UserRoleIdentity } from "../../domain/users/presentation";
+import { displayUserRoleName, type UserRoleIdentity } from "../../domain/users/userPresentation";
 
 const ownerRoles: readonly CreateUserRole[] = ["manager", "librarian", "reader"];
 const managerRoles: readonly CreateUserRole[] = ["librarian", "reader"];

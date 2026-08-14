@@ -2,7 +2,7 @@ import type { MarginaliaImportApplyResult, MarginaliaImportPreview } from "@seco
 import { useEffect, useRef, type FormEvent, type RefObject } from "react";
 import { Link } from "react-router";
 
-import { Badge, Button, FormField, Surface } from "../../../components/ui";
+import { Badge, Button, FormField, Surface } from "../../../components/UiPrimitives";
 import { HelpPopover } from "../../../components/HelpPopover";
 import { BookCover } from "../../../shared/books/BookCover";
 import { marginaliaSessionDisplayName } from "../../../shared/marginaliaSessionDisplayName";

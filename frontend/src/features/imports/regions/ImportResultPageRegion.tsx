@@ -1,6 +1,6 @@
 import type { LibraryImportResult } from "@second-pass/spl-api";
 
-import { Badge, Surface } from "../../../components/ui";
+import { Badge, Surface } from "../../../components/UiPrimitives";
 import {
   ImportResultItem,
   type ImportResultBookNavigation,

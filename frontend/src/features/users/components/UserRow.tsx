@@ -3,8 +3,8 @@ import { Link } from "react-router";
 
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
-import { Badge } from "../../../components/ui";
-import { displayUserRole } from "../../../domain/users/presentation";
+import { Badge } from "../../../components/UiPrimitives";
+import { displayUserRole } from "../../../domain/users/userPresentation";
 import { UserInlineIdentity } from "../../../shared/users/UserInlineIdentity";
 import { usersEditBreadcrumbTrail } from "../usersBreadcrumbs";
 

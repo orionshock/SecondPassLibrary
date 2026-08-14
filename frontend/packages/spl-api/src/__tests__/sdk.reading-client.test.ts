@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildReadingClientBookUrl } from "../readingClient";
+import { buildReadingClientBookUrl } from "../readingClientUrl";
 
 describe("Reading Client launcher", () => {
   it("builds a hash-reader URL and defensively removes trailing slashes", () => {

@@ -2,7 +2,7 @@ import type { ClientSession } from "@second-pass/spl-api";
 import { Link } from "react-router";
 
 import type { BreadcrumbLocationState } from "../../../app/navigation/breadcrumbs";
-import { Button, Surface } from "../../../components/ui";
+import { Button, Surface } from "../../../components/UiPrimitives";
 import { ActionFeedback } from "../../../shared/feedback/ActionFeedback";
 import type { MutationState } from "../../../shared/feedback/mutationState";
 import { ClientSessionRow } from "../components/ClientSessionRow";

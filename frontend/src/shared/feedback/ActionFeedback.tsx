@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 import { MaterialIcon } from "../../components/icons/MaterialIcon";
-import { ErrorPanel } from "../../components/ui";
+import { ErrorPanel } from "../../components/UiPrimitives";
 import type { MutationState } from "./mutationState";
 import { SUCCESS_MESSAGE_TIMEOUT_MS } from "./useAutoDismissMutationMessage";
 

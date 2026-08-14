@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { Button } from "../../components/ui";
+import { Button } from "../../components/UiPrimitives";
 import { ActionFeedback } from "../feedback/ActionFeedback";
 import type { MutationState } from "../feedback/mutationState";
 

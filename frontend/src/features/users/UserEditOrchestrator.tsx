@@ -17,7 +17,7 @@ import { Link, useOutletContext, useParams } from "react-router";
 
 import type { AppOutletContext } from "../../app/layout/AppOrchestrator";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { ErrorPanel } from "../../components/ui";
+import { ErrorPanel } from "../../components/UiPrimitives";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
 import { ProductPageShell } from "../../shared/layout/ProductPageShell";
 import { UserInlineIdentity } from "../../shared/users/UserInlineIdentity";

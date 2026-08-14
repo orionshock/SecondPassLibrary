@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import { Surface } from "../../../components/ui";
+import { Surface } from "../../../components/UiPrimitives";
 import { ProductPageShell } from "../../../shared/layout/ProductPageShell";
 
 export function PairingPageFrame({ children }: { children: ReactNode }) {

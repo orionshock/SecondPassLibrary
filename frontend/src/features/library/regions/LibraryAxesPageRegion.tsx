@@ -1,4 +1,4 @@
-import { PageHeader } from "../../../components/ui";
+import { PageHeader } from "../../../components/UiPrimitives";
 import { Link } from "react-router";
 import { libraryEntityAxisPath, libraryEntityBreadcrumbs, libraryEntityNavigationState, libraryEntityNewPath } from "../authorSeriesLifecycle";
 import type { LibraryView } from "../libraryQuery";

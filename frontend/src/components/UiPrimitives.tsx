@@ -1,6 +1,6 @@
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
 
-import "./ui.css";
+import "./UiPrimitives.css";
 
 export function PageHeader({
   eyebrow,

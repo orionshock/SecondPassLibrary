@@ -1,6 +1,6 @@
 import type { LibraryGroupsSettings } from "@second-pass/spl-api";
 
-import { Button } from "../../../components/ui";
+import { Button } from "../../../components/UiPrimitives";
 import { ActionRow } from "../../../shared/forms/ActionRow";
 import type { MutationState } from "../../../shared/feedback/mutationState";
 

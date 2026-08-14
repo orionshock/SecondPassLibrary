@@ -2,7 +2,7 @@ import { apiClient, type ApiClient } from "./client";
 import { mapCompactBook, type CompactBookResponse } from "./compactBooks";
 import { ApiError } from "./errors";
 import { collectPaginatedResults, toPage, type ApiPage, type Page } from "./pagination";
-import { sameOriginUrl } from "./urls";
+import { sameOriginUrl } from "./sameOriginUrl";
 
 export type BookOrdering =
   | "title" | "-title"

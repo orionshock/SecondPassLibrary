@@ -1,7 +1,7 @@
 import type { Page, UserChoice } from "@second-pass/spl-api";
 import type { FormEvent } from "react";
 
-import { Button, ErrorPanel } from "../../../components/ui";
+import { Button, ErrorPanel } from "../../../components/UiPrimitives";
 import { Pager } from "../../../shared/pagination/Pager";
 import { UserInlineIdentity } from "../../../shared/users/UserInlineIdentity";
 

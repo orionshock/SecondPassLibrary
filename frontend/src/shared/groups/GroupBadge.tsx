@@ -1,5 +1,5 @@
 import { MaterialIcon } from "../../components/icons/MaterialIcon";
-import { Badge } from "../../components/ui";
+import { Badge } from "../../components/UiPrimitives";
 import "./GroupBadge.css";
 
 export function GroupBadge({ name, isPublicGroup = false, size = "small" }: {

@@ -3,7 +3,7 @@ import { useEffect, useState, type FormEvent } from "react";
 
 import { HelpPopover } from "../../../components/HelpPopover";
 import { RemoveIconButton } from "../../../components/icons/RemoveIconButton";
-import { Button } from "../../../components/ui";
+import { Button } from "../../../components/UiPrimitives";
 import type { MutationState } from "../../../shared/feedback/mutationState";
 import { ActionRow } from "../../../shared/forms/ActionRow";
 import { GroupBadge } from "../../../shared/groups/GroupBadge";

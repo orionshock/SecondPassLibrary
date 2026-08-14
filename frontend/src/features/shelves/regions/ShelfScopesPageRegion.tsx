@@ -1,7 +1,7 @@
 import type { ShelfScope } from "@second-pass/spl-api";
 
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
-import { Button } from "../../../components/ui";
+import { Button } from "../../../components/UiPrimitives";
 import { shelfScopePresentations } from "../shelfScopes";
 
 export function ShelfScopesPageRegion({ activeScope, onScopeChange }: {

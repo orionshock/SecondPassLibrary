@@ -2,7 +2,7 @@ import type { Page, ShelfOrdering, ShelfScope, ShelfSummary } from "@second-pass
 import { Link } from "react-router";
 
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
-import { Button, ErrorPanel, PageHeader } from "../../../components/ui";
+import { Button, ErrorPanel, PageHeader } from "../../../components/UiPrimitives";
 import type { BookCoverPreviewItem } from "../../../shared/books/BookCoverPreviewStrip";
 import { OrderMenu, type OrderMenuOption } from "../../../shared/forms/OrderMenu";
 import { PaginatedListFrame } from "../../../shared/pagination/PaginatedListFrame";

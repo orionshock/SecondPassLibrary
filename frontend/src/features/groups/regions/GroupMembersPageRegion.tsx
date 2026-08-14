@@ -1,6 +1,6 @@
 import type { GroupMembership, Page } from "@second-pass/spl-api";
 
-import { Button, ErrorPanel } from "../../../components/ui";
+import { Button, ErrorPanel } from "../../../components/UiPrimitives";
 import { Pager } from "../../../shared/pagination/Pager";
 import { GroupMemberRow } from "../components/GroupMemberRow";
 

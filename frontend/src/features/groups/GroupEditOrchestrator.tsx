@@ -16,7 +16,7 @@ import { Link, useBlocker, useLocation, useNavigate, useOutletContext, useParams
 
 import type { AppOutletContext } from "../../app/layout/AppOrchestrator";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { Button, ErrorPanel } from "../../components/ui";
+import { Button, ErrorPanel } from "../../components/UiPrimitives";
 import {
   idleMutationState,
   normalizeMutationError,

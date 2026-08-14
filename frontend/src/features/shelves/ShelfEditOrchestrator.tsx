@@ -20,7 +20,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useBlocker, useLocation, useNavigate, useParams } from "react-router";
 
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { Button, ErrorPanel } from "../../components/ui";
+import { Button, ErrorPanel } from "../../components/UiPrimitives";
 import {
   idleMutationState,
   normalizeMutationError,

@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 
-import { ErrorPanel } from "../../../components/ui";
+import { ErrorPanel } from "../../../components/UiPrimitives";
 
 export function BookDetailStatePageRegion({
   state,

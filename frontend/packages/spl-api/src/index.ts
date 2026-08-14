@@ -88,7 +88,7 @@ export {
   type MarginaliaImportWarning,
 } from "./marginaliaImport";
 export type { AttachmentDownload } from "./client";
-export { buildReadingClientBookUrl } from "./readingClient";
+export { buildReadingClientBookUrl } from "./readingClientUrl";
 export {
   addGroupMember,
   addBookToGroup,

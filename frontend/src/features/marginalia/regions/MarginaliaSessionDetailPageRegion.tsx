@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type MouseEve
 import { Link } from "react-router";
 
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
-import { Badge, Button, ErrorPanel, Surface } from "../../../components/ui";
+import { Badge, Button, ErrorPanel, Surface } from "../../../components/UiPrimitives";
 import type { MutationState } from "../../../shared/feedback/mutationState";
 import { BookCover } from "../../../shared/books/BookCover";
 import { OrderMenu, type OrderMenuOption } from "../../../shared/forms/OrderMenu";

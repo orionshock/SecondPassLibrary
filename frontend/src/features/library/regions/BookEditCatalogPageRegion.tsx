@@ -3,7 +3,7 @@ import { useState } from "react";
 import type { CatalogTag } from "@second-pass/spl-api";
 import { AddIconButton } from "../../../components/icons/AddIconButton";
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
-import { Button, FormField } from "../../../components/ui";
+import { Button, FormField } from "../../../components/UiPrimitives";
 import { fieldError } from "../../../shared/feedback/mutationState";
 import type { BookEditDraft, PublicationPrecision } from "../bookEditDraft";
 

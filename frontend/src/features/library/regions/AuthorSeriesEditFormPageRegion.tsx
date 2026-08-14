@@ -1,6 +1,6 @@
 import type { FormEvent } from "react";
 
-import { FormField } from "../../../components/ui";
+import { FormField } from "../../../components/UiPrimitives";
 import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";
 import { SaveCancelActionRow } from "../../../shared/forms/ActionRow";
 import type { AuthorSeriesEditDraft } from "../authorSeriesEditDraft";

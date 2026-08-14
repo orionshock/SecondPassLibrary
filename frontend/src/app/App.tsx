@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router";
 
 import { AppOrchestrator } from "./layout/AppOrchestrator";
-import "../components/ui.css";
+import "../components/UiPrimitives.css";
 
 type BootstrapState =
   | { status: "loading" }

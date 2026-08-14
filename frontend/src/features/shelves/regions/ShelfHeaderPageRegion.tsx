@@ -1,7 +1,7 @@
 import type { ShelfSummary } from "@second-pass/spl-api";
 import { Link } from "react-router";
 
-import { Badge, Button, ErrorPanel, PageHeader } from "../../../components/ui";
+import { Badge, Button, ErrorPanel, PageHeader } from "../../../components/UiPrimitives";
 import { UserInlineIdentity } from "../../../shared/users/UserInlineIdentity";
 
 export function ShelfHeaderPageRegion({ shelf, loading, error, editPath, editNavigationState, onRetry }: {

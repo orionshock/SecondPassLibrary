@@ -1,7 +1,7 @@
 import type { ClientPairingRequest } from "@second-pass/spl-api";
 import type { FormEvent } from "react";
 
-import { Button, FormField } from "../../../components/ui";
+import { Button, FormField } from "../../../components/UiPrimitives";
 import { ActionRow } from "../../../shared/forms/ActionRow";
 import { PairingPageFrame } from "../components/PairingPageFrame";
 

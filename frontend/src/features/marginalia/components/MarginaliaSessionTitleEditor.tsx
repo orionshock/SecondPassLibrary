@@ -1,7 +1,7 @@
 import type { KeyboardEvent, ReactNode } from "react";
 
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
-import { IconButton } from "../../../components/ui";
+import { IconButton } from "../../../components/UiPrimitives";
 
 export function MarginaliaSessionTitleEditor({
   displayName,

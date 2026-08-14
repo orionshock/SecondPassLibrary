@@ -2,7 +2,7 @@ import type { MarginaliaBookSummary, Page } from "@second-pass/spl-api";
 import type { FormEvent } from "react";
 import { Link } from "react-router";
 
-import { Button, ErrorPanel } from "../../../components/ui";
+import { Button, ErrorPanel } from "../../../components/UiPrimitives";
 import { CompactBookRow } from "../../../shared/books/CompactBookRow";
 import { PaginatedListFrame } from "../../../shared/pagination/PaginatedListFrame";
 

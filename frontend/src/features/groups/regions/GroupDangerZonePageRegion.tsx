@@ -1,4 +1,4 @@
-import { Button, ErrorPanel } from "../../../components/ui";
+import { Button, ErrorPanel } from "../../../components/UiPrimitives";
 import type { MutationState } from "../../../shared/feedback/mutationState";
 
 export function GroupDangerZonePageRegion({ state, controlsDisabled, onDelete }: {

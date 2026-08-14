@@ -4,7 +4,7 @@ import { useOutletContext } from "react-router";
 
 import type { AppOutletContext } from "../../app/layout/AppOrchestrator";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { ErrorPanel } from "../../components/ui";
+import { ErrorPanel } from "../../components/UiPrimitives";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
 import { ProductPageShell } from "../../shared/layout/ProductPageShell";
 import { UserCreateFormPageRegion } from "./regions/UserCreateFormPageRegion";

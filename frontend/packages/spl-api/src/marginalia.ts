@@ -1,7 +1,7 @@
 import { apiClient, type ApiClient, type AttachmentApiClient, type AttachmentDownload } from "./client";
 import { ApiError, apiErrorFromPayload } from "./errors";
 import { toPage, type ApiPage, type Page } from "./pagination";
-import { sameOriginUrl } from "./urls";
+import { sameOriginUrl } from "./sameOriginUrl";
 
 export type MarginaliaSessionStatus = "active" | "closed";
 export type MarginaliaHighlightColor = "yellow" | "green" | "blue" | "pink" | "purple" | "orange";

@@ -1,6 +1,6 @@
 import type { FormEvent } from "react";
 
-import { Button, FormField } from "../../../components/ui";
+import { Button, FormField } from "../../../components/UiPrimitives";
 import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";
 import { ActionRow } from "../../../shared/forms/ActionRow";
 import { ProductPageShell } from "../../../shared/layout/ProductPageShell";

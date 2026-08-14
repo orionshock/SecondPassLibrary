@@ -4,7 +4,7 @@ import { useLocation, useParams, useSearchParams } from "react-router";
 
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { loadPageWithRecovery } from "../../app/routing/pageRecovery";
-import { ErrorPanel } from "../../components/ui";
+import { ErrorPanel } from "../../components/UiPrimitives";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
 import { ProductPageShell } from "../../shared/layout/ProductPageShell";
 import { ShelfHeaderPageRegion } from "./regions/ShelfHeaderPageRegion";

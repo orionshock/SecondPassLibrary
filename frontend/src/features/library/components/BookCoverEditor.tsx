@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent, type MouseEvent } from "react";
 
-import { Button } from "../../../components/ui";
+import { Button } from "../../../components/UiPrimitives";
 import { BookCover } from "../../../shared/books/BookCover";
 import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";
 

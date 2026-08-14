@@ -1,7 +1,7 @@
 import type { GroupMembership } from "@second-pass/spl-api";
 import type { ReactNode } from "react";
 
-import { Badge } from "../../../components/ui";
+import { Badge } from "../../../components/UiPrimitives";
 import { UserInlineIdentity } from "../../../shared/users/UserInlineIdentity";
 
 export function GroupMemberRow({ membership, actions }: { membership: GroupMembership; actions?: ReactNode }) {

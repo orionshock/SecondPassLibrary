@@ -1,7 +1,7 @@
 import type { LibraryGroup, ShelfSummary } from "@second-pass/spl-api";
 import type { FormEvent } from "react";
 
-import { Button, ErrorPanel, FormField } from "../../../components/ui";
+import { Button, ErrorPanel, FormField } from "../../../components/UiPrimitives";
 import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";
 import { SaveCancelActionRow } from "../../../shared/forms/ActionRow";
 import { GroupBadge } from "../../../shared/groups/GroupBadge";

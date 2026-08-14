@@ -1,7 +1,7 @@
 import type { GeneralServerSettings } from "@second-pass/spl-api";
 import type { FormEvent } from "react";
 
-import { FormField, KeyValueList } from "../../../components/ui";
+import { FormField, KeyValueList } from "../../../components/UiPrimitives";
 import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";
 
 export function GeneralSettingsPageRegion({ settings, draft, editing, state, onChange, onSubmit }: {

@@ -2,7 +2,7 @@ import type { CreateUserRole } from "@second-pass/spl-api";
 import type { FormEvent } from "react";
 import { Link } from "react-router";
 
-import { Button, FormField } from "../../../components/ui";
+import { Button, FormField } from "../../../components/UiPrimitives";
 import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";
 import { ActionRow } from "../../../shared/forms/ActionRow";
 import type { UserCreateDraft, UserCreateDraftField } from "../userCreateForm";

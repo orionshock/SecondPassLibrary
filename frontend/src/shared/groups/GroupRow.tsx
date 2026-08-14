@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 
-import { Badge } from "../../components/ui";
+import { Badge } from "../../components/UiPrimitives";
 import { BookCoverPreviewStrip, type BookCoverPreviewItem } from "../books/BookCoverPreviewStrip";
 import "./GroupRow.css";
 
