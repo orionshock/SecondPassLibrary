@@ -1,4 +1,4 @@
-import { TabListComponent, type TabItem } from "../../../shared/tabs/TabListComponent";
+import { TabList, type TabItem } from "../../../shared/tabs/TabList";
 import type { ShelfEditTab } from "../shelvesQuery";
 
 const shelfEditTabs: readonly TabItem<ShelfEditTab>[] = [
@@ -12,7 +12,7 @@ export function ShelfEditTabsPageRegion({ activeTab, disabled = false, onTabChan
   disabled?: boolean;
   onTabChange: (tab: ShelfEditTab) => void;
 }) {
-  return <TabListComponent
+  return <TabList
     tabs={shelfEditTabs}
     activeTab={activeTab}
     onChange={onTabChange}

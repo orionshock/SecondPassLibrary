@@ -1,7 +1,7 @@
 import type { BookPreview, CompactBook } from "@second-pass/spl-api";
 
 import { breadcrumbNavigationState } from "../../app/navigation/breadcrumbs";
-import type { BookCoverPreviewItem } from "../../shared/books/BookCoverPreviewStripComponent";
+import type { BookCoverPreviewItem } from "../../shared/books/BookCoverPreviewStrip";
 import { COMPACT_BOOK_COVER_PREVIEW_SOURCE_LIMIT } from "../../shared/books/bookCoverPreview";
 import type { LibrarySelectedContextKind, LibraryUrlState } from "./libraryQuery";
 

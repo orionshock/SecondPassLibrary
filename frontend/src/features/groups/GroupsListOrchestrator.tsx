@@ -6,7 +6,7 @@ import type { AppOutletContext } from "../../app/layout/AppOrchestrator";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { loadPageWithRecovery } from "../../app/routing/pageRecovery";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
-import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
+import { ProductPageShell } from "../../shared/layout/ProductPageShell";
 import { breadcrumbNavigationState } from "../../app/navigation/breadcrumbs";
 import { canCreateGroupMetadata } from "./groupMetadataAuthority";
 import { groupNewBreadcrumbs, groupsListBreadcrumbFallback } from "./groupsBreadcrumbs";
@@ -84,7 +84,7 @@ export function GroupsListOrchestrator() {
     currentUser.groups.filter(({ isCurator }) => isCurator).map(({ id }) => id),
   );
 
-  return <ProductPageShellComponent className="groups-page">
+  return <ProductPageShell className="groups-page">
     <GroupsListPageRegion
       page={load.page}
       pageNumber={queryState.page}
@@ -103,5 +103,5 @@ export function GroupsListOrchestrator() {
       onPageSizeChange={(pageSize) => changeQuery({ pageSize })}
       onRetry={() => setRetry((value) => value + 1)}
     />
-  </ProductPageShellComponent>;
+  </ProductPageShell>;
 }

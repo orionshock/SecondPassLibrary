@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 
 import { PageHeader } from "../../components/ui";
-import "./ProductPageShellComponent.css";
+import "./ProductPageShell.css";
 
-export interface ProductPageShellComponentProps {
+export interface ProductPageShellProps {
   title?: ReactNode;
   eyebrow?: ReactNode;
   description?: ReactNode;
@@ -12,14 +12,14 @@ export interface ProductPageShellComponentProps {
   className?: string;
 }
 
-export function ProductPageShellComponent({
+export function ProductPageShell({
   title,
   eyebrow,
   description,
   actions,
   children,
   className = "",
-}: ProductPageShellComponentProps) {
+}: ProductPageShellProps) {
   return <div className={`product-page-shell ${className}`.trim()}>
     {title !== undefined ? <PageHeader eyebrow={eyebrow} title={title} description={description} actions={actions} /> : null}
     {children}

@@ -1,8 +1,8 @@
 import { Link } from "react-router";
 import type { ReactNode } from "react";
 
-import { BookCoverComponent } from "./BookCoverComponent";
-import { BookMetadataComponent } from "./BookMetadataComponent";
+import { BookCover } from "./BookCover";
+import { BookMetadata } from "./BookMetadata";
 
 export interface CompactBookRowData {
   id: string;
@@ -14,7 +14,7 @@ export interface CompactBookRowData {
   coverUrl: string | null;
 }
 
-export function CompactBookRowComponent({
+export function CompactBookRow({
   book,
   detailPath,
   navigationState,
@@ -36,11 +36,11 @@ export function CompactBookRowComponent({
 
   return <article className="book-row-component">
     {detailPath ? <Link className="book-row-component__cover-link" to={detailPath} state={navigationState} aria-label={`Open ${book.title}`}>
-      <BookCoverComponent coverUrl={book.coverUrl} title={book.title} />
-    </Link> : <div className="book-row-component__cover-link"><BookCoverComponent coverUrl={book.coverUrl} title={book.title} /></div>}
+      <BookCover coverUrl={book.coverUrl} title={book.title} />
+    </Link> : <div className="book-row-component__cover-link"><BookCover coverUrl={book.coverUrl} title={book.title} /></div>}
     <div className="book-row-component__body">
       <h2>{detailPath ? <Link to={detailPath} state={navigationState}>{book.title}</Link> : book.title}</h2>
-      <BookMetadataComponent
+      <BookMetadata
         authors={book.authors.map(({ name }) => name)}
         series={series}
         publisher={book.publisher || undefined}

@@ -1,11 +1,11 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { UserInlineIdentityComponent } from "../shared/users/UserInlineIdentityComponent";
+import { UserInlineIdentity } from "../shared/users/UserInlineIdentity";
 
-describe("UserInlineIdentityComponent", () => {
+describe("UserInlineIdentity", () => {
   it("renders full name, plain username, and person identity semantics", () => {
-    const markup = renderToStaticMarkup(<UserInlineIdentityComponent username="reader" displayName="Read Er" />);
+    const markup = renderToStaticMarkup(<UserInlineIdentity username="reader" displayName="Read Er" />);
 
     expect(markup).toContain('aria-label="User reader"');
     expect(markup).toContain("Read Er");
@@ -15,7 +15,7 @@ describe("UserInlineIdentityComponent", () => {
   });
 
   it("renders compact username identity without inventing a display name", () => {
-    const markup = renderToStaticMarkup(<UserInlineIdentityComponent username="reader" />);
+    const markup = renderToStaticMarkup(<UserInlineIdentity username="reader" />);
 
     expect(markup).toContain(">reader<");
     expect(markup).not.toContain("display-name");

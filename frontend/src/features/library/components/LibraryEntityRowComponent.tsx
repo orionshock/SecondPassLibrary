@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 
-import { BookCoverPreviewStripComponent, type BookCoverPreviewItem } from "../../../shared/books/BookCoverPreviewStripComponent";
+import { BookCoverPreviewStrip, type BookCoverPreviewItem } from "../../../shared/books/BookCoverPreviewStrip";
 
 export function LibraryEntityRowComponent({
   title,
@@ -21,6 +21,6 @@ export function LibraryEntityRowComponent({
       <h2><Link to={href} state={navigationState}>{title}</Link></h2>
       <span>{subtitle}</span>
     </div>
-    {hasPreviews ? <BookCoverPreviewStripComponent books={previewBooks} /> : null}
+    {hasPreviews ? <BookCoverPreviewStrip books={previewBooks} /> : null}
   </article>;
 }

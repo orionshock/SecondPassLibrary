@@ -1,13 +1,13 @@
 import type { KeyboardEvent } from "react";
 
-import "./TabListComponent.css";
+import "./TabList.css";
 
 export interface TabItem<T extends string> {
   id: T;
   label: string;
 }
 
-export interface TabListComponentProps<T extends string> {
+export interface TabListProps<T extends string> {
   tabs: readonly TabItem<T>[];
   activeTab: T;
   onChange: (tab: T) => void;
@@ -33,14 +33,14 @@ export function tabFocusIndexForKey(currentIndex: number, key: string, count: nu
   return undefined;
 }
 
-export function TabListComponent<T extends string>({
+export function TabList<T extends string>({
   tabs,
   activeTab,
   onChange,
   ariaLabel,
   disabled = false,
   idPrefix,
-}: TabListComponentProps<T>) {
+}: TabListProps<T>) {
   function handleKeyDown(event: KeyboardEvent<HTMLButtonElement>, tab: T) {
     if (disabled) return;
     if (event.key === "Enter" || event.key === " ") {

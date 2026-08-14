@@ -2,7 +2,7 @@ import type { ManagedUser, Page, UserOrdering } from "@second-pass/spl-api";
 
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
 import { Button, ErrorPanel } from "../../../components/ui";
-import { PaginatedListFrameComponent } from "../../../shared/pagination/PaginatedListFrameComponent";
+import { PaginatedListFrame } from "../../../shared/pagination/PaginatedListFrame";
 import { UserRowComponent } from "../components/UserRowComponent";
 import { nextUserOrdering } from "../usersListQuery";
 
@@ -25,7 +25,7 @@ export function UsersListPageRegion({ page, pageNumber, pageSize, ordering, adva
 
   return <section className={`users-results${loading ? " users-results--loading" : ""}`} aria-busy={loading}>
     {error ? <div className="users-inline-error"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></div> : null}
-    <PaginatedListFrameComponent
+    <PaginatedListFrame
       page={pageNumber}
       pageSize={pageSize}
       count={page.count}
@@ -46,7 +46,7 @@ export function UsersListPageRegion({ page, pageNumber, pageSize, ordering, adva
         </tr></thead>
         <tbody>{page.items.map((user) => <UserRowComponent key={user.id} user={user} showGroups={advancedGroupsEnabled} />)}</tbody>
       </table></div>}
-    </PaginatedListFrameComponent>
+    </PaginatedListFrame>
   </section>;
 }
 

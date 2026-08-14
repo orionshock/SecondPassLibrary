@@ -3,9 +3,9 @@ import { Link } from "react-router";
 
 import { RemoveIconButton } from "../../../components/icons/RemoveIconButton";
 import { Button, ErrorPanel } from "../../../components/ui";
-import { ActionFeedbackComponent } from "../../../shared/feedback/ActionFeedbackComponent";
+import { ActionFeedback } from "../../../shared/feedback/ActionFeedback";
 import type { MutationState } from "../../../shared/feedback/mutationState";
-import { GroupBadgeComponent } from "../../../shared/groups/GroupBadgeComponent";
+import { GroupBadge } from "../../../shared/groups/GroupBadge";
 
 export function BookEditGroupShelvesPageRegion({
   shelves,
@@ -38,14 +38,14 @@ export function BookEditGroupShelvesPageRegion({
       {shelves.map((shelf) => <li key={shelf.id} className="book-edit-group-shelf-row">
         <div className="book-edit-group-shelf-row__identity">
           <Link to={`/shelves/${encodeURIComponent(shelf.id)}`} state={shelfNavigationState?.(shelf)}>{shelf.name}</Link>
-          {shelf.ownerGroup ? <GroupBadgeComponent name={shelf.ownerGroup.name} isPublicGroup={shelf.ownerGroup.isPublicGroup} /> : null}
+          {shelf.ownerGroup ? <GroupBadge name={shelf.ownerGroup.name} isPublicGroup={shelf.ownerGroup.isPublicGroup} /> : null}
         </div>
         {shelf.canEdit && shelf.matchedItemId
           ? <RemoveIconButton type="button" label={`Remove ${shelf.name}`} disabled={disabled} onClick={() => onRemove(shelf)} />
           : null}
       </li>)}
     </ul> : null}
-    <ActionFeedbackComponent state={mutation} />
+    <ActionFeedback state={mutation} />
     <p className="book-edit-group-shelves__note">Only group-owned shelves are shown here.</p>
   </section>;
 }

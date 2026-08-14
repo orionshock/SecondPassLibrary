@@ -2,7 +2,7 @@ import type { MarginaliaBookReference, MarginaliaSessionSummary } from "@second-
 import { Link } from "react-router";
 
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
-import { BookCoverComponent } from "../../../shared/books/BookCoverComponent";
+import { BookCover } from "../../../shared/books/BookCover";
 import { marginaliaSessionDisplayName } from "../../../shared/marginaliaSessionDisplayName";
 import { marginaliaSessionBreadcrumbFallback } from "../marginaliaBreadcrumbs";
 import { marginaliaSessionNoteExcerpt } from "../marginaliaSessionNoteExcerpt";
@@ -15,7 +15,7 @@ export function SessionSummaryRowComponent({ session, book }: { session: Margina
 
   return <article className="marginalia-session-row">
     <div className="marginalia-session-row__cover">
-      <BookCoverComponent coverUrl={book.coverUrl} title={bookTitle} />
+      <BookCover coverUrl={book.coverUrl} title={bookTitle} />
     </div>
     <div className="marginalia-session-row__body">
       <div className="marginalia-session-row__heading">

@@ -2,11 +2,11 @@ import type { FormEvent } from "react";
 import type { MarginaliaSessionListItem, Page } from "@second-pass/spl-api";
 
 import { Badge, Button, ErrorPanel, Surface } from "../../../components/ui";
-import { BookCoverComponent } from "../../../shared/books/BookCoverComponent";
+import { BookCover } from "../../../shared/books/BookCover";
 import { marginaliaSessionDisplayName } from "../../../shared/marginaliaSessionDisplayName";
-import { ActionFeedbackComponent } from "../../../shared/feedback/ActionFeedbackComponent";
+import { ActionFeedback } from "../../../shared/feedback/ActionFeedback";
 import type { MutationState } from "../../../shared/feedback/mutationState";
-import { PaginatedListFrameComponent } from "../../../shared/pagination/PaginatedListFrameComponent";
+import { PaginatedListFrame } from "../../../shared/pagination/PaginatedListFrame";
 import type { MarginaliaExportStatusFilter } from "../marginaliaExportQuery";
 
 export interface MarginaliaExportLimitFailure {
@@ -82,9 +82,9 @@ export function MarginaliaExportPageRegion({ page, pageNumber, pageSize, search,
       {!page && loadError ? <div className="marginalia-state"><ErrorPanel>{loadError.message}</ErrorPanel><Button type="button" tone="secondary" onClick={onRetry}>Retry</Button></div> : null}
       {page ? <div className={loading ? "marginalia-results marginalia-results--loading" : "marginalia-results"} aria-busy={loading}>
         {loadError ? <div className="marginalia-inline-error"><ErrorPanel>{loadError.message}</ErrorPanel><Button type="button" tone="secondary" onClick={onRetry}>Retry</Button></div> : null}
-        <PaginatedListFrameComponent page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Export Sessions" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange}>
+        <PaginatedListFrame page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Export Sessions" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange}>
           {page.items.length ? <div className="marginalia-export-session-rows">{page.items.map((session) => <MarginaliaExportSessionRow key={session.id} session={session} selected={selectedSessionIds.has(session.id)} disabled={selectedState.pending} onChange={(selected) => onSessionSelectionChange(session, selected)} />)}</div> : <div className="marginalia-empty"><p>No reading sessions found.</p></div>}
-        </PaginatedListFrameComponent>
+        </PaginatedListFrame>
       </div> : null}
 
       <div className="marginalia-export-submit">
@@ -96,7 +96,7 @@ export function MarginaliaExportPageRegion({ page, pageNumber, pageSize, search,
 }
 
 function MarginaliaExportFeedback({ state, limitFailure }: { state: MutationState; limitFailure?: MarginaliaExportLimitFailure }) {
-  if (!limitFailure) return <ActionFeedbackComponent state={state} />;
+  if (!limitFailure) return <ActionFeedback state={state} />;
   return <ErrorPanel>
     <p>{limitFailure.message}</p>
     <p>{limitFailure.guidance}</p>
@@ -110,7 +110,7 @@ function MarginaliaExportSessionRow({ session, selected, disabled, onChange }: {
   const relevantDate = session.closedAt ?? session.updatedAt;
   return <article className="marginalia-export-session-row">
     <div className="marginalia-export-session-row__selection"><input type="checkbox" aria-label={`Select ${sessionName}`} checked={selected} disabled={disabled} onChange={(event) => onChange(event.target.checked)} /></div>
-    <div className="marginalia-export-session-row__cover"><BookCoverComponent coverUrl={session.book.coverUrl} title={bookTitle} /></div>
+    <div className="marginalia-export-session-row__cover"><BookCover coverUrl={session.book.coverUrl} title={bookTitle} /></div>
     <div className="marginalia-export-session-row__body">
       <div className="marginalia-export-session-row__heading"><strong>{sessionName}</strong><Badge tone={session.status === "active" ? "success" : "default"}>{session.status === "active" ? "Active" : "Closed"}</Badge></div>
       <p>{bookTitle}</p>

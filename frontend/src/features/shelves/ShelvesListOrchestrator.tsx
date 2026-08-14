@@ -5,7 +5,7 @@ import { useSearchParams } from "react-router";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { loadPageWithRecovery } from "../../app/routing/pageRecovery";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
-import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
+import { ProductPageShell } from "../../shared/layout/ProductPageShell";
 import { ShelvesListPageRegion } from "./regions/ShelvesListPageRegion";
 import { shelvesListBreadcrumbFallback } from "./shelvesBreadcrumbs";
 import {
@@ -73,7 +73,7 @@ export function ShelvesListOrchestrator() {
     setSearchParameters(shelvesListSearchParams(withShelvesListChange(queryState, changes, resetPage)), { state: null });
   }
 
-  return <ProductPageShellComponent className="shelves-page">
+  return <ProductPageShell className="shelves-page">
     <ShelvesListPageRegion
       page={load.page}
       pageNumber={queryState.page}
@@ -88,5 +88,5 @@ export function ShelvesListOrchestrator() {
       onPageSizeChange={(pageSize) => changeQuery({ pageSize })}
       onRetry={() => setRetry((value) => value + 1)}
     />
-  </ProductPageShellComponent>;
+  </ProductPageShell>;
 }

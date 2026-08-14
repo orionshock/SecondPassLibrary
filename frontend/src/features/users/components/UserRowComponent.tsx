@@ -5,7 +5,7 @@ import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
 import { Badge } from "../../../components/ui";
 import { displayUserRole } from "../../../domain/users/presentation";
-import { UserInlineIdentityComponent } from "../../../shared/users/UserInlineIdentityComponent";
+import { UserInlineIdentity } from "../../../shared/users/UserInlineIdentity";
 import { usersEditBreadcrumbTrail } from "../usersBreadcrumbs";
 
 export function UserRowComponent({ user, showGroups }: { user: ManagedUser; showGroups: boolean }) {
@@ -15,7 +15,7 @@ export function UserRowComponent({ user, showGroups }: { user: ManagedUser; show
 
   return <tr className={`users-row${user.isActive ? "" : " users-row--inactive"}`}>
     <td className="users-identity">
-      <div className="users-identity__primary"><UserInlineIdentityComponent username={user.username} displayName={displayName} /></div>
+      <div className="users-identity__primary"><UserInlineIdentity username={user.username} displayName={displayName} /></div>
       <div className={`users-identity__email${user.email ? "" : " muted"}`}>{user.email || "No email"}</div>
     </td>
     <td className="users-role-status"><div className="users-role-status__content"><Badge tone={user.isOwner ? "accent" : "default"}>{displayUserRole(user)}</Badge>{user.isActive ? null : <span className="users-status-pill users-status-pill--inactive">Inactive</span>}</div></td>

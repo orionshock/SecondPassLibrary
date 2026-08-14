@@ -23,8 +23,8 @@ import {
   type MutationState,
 } from "../../shared/feedback/mutationState";
 import { useAutoDismissMutationMessage } from "../../shared/feedback/useAutoDismissMutationMessage";
-import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
-import { tabButtonId, tabPanelId } from "../../shared/tabs/TabListComponent";
+import { ProductPageShell } from "../../shared/layout/ProductPageShell";
+import { tabButtonId, tabPanelId } from "../../shared/tabs/TabList";
 import {
   emptyGroupDraft,
   groupDraftFromGroup,
@@ -320,7 +320,7 @@ export function GroupEditOrchestrator() {
     return <section className="group-lifecycle-state"><ErrorPanel>This Group is not available for editing.</ErrorPanel><Link to={groupDetailPath(load.group.id)}>Back to Group</Link></section>;
   }
 
-  return <ProductPageShellComponent className="groups-page group-lifecycle-page" eyebrow="Managing Group" title={draft.name || load.group.name}>
+  return <ProductPageShell className="groups-page group-lifecycle-page" eyebrow="Managing Group" title={draft.name || load.group.name}>
     <GroupEditTabsPageRegion activeTab={activeTab} disabled={immediateMutationPending} onTabChange={changeTab} />
     {activeTab === "details" ? <div
       id={tabPanelId("group-edit", "details")}
@@ -399,5 +399,5 @@ export function GroupEditOrchestrator() {
     >{memberMutationAllowed
       ? <GroupMembersEditOrchestrator group={load.group} metadataPending={mutation.pending} onMutationPendingChange={setMemberMutationPending} />
       : <section className="group-edit-section-state" aria-label="Members unavailable"><p className="muted">Membership management is not available for this account.</p></section>}</div> : null}
-  </ProductPageShellComponent>;
+  </ProductPageShell>;
 }

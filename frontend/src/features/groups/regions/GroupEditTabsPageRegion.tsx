@@ -1,4 +1,4 @@
-import { TabListComponent, type TabItem } from "../../../shared/tabs/TabListComponent";
+import { TabList, type TabItem } from "../../../shared/tabs/TabList";
 import type { GroupEditTab } from "../groupsQuery";
 
 const groupEditTabs: readonly TabItem<GroupEditTab>[] = [
@@ -13,7 +13,7 @@ export function GroupEditTabsPageRegion({ activeTab, disabled = false, onTabChan
   disabled?: boolean;
   onTabChange: (tab: GroupEditTab) => void;
 }) {
-  return <TabListComponent
+  return <TabList
     tabs={groupEditTabs}
     activeTab={activeTab}
     onChange={onTabChange}

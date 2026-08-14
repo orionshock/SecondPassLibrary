@@ -10,7 +10,7 @@ import {
   normalizeMutationError,
   type MutationState,
 } from "../../shared/feedback/mutationState";
-import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
+import { ProductPageShell } from "../../shared/layout/ProductPageShell";
 import {
   createGroupInputFromDraft,
   emptyGroupDraft,
@@ -94,7 +94,7 @@ export function GroupCreateOrchestrator() {
     return <section className="group-lifecycle-state"><ErrorPanel>Group creation is not available.</ErrorPanel></section>;
   }
 
-  return <ProductPageShellComponent className="groups-page group-lifecycle-page" eyebrow="New Group" title="Create Group">
+  return <ProductPageShell className="groups-page group-lifecycle-page" eyebrow="New Group" title="Create Group">
     <GroupMetadataFormPageRegion
       mode="new"
       draft={draft}
@@ -104,5 +104,5 @@ export function GroupCreateOrchestrator() {
       onSubmit={(event) => void save(event)}
       onCancel={cancel}
     />
-  </ProductPageShellComponent>;
+  </ProductPageShell>;
 }

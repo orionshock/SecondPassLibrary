@@ -2,8 +2,8 @@ import type { CompactBook, Page } from "@second-pass/spl-api";
 
 import { Button, ErrorPanel } from "../../../components/ui";
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
-import { CompactBookRowComponent } from "../../../shared/books/CompactBookRowComponent";
-import { PagerComponent } from "../../../shared/pagination/PagerComponent";
+import { CompactBookRow } from "../../../shared/books/CompactBookRow";
+import { Pager } from "../../../shared/pagination/Pager";
 import { bookBrowseDetailBreadcrumbs } from "../bookDetailPresentation";
 
 export function BookListPageRegion({ page, pageNumber, pageSize, loading, error, searching = false, tagged = false, selectedContext, libraryPath, parentLibraryPath, onPageChange, onPageSizeChange, onRetry }: {
@@ -38,9 +38,9 @@ export function BookListPageRegion({ page, pageNumber, pageSize, loading, error,
           contextKind: selectedContext?.kind,
           parentLibraryPath: parentLibraryPath ?? libraryPath,
         }));
-        return <CompactBookRowComponent key={book.id} book={book} detailPath={detailPath} navigationState={navigationState} />;
+        return <CompactBookRow key={book.id} book={book} detailPath={detailPath} navigationState={navigationState} />;
       })}</div>}
-    <PagerComponent
+    <Pager
       page={pageNumber}
       pageSize={pageSize}
       count={page.count}

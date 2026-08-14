@@ -3,16 +3,16 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 import {
-  OrderMenuComponent,
-  OrderMenuOptionsComponent,
+  OrderMenu,
+  OrderMenuOptions,
   orderMenuReducer,
   orderMenuStateForKey,
-} from "../shared/forms/OrderMenuComponent";
+} from "../shared/forms/OrderMenu";
 import { libraryAxisOrderingOptions, libraryBookOrderingOptions, libraryStateFromSearchParams, withLibraryChange, type LibraryUiOrdering } from "../features/library/libraryQuery";
 
-describe("OrderMenuComponent", () => {
+describe("OrderMenu", () => {
   it("shows the inline label and selected option icon in an accessible menu button", () => {
-    const markup = renderToStaticMarkup(<OrderMenuComponent
+    const markup = renderToStaticMarkup(<OrderMenu
       label="Order"
       ariaLabel="Sort books"
       value="-author"
@@ -30,7 +30,7 @@ describe("OrderMenuComponent", () => {
   });
 
   it("renders every option with its icon and marks the selected option", () => {
-    const markup = renderToStaticMarkup(<OrderMenuOptionsComponent
+    const markup = renderToStaticMarkup(<OrderMenuOptions
       value="series"
       options={libraryBookOrderingOptions}
       ariaLabel="Sort books"
@@ -51,7 +51,7 @@ describe("OrderMenuComponent", () => {
     const onSelect = vi.fn((ordering: LibraryUiOrdering) => {
       state = withLibraryChange(state, { ordering });
     });
-    const menu = OrderMenuOptionsComponent({ value: "series", options: libraryBookOrderingOptions, ariaLabel: "Sort books", onSelect });
+    const menu = OrderMenuOptions({ value: "series", options: libraryBookOrderingOptions, ariaLabel: "Sort books", onSelect });
     const options = (menu as ReactElement<{ children: ReactElement<{ onClick: () => void }>[] }>).props.children;
     options[3]!.props.onClick();
 
@@ -61,7 +61,7 @@ describe("OrderMenuComponent", () => {
   });
 
   it("supports Library axis options and Escape dismissal", () => {
-    const markup = renderToStaticMarkup(<OrderMenuOptionsComponent
+    const markup = renderToStaticMarkup(<OrderMenuOptions
       value="-book_count"
       options={libraryAxisOrderingOptions}
       ariaLabel="Sort authors"
@@ -77,7 +77,7 @@ describe("OrderMenuComponent", () => {
 
   it("keeps a disabled menu closed", () => {
     const onChange = vi.fn();
-    const markup = renderToStaticMarkup(<OrderMenuComponent
+    const markup = renderToStaticMarkup(<OrderMenu
       label="Order"
       value="name"
       options={[{ value: "name", label: "Name A-Z", icon: "sort_by_alpha" }] as const}

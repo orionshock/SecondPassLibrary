@@ -2,7 +2,7 @@ import type { FormEvent } from "react";
 
 import { FormField } from "../../../components/ui";
 import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";
-import { SaveCancelActionRowComponent } from "../../../shared/forms/ActionRowComponent";
+import { SaveCancelActionRow } from "../../../shared/forms/ActionRow";
 import type { AuthorSeriesEditDraft } from "../authorSeriesEditDraft";
 import type { DuplicateAdvisoryCandidate } from "../authorSeriesDuplicateAdvisory";
 import { titleKind, type LibraryEntityKind } from "../authorSeriesLifecycle";
@@ -53,7 +53,7 @@ export function AuthorSeriesEditFormPageRegion({
     <FormField label={proseLabel} htmlFor="library-entity-prose" error={fieldError(state.error, proseField)}>
       <textarea id="library-entity-prose" value={draft.prose} autoComplete="off" onChange={(event) => onChange("prose", event.target.value)} />
     </FormField>
-    <SaveCancelActionRowComponent
+    <SaveCancelActionRow
       state={state}
       submitLabel={`Save ${entity}`}
       pendingLabel="Saving..."

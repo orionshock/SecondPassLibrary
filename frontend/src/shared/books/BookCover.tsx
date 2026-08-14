@@ -3,7 +3,7 @@ import { useState } from "react";
 import { MaterialIcon } from "../../components/icons/MaterialIcon";
 import "./BookComponents.css";
 
-export function BookCoverComponent({ coverUrl, title }: { coverUrl: string | null; title: string }) {
+export function BookCover({ coverUrl, title }: { coverUrl: string | null; title: string }) {
   const [failedUrl, setFailedUrl] = useState<string>();
   const showImage = Boolean(coverUrl && coverUrl !== failedUrl);
 

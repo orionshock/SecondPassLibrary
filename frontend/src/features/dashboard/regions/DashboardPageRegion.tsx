@@ -3,7 +3,7 @@ import { Link } from "react-router";
 
 import { Button, ErrorPanel } from "../../../components/ui";
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
-import { ProductPageShellComponent } from "../../../shared/layout/ProductPageShellComponent";
+import { ProductPageShell } from "../../../shared/layout/ProductPageShell";
 import { DashboardActionTileComponent, type DashboardAction } from "../components/DashboardActionTileComponent";
 import { RecentSessionScrollerComponent } from "../components/RecentSessionScrollerComponent";
 
@@ -29,7 +29,7 @@ export function DashboardPageRegion({
   showServerSettings: boolean;
   onRetryRecentReading: () => void;
 }) {
-  return <ProductPageShellComponent
+  return <ProductPageShell
     className="dashboard-page"
     title="Library Home"
   >
@@ -37,7 +37,7 @@ export function DashboardPageRegion({
     <RecentReadingPageRegion state={recentReading} onRetry={onRetryRecentReading} />
     <DashboardLaunchPadsPageRegion showAdvancedGroups={showAdvancedGroups} />
     <DashboardUtilitiesComponent showImports={showImports} showUsers={showUsers} showServerSettings={showServerSettings} />
-  </ProductPageShellComponent>;
+  </ProductPageShell>;
 }
 
 function RecentReadingPageRegion({ state, onRetry }: { state: RecentReadingState; onRetry: () => void }) {

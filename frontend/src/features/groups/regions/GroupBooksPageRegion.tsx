@@ -3,9 +3,9 @@ import type { FormEvent } from "react";
 
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { Button, ErrorPanel } from "../../../components/ui";
-import { CompactBookRowComponent } from "../../../shared/books/CompactBookRowComponent";
-import { OrderMenuComponent, type OrderMenuOption } from "../../../shared/forms/OrderMenuComponent";
-import { PagerComponent } from "../../../shared/pagination/PagerComponent";
+import { CompactBookRow } from "../../../shared/books/CompactBookRow";
+import { OrderMenu, type OrderMenuOption } from "../../../shared/forms/OrderMenu";
+import { Pager } from "../../../shared/pagination/Pager";
 import { groupBookBreadcrumbs } from "../groupsBreadcrumbs";
 import type { GroupBookOrdering } from "../groupsQuery";
 
@@ -67,7 +67,7 @@ export function GroupBooksPageRegion({
         <input id="group-books-search" value={search} placeholder="Book title..." onChange={(event) => onSearchChange(event.target.value)} />
         <Button type="submit">Search</Button>
       </form>
-      <OrderMenuComponent label="Order" ariaLabel="Order group books" value={ordering} options={groupBookOrderingOptions} onChange={onOrderingChange} />
+      <OrderMenu label="Order" ariaLabel="Order group books" value={ordering} options={groupBookOrderingOptions} onChange={onOrderingChange} />
     </div>
     <GroupBooksResults
       groupId={groupId}
@@ -109,7 +109,7 @@ function GroupBooksResults({ groupId, groupName, isPublicGroup, groupPath, page,
     {page.items.length === 0 ? <p className="group-detail-state muted">No books match this group view.</p> : <div className="group-book-rows">
       {page.items.map((book) => {
         const detailPath = `/library/books/${encodeURIComponent(book.id)}`;
-        return <CompactBookRowComponent
+        return <CompactBookRow
           key={book.id}
           book={book}
           detailPath={detailPath}
@@ -117,7 +117,7 @@ function GroupBooksResults({ groupId, groupName, isPublicGroup, groupPath, page,
         />;
       })}
     </div>}
-    <PagerComponent
+    <Pager
       page={pageNumber}
       pageSize={pageSize}
       count={page.count}

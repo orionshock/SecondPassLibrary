@@ -22,7 +22,7 @@ import { breadcrumbNavigationState, resolveBreadcrumbTrail } from "../../app/nav
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { Button, ErrorPanel } from "../../components/ui";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
-import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
+import { ProductPageShell } from "../../shared/layout/ProductPageShell";
 import {
   authorEditDraft,
   authorMutationInput,
@@ -363,7 +363,7 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
   if (load.status === "not-found") return <div className="author-series-edit-state"><ErrorPanel>{entityTitle} not found or unavailable.</ErrorPanel><Link to={libraryEntityAxisPath(kind)}>Back to {entityTitle === "Author" ? "Authors" : "Series"}</Link></div>;
   if (load.status === "error") return <div className="author-series-edit-state"><ErrorPanel>{load.error.message}</ErrorPanel><Button type="button" onClick={() => setRetry((value) => value + 1)}>Retry</Button></div>;
 
-  return <ProductPageShellComponent
+  return <ProductPageShell
     className="author-series-edit-page"
     eyebrow={mode === "new" ? `New ${entityTitle}` : `Editing ${entityTitle}`}
     title={mode === "new" ? `Create ${entityTitle}` : draft.name || entity?.name || entityTitle}
@@ -411,7 +411,7 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
         editPath={`${location.pathname}${location.search}`}
       />
     </> : null}
-  </ProductPageShellComponent>;
+  </ProductPageShell>;
 }
 
 async function saveEntity(

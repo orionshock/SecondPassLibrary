@@ -1,7 +1,7 @@
 import { useEffect, useId, useReducer, useRef, type KeyboardEvent } from "react";
 
 import { MaterialIcon } from "../../components/icons/MaterialIcon";
-import "./OrderMenuComponent.css";
+import "./OrderMenu.css";
 
 type OrderMenuAction = "toggle" | "close";
 
@@ -11,7 +11,7 @@ export interface OrderMenuOption<Value extends string> {
   icon: string;
 }
 
-export interface OrderMenuComponentProps<Value extends string> {
+export interface OrderMenuProps<Value extends string> {
   label: string;
   value: Value;
   options: readonly OrderMenuOption<Value>[];
@@ -30,7 +30,7 @@ export function orderMenuStateForKey(open: boolean, key: string): boolean {
   return key === "Escape" ? false : open;
 }
 
-export function OrderMenuComponent<Value extends string>({
+export function OrderMenu<Value extends string>({
   label,
   value,
   options,
@@ -39,7 +39,7 @@ export function OrderMenuComponent<Value extends string>({
   size = "medium",
   disabled = false,
   className = "",
-}: OrderMenuComponentProps<Value>) {
+}: OrderMenuProps<Value>) {
   const [open, dispatch] = useReducer(orderMenuReducer, false);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -98,7 +98,7 @@ export function OrderMenuComponent<Value extends string>({
         <span>{activeOption.label}</span>
         <MaterialIcon name={open ? "expand_less" : "expand_more"} className="order-menu-component__chevron" />
       </button>
-      {open ? <OrderMenuOptionsComponent
+      {open ? <OrderMenuOptions
         id={menuId}
         value={value}
         options={options}
@@ -112,7 +112,7 @@ export function OrderMenuComponent<Value extends string>({
   </div>;
 }
 
-export function OrderMenuOptionsComponent<Value extends string>({ id, value, options, ariaLabel, onSelect }: {
+export function OrderMenuOptions<Value extends string>({ id, value, options, ariaLabel, onSelect }: {
   id?: string;
   value: Value;
   options: readonly OrderMenuOption<Value>[];

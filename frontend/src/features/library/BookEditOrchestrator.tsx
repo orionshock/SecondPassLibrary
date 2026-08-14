@@ -25,12 +25,12 @@ import { useBlocker, useLocation, useNavigate, useOutletContext, useParams } fro
 import type { AppOutletContext } from "../../app/layout/AppOrchestrator";
 import { breadcrumbNavigationState, readIncomingBreadcrumbTrail, resolveBreadcrumbTrail } from "../../app/navigation/breadcrumbs";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { BookCoverComponent } from "../../shared/books/BookCoverComponent";
+import { BookCover } from "../../shared/books/BookCover";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
 import { useAutoDismissMutationMessage } from "../../shared/feedback/useAutoDismissMutationMessage";
-import { SaveCancelActionRowComponent } from "../../shared/forms/ActionRowComponent";
-import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
-import { tabButtonId, tabPanelId } from "../../shared/tabs/TabListComponent";
+import { SaveCancelActionRow } from "../../shared/forms/ActionRow";
+import { ProductPageShell } from "../../shared/layout/ProductPageShell";
+import { tabButtonId, tabPanelId } from "../../shared/tabs/TabList";
 import { bookDetailBreadcrumbFallback, bookEditBreadcrumbTrail, bookEditRelatedBreadcrumbTrail } from "./bookDetailPresentation";
 import { bookDetailWithUpdatedCover } from "./bookCoverMutation";
 import { bookDetailWithUpdatedGroups, canEditBookGroups } from "./bookGroupMutation";
@@ -318,14 +318,14 @@ export function BookEditOrchestrator() {
     });
   }
 
-  if (load.status === "not-found") return <ProductPageShellComponent><BookDetailStatePageRegion state="not-found" /></ProductPageShellComponent>;
-  if (load.status === "error") return <ProductPageShellComponent><BookDetailStatePageRegion state="error" error={load.error} onRetry={() => setBookRetry((value) => value + 1)} /></ProductPageShellComponent>;
-  if (load.status === "loading" || !draft) return <ProductPageShellComponent><BookDetailStatePageRegion state="loading" /></ProductPageShellComponent>;
+  if (load.status === "not-found") return <ProductPageShell><BookDetailStatePageRegion state="not-found" /></ProductPageShell>;
+  if (load.status === "error") return <ProductPageShell><BookDetailStatePageRegion state="error" error={load.error} onRetry={() => setBookRetry((value) => value + 1)} /></ProductPageShell>;
+  if (load.status === "loading" || !draft) return <ProductPageShell><BookDetailStatePageRegion state="loading" /></ProductPageShell>;
   const readyBook = load.book;
 
-  return <ProductPageShellComponent><form className="book-edit-page" onSubmit={save}>
+  return <ProductPageShell><form className="book-edit-page" onSubmit={save}>
     <aside className="book-edit-cover">
-      <BookCoverComponent coverUrl={readyBook.coverUrl} title={readyBook.title} />
+      <BookCover coverUrl={readyBook.coverUrl} title={readyBook.title} />
       <BookCoverEditorComponent
         coverUrl={readyBook.coverUrl}
         title={readyBook.title}
@@ -384,9 +384,9 @@ export function BookEditOrchestrator() {
         onRemove={(shelf) => void removeGroupShelf(shelf)}
       /> : null}
       </div>
-      <SaveCancelActionRowComponent state={mutation} submitLabel="Save Book" pendingLabel="Saving..." disabled={immediateMutationPending} onCancel={cancel} />
+      <SaveCancelActionRow state={mutation} submitLabel="Save Book" pendingLabel="Saving..." disabled={immediateMutationPending} onCancel={cancel} />
     </main>
-  </form></ProductPageShellComponent>;
+  </form></ProductPageShell>;
 }
 
 function readyGroupsForRemoval(load: BookLoad, removedGroupId: string): boolean {

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent, type MouseEvent } from "react";
 
 import { Button } from "../../../components/ui";
-import { BookCoverComponent } from "../../../shared/books/BookCoverComponent";
+import { BookCover } from "../../../shared/books/BookCover";
 import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";
 
 const acceptedCoverTypes = "image/jpeg,image/png,image/webp";
@@ -63,7 +63,7 @@ export function BookCoverPreviewComponent({
   title: string;
 }) {
   return <>
-    <BookCoverComponent coverUrl={previewUrl ?? coverUrl} title={title} />
+    <BookCover coverUrl={previewUrl ?? coverUrl} title={title} />
     {previewUrl ? <p className="book-cover-dialog__preview-status" role="status">Pending replacement preview</p> : null}
   </>;
 }

@@ -1,7 +1,7 @@
 import type { LibrarySeries, Page } from "@second-pass/spl-api";
 
 import { Button, ErrorPanel } from "../../../components/ui";
-import { PagerComponent } from "../../../shared/pagination/PagerComponent";
+import { Pager } from "../../../shared/pagination/Pager";
 import { SeriesRowComponent } from "../components/SeriesRowComponent";
 
 export function SeriesListPageRegion({ page, pageNumber, pageSize, loading, error, searching, tagged, libraryPath, contextPathFor, onPageChange, onPageSizeChange, onRetry }: {
@@ -26,7 +26,7 @@ export function SeriesListPageRegion({ page, pageNumber, pageSize, loading, erro
     {page.items.length === 0
       ? <p className="library-list-state muted">{seriesEmptyCopy(searching, tagged)}</p>
       : <div className="library-axis-list-region__rows">{page.items.map((series) => <SeriesRowComponent key={series.id} series={series} libraryPath={libraryPath} contextPath={contextPathFor(series)} />)}</div>}
-    <PagerComponent page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Series" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} />
+    <Pager page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Series" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} />
   </section>;
 }
 

@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { CatalogTag, CompactBook, LibraryAuthor, LibrarySeries, Page, ShelfSummary } from "@second-pass/spl-api";
 import { BookCoverEditorComponent } from "../features/library/components/BookCoverEditorComponent";
 import { AuthorRowComponent } from "../features/library/components/AuthorRowComponent";
-import { CompactBookRowComponent } from "../shared/books/CompactBookRowComponent";
+import { CompactBookRow } from "../shared/books/CompactBookRow";
 import { SeriesRowComponent } from "../features/library/components/SeriesRowComponent";
 import { readSelectedLibraryContextDisplay } from "../features/library/libraryPresentation";
 import { libraryStateFromSearchParams } from "../features/library/libraryQuery";
@@ -118,7 +118,7 @@ describe("Library Books components", () => {
   });
 
   it("renders only the accepted compact row presentation", () => {
-    const markup = renderToStaticMarkup(<MemoryRouter><CompactBookRowComponent book={book} detailPath="/library/books/book%2Fid" /></MemoryRouter>);
+    const markup = renderToStaticMarkup(<MemoryRouter><CompactBookRow book={book} detailPath="/library/books/book%2Fid" /></MemoryRouter>);
     for (const value of ["Visible Title", "Visible Author", "Visible Series 3.00", "Visible Publisher", "Tag 0", "+2"]) expect(markup).toContain(value);
     for (const hidden of ["HIDDEN SUBTITLE", "1999", "HIDDEN LANGUAGE", "HIDDEN FORMAT", "Groups", "checksum", "identifier"]) expect(markup).not.toContain(hidden);
     expect(markup).toContain("No cover available for Visible Title");
@@ -126,8 +126,8 @@ describe("Library Books components", () => {
   });
 
   it("keeps compact Book rows action-free by default and accepts caller-owned actions", () => {
-    const readOnly = renderToStaticMarkup(<MemoryRouter><CompactBookRowComponent book={book} detailPath="/library/books/book" /></MemoryRouter>);
-    const actionable = renderToStaticMarkup(<MemoryRouter><CompactBookRowComponent
+    const readOnly = renderToStaticMarkup(<MemoryRouter><CompactBookRow book={book} detailPath="/library/books/book" /></MemoryRouter>);
+    const actionable = renderToStaticMarkup(<MemoryRouter><CompactBookRow
       book={book}
       detailPath="/library/books/book"
       actions={<button type="button" aria-label="Add Visible Title">Add</button>}

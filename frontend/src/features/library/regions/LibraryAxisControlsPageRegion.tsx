@@ -1,7 +1,7 @@
 import type { FormEvent } from "react";
 
 import { Button } from "../../../components/ui";
-import { OrderMenuComponent } from "../../../shared/forms/OrderMenuComponent";
+import { OrderMenu } from "../../../shared/forms/OrderMenu";
 import { libraryOrderingOptions, type LibrarySelectedContextKind, type LibraryUiOrdering, type LibraryView } from "../libraryQuery";
 
 const labels = {
@@ -28,7 +28,7 @@ export function LibraryAxisControlsPageRegion({ view, selectedContext, search, o
       <input id="library-search" value={search} placeholder={copy.placeholder} onChange={(event) => onSearchChange(event.target.value)} />
       <Button type="submit">Search</Button>
     </form>
-    <OrderMenuComponent
+    <OrderMenu
       label="Order"
       ariaLabel={`Sort ${copy.item}`}
       value={ordering}

@@ -7,7 +7,7 @@ import { breadcrumbNavigationState } from "../../app/navigation/breadcrumbs";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { Button } from "../../components/ui";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
-import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
+import { ProductPageShell } from "../../shared/layout/ProductPageShell";
 import { UsersFiltersPageRegion } from "./regions/UsersFiltersPageRegion";
 import { UsersListPageRegion } from "./regions/UsersListPageRegion";
 import { creatableUserRoles } from "./userCreateRoles";
@@ -57,7 +57,7 @@ export function UsersListOrchestrator() {
     setSearchParameters(usersListSearchParams(withUsersListChange(queryState, changes, resetPage)));
   }
 
-  return <ProductPageShellComponent className="users-page" title="Users" actions={canCreateUsers
+  return <ProductPageShell className="users-page" title="Users" actions={canCreateUsers
       ? <Link className="button" to="/users/new" state={breadcrumbNavigationState(usersCreateBreadcrumbFallback)}>Create User</Link>
       : <Button type="button" disabled>Create User</Button>}>
     <UsersFiltersPageRegion
@@ -84,5 +84,5 @@ export function UsersListOrchestrator() {
       onPageSizeChange={(pageSize) => changeQuery({ pageSize })}
       onRetry={() => setRetry((value) => value + 1)}
     />
-  </ProductPageShellComponent>;
+  </ProductPageShell>;
 }

@@ -2,7 +2,7 @@ import type { FormEvent } from "react";
 
 import { FormField } from "../../../components/ui";
 import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";
-import { SaveCancelActionRowComponent } from "../../../shared/forms/ActionRowComponent";
+import { SaveCancelActionRow } from "../../../shared/forms/ActionRow";
 import type { GroupDraft } from "../groupDraft";
 
 export function GroupMetadataFormPageRegion({
@@ -44,7 +44,7 @@ export function GroupMetadataFormPageRegion({
         onChange={(event) => onChange("description", event.target.value)}
       />
     </FormField>
-    <SaveCancelActionRowComponent
+    <SaveCancelActionRow
       state={state}
       submitLabel={mode === "new" ? "Create Group" : "Save Group"}
       pendingLabel="Saving..."

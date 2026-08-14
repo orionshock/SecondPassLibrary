@@ -1,10 +1,10 @@
 import type { BookDetail, BookPreview, LibraryGroup, ShelfSummary } from "@second-pass/spl-api";
 
 import { ErrorPanel } from "../../../components/ui";
-import type { BookCoverPreviewItem } from "../../../shared/books/BookCoverPreviewStripComponent";
-import { GroupRowComponent } from "../../../shared/groups/GroupRowComponent";
-import { ShelfSummaryRowComponent, type ShelfOwnerBadge } from "../../../shared/shelves/ShelfSummaryRowComponent";
-import { TabListComponent, tabButtonId, tabPanelId, type TabItem } from "../../../shared/tabs/TabListComponent";
+import type { BookCoverPreviewItem } from "../../../shared/books/BookCoverPreviewStrip";
+import { GroupRow } from "../../../shared/groups/GroupRow";
+import { ShelfSummaryRow, type ShelfOwnerBadge } from "../../../shared/shelves/ShelfSummaryRow";
+import { TabList, tabButtonId, tabPanelId, type TabItem } from "../../../shared/tabs/TabList";
 import { BookIdentifierListComponent } from "../components/BookIdentifierListComponent";
 import { formatBookFileSize, formatBookPublishedDate } from "../bookDetailPresentation";
 import type { BookDetailTab } from "../bookTabs";
@@ -98,7 +98,7 @@ function BookDetailSectionsComponent({
   onRetryGroups?: () => void;
 }) {
   return <section className="book-detail-sections-region" aria-label="Book relationships and metadata">
-    <TabListComponent tabs={sections} activeTab={activeSection} onChange={onSectionChange} ariaLabel="Book detail sections" idPrefix="book-detail" />
+    <TabList tabs={sections} activeTab={activeSection} onChange={onSectionChange} ariaLabel="Book detail sections" idPrefix="book-detail" />
     <div
       className="book-detail-sections-region__panel"
       id={tabPanelId("book-detail", activeSection)}
@@ -141,7 +141,7 @@ function BookDetailShelvesSection({ state, shelfNavigationState, shelfBookNaviga
         : shelf.visibility === "listed" && shelf.ownerUser
           ? { kind: "user", username: shelf.ownerUser.username }
           : undefined;
-      return <ShelfSummaryRowComponent
+      return <ShelfSummaryRow
         key={shelf.id}
         name={shelf.name}
         description={shelf.description}
@@ -172,7 +172,7 @@ function BookDetailGroupsSection({ state, groupNavigationState, groupBookNavigat
   }
   if (state.groups.length === 0) return <p className="muted">No visible groups.</p>;
   return <div className="book-detail-sections-region__groups" aria-label="Book groups">
-    {state.groups.map((group) => <GroupRowComponent
+    {state.groups.map((group) => <GroupRow
       key={group.id}
       group={group}
       detailPath={`/groups/${encodeURIComponent(group.id)}`}

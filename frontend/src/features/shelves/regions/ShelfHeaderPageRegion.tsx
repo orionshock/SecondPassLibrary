@@ -2,7 +2,7 @@ import type { ShelfSummary } from "@second-pass/spl-api";
 import { Link } from "react-router";
 
 import { Badge, Button, ErrorPanel, PageHeader } from "../../../components/ui";
-import { UserInlineIdentityComponent } from "../../../shared/users/UserInlineIdentityComponent";
+import { UserInlineIdentity } from "../../../shared/users/UserInlineIdentity";
 
 export function ShelfHeaderPageRegion({ shelf, loading, error, editPath, editNavigationState, onRetry }: {
   shelf?: ShelfSummary;
@@ -37,6 +37,6 @@ function ShelfOwnerIdentity({ shelf }: { shelf: ShelfSummary }) {
   if (shelf.ownerType === "group") return <span>{shelf.ownerGroup?.name ?? "Library Group"}</span>;
   if (shelf.canEdit) return <span>Personal shelf</span>;
   return shelf.ownerUser
-    ? <span>Shared by <UserInlineIdentityComponent username={shelf.ownerUser.username} /></span>
+    ? <span>Shared by <UserInlineIdentity username={shelf.ownerUser.username} /></span>
     : <span>Shared shelf</span>;
 }

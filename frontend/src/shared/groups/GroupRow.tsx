@@ -1,8 +1,8 @@
 import { Link } from "react-router";
 
 import { Badge } from "../../components/ui";
-import { BookCoverPreviewStripComponent, type BookCoverPreviewItem } from "../books/BookCoverPreviewStripComponent";
-import "./GroupRowComponent.css";
+import { BookCoverPreviewStrip, type BookCoverPreviewItem } from "../books/BookCoverPreviewStrip";
+import "./GroupRow.css";
 
 export interface GroupRowIdentity {
   name: string;
@@ -10,7 +10,7 @@ export interface GroupRowIdentity {
   isPublicGroup: boolean;
 }
 
-export function GroupRowComponent({ group, detailPath, navigationState, isCurator, previewBooks }: {
+export function GroupRow({ group, detailPath, navigationState, isCurator, previewBooks }: {
   group: GroupRowIdentity;
   detailPath: string;
   navigationState?: unknown;
@@ -27,6 +27,6 @@ export function GroupRowComponent({ group, detailPath, navigationState, isCurato
       </div>
       {group.description ? <p>{group.description}</p> : null}
     </div>
-    {hasPreviews ? <BookCoverPreviewStripComponent books={previewBooks} /> : null}
+    {hasPreviews ? <BookCoverPreviewStrip books={previewBooks} /> : null}
   </article>;
 }

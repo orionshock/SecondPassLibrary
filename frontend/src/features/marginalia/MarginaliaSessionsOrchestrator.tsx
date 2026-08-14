@@ -13,7 +13,7 @@ import { useSearchParams } from "react-router";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { loadPageWithRecovery } from "../../app/routing/pageRecovery";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
-import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
+import { ProductPageShell } from "../../shared/layout/ProductPageShell";
 import { marginaliaListBreadcrumbFallback } from "./marginaliaBreadcrumbs";
 import { MarginaliaSectionActionsComponent } from "./components/MarginaliaSectionActionsComponent";
 import { MarginaliaViewSelectorComponent } from "./components/MarginaliaViewSelectorComponent";
@@ -167,7 +167,7 @@ export function MarginaliaSessionsOrchestrator() {
   }
 
   const shellActions = <MarginaliaSectionActionsComponent activeSection="sessions" />;
-  return <ProductPageShellComponent title="My Marginalia" actions={shellActions}>
+  return <ProductPageShell title="My Marginalia" actions={shellActions}>
     <div className="marginalia-browser">
       <MarginaliaViewSelectorComponent activeView={queryState.view} onViewChange={changeView} />
       {stage === "sessions" ? <MarginaliaSessionsPageRegion
@@ -217,5 +217,5 @@ export function MarginaliaSessionsOrchestrator() {
         onRetry={() => setRetry((value) => value + 1)}
       /> : null}
     </div>
-  </ProductPageShellComponent>;
+  </ProductPageShell>;
 }

@@ -5,8 +5,8 @@ import { HelpPopover } from "../../../components/HelpPopover";
 import { RemoveIconButton } from "../../../components/icons/RemoveIconButton";
 import { Button } from "../../../components/ui";
 import type { MutationState } from "../../../shared/feedback/mutationState";
-import { ActionRowComponent } from "../../../shared/forms/ActionRowComponent";
-import { GroupBadgeComponent } from "../../../shared/groups/GroupBadgeComponent";
+import { ActionRow } from "../../../shared/forms/ActionRow";
+import { GroupBadge } from "../../../shared/groups/GroupBadge";
 
 export function UserGroupMembershipsPageRegion({ memberships, assignableGroups, state, onAdd, onRemove, onCuratorChange }: {
   memberships: readonly ManagedUserGroup[];
@@ -35,7 +35,7 @@ export function UserGroupMembershipsPageRegion({ memberships, assignableGroups, 
         return <div className="user-membership-row" key={membership.id}>
           <div className="user-membership-left">
             <RemoveIconButton label={`Remove ${membership.name}`} disabled={!removeEnabled} onClick={() => onRemove(membership)} />
-            <GroupBadgeComponent name={membership.name} isPublicGroup={membership.isPublicGroup} />
+            <GroupBadge name={membership.name} isPublicGroup={membership.isPublicGroup} />
           </div>
           <div className="user-membership-curator">
             {membership.isPublicGroup
@@ -51,7 +51,7 @@ export function UserGroupMembershipsPageRegion({ memberships, assignableGroups, 
         <div className="form-field"><label htmlFor="managed-user-add-group">Group</label><select id="managed-user-add-group" value={groupId} onChange={(event) => setGroupId(event.target.value)}>{assignableGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></div>
         <div className="form-field"><span>Curator</span>{selectedGroup?.isPublicGroup ? <span className="muted">Public membership cannot be curator.</span> : <label className="checkbox-control"><input type="checkbox" checked={isCurator} onChange={(event) => setIsCurator(event.target.checked)} /> Grant curator access</label>}</div>
       </> : <p className="muted">No groups are available to add.</p>}
-      <ActionRowComponent state={state}><Button type="submit" disabled={!groupId || state.pending}>{state.pending ? "Adding..." : "Add"}</Button></ActionRowComponent>
+      <ActionRow state={state}><Button type="submit" disabled={!groupId || state.pending}>{state.pending ? "Adding..." : "Add"}</Button></ActionRow>
     </form>
   </section>;
 }

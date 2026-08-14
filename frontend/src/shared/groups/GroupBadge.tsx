@@ -1,8 +1,8 @@
 import { MaterialIcon } from "../../components/icons/MaterialIcon";
 import { Badge } from "../../components/ui";
-import "./GroupBadgeComponent.css";
+import "./GroupBadge.css";
 
-export function GroupBadgeComponent({ name, isPublicGroup = false, size = "small" }: {
+export function GroupBadge({ name, isPublicGroup = false, size = "small" }: {
   name: string;
   isPublicGroup?: boolean;
   size?: "small" | "medium";

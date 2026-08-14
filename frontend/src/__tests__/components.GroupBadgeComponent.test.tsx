@@ -1,13 +1,13 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { GroupBadgeComponent } from "../shared/groups/GroupBadgeComponent";
+import { GroupBadge } from "../shared/groups/GroupBadge";
 
-describe("GroupBadgeComponent", () => {
+describe("GroupBadge", () => {
   it("renders structural group identity with distinct Public semantics", () => {
-    const ordinary = renderToStaticMarkup(<GroupBadgeComponent name="Editors" />);
-    const publicGroup = renderToStaticMarkup(<GroupBadgeComponent name="Common Room" isPublicGroup />);
-    const medium = renderToStaticMarkup(<GroupBadgeComponent name="Editors" size="medium" />);
+    const ordinary = renderToStaticMarkup(<GroupBadge name="Editors" />);
+    const publicGroup = renderToStaticMarkup(<GroupBadge name="Common Room" isPublicGroup />);
+    const medium = renderToStaticMarkup(<GroupBadge name="Editors" size="medium" />);
 
     expect(ordinary).toContain('aria-label="Group: Editors"');
     expect(ordinary).toContain("Editors");

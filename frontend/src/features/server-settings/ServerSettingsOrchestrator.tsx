@@ -16,9 +16,9 @@ import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { Button, ErrorPanel } from "../../components/ui";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
 import { useAutoDismissMutationMessage } from "../../shared/feedback/useAutoDismissMutationMessage";
-import { ActionRowComponent } from "../../shared/forms/ActionRowComponent";
-import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
-import { TabListComponent, tabButtonId, tabPanelId } from "../../shared/tabs/TabListComponent";
+import { ActionRow } from "../../shared/forms/ActionRow";
+import { ProductPageShell } from "../../shared/layout/ProductPageShell";
+import { TabList, tabButtonId, tabPanelId } from "../../shared/tabs/TabList";
 import { GeneralSettingsPageRegion } from "./regions/GeneralSettingsPageRegion";
 import { ExternalServicesPageRegion } from "./regions/ExternalServicesPageRegion";
 import { LibraryGroupsPageRegion } from "./regions/LibraryGroupsPageRegion";
@@ -146,16 +146,16 @@ export function ServerSettingsOrchestrator() {
 
   const settings = load.settings;
   const formId = serverSettingsFormId(tab);
-  const headerActions = <ActionRowComponent state={state}>
+  const headerActions = <ActionRow state={state}>
     {editing ? <>
       <Button type="button" tone="secondary" disabled={state.pending} onClick={cancel}>Cancel</Button>
       {formId ? <Button type="submit" form={formId} disabled={state.pending}>{state.pending ? "Saving..." : "Save"}</Button> : null}
     </> : <Button type="button" tone="secondary" onClick={() => { setState(idleMutationState); setEditing(true); }}>Edit</Button>}
-  </ActionRowComponent>;
+  </ActionRow>;
 
-  return <ProductPageShellComponent className="server-settings-page" title="Server Settings" actions={<DjangoAdminActionComponent enabled={currentUser.canAccessDjangoAdmin} />}>
+  return <ProductPageShell className="server-settings-page" title="Server Settings" actions={<DjangoAdminActionComponent enabled={currentUser.canAccessDjangoAdmin} />}>
     <div className="server-settings-tabs">
-      <TabListComponent tabs={serverSettingsTabs} activeTab={tab} onChange={selectTab} ariaLabel="Server settings sections" idPrefix="server-settings" />
+      <TabList tabs={serverSettingsTabs} activeTab={tab} onChange={selectTab} ariaLabel="Server settings sections" idPrefix="server-settings" />
       <div className="server-settings-tab-actions">{headerActions}</div>
     </div>
     <div id={tabPanelId("server-settings", tab)} role="tabpanel" aria-labelledby={tabButtonId("server-settings", tab)}>
@@ -185,7 +185,7 @@ export function ServerSettingsOrchestrator() {
     /> : null}
     {tab === "library-groups" ? <LibraryGroupsPageRegion settings={settings.libraryGroups} editing={editing} state={state} onEnable={() => void enableGroups()} /> : null}
     </div>
-  </ProductPageShellComponent>;
+  </ProductPageShell>;
 }
 
 export function canAccessServerSettings(isOwner: boolean): boolean { return isOwner; }

@@ -3,8 +3,8 @@ import type { CompactBook, Page } from "@second-pass/spl-api";
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { RemoveIconButton } from "../../../components/icons/RemoveIconButton";
 import { Button, ErrorPanel } from "../../../components/ui";
-import { CompactBookRowComponent } from "../../../shared/books/CompactBookRowComponent";
-import { PagerComponent } from "../../../shared/pagination/PagerComponent";
+import { CompactBookRow } from "../../../shared/books/CompactBookRow";
+import { Pager } from "../../../shared/pagination/Pager";
 import { groupBookBreadcrumbs } from "../groupsBreadcrumbs";
 
 export function GroupBooksEditPageRegion({ groupId, groupName, isPublicGroup, page, pageNumber, pageSize, loading, error, pendingBookId, controlsDisabled, onRemove, onPageChange, onPageSizeChange, onRetry }: {
@@ -30,7 +30,7 @@ export function GroupBooksEditPageRegion({ groupId, groupName, isPublicGroup, pa
   return <section className="group-books-edit-region" aria-label="Assigned group books" aria-busy={loading}>
     {error ? <div className="groups-inline-error"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></div> : null}
     {page.items.length === 0 ? <p className="muted">This group has no books.</p> : <div className="group-book-rows">
-      {page.items.map((book) => <CompactBookRowComponent
+      {page.items.map((book) => <CompactBookRow
         key={book.id}
         book={book}
         detailPath={`/library/books/${encodeURIComponent(book.id)}`}
@@ -44,6 +44,6 @@ export function GroupBooksEditPageRegion({ groupId, groupName, isPublicGroup, pa
         />}
       />)}
     </div>}
-    <PagerComponent page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Books" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} />
+    <Pager page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Books" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} />
   </section>;
 }

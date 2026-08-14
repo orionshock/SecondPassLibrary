@@ -1,10 +1,10 @@
-import "./PagerComponent.css";
+import "./Pager.css";
 
 import { Button } from "../../components/ui";
 
 export type PagerDensity = "compact" | "full";
 
-export interface PagerComponentProps {
+export interface PagerProps {
   page: number;
   pageSize: number;
   count: number;
@@ -20,7 +20,7 @@ export interface PagerComponentProps {
 
 const defaultPageSizes = [20, 30, 40, 50] as const;
 
-export function PagerComponent({ page, pageSize, count, hasPrevious, hasNext, itemLabel, onPageChange, onPageSizeChange, pageSizes = defaultPageSizes, density = "full", ariaLabel }: PagerComponentProps) {
+export function Pager({ page, pageSize, count, hasPrevious, hasNext, itemLabel, onPageChange, onPageSizeChange, pageSizes = defaultPageSizes, density = "full", ariaLabel }: PagerProps) {
   const start = count === 0 ? 0 : ((page - 1) * pageSize) + 1;
   const end = Math.min(count, start + pageSize - 1);
 

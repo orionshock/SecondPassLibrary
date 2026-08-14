@@ -18,13 +18,13 @@ import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { loadPageWithRecovery } from "../../app/routing/pageRecovery";
 import { ErrorPanel } from "../../components/ui";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
-import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
+import { ProductPageShell } from "../../shared/layout/ProductPageShell";
 import {
   canCreateShelfForGroup,
   shelfCreateNavigationStateForGroup,
   shelfNewPath,
 } from "../../shared/shelves/shelfNavigation";
-import { tabButtonId, tabPanelId } from "../../shared/tabs/TabListComponent";
+import { tabButtonId, tabPanelId } from "../../shared/tabs/TabList";
 import { groupDetailBreadcrumbFallback } from "./groupsBreadcrumbs";
 import { groupEditNavigationState, groupEditPath } from "./groupsBreadcrumbs";
 import { canManageGroup } from "./groupMetadataAuthority";
@@ -169,7 +169,7 @@ export function GroupDetailOrchestrator() {
   const canCreateGroupShelf = Boolean(group && canCreateShelfForGroup(currentUser, group));
   const currentPath = groupDetailPath(groupId, queryState);
 
-  return <ProductPageShellComponent className="groups-page group-detail-page">
+  return <ProductPageShell className="groups-page group-detail-page">
     <GroupHeaderPageRegion
       group={group}
       loading={detail.status === "loading"}
@@ -242,5 +242,5 @@ export function GroupDetailOrchestrator() {
       onPageSizeChange={(pageSize) => changeQuery({ pageSize })}
       onRetry={() => setPageRetry((value) => value + 1)}
     /></div> : null}
-  </ProductPageShellComponent>;
+  </ProductPageShell>;
 }

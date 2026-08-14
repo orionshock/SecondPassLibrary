@@ -15,7 +15,7 @@ import { Button, ErrorPanel } from "../../components/ui";
 import { saveDownloadedFile, type BrowserDownload } from "../../shared/browser/saveDownloadedFile";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
 import { useAutoDismissMutationMessage } from "../../shared/feedback/useAutoDismissMutationMessage";
-import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
+import { ProductPageShell } from "../../shared/layout/ProductPageShell";
 import { marginaliaSessionDisplayName } from "../../shared/marginaliaSessionDisplayName";
 import { marginaliaSessionBreadcrumbFallback } from "./marginaliaBreadcrumbs";
 import { MarginaliaSessionNoteEditorComponent } from "./components/MarginaliaSessionNoteEditorComponent";
@@ -240,8 +240,8 @@ export function MarginaliaSessionDetailOrchestrator() {
   }
 
   const title = sessionLoad.status === "ready" ? marginaliaSessionDisplayName(sessionLoad.detail.session) : "Reading session";
-  if (sessionLoad.status === "loading") return <ProductPageShellComponent title={title}><p aria-live="polite" aria-busy="true">Loading reading session...</p></ProductPageShellComponent>;
-  if (sessionLoad.status === "error") return <ProductPageShellComponent title={title}><ErrorPanel>{sessionLoad.error.message}</ErrorPanel><Button type="button" tone="secondary" onClick={() => setSessionRetry((value) => value + 1)}>Retry</Button></ProductPageShellComponent>;
+  if (sessionLoad.status === "loading") return <ProductPageShell title={title}><p aria-live="polite" aria-busy="true">Loading reading session...</p></ProductPageShell>;
+  if (sessionLoad.status === "error") return <ProductPageShell title={title}><ErrorPanel>{sessionLoad.error.message}</ErrorPanel><Button type="button" tone="secondary" onClick={() => setSessionRetry((value) => value + 1)}>Retry</Button></ProductPageShell>;
 
   const renameFeedback = mutationFeedback(renameState);
   const noteFeedback = mutationFeedback(noteState);
@@ -271,7 +271,7 @@ export function MarginaliaSessionDetailOrchestrator() {
     onCancel={cancelNoteEdit}
   />;
 
-  return <ProductPageShellComponent title={titleEditor}>
+  return <ProductPageShell title={titleEditor}>
     <MarginaliaSessionDetailPageRegion
       detail={sessionLoad.detail}
       annotations={annotationsLoad}
@@ -284,7 +284,7 @@ export function MarginaliaSessionDetailOrchestrator() {
       onExport={() => void exportSession()}
       onRetryAnnotations={() => setAnnotationsRetry((value) => value + 1)}
     />
-  </ProductPageShellComponent>;
+  </ProductPageShell>;
 }
 
 function mutationFeedback(state: MutationState) {

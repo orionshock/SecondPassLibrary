@@ -19,8 +19,8 @@ import type { AppOutletContext } from "../../app/layout/AppOrchestrator";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { ErrorPanel } from "../../components/ui";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
-import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
-import { UserInlineIdentityComponent } from "../../shared/users/UserInlineIdentityComponent";
+import { ProductPageShell } from "../../shared/layout/ProductPageShell";
+import { UserInlineIdentity } from "../../shared/users/UserInlineIdentity";
 import { UserDetailsPageRegion } from "./regions/UserDetailsPageRegion";
 import { UserGroupMembershipsPageRegion } from "./regions/UserGroupMembershipsPageRegion";
 import { UserPasswordPageRegion } from "./regions/UserPasswordPageRegion";
@@ -124,7 +124,7 @@ export function UserEditOrchestrator() {
   if (load.error || !user) return <div className="users-results-state"><ErrorPanel>{load.error?.message ?? "User not found."}</ErrorPanel><button type="button" onClick={() => setRetry((value) => value + 1)}>Retry</button><Link to="/users">Back to Users</Link></div>;
 
   const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ") || undefined;
-  return <ProductPageShellComponent className="users-page user-edit-page" title={<span className="page-header__title-content"><span>Editing User:</span><UserInlineIdentityComponent username={user.username} displayName={displayName} /></span>} actions={<Link className="button button--secondary" to="/users">Back to Users</Link>}>
+  return <ProductPageShell className="users-page user-edit-page" title={<span className="page-header__title-content"><span>Editing User:</span><UserInlineIdentity username={user.username} displayName={displayName} /></span>} actions={<Link className="button button--secondary" to="/users">Back to Users</Link>}>
     <UserDetailsPageRegion
       user={user}
       roles={editableUserRoles(currentUser, user)}
@@ -151,7 +151,7 @@ export function UserEditOrchestrator() {
       onRemove={removeMembership}
       onCuratorChange={(membership, isCurator) => void runMembershipAction(() => updateGroupMember(membership.id, profileId, { isCurator }), "Curator access saved.")}
     /> : null}
-  </ProductPageShellComponent>;
+  </ProductPageShell>;
 }
 
 export function shouldShowManagedGroupMemberships(

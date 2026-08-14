@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 import { resolveTabQuery, withTabQuery } from "../app/routing/tabQuery";
-import { TabListComponent, tabFocusIndexForKey } from "../shared/tabs/TabListComponent";
+import { TabList, tabFocusIndexForKey } from "../shared/tabs/TabList";
 
 const tabs = [
   { id: "details", label: "Details" },
@@ -11,9 +11,9 @@ const tabs = [
   { id: "members", label: "Members" },
 ] as const;
 
-describe("TabListComponent", () => {
+describe("TabList", () => {
   it("renders controlled tab semantics and stable panel wiring", () => {
-    const markup = renderToStaticMarkup(<TabListComponent
+    const markup = renderToStaticMarkup(<TabList
       tabs={tabs}
       activeTab="books"
       onChange={vi.fn()}
@@ -29,7 +29,7 @@ describe("TabListComponent", () => {
 
   it("activates through click, Enter, and Space but not while disabled", () => {
     const onChange = vi.fn();
-    const tree = TabListComponent({ tabs, activeTab: "details", onChange, ariaLabel: "Sections" }) as ReactElement<{
+    const tree = TabList({ tabs, activeTab: "details", onChange, ariaLabel: "Sections" }) as ReactElement<{
       children: ReactElement<{ onClick: () => void; onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void }>[];
     }>;
     const buttons = tree.props.children;
@@ -39,7 +39,7 @@ describe("TabListComponent", () => {
     expect(onChange.mock.calls).toEqual([["books"], ["members"], ["members"]]);
 
     const disabledChange = vi.fn();
-    const disabled = TabListComponent({ tabs, activeTab: "details", onChange: disabledChange, ariaLabel: "Sections", disabled: true }) as typeof tree;
+    const disabled = TabList({ tabs, activeTab: "details", onChange: disabledChange, ariaLabel: "Sections", disabled: true }) as typeof tree;
     disabled.props.children[1]!.props.onClick();
     disabled.props.children[1]!.props.onKeyDown({ key: "Enter", preventDefault: vi.fn() } as unknown as KeyboardEvent<HTMLButtonElement>);
     expect(disabledChange).not.toHaveBeenCalled();
@@ -53,7 +53,7 @@ describe("TabListComponent", () => {
     expect(tabFocusIndexForKey(1, "Enter", 3)).toBeUndefined();
 
     const onChange = vi.fn();
-    const tree = TabListComponent({ tabs, activeTab: "details", onChange, ariaLabel: "Sections" }) as ReactElement<{
+    const tree = TabList({ tabs, activeTab: "details", onChange, ariaLabel: "Sections" }) as ReactElement<{
       children: ReactElement<{ onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void }>[];
     }>;
     const focused = vi.fn();

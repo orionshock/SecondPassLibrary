@@ -20,7 +20,7 @@ import type { AppOutletContext } from "../../app/layout/AppOrchestrator";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { loadPageWithRecovery } from "../../app/routing/pageRecovery";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
-import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
+import { ProductPageShell } from "../../shared/layout/ProductPageShell";
 import {
   libraryAxisBasePath,
   libraryAxisSdkQuery,
@@ -214,7 +214,7 @@ export function LibraryOrchestrator() {
   };
   const catalogLayoutKey = catalogLayoutStabilityKey(requestView, queryState);
 
-  return <ProductPageShellComponent className="library-page">
+  return <ProductPageShell className="library-page">
     <LibraryAxesPageRegion
       activeView={queryState.view}
       canManageCatalog={canEditCatalog}
@@ -285,7 +285,7 @@ export function LibraryOrchestrator() {
           {...commonListProps}
         /> : null}
     </CatalogBrowserPageRegion>
-  </ProductPageShellComponent>;
+  </ProductPageShell>;
 }
 
 export function unknownCatalogTag(activeTag: string | undefined, tags: readonly CatalogTag[] | undefined): boolean {

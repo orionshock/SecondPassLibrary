@@ -5,8 +5,8 @@ import { Link } from "react-router";
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
 import { Badge, Button, ErrorPanel, Surface } from "../../../components/ui";
 import type { MutationState } from "../../../shared/feedback/mutationState";
-import { BookCoverComponent } from "../../../shared/books/BookCoverComponent";
-import { OrderMenuComponent, type OrderMenuOption } from "../../../shared/forms/OrderMenuComponent";
+import { BookCover } from "../../../shared/books/BookCover";
+import { OrderMenu, type OrderMenuOption } from "../../../shared/forms/OrderMenu";
 
 export type MarginaliaAnnotationOrdering = "reading" | "newest" | "oldest";
 
@@ -104,7 +104,7 @@ function SessionSummaryRegion({ detail, sessionNote, closeState, deleteState, ex
 
   return <Surface>
     <div className="marginalia-session-summary">
-      <div className="marginalia-session-summary__cover"><BookCoverComponent coverUrl={book.coverUrl} title={book.title || "Untitled Book"} /></div>
+      <div className="marginalia-session-summary__cover"><BookCover coverUrl={book.coverUrl} title={book.title || "Untitled Book"} /></div>
       <div className="marginalia-session-summary__main">
         <header className="marginalia-session-summary__book-header">
           <div>
@@ -213,7 +213,7 @@ function AnnotationsRegion({ state, onRetry }: { state: MarginaliaAnnotationsLoa
   return <section className="marginalia-session-detail__annotations" aria-labelledby="marginalia-session-annotations-heading">
     <header>
       <h2 id="marginalia-session-annotations-heading">Marginalia</h2>
-      {orderedItems && orderedItems.length > 1 ? <OrderMenuComponent
+      {orderedItems && orderedItems.length > 1 ? <OrderMenu
         label="Order"
         ariaLabel="Order marginalia"
         size="small"

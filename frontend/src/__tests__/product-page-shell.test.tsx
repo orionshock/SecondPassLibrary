@@ -1,16 +1,16 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 
-import { ProductPageShellComponent } from "../shared/layout/ProductPageShellComponent";
+import { ProductPageShell } from "../shared/layout/ProductPageShell";
 
-describe("ProductPageShellComponent", () => {
+describe("ProductPageShell", () => {
   it("renders the shared heading contract and page body", () => {
-    const markup = renderToStaticMarkup(<ProductPageShellComponent
+    const markup = renderToStaticMarkup(<ProductPageShell
       eyebrow="Library"
       title="Books"
       description="Visible books"
       actions={<button type="button">New Book</button>}
-    ><section>Results</section></ProductPageShellComponent>);
+    ><section>Results</section></ProductPageShell>);
 
     expect(markup).toContain("<h1>Books</h1>");
     expect(markup).toContain("Library");
@@ -20,7 +20,7 @@ describe("ProductPageShellComponent", () => {
   });
 
   it("supports a frame-only special composition", () => {
-    const markup = renderToStaticMarkup(<ProductPageShellComponent><article>Book hero</article></ProductPageShellComponent>);
+    const markup = renderToStaticMarkup(<ProductPageShell><article>Book hero</article></ProductPageShell>);
 
     expect(markup).toContain("Book hero");
     expect(markup).not.toContain("<h1");

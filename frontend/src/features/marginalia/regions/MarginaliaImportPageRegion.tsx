@@ -4,11 +4,11 @@ import { Link } from "react-router";
 
 import { Badge, Button, FormField, Surface } from "../../../components/ui";
 import { HelpPopover } from "../../../components/HelpPopover";
-import { BookCoverComponent } from "../../../shared/books/BookCoverComponent";
+import { BookCover } from "../../../shared/books/BookCover";
 import { marginaliaSessionDisplayName } from "../../../shared/marginaliaSessionDisplayName";
-import { ActionFeedbackComponent } from "../../../shared/feedback/ActionFeedbackComponent";
+import { ActionFeedback } from "../../../shared/feedback/ActionFeedback";
 import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";
-import { ActionRowComponent } from "../../../shared/forms/ActionRowComponent";
+import { ActionRow } from "../../../shared/forms/ActionRow";
 import { marginaliaImportBookSelectionState, marginaliaImportSelectedCount, type MarginaliaImportBookSelectionState, type MarginaliaImportDraft, type MarginaliaImportSessionDraft } from "../marginaliaImportDraft";
 
 export function MarginaliaImportPageRegion({ preview, draft, result, editingSessionKeys, previewState, applyState, downloadState, inputRef, includeEmptySessions, onIncludeEmptySessionsChange, onFileChange, onPreview, onDraftChange, onBookSelectionChange, onEditingChange, onDownloadUnmatched, onApply }: {
@@ -40,7 +40,7 @@ export function MarginaliaImportPageRegion({ preview, draft, result, editingSess
             <input ref={inputRef} id="marginalia-import-file" name="file" type="file" accept=".json,application/json" disabled={previewState.pending || applyState.pending} onChange={(event) => onFileChange(event.target.files?.[0])} />
           </FormField>
           <label className="marginalia-empty-sessions-toggle"><input type="checkbox" checked={includeEmptySessions} disabled={previewState.pending || applyState.pending} onChange={(event) => onIncludeEmptySessionsChange(event.target.checked)} />Include empty sessions</label>
-          <ActionRowComponent state={previewState}><Button type="submit" disabled={previewState.pending || applyState.pending}>{previewState.pending ? "Previewing..." : "Preview"}</Button></ActionRowComponent>
+          <ActionRow state={previewState}><Button type="submit" disabled={previewState.pending || applyState.pending}>{previewState.pending ? "Previewing..." : "Preview"}</Button></ActionRow>
         </div>
       </form>
     </Surface>
@@ -75,7 +75,7 @@ function MarginaliaImportReview({ preview, draft, editingSessionKeys, selectedCo
     <div className="marginalia-import-books">
       {preview.books.map((book, bookIndex) => <section className="marginalia-import-book" key={book.candidateId}>
         <div className="marginalia-import-book__cover">
-          <BookCoverComponent coverUrl={null} title={book.title || "Imported Book"} />
+          <BookCover coverUrl={null} title={book.title || "Imported Book"} />
         </div>
         <div className="marginalia-import-book__content">
           <header className="marginalia-import-book__header">
@@ -120,11 +120,11 @@ function MarginaliaImportReview({ preview, draft, editingSessionKeys, selectedCo
         </div>
       </section>)}
     </div>
-    <ActionRowComponent state={applyState}>
-      {preview.unmatchedDownloadableReadingSessionCount > 0 ? <span className="marginalia-import-download-action"><ActionFeedbackComponent state={downloadState} /><Button type="button" tone="secondary" disabled={downloadState.pending || applyState.pending} onClick={onDownloadUnmatched}>{downloadState.pending ? "Downloading..." : `Download Unmatched Sessions (${preview.unmatchedDownloadableReadingSessionCount})`}</Button></span> : null}
+    <ActionRow state={applyState}>
+      {preview.unmatchedDownloadableReadingSessionCount > 0 ? <span className="marginalia-import-download-action"><ActionFeedback state={downloadState} /><Button type="button" tone="secondary" disabled={downloadState.pending || applyState.pending} onClick={onDownloadUnmatched}>{downloadState.pending ? "Downloading..." : `Download Unmatched Sessions (${preview.unmatchedDownloadableReadingSessionCount})`}</Button></span> : null}
       <span className="muted">{selectedCount} {selectedCount === 1 ? "session" : "sessions"} selected</span>
       <Button type="button" disabled={!preview.canApply || selectedCount === 0 || applyState.pending || downloadState.pending} onClick={onApply}>{applyState.pending ? "Importing..." : "Import Selected Sessions"}</Button>
-    </ActionRowComponent>
+    </ActionRow>
   </section>;
 }
 
@@ -149,7 +149,7 @@ function MarginaliaImportResultRegion({ result, downloadState, onDownloadUnmatch
     {result.readingSessions.length ? <ul>{result.readingSessions.map((session) => <li key={session.candidateId}><Link to={`/marginalia/sessions/${encodeURIComponent(session.readingSessionId)}`}>{marginaliaSessionDisplayName({ id: session.readingSessionId, name: session.name })}</Link> · {session.annotationCount} annotations · Closed</li>)}</ul> : null}
     {result.warnings.length ? <ul>{result.warnings.map((warning) => <li key={`${warning.code}:${warning.candidateId ?? "general"}`}>{warning.message}</li>)}</ul> : null}
     <div className="marginalia-import-result-actions">
-      {result.unmatchedDownloadAvailable ? <><ActionFeedbackComponent state={downloadState} /><Button type="button" tone="secondary" disabled={downloadState.pending} onClick={onDownloadUnmatched}>{downloadState.pending ? "Downloading..." : `Download Unmatched Sessions (${result.unmatchedDownloadableReadingSessionCount})`}</Button></> : null}
+      {result.unmatchedDownloadAvailable ? <><ActionFeedback state={downloadState} /><Button type="button" tone="secondary" disabled={downloadState.pending} onClick={onDownloadUnmatched}>{downloadState.pending ? "Downloading..." : `Download Unmatched Sessions (${result.unmatchedDownloadableReadingSessionCount})`}</Button></> : null}
       <Link className="button" to="/marginalia">Back to My Marginalia</Link>
     </div>
   </Surface>;

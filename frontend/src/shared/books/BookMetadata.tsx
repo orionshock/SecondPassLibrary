@@ -1,7 +1,7 @@
 import { MaterialIcon } from "../../components/icons/MaterialIcon";
 import "./BookComponents.css";
 
-export function BookMetadataComponent({ authors, series, publisher }: {
+export function BookMetadata({ authors, series, publisher }: {
   authors: readonly string[];
   series?: string;
   publisher?: string;

@@ -13,7 +13,7 @@ import {
   normalizeMutationError,
   type MutationState,
 } from "../../shared/feedback/mutationState";
-import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
+import { ProductPageShell } from "../../shared/layout/ProductPageShell";
 import {
   authorizedShelfCreateGroupContext,
   shelfCreateGroupReturnNavigationState,
@@ -190,7 +190,7 @@ export function ShelfCreateOrchestrator() {
     navigate(shelfScopePath(originatingScope), { state: null });
   }
 
-  return <ProductPageShellComponent className="shelf-lifecycle-page" eyebrow="New Shelf" title="Create Shelf">
+  return <ProductPageShell className="shelf-lifecycle-page" eyebrow="New Shelf" title="Create Shelf">
     <ShelfDetailsEditPageRegion
       mode="new"
       draft={draft}
@@ -206,7 +206,7 @@ export function ShelfCreateOrchestrator() {
       onCancel={cancel}
       onDelete={() => undefined}
     />
-  </ProductPageShellComponent>;
+  </ProductPageShell>;
 }
 
 function withGroupChoice(groups: readonly LibraryGroup[], group: LibraryGroup): LibraryGroup[] {

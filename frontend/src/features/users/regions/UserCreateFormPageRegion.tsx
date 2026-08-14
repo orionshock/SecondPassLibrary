@@ -4,7 +4,7 @@ import { Link } from "react-router";
 
 import { Button, FormField } from "../../../components/ui";
 import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";
-import { ActionRowComponent } from "../../../shared/forms/ActionRowComponent";
+import { ActionRow } from "../../../shared/forms/ActionRow";
 import type { UserCreateDraft, UserCreateDraftField } from "../userCreateForm";
 import { createUserRoleLabel } from "../userCreateRoles";
 
@@ -33,9 +33,9 @@ export function UserCreateFormPageRegion({ draft, roles, state, onChange, onSubm
         {roles.map((role) => <option key={role} value={role}>{createUserRoleLabel(role)}</option>)}
       </select>
     </FormField>
-    <ActionRowComponent state={state}>
+    <ActionRow state={state}>
       <Link className="button button--secondary" to="/users">Cancel</Link>
       <Button type="submit" disabled={state.pending}>{state.pending ? "Creating..." : "Create User"}</Button>
-    </ActionRowComponent>
+    </ActionRow>
   </form>;
 }

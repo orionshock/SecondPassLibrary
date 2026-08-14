@@ -3,7 +3,7 @@ import { Link } from "react-router";
 
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
 import { Badge, Button, ErrorPanel, PageHeader } from "../../../components/ui";
-import { TabListComponent, type TabItem } from "../../../shared/tabs/TabListComponent";
+import { TabList, type TabItem } from "../../../shared/tabs/TabList";
 import type { GroupDetailTab } from "../groupsQuery";
 
 const groupDetailTabs: readonly TabItem<GroupDetailTab>[] = [
@@ -52,7 +52,7 @@ export function GroupHeaderPageRegion({
       </span>}
       description={group.description || undefined}
     />
-    <TabListComponent
+    <TabList
       tabs={groupDetailTabs}
       activeTab={activeTab}
       onChange={onTabChange}

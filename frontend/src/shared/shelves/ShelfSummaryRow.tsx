@@ -1,15 +1,15 @@
 import { Link } from "react-router";
 
-import { BookCoverPreviewStripComponent, type BookCoverPreviewItem } from "../books/BookCoverPreviewStripComponent";
-import { GroupBadgeComponent } from "../groups/GroupBadgeComponent";
-import { UserInlineIdentityComponent } from "../users/UserInlineIdentityComponent";
+import { BookCoverPreviewStrip, type BookCoverPreviewItem } from "../books/BookCoverPreviewStrip";
+import { GroupBadge } from "../groups/GroupBadge";
+import { UserInlineIdentity } from "../users/UserInlineIdentity";
 import "./ShelfComponents.css";
 
 export type ShelfOwnerBadge =
   | { kind: "group"; label: string; isPublicGroup?: boolean }
   | { kind: "user"; username: string };
 
-export function ShelfSummaryRowComponent({ name, description, itemCount, detailPath, navigationState, previewBooks, owner }: {
+export function ShelfSummaryRow({ name, description, itemCount, detailPath, navigationState, previewBooks, owner }: {
   name: string;
   description: string;
   itemCount: number;
@@ -28,10 +28,10 @@ export function ShelfSummaryRowComponent({ name, description, itemCount, detailP
           {owner.kind === "user" ? "shared by" : "from"}
         </span> : null}
         {owner ? <span className="shelf-summary-row-component__source">
-          {owner.kind === "group" ? <GroupBadgeComponent
+          {owner.kind === "group" ? <GroupBadge
             name={owner.label}
             isPublicGroup={owner.isPublicGroup}
-          /> : <UserInlineIdentityComponent username={owner.username} />}
+          /> : <UserInlineIdentity username={owner.username} />}
         </span> : null}
         {owner ? <span className="css-dot" aria-hidden="true" /> : null}
         <span className="shelf-summary-row-component__count">
@@ -40,6 +40,6 @@ export function ShelfSummaryRowComponent({ name, description, itemCount, detailP
       </div>
       {description ? <p>{description}</p> : null}
     </div>
-    {hasPreviews ? <BookCoverPreviewStripComponent books={previewBooks} /> : null}
+    {hasPreviews ? <BookCoverPreviewStrip books={previewBooks} /> : null}
   </article>;
 }

@@ -3,7 +3,7 @@ import { useEffect, useReducer, type FormEvent } from "react";
 
 import { FormField } from "../../../components/ui";
 import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";
-import { SaveCancelActionRowComponent } from "../../../shared/forms/ActionRowComponent";
+import { SaveCancelActionRow } from "../../../shared/forms/ActionRow";
 import { displayUserRole, displayUserRoleName } from "../../../domain/users/presentation";
 import { userEditDraftFromUser, userEditDraftReducer, userEditInputFromDraft } from "../userEditForm";
 
@@ -42,7 +42,7 @@ export function UserDetailsPageRegion({ user, roles, canEdit, canChangeActive, s
           <option value="active">Active</option><option value="inactive">Inactive</option>
         </select>
       </FormField>
-      {canEdit ? <SaveCancelActionRowComponent state={state} submitLabel="Save user" pendingLabel="Saving..." onCancel={cancel} /> : null}
+      {canEdit ? <SaveCancelActionRow state={state} submitLabel="Save user" pendingLabel="Saving..." onCancel={cancel} /> : null}
     </form>
   </section>;
 }

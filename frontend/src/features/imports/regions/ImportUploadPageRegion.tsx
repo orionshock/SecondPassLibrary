@@ -2,7 +2,7 @@ import { type FormEvent, type RefObject } from "react";
 
 import { Button, FormField, Surface } from "../../../components/ui";
 import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";
-import { ActionRowComponent } from "../../../shared/forms/ActionRowComponent";
+import { ActionRow } from "../../../shared/forms/ActionRow";
 
 export function ImportUploadPageRegion({ state, inputRef, onFileChange, onSubmit }: {
   state: MutationState;
@@ -16,7 +16,7 @@ export function ImportUploadPageRegion({ state, inputRef, onFileChange, onSubmit
       <FormField label="File" htmlFor="library-import-file" error={fieldError(state.error, "file")}>
         <input ref={inputRef} id="library-import-file" name="file" type="file" accept=".epub,.zip" disabled={state.pending} onChange={(event) => onFileChange(event.target.files?.[0])} />
       </FormField>
-      <ActionRowComponent state={state}><Button type="submit" disabled={state.pending}>{state.pending ? "Importing..." : "Import"}</Button></ActionRowComponent>
+      <ActionRow state={state}><Button type="submit" disabled={state.pending}>{state.pending ? "Importing..." : "Import"}</Button></ActionRow>
     </form>
   </Surface>;
 }

@@ -6,7 +6,7 @@ import { App } from "./App";
 import { RoleRouteGuard } from "./navigation/RoleRouteGuard";
 import { DashboardOrchestrator } from "../features/dashboard/DashboardOrchestrator";
 import { canCreateGroupMetadata } from "../features/groups/groupMetadataAuthority";
-import { ProductPageShellComponent } from "../shared/layout/ProductPageShellComponent";
+import { ProductPageShell } from "../shared/layout/ProductPageShell";
 
 const LibraryOrchestrator = lazy(() => import("./routes/libraryRoutes").then((module) => ({ default: module.LibraryOrchestrator })));
 const BookDetailOrchestrator = lazy(() => import("./routes/libraryRoutes").then((module) => ({ default: module.BookDetailOrchestrator })));
@@ -46,19 +46,19 @@ const groupCreationRouteAvailable = (user: CurrentUser, server: ServerInfo) => (
 );
 
 export function PlaceholderPageRegion({ title }: { title: string }) {
-  return <ProductPageShellComponent eyebrow="React Product UI" title={title}>
+  return <ProductPageShell eyebrow="React Product UI" title={title}>
     <section className="page-panel">
       <p>This section has not been rebuilt yet.</p>
     </section>
-  </ProductPageShellComponent>;
+  </ProductPageShell>;
 }
 
 export function NotFoundPageRegion() {
-  return <ProductPageShellComponent eyebrow="Not found" title="Page not found">
+  return <ProductPageShell eyebrow="Not found" title="Page not found">
     <section className="page-panel">
       <p>This address does not match a Product UI page.</p>
     </section>
-  </ProductPageShellComponent>;
+  </ProductPageShell>;
 }
 
 export const appRoutes = [

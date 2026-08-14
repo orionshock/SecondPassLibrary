@@ -1,7 +1,7 @@
 import type { BookDetail } from "@second-pass/spl-api";
 import { Link } from "react-router";
 
-import { BookCoverComponent } from "../../../shared/books/BookCoverComponent";
+import { BookCover } from "../../../shared/books/BookCover";
 import { selectedLibraryContextNavigationState } from "../libraryPresentation";
 import { bookSeriesDisplay, formatBookPublishedDate } from "../bookDetailPresentation";
 
@@ -11,7 +11,7 @@ export function BookDetailHeroPageRegion({ book, canEdit = false, editNavigation
 
   return <section className="book-detail-hero-region" aria-labelledby="book-detail-title">
     <div className="book-detail-hero-region__cover">
-      <BookCoverComponent coverUrl={book.coverUrl} title={book.title} />
+      <BookCover coverUrl={book.coverUrl} title={book.title} />
     </div>
     <div className="book-detail-hero-region__identity">
       <h1 id="book-detail-title">{book.title}</h1>

@@ -1,7 +1,7 @@
 import type { GroupMembership, Page } from "@second-pass/spl-api";
 
 import { Button, ErrorPanel } from "../../../components/ui";
-import { PagerComponent } from "../../../shared/pagination/PagerComponent";
+import { Pager } from "../../../shared/pagination/Pager";
 import { GroupMemberRowComponent } from "../components/GroupMemberRowComponent";
 
 export function GroupMembersPageRegion({ page, pageNumber, pageSize, loading, error, onPageChange, onPageSizeChange, onRetry }: {
@@ -23,7 +23,7 @@ export function GroupMembersPageRegion({ page, pageNumber, pageSize, loading, er
     {page.items.length === 0 ? <p className="group-detail-state muted">No members are visible.</p> : <div className="group-member-rows">
       {page.items.map((membership) => <GroupMemberRowComponent key={membership.user.profileId} membership={membership} />)}
     </div>}
-    <PagerComponent
+    <Pager
       page={pageNumber}
       pageSize={pageSize}
       count={page.count}

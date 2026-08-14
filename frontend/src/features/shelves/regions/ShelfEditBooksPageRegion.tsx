@@ -4,8 +4,8 @@ import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
 import { RemoveIconButton } from "../../../components/icons/RemoveIconButton";
 import { Button, ErrorPanel, IconButton } from "../../../components/ui";
-import { CompactBookRowComponent } from "../../../shared/books/CompactBookRowComponent";
-import { PagerComponent } from "../../../shared/pagination/PagerComponent";
+import { CompactBookRow } from "../../../shared/books/CompactBookRow";
+import { Pager } from "../../../shared/pagination/Pager";
 import { shelfBookBreadcrumbs } from "../shelvesBreadcrumbs";
 
 export function ShelfEditBooksPageRegion({ shelfId, shelfName, scope, page, pageNumber, pageSize, loading, error, pendingItemId, pendingAction, controlsDisabled, onMove, onMoveTo, onRemove, onPageChange, onPageSizeChange, onRetry }: {
@@ -65,7 +65,7 @@ export function ShelfEditBooksPageRegion({ shelfId, shelfName, scope, page, page
           onRemove={onRemove}
         />)}
     </div>}
-    <PagerComponent page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Items" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} />
+    <Pager page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Items" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} />
   </section>;
 }
 
@@ -87,7 +87,7 @@ function VisibleShelfItemRow({ item, shelfId, shelfName, scope, canMoveUp, canMo
 }) {
   return <div className="shelf-edit-book-row" aria-busy={moving || undefined}>
     <span className="shelf-edit-position" aria-label={`Shelf position ${item.position + 1}`}>#{item.position + 1}</span>
-    <CompactBookRowComponent
+    <CompactBookRow
       book={item.book}
       detailPath={`/library/books/${encodeURIComponent(item.book.id)}`}
       navigationState={breadcrumbNavigationState(shelfBookBreadcrumbs(scope, shelfId, shelfName, item.book.title))}

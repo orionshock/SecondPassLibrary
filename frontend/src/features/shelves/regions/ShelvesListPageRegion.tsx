@@ -3,10 +3,10 @@ import { Link } from "react-router";
 
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { Button, ErrorPanel, PageHeader } from "../../../components/ui";
-import type { BookCoverPreviewItem } from "../../../shared/books/BookCoverPreviewStripComponent";
-import { OrderMenuComponent, type OrderMenuOption } from "../../../shared/forms/OrderMenuComponent";
-import { PaginatedListFrameComponent } from "../../../shared/pagination/PaginatedListFrameComponent";
-import { ShelfSummaryRowComponent } from "../../../shared/shelves/ShelfSummaryRowComponent";
+import type { BookCoverPreviewItem } from "../../../shared/books/BookCoverPreviewStrip";
+import { OrderMenu, type OrderMenuOption } from "../../../shared/forms/OrderMenu";
+import { PaginatedListFrame } from "../../../shared/pagination/PaginatedListFrame";
+import { ShelfSummaryRow } from "../../../shared/shelves/ShelfSummaryRow";
 import { shelfNewPath } from "../../../shared/shelves/shelfNavigation";
 import { shelfBookBreadcrumbs, shelfDetailBreadcrumbFallback } from "../shelvesBreadcrumbs";
 import { shelfNewBreadcrumbs } from "../shelfLifecycle";
@@ -61,7 +61,7 @@ function ShelvesListResults({ page, pageNumber, pageSize, scope, ordering, loadi
 
   return <section className={`shelves-results${loading ? " shelves-results--loading" : ""}`} aria-busy={loading}>
     {error ? <div className="shelves-inline-error"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></div> : null}
-    <PaginatedListFrameComponent page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Shelves" topControls={<OrderMenuComponent label="Order" ariaLabel="Order shelves" size="small" value={ordering} options={shelfOrderingOptions} onChange={onOrderingChange} />} onPageChange={onPageChange} onPageSizeChange={onPageSizeChange}>
+    <PaginatedListFrame page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Shelves" topControls={<OrderMenu label="Order" ariaLabel="Order shelves" size="small" value={ordering} options={shelfOrderingOptions} onChange={onOrderingChange} />} onPageChange={onPageChange} onPageSizeChange={onPageSizeChange}>
       {page.items.length === 0 ? <p className="shelves-state muted">{emptyLabel(scope)}</p> : <div className="shelves-list-rows">
         {page.items.map((shelf) => {
           const detailPath = `/shelves/${encodeURIComponent(shelf.id)}`;
@@ -70,7 +70,7 @@ function ShelvesListResults({ page, pageNumber, pageSize, scope, ordering, loadi
             href: `/library/books/${encodeURIComponent(book.id)}`,
             navigationState: breadcrumbNavigationState(shelfBookBreadcrumbs(scope, shelf.id, shelf.name, book.title)),
           }));
-          return <ShelfSummaryRowComponent
+          return <ShelfSummaryRow
             key={shelf.id}
             name={shelf.name}
             description={shelf.description}
@@ -86,7 +86,7 @@ function ShelvesListResults({ page, pageNumber, pageSize, scope, ordering, loadi
           />;
         })}
       </div>}
-    </PaginatedListFrameComponent>
+    </PaginatedListFrame>
   </section>;
 }
 

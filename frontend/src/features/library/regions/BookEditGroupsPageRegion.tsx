@@ -6,7 +6,7 @@ import { AddIconButton } from "../../../components/icons/AddIconButton";
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
 import { RemoveIconButton } from "../../../components/icons/RemoveIconButton";
 import { Button, ErrorPanel } from "../../../components/ui";
-import { ActionFeedbackComponent } from "../../../shared/feedback/ActionFeedbackComponent";
+import { ActionFeedback } from "../../../shared/feedback/ActionFeedback";
 import type { MutationState } from "../../../shared/feedback/mutationState";
 
 export function BookEditGroupsPageRegion({
@@ -79,6 +79,6 @@ export function BookEditGroupsPageRegion({
         <AddIconButton type="button" label="Add group" disabled={disabled || !groupId} onClick={() => onAdd(groupId)} />
       </div> : null}
     </div>
-    <ActionFeedbackComponent state={mutation} />
+    <ActionFeedback state={mutation} />
   </section>;
 }

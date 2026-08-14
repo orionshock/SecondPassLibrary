@@ -1,8 +1,8 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-import { PaginatedListFrameComponent } from "../shared/pagination/PaginatedListFrameComponent";
-import { PagerComponent } from "../shared/pagination/PagerComponent";
+import { PaginatedListFrame } from "../shared/pagination/PaginatedListFrame";
+import { Pager } from "../shared/pagination/Pager";
 
 const callbacks = {
   onPageChange: vi.fn(),
@@ -20,8 +20,8 @@ describe("shared pagination", () => {
       itemLabel: "Books",
       ...callbacks,
     };
-    const full = renderToStaticMarkup(<PagerComponent {...props} ariaLabel="Full books pager" />);
-    const compact = renderToStaticMarkup(<PagerComponent {...props} density="compact" ariaLabel="Compact books pager" />);
+    const full = renderToStaticMarkup(<Pager {...props} ariaLabel="Full books pager" />);
+    const compact = renderToStaticMarkup(<Pager {...props} density="compact" ariaLabel="Compact books pager" />);
 
     expect(full).toContain('aria-label="Full books pager"');
     expect(full).toContain('aria-label="Books per page"');
@@ -33,7 +33,7 @@ describe("shared pagination", () => {
   });
 
   it("frames children with a compact top pager and full bottom pager", () => {
-    const markup = renderToStaticMarkup(<PaginatedListFrameComponent
+    const markup = renderToStaticMarkup(<PaginatedListFrame
       page={1}
       pageSize={20}
       count={21}
@@ -45,7 +45,7 @@ describe("shared pagination", () => {
       {...callbacks}
     >
       <div data-list-body="true">Rows</div>
-    </PaginatedListFrameComponent>);
+    </PaginatedListFrame>);
 
     const top = markup.indexOf('aria-label="Users pagination, top"');
     const topControl = markup.indexOf('data-top-control="true"');
@@ -61,7 +61,7 @@ describe("shared pagination", () => {
   });
 
   it("omits the full bottom pager for an empty result", () => {
-    const markup = renderToStaticMarkup(<PaginatedListFrameComponent
+    const markup = renderToStaticMarkup(<PaginatedListFrame
       page={1}
       pageSize={20}
       count={0}
@@ -71,7 +71,7 @@ describe("shared pagination", () => {
       {...callbacks}
     >
       <p>No shelves.</p>
-    </PaginatedListFrameComponent>);
+    </PaginatedListFrame>);
 
     expect(markup).toContain('aria-label="Shelves pagination, top"');
     expect(markup).not.toContain('aria-label="Shelves pagination, bottom"');

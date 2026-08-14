@@ -4,10 +4,10 @@ import { Link } from "react-router";
 
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { Button, ErrorPanel, PageHeader } from "../../../components/ui";
-import type { BookCoverPreviewItem } from "../../../shared/books/BookCoverPreviewStripComponent";
-import { OrderMenuComponent, type OrderMenuOption } from "../../../shared/forms/OrderMenuComponent";
-import { GroupRowComponent } from "../../../shared/groups/GroupRowComponent";
-import { PaginatedListFrameComponent } from "../../../shared/pagination/PaginatedListFrameComponent";
+import type { BookCoverPreviewItem } from "../../../shared/books/BookCoverPreviewStrip";
+import { OrderMenu, type OrderMenuOption } from "../../../shared/forms/OrderMenu";
+import { GroupRow } from "../../../shared/groups/GroupRow";
+import { PaginatedListFrame } from "../../../shared/pagination/PaginatedListFrame";
 import { groupBookBreadcrumbs, groupDetailBreadcrumbFallback } from "../groupsBreadcrumbs";
 
 type GroupsListOrdering = "name" | "-name";
@@ -103,14 +103,14 @@ function GroupsListResults({ page, pageNumber, pageSize, loading, error, orderin
 
   return <section className={`groups-results${loading ? " groups-results--loading" : ""}`} aria-busy={loading}>
     {error ? <div className="groups-inline-error"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></div> : null}
-    <PaginatedListFrameComponent
+    <PaginatedListFrame
       page={pageNumber}
       pageSize={pageSize}
       count={page.count}
       hasPrevious={Boolean(page.previous)}
       hasNext={Boolean(page.next)}
       itemLabel="Groups"
-      topControls={<OrderMenuComponent label="Order" ariaLabel="Order groups" size="small" value={ordering} options={groupOrderingOptions} onChange={onOrderingChange} />}
+      topControls={<OrderMenu label="Order" ariaLabel="Order groups" size="small" value={ordering} options={groupOrderingOptions} onChange={onOrderingChange} />}
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}
     >
@@ -123,7 +123,7 @@ function GroupsListResults({ page, pageNumber, pageSize, loading, error, orderin
             href: `/library/books/${encodeURIComponent(book.id)}`,
             navigationState: breadcrumbNavigationState(groupBookBreadcrumbs(group.id, group.name, book.title, undefined, group.isPublicGroup)),
           }));
-          return <GroupRowComponent
+          return <GroupRow
             key={group.id}
             group={group}
             detailPath={detailPath}
@@ -133,6 +133,6 @@ function GroupsListResults({ page, pageNumber, pageSize, loading, error, orderin
           />;
         })}
       </div>}
-    </PaginatedListFrameComponent>
+    </PaginatedListFrame>
   </section>;
 }

@@ -3,8 +3,8 @@ import type { FormEvent } from "react";
 import { Link } from "react-router";
 
 import { Button, ErrorPanel } from "../../../components/ui";
-import { CompactBookRowComponent } from "../../../shared/books/CompactBookRowComponent";
-import { PaginatedListFrameComponent } from "../../../shared/pagination/PaginatedListFrameComponent";
+import { CompactBookRow } from "../../../shared/books/CompactBookRow";
+import { PaginatedListFrame } from "../../../shared/pagination/PaginatedListFrame";
 
 export function MarginaliaBooksPageRegion({ page, pageNumber, pageSize, search, loading, error, bookPath, onSearchChange, onSearch, onPageChange, onPageSizeChange, onRetry }: {
   page?: Page<MarginaliaBookSummary>;
@@ -55,17 +55,17 @@ function BookResults({ page, pageNumber, pageSize, searching, loading, error, bo
 
   return <section className={`marginalia-results${loading ? " marginalia-results--loading" : ""}`} aria-label="Marginalia Books" aria-busy={loading}>
     {error ? <div className="marginalia-inline-error"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></div> : null}
-    <PaginatedListFrameComponent page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Books" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange}>
+    <PaginatedListFrame page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Books" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange}>
       {page.items.length === 0
         ? <div className="marginalia-empty"><p>{searching ? "No Books with Marginalia match this search." : "No Books with Marginalia found."}</p></div>
-        : <div className="marginalia-book-rows">{page.items.map((book) => <CompactBookRowComponent
+        : <div className="marginalia-book-rows">{page.items.map((book) => <CompactBookRow
           key={book.id}
           book={book}
           detailPath={bookPath(book.id)}
           details={<BookMarginaliaFacts book={book} />}
           actions={book.canOpen ? <Link className="button button--small button--secondary" to={`/library/books/${encodeURIComponent(book.id)}`}>View Book</Link> : null}
         />)}</div>}
-    </PaginatedListFrameComponent>
+    </PaginatedListFrame>
   </section>;
 }
 

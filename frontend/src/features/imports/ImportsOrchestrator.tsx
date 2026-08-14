@@ -7,7 +7,7 @@ import { breadcrumbNavigationState } from "../../app/navigation/breadcrumbs";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { ErrorPanel } from "../../components/ui";
 import { idleMutationState, LocalValidationError, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
-import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
+import { ProductPageShell } from "../../shared/layout/ProductPageShell";
 import type { ImportResultBookNavigation } from "./components/ImportResultItemComponent";
 import { ImportResultPageRegion } from "./regions/ImportResultPageRegion";
 import { ImportUploadPageRegion } from "./regions/ImportUploadPageRegion";
@@ -49,10 +49,10 @@ export function ImportsOrchestrator() {
     }
   }
 
-  return <ProductPageShellComponent className="imports-page" title="Imports">
+  return <ProductPageShell className="imports-page" title="Imports">
     <ImportUploadPageRegion state={state} inputRef={inputRef} onFileChange={(value) => { setFile(value); setState(idleMutationState); }} onSubmit={(event) => void submit(event)} />
     <ImportResultPageRegion result={result} bookNavigation={importResultBookNavigation} />
-  </ProductPageShellComponent>;
+  </ProductPageShell>;
 }
 
 export function uploadSelectedLibraryFile(

@@ -2,9 +2,9 @@ import type { Page, ShelfSummary } from "@second-pass/spl-api";
 
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { Button, ErrorPanel } from "../../../components/ui";
-import type { BookCoverPreviewItem } from "../../../shared/books/BookCoverPreviewStripComponent";
-import { PaginatedListFrameComponent } from "../../../shared/pagination/PaginatedListFrameComponent";
-import { ShelfSummaryRowComponent } from "../../../shared/shelves/ShelfSummaryRowComponent";
+import type { BookCoverPreviewItem } from "../../../shared/books/BookCoverPreviewStrip";
+import { PaginatedListFrame } from "../../../shared/pagination/PaginatedListFrame";
+import { ShelfSummaryRow } from "../../../shared/shelves/ShelfSummaryRow";
 import { groupShelfBookBreadcrumbs, groupShelfBreadcrumbs } from "../groupsBreadcrumbs";
 
 export function GroupShelvesPageRegion({ groupId, groupName, isPublicGroup, groupPath, page, pageNumber, pageSize, loading, error, onPageChange, onPageSizeChange, onRetry }: {
@@ -27,7 +27,7 @@ export function GroupShelvesPageRegion({ groupId, groupName, isPublicGroup, grou
 
   return <section className="group-shelves-region" aria-label="Group shelves" aria-busy={loading}>
     {error ? <div className="groups-inline-error"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></div> : null}
-    <PaginatedListFrameComponent
+    <PaginatedListFrame
       page={pageNumber}
       pageSize={pageSize}
       count={page.count}
@@ -50,7 +50,7 @@ export function GroupShelvesPageRegion({ groupId, groupName, isPublicGroup, grou
           const detailNavigationState = breadcrumbNavigationState(groupShelfBreadcrumbs(
             groupId, groupName, shelf.name, groupPath, isPublicGroup,
           ));
-          return <ShelfSummaryRowComponent
+          return <ShelfSummaryRow
             key={shelf.id}
             name={shelf.name}
             description={shelf.description}
@@ -61,6 +61,6 @@ export function GroupShelvesPageRegion({ groupId, groupName, isPublicGroup, grou
           />;
         })}
       </div>}
-    </PaginatedListFrameComponent>
+    </PaginatedListFrame>
   </section>;
 }

@@ -1,7 +1,7 @@
 import type { LibraryGroupsSettings } from "@second-pass/spl-api";
 
 import { Button } from "../../../components/ui";
-import { ActionRowComponent } from "../../../shared/forms/ActionRowComponent";
+import { ActionRow } from "../../../shared/forms/ActionRow";
 import type { MutationState } from "../../../shared/feedback/mutationState";
 
 export function LibraryGroupsPageRegion({ settings, editing, state, onEnable }: {
@@ -18,6 +18,6 @@ export function LibraryGroupsPageRegion({ settings, editing, state, onEnable }: 
     <p className="muted">{enabled
       ? "Turning this off later requires the Django Admin Service Hatch recovery flow."
       : "Enabling exposes advanced group management. Turning it off later requires the Django Admin Service Hatch recovery flow."}</p>
-    {!enabled && editing ? <ActionRowComponent state={state}><Button type="button" disabled={state.pending} onClick={onEnable}>{state.pending ? "Enabling..." : "Enable Advanced Groups"}</Button></ActionRowComponent> : null}
+    {!enabled && editing ? <ActionRow state={state}><Button type="button" disabled={state.pending} onClick={onEnable}>{state.pending ? "Enabling..." : "Enable Advanced Groups"}</Button></ActionRow> : null}
   </section>;
 }

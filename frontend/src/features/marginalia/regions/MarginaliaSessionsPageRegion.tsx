@@ -9,8 +9,8 @@ import type { FormEvent } from "react";
 import { Link } from "react-router";
 
 import { Button, ErrorPanel } from "../../../components/ui";
-import { CompactBookRowComponent } from "../../../shared/books/CompactBookRowComponent";
-import { PaginatedListFrameComponent } from "../../../shared/pagination/PaginatedListFrameComponent";
+import { CompactBookRow } from "../../../shared/books/CompactBookRow";
+import { PaginatedListFrame } from "../../../shared/pagination/PaginatedListFrame";
 import { SessionSummaryRowComponent } from "../components/SessionSummaryRowComponent";
 import type { MarginaliaStatusFilter } from "../marginaliaQuery";
 
@@ -93,7 +93,7 @@ export function MarginaliaSessionsPageRegion({
 
 function SelectedBookContextComponent({ book, onBack }: { book: MarginaliaBookSummary; onBack?: () => void }) {
   return <section className="marginalia-selected-book" aria-label="Selected Marginalia Book">
-    <CompactBookRowComponent
+    <CompactBookRow
       book={book}
       details={<p className="marginalia-book-facts"><span>{formatCount(book.sessionCount, "Session")}</span><span>{book.activeSessionCount} active</span></p>}
       actions={<div className="marginalia-selected-book__actions">
@@ -122,11 +122,11 @@ function ReadingSessionResults({ page, pageNumber, pageSize, bookContext, hasFil
 
   return <section className={`marginalia-results${loading ? " marginalia-results--loading" : ""}`} aria-busy={loading}>
     {error ? <div className="marginalia-inline-error"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></div> : null}
-    <PaginatedListFrameComponent page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Reading sessions" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange}>
+    <PaginatedListFrame page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Reading sessions" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange}>
       {page.items.length === 0
         ? <div className="marginalia-empty"><p>{bookContext ? "No reading sessions match for this Book." : "No reading sessions found."}</p>{hasFilters ? <p className="muted">Try clearing the search or status filter.</p> : <p className="muted">{bookContext ? "This Book has no Sessions in the selected status." : "Your reading history will appear here."}</p>}</div>
         : <div className="marginalia-session-rows">{page.items.map((session) => <SessionSummaryRowComponent key={session.id} session={session} book={bookReference(session, bookContext)} />)}</div>}
-    </PaginatedListFrameComponent>
+    </PaginatedListFrame>
   </section>;
 }
 

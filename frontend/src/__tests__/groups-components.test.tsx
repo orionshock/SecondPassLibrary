@@ -9,7 +9,7 @@ import { GroupHeaderPageRegion } from "../features/groups/regions/GroupHeaderPag
 import { GroupMembersPageRegion } from "../features/groups/regions/GroupMembersPageRegion";
 import { GroupShelvesPageRegion } from "../features/groups/regions/GroupShelvesPageRegion";
 import { GroupsListPageRegion } from "../features/groups/regions/GroupsListPageRegion";
-import { GroupRowComponent } from "../shared/groups/GroupRowComponent";
+import { GroupRow } from "../shared/groups/GroupRow";
 
 const group: LibraryGroup = {
   id: "group", name: "Common Room", description: "<b>Add, edit, and delete books</b>", isPublicGroup: true,
@@ -23,7 +23,7 @@ const book: CompactBook = {
 
 describe("Groups read-only regions", () => {
   it("renders server-driven Public and curator treatments without mutation controls or counts", () => {
-    const markup = renderToStaticMarkup(<MemoryRouter><GroupRowComponent
+    const markup = renderToStaticMarkup(<MemoryRouter><GroupRow
       group={group}
       detailPath="/groups/group"
       isCurator
@@ -40,7 +40,7 @@ describe("Groups read-only regions", () => {
   });
 
   it("keeps Group identity structurally primary beside the shared compact preview", () => {
-    const markup = renderToStaticMarkup(<MemoryRouter><GroupRowComponent
+    const markup = renderToStaticMarkup(<MemoryRouter><GroupRow
       group={group}
       detailPath="/groups/group"
       isCurator={false}

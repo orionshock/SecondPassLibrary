@@ -3,8 +3,8 @@ import type { FormEvent } from "react";
 
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { Button, ErrorPanel } from "../../../components/ui";
-import { CompactBookRowComponent } from "../../../shared/books/CompactBookRowComponent";
-import { PagerComponent } from "../../../shared/pagination/PagerComponent";
+import { CompactBookRow } from "../../../shared/books/CompactBookRow";
+import { Pager } from "../../../shared/pagination/Pager";
 import { shelfBookBreadcrumbs } from "../shelvesBreadcrumbs";
 
 export function ShelfEditAddBooksPageRegion({ shelfId, shelfName, scope, search, page, pageNumber, pageSize, loading, error, pendingBookId, controlsDisabled, onSearchChange, onSearch, onAdd, onPageChange, onPageSizeChange, onRetry }: {
@@ -43,7 +43,7 @@ export function ShelfEditAddBooksPageRegion({ shelfId, shelfName, scope, search,
     {page ? <div className="shelf-edit-candidates" aria-busy={loading}>
       {error ? <div className="shelf-edit-inline-error"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></div> : null}
       {page.items.length === 0 ? <p className="muted">No matching books.</p> : <div className="shelf-edit-book-rows">
-        {page.items.map((book) => <CompactBookRowComponent
+        {page.items.map((book) => <CompactBookRow
             key={book.id}
             book={book}
             detailPath={`/library/books/${encodeURIComponent(book.id)}`}
@@ -53,7 +53,7 @@ export function ShelfEditAddBooksPageRegion({ shelfId, shelfName, scope, search,
             </Button>}
           />)}
       </div>}
-      <PagerComponent page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Books" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} />
+      <Pager page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Books" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} />
     </div> : null}
   </section>;
 }

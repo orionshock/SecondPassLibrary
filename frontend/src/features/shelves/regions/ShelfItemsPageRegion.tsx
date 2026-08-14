@@ -2,9 +2,9 @@ import type { Page, ShelfItem, ShelfItemOrdering, ShelfScope } from "@second-pas
 
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { Button, ErrorPanel } from "../../../components/ui";
-import { CompactBookRowComponent } from "../../../shared/books/CompactBookRowComponent";
-import { OrderMenuComponent, type OrderMenuOption } from "../../../shared/forms/OrderMenuComponent";
-import { PagerComponent } from "../../../shared/pagination/PagerComponent";
+import { CompactBookRow } from "../../../shared/books/CompactBookRow";
+import { OrderMenu, type OrderMenuOption } from "../../../shared/forms/OrderMenu";
+import { Pager } from "../../../shared/pagination/Pager";
 import { shelfBookBreadcrumbs } from "../shelvesBreadcrumbs";
 
 const shelfItemOrderingOptions: readonly OrderMenuOption<ShelfItemOrdering>[] = [
@@ -34,7 +34,7 @@ export function ShelfItemsPageRegion({ shelfId, shelfName, scope, shelfPath, pag
 }) {
   return <section className="shelf-items-region" aria-label="Shelf books">
     <div className="shelf-items-controls">
-      <OrderMenuComponent label="Order" ariaLabel="Order shelf books" value={ordering} options={shelfItemOrderingOptions} onChange={onOrderingChange} />
+      <OrderMenu label="Order" ariaLabel="Order shelf books" value={ordering} options={shelfItemOrderingOptions} onChange={onOrderingChange} />
     </div>
     <ShelfItemResults shelfId={shelfId} shelfName={shelfName} scope={scope} shelfPath={shelfPath} page={page} pageNumber={pageNumber} pageSize={pageSize} loading={loading} error={error} onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} onRetry={onRetry} />
   </section>;
@@ -61,13 +61,13 @@ function ShelfItemResults({ shelfId, shelfName, scope, shelfPath, page, pageNumb
   return <div className={`shelf-items-results${loading ? " shelf-results--loading" : ""}`} aria-busy={loading}>
     {error ? <div className="shelves-inline-error"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></div> : null}
     {page.items.length === 0 ? <p className="shelf-detail-state muted">This shelf has no visible books.</p> : <div className="shelf-book-rows">
-      {page.items.map((item) => <CompactBookRowComponent
+      {page.items.map((item) => <CompactBookRow
         key={item.id}
         book={item.book}
         detailPath={`/library/books/${encodeURIComponent(item.book.id)}`}
         navigationState={breadcrumbNavigationState(shelfBookBreadcrumbs(scope, shelfId, shelfName, item.book.title, shelfPath))}
       />)}
     </div>}
-    <PagerComponent page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Books" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} />
+    <Pager page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Books" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} />
   </div>;
 }

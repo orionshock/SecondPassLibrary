@@ -15,7 +15,7 @@ import type { AppOutletContext } from "../../app/layout/AppOrchestrator";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { breadcrumbNavigationState, resolveBreadcrumbTrail } from "../../app/navigation/breadcrumbs";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
-import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
+import { ProductPageShell } from "../../shared/layout/ProductPageShell";
 import {
   bookDetailBreadcrumbFallback,
   bookEditBreadcrumbTrail,
@@ -156,11 +156,11 @@ export function BookDetailOrchestrator() {
     });
   }
 
-  if (load.status === "loading") return <ProductPageShellComponent><BookDetailStatePageRegion state="loading" /></ProductPageShellComponent>;
-  if (load.status === "not-found") return <ProductPageShellComponent><BookDetailStatePageRegion state="not-found" /></ProductPageShellComponent>;
-  if (load.status === "error") return <ProductPageShellComponent><BookDetailStatePageRegion state="error" error={load.error} onRetry={() => setRetry((value) => value + 1)} /></ProductPageShellComponent>;
+  if (load.status === "loading") return <ProductPageShell><BookDetailStatePageRegion state="loading" /></ProductPageShell>;
+  if (load.status === "not-found") return <ProductPageShell><BookDetailStatePageRegion state="not-found" /></ProductPageShell>;
+  if (load.status === "error") return <ProductPageShell><BookDetailStatePageRegion state="error" error={load.error} onRetry={() => setRetry((value) => value + 1)} /></ProductPageShell>;
 
-  return <ProductPageShellComponent><article className="page-stack book-detail-page">
+  return <ProductPageShell><article className="page-stack book-detail-page">
     <BookDetailHeroPageRegion
       book={load.book}
       readingClientBookUrl={serverInfo.readingClientBaseUrl && load.book.file
@@ -209,5 +209,5 @@ export function BookDetailOrchestrator() {
       onRetryShelves={loadShelves}
       onRetryGroups={loadGroups}
     />
-  </article></ProductPageShellComponent>;
+  </article></ProductPageShell>;
 }

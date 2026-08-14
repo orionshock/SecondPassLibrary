@@ -3,7 +3,7 @@ import { Link } from "react-router";
 
 import { breadcrumbNavigationState, type BreadcrumbItem } from "../../../app/navigation/breadcrumbs";
 import { Button, ErrorPanel } from "../../../components/ui";
-import { BookCoverComponent } from "../../../shared/books/BookCoverComponent";
+import { BookCover } from "../../../shared/books/BookCover";
 import {
   libraryEntityAttachedBookBreadcrumbs,
   libraryEntityContextPath,
@@ -66,7 +66,7 @@ export function AuthorSeriesAttachedBooksPageRegion({
         )}
         aria-label={`View ${book.title}`}
         title={book.title}
-      ><BookCoverComponent coverUrl={book.coverUrl} title={book.title} /></Link>)}
+      ><BookCover coverUrl={book.coverUrl} title={book.title} /></Link>)}
     </div> : null}
     <div className="author-series-attached-books__status" aria-live="polite">
       {pending ? "Loading attached Books…" : null}

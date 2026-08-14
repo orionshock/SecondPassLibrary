@@ -3,8 +3,8 @@ import type { FormEvent } from "react";
 
 import { Button, ErrorPanel, FormField } from "../../../components/ui";
 import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";
-import { SaveCancelActionRowComponent } from "../../../shared/forms/ActionRowComponent";
-import { GroupBadgeComponent } from "../../../shared/groups/GroupBadgeComponent";
+import { SaveCancelActionRow } from "../../../shared/forms/ActionRow";
+import { GroupBadge } from "../../../shared/groups/GroupBadge";
 import type { ShelfDraft } from "../shelfDraft";
 import type { ShelfLifecycleMode } from "../shelfLifecycle";
 
@@ -56,7 +56,7 @@ export function ShelfDetailsEditPageRegion({
       </FormField> : null}
       {mode === "edit" && shelf?.ownerType === "group" ? <div className="shelf-lifecycle-owner-context">
         <span>Owned by</span>
-        <GroupBadgeComponent name={shelf.ownerGroup?.name ?? "Library Group"} isPublicGroup={shelf.ownerGroup?.isPublicGroup} />
+        <GroupBadge name={shelf.ownerGroup?.name ?? "Library Group"} isPublicGroup={shelf.ownerGroup?.isPublicGroup} />
       </div> : null}
       {mode === "new" && groupsLoading ? <p className="muted shelf-group-picker-note" aria-live="polite">Loading group choices...</p> : null}
       {mode === "new" && groupsError ? <div className="shelf-group-picker-error"><ErrorPanel>{groupsError.message}</ErrorPanel><p className="muted">You can still create a personal shelf.</p></div> : null}
@@ -72,7 +72,7 @@ export function ShelfDetailsEditPageRegion({
           <option value="listed">Listed</option>
         </select>
       </FormField> : null}
-      <SaveCancelActionRowComponent
+      <SaveCancelActionRow
         state={mutation}
         submitLabel={mode === "new" ? "Create Shelf" : "Save Shelf"}
         pendingLabel="Saving..."

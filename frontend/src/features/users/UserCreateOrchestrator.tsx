@@ -6,7 +6,7 @@ import type { AppOutletContext } from "../../app/layout/AppOrchestrator";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { ErrorPanel } from "../../components/ui";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
-import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
+import { ProductPageShell } from "../../shared/layout/ProductPageShell";
 import { UserCreateFormPageRegion } from "./regions/UserCreateFormPageRegion";
 import { UserCreateSuccessPageRegion } from "./regions/UserCreateSuccessPageRegion";
 import { createUserInputFromDraft, emptyUserCreateDraft, userCreateDraftReducer } from "./userCreateForm";
@@ -36,7 +36,7 @@ export function UserCreateOrchestrator() {
     }
   }
 
-  return <ProductPageShellComponent className="users-page" title="Create User">
+  return <ProductPageShell className="users-page" title="Create User">
     {roles.length === 0 ? <ErrorPanel>You do not have permission to create users.</ErrorPanel> : result
       ? <UserCreateSuccessPageRegion result={result} />
       : <UserCreateFormPageRegion
@@ -46,5 +46,5 @@ export function UserCreateOrchestrator() {
           onChange={(field, value) => dispatch({ type: "change", field, value })}
           onSubmit={submit}
         />}
-  </ProductPageShellComponent>;
+  </ProductPageShell>;
 }

@@ -2,7 +2,7 @@ import type { RecentMarginaliaSession } from "@second-pass/spl-api";
 import { Link } from "react-router";
 
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
-import { BookCoverComponent } from "../../../shared/books/BookCoverComponent";
+import { BookCover } from "../../../shared/books/BookCover";
 import { marginaliaSessionDisplayName } from "../../../shared/marginaliaSessionDisplayName";
 
 export function RecentSessionCoverCardComponent({ item }: { item: RecentMarginaliaSession }) {
@@ -15,7 +15,7 @@ export function RecentSessionCoverCardComponent({ item }: { item: RecentMarginal
       aria-label={`${sessionName}, ${item.book.title}`}
       state={breadcrumbNavigationState([{ label: "My Marginalia", to: "/marginalia", resetTrail: true }, { label: sessionName }])}
     >
-      <BookCoverComponent coverUrl={item.book.coverUrl} title={item.book.title} />
+      <BookCover coverUrl={item.book.coverUrl} title={item.book.title} />
       <span className="dashboard-session-card__overlay">
         <span className="dashboard-session-card__details">
           <span className="dashboard-session-card__book-title">{item.book.title}</span>

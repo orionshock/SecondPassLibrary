@@ -2,11 +2,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router";
 import { describe, expect, it } from "vitest";
 
-import { ShelfSummaryRowComponent } from "../shared/shelves/ShelfSummaryRowComponent";
+import { ShelfSummaryRow } from "../shared/shelves/ShelfSummaryRow";
 
-describe("ShelfSummaryRowComponent", () => {
+describe("ShelfSummaryRow", () => {
   it("renders linked Shelf identity and the required cover preview strip", () => {
-    const markup = renderToStaticMarkup(<MemoryRouter><ShelfSummaryRowComponent
+    const markup = renderToStaticMarkup(<MemoryRouter><ShelfSummaryRow
       name="Favorites"
       description="Reader picks"
       itemCount={2}
@@ -33,7 +33,7 @@ describe("ShelfSummaryRowComponent", () => {
   });
 
   it("renders Group and Public identity without mutation affordances", () => {
-    const markup = renderToStaticMarkup(<MemoryRouter><ShelfSummaryRowComponent
+    const markup = renderToStaticMarkup(<MemoryRouter><ShelfSummaryRow
       name="Common picks"
       description=""
       itemCount={1}
@@ -52,7 +52,7 @@ describe("ShelfSummaryRowComponent", () => {
   });
 
   it("renders optional user ownership as plain inline identity", () => {
-    const markup = renderToStaticMarkup(<MemoryRouter><ShelfSummaryRowComponent
+    const markup = renderToStaticMarkup(<MemoryRouter><ShelfSummaryRow
       name="Shared favorites"
       description="A shared shelf"
       itemCount={3}

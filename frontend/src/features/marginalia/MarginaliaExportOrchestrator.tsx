@@ -6,7 +6,7 @@ import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { loadPageWithRecovery } from "../../app/routing/pageRecovery";
 import { saveDownloadedFile } from "../../shared/browser/saveDownloadedFile";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
-import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
+import { ProductPageShell } from "../../shared/layout/ProductPageShell";
 import { marginaliaExportBreadcrumbFallback } from "./marginaliaBreadcrumbs";
 import { MarginaliaSectionActionsComponent } from "./components/MarginaliaSectionActionsComponent";
 import { marginaliaExportSelectedBookCount, marginaliaExportSelectedSessionIds, withMarginaliaExportPageSelection, withMarginaliaExportSessionSelection, type MarginaliaExportSelectionMap } from "./marginaliaExportSelection";
@@ -100,7 +100,7 @@ export function MarginaliaExportOrchestrator() {
   const selectedSessionIds = new Set(selection.keys());
   const completeLimitFailure = marginaliaExportLimitFailure(completeState.error);
   const selectedLimitFailure = marginaliaExportLimitFailure(selectedState.error);
-  return <ProductPageShellComponent title="Export Marginalia" actions={<MarginaliaSectionActionsComponent activeSection="export" />}>
+  return <ProductPageShell title="Export Marginalia" actions={<MarginaliaSectionActionsComponent activeSection="export" />}>
     <MarginaliaExportPageRegion
       page={load.page}
       pageNumber={query.page}
@@ -135,7 +135,7 @@ export function MarginaliaExportOrchestrator() {
       onClearSelection={() => setSelection(new Map())}
       onSelectedExport={() => void exportSelected()}
     />
-  </ProductPageShellComponent>;
+  </ProductPageShell>;
 }
 
 export function marginaliaExportLimitFailure(

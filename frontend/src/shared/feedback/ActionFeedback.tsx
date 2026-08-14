@@ -5,7 +5,7 @@ import { ErrorPanel } from "../../components/ui";
 import type { MutationState } from "./mutationState";
 import { SUCCESS_MESSAGE_TIMEOUT_MS } from "./useAutoDismissMutationMessage";
 
-export function ActionFeedbackComponent({ state }: { state: MutationState }) {
+export function ActionFeedback({ state }: { state: MutationState }) {
   const [visibleMessage, setVisibleMessage] = useState(state.message);
 
   useEffect(() => {

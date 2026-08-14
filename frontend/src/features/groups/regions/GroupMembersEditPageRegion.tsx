@@ -2,7 +2,7 @@ import type { GroupMembership, Page } from "@second-pass/spl-api";
 
 import { RemoveIconButton } from "../../../components/icons/RemoveIconButton";
 import { Button, ErrorPanel } from "../../../components/ui";
-import { PagerComponent } from "../../../shared/pagination/PagerComponent";
+import { Pager } from "../../../shared/pagination/Pager";
 import { GroupMemberRowComponent } from "../components/GroupMemberRowComponent";
 
 export function GroupMembersEditPageRegion({ page, pageNumber, pageSize, isPublicGroup, loading, error, pendingProfileId, controlsDisabled, onToggleCurator, onRemove, onPageChange, onPageSizeChange, onRetry }: {
@@ -47,6 +47,6 @@ export function GroupMembersEditPageRegion({ page, pageNumber, pageSize, isPubli
         </>}
       />)}
     </div>}
-    <PagerComponent page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Members" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} />
+    <Pager page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Members" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} />
   </section>;
 }

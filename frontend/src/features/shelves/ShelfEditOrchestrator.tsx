@@ -27,9 +27,9 @@ import {
   type MutationState,
 } from "../../shared/feedback/mutationState";
 import { useAutoDismissMutationMessage } from "../../shared/feedback/useAutoDismissMutationMessage";
-import { ProductPageShellComponent } from "../../shared/layout/ProductPageShellComponent";
+import { ProductPageShell } from "../../shared/layout/ProductPageShell";
 import { shelfDetailPathForId } from "../../shared/shelves/shelfNavigation";
-import { tabButtonId, tabPanelId } from "../../shared/tabs/TabListComponent";
+import { tabButtonId, tabPanelId } from "../../shared/tabs/TabList";
 import { ShelfDetailsEditPageRegion } from "./regions/ShelfDetailsEditPageRegion";
 import { ShelfEditAddBooksPageRegion } from "./regions/ShelfEditAddBooksPageRegion";
 import { ShelfEditBooksPageRegion } from "./regions/ShelfEditBooksPageRegion";
@@ -364,7 +364,7 @@ export function ShelfEditOrchestrator() {
   }
   const editableShelf = load.shelf;
 
-  return <ProductPageShellComponent className="shelf-lifecycle-page" eyebrow="Editing Shelf" title={draft.name || editableShelf.name || "Shelf"}>
+  return <ProductPageShell className="shelf-lifecycle-page" eyebrow="Editing Shelf" title={draft.name || editableShelf.name || "Shelf"}>
     <ShelfEditTabsPageRegion
       activeTab={editState.tab}
       disabled={immediateItemMutationPending}
@@ -441,5 +441,5 @@ export function ShelfEditOrchestrator() {
         onRetry={() => setCandidatesVersion((value) => value + 1)}
       />
     </div> : null}
-  </ProductPageShellComponent>;
+  </ProductPageShell>;
 }
