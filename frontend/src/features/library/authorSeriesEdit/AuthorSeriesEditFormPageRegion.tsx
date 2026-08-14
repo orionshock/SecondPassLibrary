@@ -3,10 +3,10 @@ import type { FormEvent } from "react";
 import { FormField } from "../../../components/UiPrimitives";
 import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";
 import { SaveCancelActionRow } from "../../../shared/forms/ActionRow";
-import type { AuthorSeriesEditDraft } from "../authorSeriesEditDraft";
-import type { DuplicateAdvisoryCandidate } from "../authorSeriesDuplicateAdvisory";
+import type { AuthorSeriesEditDraft } from "./authorSeriesEditDraft";
+import type { DuplicateAdvisoryCandidate } from "./authorSeriesDuplicateAdvisory";
 import { titleKind, type LibraryEntityKind } from "../authorSeriesLifecycle";
-import { AuthorSeriesNameCombobox } from "../components/AuthorSeriesNameCombobox";
+import { AuthorSeriesNameCombobox } from "./AuthorSeriesNameCombobox";
 
 export function AuthorSeriesEditFormPageRegion({
   kind,

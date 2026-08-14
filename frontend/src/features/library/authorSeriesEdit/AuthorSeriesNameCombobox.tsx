@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
-import type { DuplicateAdvisoryCandidate } from "../authorSeriesDuplicateAdvisory";
+import type { DuplicateAdvisoryCandidate } from "./authorSeriesDuplicateAdvisory";
 import { titleKind, type LibraryEntityKind } from "../authorSeriesLifecycle";
 
 export function nextDuplicateAdvisoryOption(

@@ -7,7 +7,7 @@ import {
   libraryEntityNavigationState,
   type LibraryEntityEditMode,
   type LibraryEntityKind,
-} from "./authorSeriesLifecycle";
+} from "../authorSeriesLifecycle";
 
 export const duplicateAdvisoryMinimumLength = 2;
 export const duplicateAdvisoryResultLimit = 10;

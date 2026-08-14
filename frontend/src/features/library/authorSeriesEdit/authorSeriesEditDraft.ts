@@ -5,7 +5,7 @@ import type {
   SeriesMutationInput,
 } from "@second-pass/spl-api";
 
-import { LocalValidationError } from "../../shared/feedback/mutationState";
+import { LocalValidationError } from "../../../shared/feedback/mutationState";
 
 export interface AuthorSeriesEditDraft {
   name: string;

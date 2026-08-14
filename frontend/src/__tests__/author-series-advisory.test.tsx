@@ -9,15 +9,15 @@ import {
   duplicateCandidateEditNavigation,
   scheduleDuplicateAdvisorySearch,
   type DuplicateAdvisoryCandidate,
-} from "../features/library/authorSeriesDuplicateAdvisory";
+} from "../features/library/authorSeriesEdit/authorSeriesDuplicateAdvisory";
 import {
   AuthorSeriesNameCombobox,
   AuthorSeriesNameSuggestions,
   duplicateAdvisoryDismissesForKey,
   duplicateAdvisorySelection,
   nextDuplicateAdvisoryOption,
-} from "../features/library/components/AuthorSeriesNameCombobox";
-import { validateAuthorSeriesEditDraft } from "../features/library/authorSeriesEditDraft";
+} from "../features/library/authorSeriesEdit/AuthorSeriesNameCombobox";
+import { validateAuthorSeriesEditDraft } from "../features/library/authorSeriesEdit/authorSeriesEditDraft";
 
 const candidate: DuplicateAdvisoryCandidate = {
   id: "author/id",

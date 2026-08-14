@@ -3,11 +3,11 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
-import { confirmAuthorSeriesDelete, isAttachedBookConflict } from "../features/library/authorSeriesDelete";
-import { AttachedBooksRequestGate, appendAttachedBooks, attachedBooksQuery } from "../features/library/authorSeriesAttachedBooks";
-import { AuthorSeriesAttachedBooksPageRegion } from "../features/library/regions/AuthorSeriesAttachedBooksPageRegion";
-import { AuthorSeriesDangerZonePageRegion } from "../features/library/regions/AuthorSeriesDangerZonePageRegion";
-import { AuthorSeriesEditFormPageRegion } from "../features/library/regions/AuthorSeriesEditFormPageRegion";
+import { confirmAuthorSeriesDelete, isAttachedBookConflict } from "../features/library/authorSeriesEdit/authorSeriesDelete";
+import { AttachedBooksRequestGate, appendAttachedBooks, attachedBooksQuery } from "../features/library/authorSeriesEdit/authorSeriesAttachedBooks";
+import { AuthorSeriesAttachedBooksPageRegion } from "../features/library/authorSeriesEdit/AuthorSeriesAttachedBooksPageRegion";
+import { AuthorSeriesDangerZonePageRegion } from "../features/library/authorSeriesEdit/AuthorSeriesDangerZonePageRegion";
+import { AuthorSeriesEditFormPageRegion } from "../features/library/authorSeriesEdit/AuthorSeriesEditFormPageRegion";
 
 const books: BookPreview[] = [
   { id: "book/one", title: "A very long attached Book title that remains linked", coverUrl: "/media/one.jpg" },

@@ -1,6 +1,6 @@
 import type { BookPreview, CompactBook, LibraryBooksQuery } from "@second-pass/spl-api";
 
-import type { LibraryEntityKind } from "./authorSeriesLifecycle";
+import type { LibraryEntityKind } from "../authorSeriesLifecycle";
 
 export const ATTACHED_BOOK_PAGE_SIZE = 24;
 

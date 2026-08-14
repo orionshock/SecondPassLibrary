@@ -1,5 +1,5 @@
-import { confirmDangerousAction } from "../../shared/confirmations/confirmDangerousAction";
-import { titleKind, type LibraryEntityKind } from "./authorSeriesLifecycle";
+import { confirmDangerousAction } from "../../../shared/confirmations/confirmDangerousAction";
+import { titleKind, type LibraryEntityKind } from "../authorSeriesLifecycle";
 
 export function confirmAuthorSeriesDelete(
   kind: LibraryEntityKind,

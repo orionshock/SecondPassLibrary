@@ -10,7 +10,7 @@ import {
   seriesEditDraft,
   seriesMutationInput,
   validateAuthorSeriesEditDraft,
-} from "../features/library/authorSeriesEditDraft";
+} from "../features/library/authorSeriesEdit/authorSeriesEditDraft";
 import {
   libraryEntityBreadcrumbs,
   libraryEntityAxisPath,

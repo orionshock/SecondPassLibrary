@@ -18,11 +18,28 @@ import {
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useBlocker, useLocation, useNavigate, useParams } from "react-router";
 
-import { breadcrumbNavigationState, resolveBreadcrumbTrail } from "../../app/navigation/breadcrumbs";
-import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { Button, ErrorPanel } from "../../components/UiPrimitives";
-import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
-import { ProductPageShell } from "../../shared/layout/ProductPageShell";
+import { breadcrumbNavigationState, resolveBreadcrumbTrail } from "../../../app/navigation/breadcrumbs";
+import { usePageBreadcrumbs } from "../../../app/navigation/usePageBreadcrumbs";
+import { Button, ErrorPanel } from "../../../components/UiPrimitives";
+import { idleMutationState, normalizeMutationError, type MutationState } from "../../../shared/feedback/mutationState";
+import { ProductPageShell } from "../../../shared/layout/ProductPageShell";
+import {
+  libraryEntityAxisPath,
+  libraryEntityBreadcrumbs,
+  libraryEntityEditPath,
+  libraryEntityNavigationState,
+  libraryEntityParentBreadcrumbs,
+  libraryEntitySavedBreadcrumbs,
+  readLibraryEntityReturnTo,
+  readLibraryEntitySuccessMessage,
+  titleKind,
+  type LibraryEntityEditMode,
+  type LibraryEntityKind,
+} from "../authorSeriesLifecycle";
+import "./AuthorSeriesEdit.css";
+import { AuthorSeriesAttachedBooksPageRegion } from "./AuthorSeriesAttachedBooksPageRegion";
+import { AuthorSeriesDangerZonePageRegion } from "./AuthorSeriesDangerZonePageRegion";
+import { AuthorSeriesEditFormPageRegion } from "./AuthorSeriesEditFormPageRegion";
 import {
   authorEditDraft,
   authorMutationInput,
@@ -47,23 +64,6 @@ import {
   appendAttachedBooks,
   attachedBooksQuery,
 } from "./authorSeriesAttachedBooks";
-import {
-  libraryEntityAxisPath,
-  libraryEntityBreadcrumbs,
-  libraryEntityEditPath,
-  libraryEntityNavigationState,
-  libraryEntityParentBreadcrumbs,
-  libraryEntitySavedBreadcrumbs,
-  readLibraryEntityReturnTo,
-  readLibraryEntitySuccessMessage,
-  titleKind,
-  type LibraryEntityEditMode,
-  type LibraryEntityKind,
-} from "./authorSeriesLifecycle";
-import { AuthorSeriesEditFormPageRegion } from "./regions/AuthorSeriesEditFormPageRegion";
-import { AuthorSeriesAttachedBooksPageRegion } from "./regions/AuthorSeriesAttachedBooksPageRegion";
-import { AuthorSeriesDangerZonePageRegion } from "./regions/AuthorSeriesDangerZonePageRegion";
-import "./AuthorSeriesEdit.css";
 
 type Entity = LibraryAuthor | LibrarySeries;
 type LoadState = { status: "loading" } | { status: "ready"; entity?: Entity } | { status: "not-found" } | { status: "error"; error: Error };
