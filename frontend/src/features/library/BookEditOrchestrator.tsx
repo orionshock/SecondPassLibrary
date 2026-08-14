@@ -50,7 +50,7 @@ import { BookEditIdentifiersPageRegion } from "./regions/BookEditIdentifiersPage
 import { BookEditGroupsPageRegion } from "./regions/BookEditGroupsPageRegion";
 import { BookEditGroupShelvesPageRegion } from "./regions/BookEditGroupShelvesPageRegion";
 import { BookEditTabsPageRegion } from "./regions/BookEditTabsPageRegion";
-import { BookCoverEditorComponent } from "./components/BookCoverEditorComponent";
+import { BookCoverEditor } from "./components/BookCoverEditor";
 import "./BookEdit.css";
 
 type BookLoad = { status: "loading" } | { status: "ready"; book: BookDetail } | { status: "not-found" } | { status: "error"; error: Error };
@@ -326,7 +326,7 @@ export function BookEditOrchestrator() {
   return <ProductPageShell><form className="book-edit-page" onSubmit={save}>
     <aside className="book-edit-cover">
       <BookCover coverUrl={readyBook.coverUrl} title={readyBook.title} />
-      <BookCoverEditorComponent
+      <BookCoverEditor
         coverUrl={readyBook.coverUrl}
         title={readyBook.title}
         selectedFile={selectedCoverFile}

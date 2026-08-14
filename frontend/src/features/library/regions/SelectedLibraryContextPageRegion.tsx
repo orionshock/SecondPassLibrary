@@ -1,7 +1,7 @@
 import { Link } from "react-router";
 import { Button, ErrorPanel } from "../../../components/ui";
 import { libraryEntityBreadcrumbs, libraryEntityEditPath, libraryEntityNavigationState } from "../authorSeriesLifecycle";
-import { ClampedLibraryTextComponent } from "../components/ClampedLibraryTextComponent";
+import { ClampedLibraryText } from "../components/ClampedLibraryText";
 import type { LibrarySelectedContextKind } from "../libraryQuery";
 
 export function SelectedLibraryContextPageRegion({ kind, entityId, name, blurb, bookCount, loading = false, unavailable = false, error, canEdit = false, returnTo, onRetry }: {
@@ -26,7 +26,7 @@ export function SelectedLibraryContextPageRegion({ kind, entityId, name, blurb, 
         <h2>{title}</h2>
         {bookCount !== undefined ? <span className="muted">({bookCount} {bookCount === 1 ? "Book" : "Books"})</span> : null}
       </div>
-      {blurb && !unavailable ? <ClampedLibraryTextComponent text={blurb} /> : null}
+      {blurb && !unavailable ? <ClampedLibraryText text={blurb} /> : null}
       {loading ? <p className="muted" aria-live="polite">Loading details...</p> : null}
       {unavailable ? <p className="muted">Selected context not found or unavailable.</p> : null}
       {error ? <div className="selected-library-context-region__error"><ErrorPanel>{error.message}</ErrorPanel>{onRetry ? <Button type="button" onClick={onRetry}>Retry</Button> : null}</div> : null}

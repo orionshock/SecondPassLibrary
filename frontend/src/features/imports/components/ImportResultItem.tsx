@@ -6,7 +6,7 @@ export interface ImportResultBookNavigation {
   state: object;
 }
 
-export function ImportResultItemComponent({ item, bookNavigation }: {
+export function ImportResultItem({ item, bookNavigation }: {
   item: LibraryImportItem;
   bookNavigation?: ImportResultBookNavigation;
 }) {

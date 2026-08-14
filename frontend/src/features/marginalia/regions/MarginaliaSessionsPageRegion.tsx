@@ -11,7 +11,7 @@ import { Link } from "react-router";
 import { Button, ErrorPanel } from "../../../components/ui";
 import { CompactBookRow } from "../../../shared/books/CompactBookRow";
 import { PaginatedListFrame } from "../../../shared/pagination/PaginatedListFrame";
-import { SessionSummaryRowComponent } from "../components/SessionSummaryRowComponent";
+import { SessionSummaryRow } from "../components/SessionSummaryRow";
 import type { MarginaliaStatusFilter } from "../marginaliaQuery";
 
 type SessionRow = MarginaliaSessionListItem | MarginaliaSessionSummary;
@@ -125,7 +125,7 @@ function ReadingSessionResults({ page, pageNumber, pageSize, bookContext, hasFil
     <PaginatedListFrame page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Reading sessions" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange}>
       {page.items.length === 0
         ? <div className="marginalia-empty"><p>{bookContext ? "No reading sessions match for this Book." : "No reading sessions found."}</p>{hasFilters ? <p className="muted">Try clearing the search or status filter.</p> : <p className="muted">{bookContext ? "This Book has no Sessions in the selected status." : "Your reading history will appear here."}</p>}</div>
-        : <div className="marginalia-session-rows">{page.items.map((session) => <SessionSummaryRowComponent key={session.id} session={session} book={bookReference(session, bookContext)} />)}</div>}
+        : <div className="marginalia-session-rows">{page.items.map((session) => <SessionSummaryRow key={session.id} session={session} book={bookReference(session, bookContext)} />)}</div>}
     </PaginatedListFrame>
   </section>;
 }

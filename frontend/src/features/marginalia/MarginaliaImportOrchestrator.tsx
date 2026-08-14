@@ -7,7 +7,7 @@ import { ProductPageShell } from "../../shared/layout/ProductPageShell";
 import { saveDownloadedFile } from "../../shared/browser/saveDownloadedFile";
 import { createMarginaliaImportDraft, buildMarginaliaImportApplyInput, marginaliaImportSelectedCount, withMarginaliaImportBookSelection, type MarginaliaImportDraft, type MarginaliaImportSessionDraft } from "./marginaliaImportDraft";
 import { marginaliaImportBreadcrumbFallback } from "./marginaliaBreadcrumbs";
-import { MarginaliaSectionActionsComponent } from "./components/MarginaliaSectionActionsComponent";
+import { MarginaliaSectionActions } from "./components/MarginaliaSectionActions";
 import { MarginaliaImportPageRegion } from "./regions/MarginaliaImportPageRegion";
 
 export function MarginaliaImportOrchestrator() {
@@ -98,7 +98,7 @@ export function MarginaliaImportOrchestrator() {
     }
   }
 
-  return <ProductPageShell className="marginalia-import-shell" title="Import Marginalia" actions={<MarginaliaSectionActionsComponent activeSection="import" />}>
+  return <ProductPageShell className="marginalia-import-shell" title="Import Marginalia" actions={<MarginaliaSectionActions activeSection="import" />}>
     <MarginaliaImportPageRegion preview={preview} draft={draft} result={result} editingSessionKeys={editingSessionKeys} previewState={previewState} applyState={applyState} downloadState={downloadState} inputRef={inputRef} includeEmptySessions={includeEmptySessions} onIncludeEmptySessionsChange={changeIncludeEmptySessions} onFileChange={changeFile} onPreview={(event) => void submitPreview(event)} onDraftChange={(key, value: MarginaliaImportSessionDraft) => setDraft((current) => ({ ...current, [key]: value }))} onBookSelectionChange={(bookCandidateId, selected) => setDraft((current) => preview ? withMarginaliaImportBookSelection(preview, current, bookCandidateId, selected) : current)} onEditingChange={(key, editing) => setEditingSessionKeys((current) => {
       const next = new Set(current);
       if (editing) next.add(key); else next.delete(key);

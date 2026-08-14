@@ -2,7 +2,7 @@ import { useState } from "react";
 
 const collapsedCharacterLimit = 240;
 
-export function ClampedLibraryTextComponent({ text }: { text: string }) {
+export function ClampedLibraryText({ text }: { text: string }) {
   const [expanded, setExpanded] = useState(false);
   const lines = text.split(/\r?\n/);
   const collapsible = text.length > collapsedCharacterLimit || lines.length > 3;

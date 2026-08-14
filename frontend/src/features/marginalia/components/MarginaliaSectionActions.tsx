@@ -12,7 +12,7 @@ const sectionLinks = [
   { section: "export", label: "Export", icon: "download", to: "/marginalia/export", state: breadcrumbNavigationState(marginaliaExportBreadcrumbFallback) },
 ] as const;
 
-export function MarginaliaSectionActionsComponent({ activeSection }: { activeSection: MarginaliaSection }) {
+export function MarginaliaSectionActions({ activeSection }: { activeSection: MarginaliaSection }) {
   return <nav className="marginalia-section-actions" aria-label="My Marginalia sections">
     {sectionLinks.map((link) => <Link
       key={link.section}

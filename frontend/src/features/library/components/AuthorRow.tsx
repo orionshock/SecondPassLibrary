@@ -1,10 +1,10 @@
 import type { LibraryAuthor } from "@second-pass/spl-api";
 
 import { previewBooksForLibrary, selectedLibraryContextNavigationState } from "../libraryPresentation";
-import { LibraryEntityRowComponent } from "./LibraryEntityRowComponent";
+import { LibraryEntityRow } from "./LibraryEntityRow";
 
-export function AuthorRowComponent({ author, libraryPath, contextPath }: { author: LibraryAuthor; libraryPath: string; contextPath: string }) {
-  return <LibraryEntityRowComponent
+export function AuthorRow({ author, libraryPath, contextPath }: { author: LibraryAuthor; libraryPath: string; contextPath: string }) {
+  return <LibraryEntityRow
     title={author.name}
     subtitle={bookCountLabel(author.bookCount)}
     href={contextPath}

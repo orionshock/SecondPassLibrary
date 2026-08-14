@@ -8,7 +8,7 @@ import { saveDownloadedFile } from "../../shared/browser/saveDownloadedFile";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
 import { ProductPageShell } from "../../shared/layout/ProductPageShell";
 import { marginaliaExportBreadcrumbFallback } from "./marginaliaBreadcrumbs";
-import { MarginaliaSectionActionsComponent } from "./components/MarginaliaSectionActionsComponent";
+import { MarginaliaSectionActions } from "./components/MarginaliaSectionActions";
 import { marginaliaExportSelectedBookCount, marginaliaExportSelectedSessionIds, withMarginaliaExportPageSelection, withMarginaliaExportSessionSelection, type MarginaliaExportSelectionMap } from "./marginaliaExportSelection";
 import { marginaliaExportCandidateQuery, marginaliaExportSearchParams, marginaliaExportStateFromSearchParams, withMarginaliaExportChange } from "./marginaliaExportQuery";
 import { MarginaliaExportPageRegion, type MarginaliaExportLimitFailure } from "./regions/MarginaliaExportPageRegion";
@@ -100,7 +100,7 @@ export function MarginaliaExportOrchestrator() {
   const selectedSessionIds = new Set(selection.keys());
   const completeLimitFailure = marginaliaExportLimitFailure(completeState.error);
   const selectedLimitFailure = marginaliaExportLimitFailure(selectedState.error);
-  return <ProductPageShell title="Export Marginalia" actions={<MarginaliaSectionActionsComponent activeSection="export" />}>
+  return <ProductPageShell title="Export Marginalia" actions={<MarginaliaSectionActions activeSection="export" />}>
     <MarginaliaExportPageRegion
       page={load.page}
       pageNumber={query.page}

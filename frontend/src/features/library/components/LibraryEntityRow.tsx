@@ -2,7 +2,7 @@ import { Link } from "react-router";
 
 import { BookCoverPreviewStrip, type BookCoverPreviewItem } from "../../../shared/books/BookCoverPreviewStrip";
 
-export function LibraryEntityRowComponent({
+export function LibraryEntityRow({
   title,
   subtitle,
   href,

@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { Badge } from "../../../components/ui";
 import { UserInlineIdentity } from "../../../shared/users/UserInlineIdentity";
 
-export function GroupMemberRowComponent({ membership, actions }: { membership: GroupMembership; actions?: ReactNode }) {
+export function GroupMemberRow({ membership, actions }: { membership: GroupMembership; actions?: ReactNode }) {
   return <div className="group-member-row-component">
     <span className="group-member-row-component__identity">
       <UserInlineIdentity username={membership.user.username} />

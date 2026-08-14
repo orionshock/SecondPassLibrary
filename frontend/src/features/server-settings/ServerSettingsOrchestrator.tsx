@@ -23,7 +23,7 @@ import { GeneralSettingsPageRegion } from "./regions/GeneralSettingsPageRegion";
 import { ExternalServicesPageRegion } from "./regions/ExternalServicesPageRegion";
 import { LibraryGroupsPageRegion } from "./regions/LibraryGroupsPageRegion";
 import { PublicLibraryPageRegion } from "./regions/PublicLibraryPageRegion";
-import { DjangoAdminActionComponent } from "./DjangoAdminActionComponent";
+import { DjangoAdminAction } from "./DjangoAdminAction";
 import { confirmEnableAdvancedGroups } from "./serverSettingsConfirmations";
 import { serverSettingsFormId, serverSettingsSearchParams, serverSettingsTabFromSearchParams, serverSettingsTabs } from "./serverSettingsTabs";
 import "./ServerSettings.css";
@@ -153,7 +153,7 @@ export function ServerSettingsOrchestrator() {
     </> : <Button type="button" tone="secondary" onClick={() => { setState(idleMutationState); setEditing(true); }}>Edit</Button>}
   </ActionRow>;
 
-  return <ProductPageShell className="server-settings-page" title="Server Settings" actions={<DjangoAdminActionComponent enabled={currentUser.canAccessDjangoAdmin} />}>
+  return <ProductPageShell className="server-settings-page" title="Server Settings" actions={<DjangoAdminAction enabled={currentUser.canAccessDjangoAdmin} />}>
     <div className="server-settings-tabs">
       <TabList tabs={serverSettingsTabs} activeTab={tab} onChange={selectTab} ariaLabel="Server settings sections" idPrefix="server-settings" />
       <div className="server-settings-tab-actions">{headerActions}</div>

@@ -5,7 +5,7 @@ import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { BookCover } from "../../../shared/books/BookCover";
 import { marginaliaSessionDisplayName } from "../../../shared/marginaliaSessionDisplayName";
 
-export function RecentSessionCoverCardComponent({ item }: { item: RecentMarginaliaSession }) {
+export function RecentSessionCoverCard({ item }: { item: RecentMarginaliaSession }) {
   const sessionName = marginaliaSessionDisplayName(item);
   const locationLabel = item.progress?.locationLabel.trim() ? item.progress.locationLabel : null;
   return <article className="dashboard-session-card">

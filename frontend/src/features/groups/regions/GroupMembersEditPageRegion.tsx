@@ -3,7 +3,7 @@ import type { GroupMembership, Page } from "@second-pass/spl-api";
 import { RemoveIconButton } from "../../../components/icons/RemoveIconButton";
 import { Button, ErrorPanel } from "../../../components/ui";
 import { Pager } from "../../../shared/pagination/Pager";
-import { GroupMemberRowComponent } from "../components/GroupMemberRowComponent";
+import { GroupMemberRow } from "../components/GroupMemberRow";
 
 export function GroupMembersEditPageRegion({ page, pageNumber, pageSize, isPublicGroup, loading, error, pendingProfileId, controlsDisabled, onToggleCurator, onRemove, onPageChange, onPageSizeChange, onRetry }: {
   page?: Page<GroupMembership>;
@@ -27,7 +27,7 @@ export function GroupMembersEditPageRegion({ page, pageNumber, pageSize, isPubli
   return <section className="group-members-edit-region" aria-label="Current group members" aria-busy={loading}>
     {error ? <div className="groups-inline-error"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></div> : null}
     {page.items.length === 0 ? <p className="muted">This group has no members.</p> : <div className="group-member-rows">
-      {page.items.map((membership) => <GroupMemberRowComponent
+      {page.items.map((membership) => <GroupMemberRow
         key={membership.user.profileId}
         membership={membership}
         actions={<>

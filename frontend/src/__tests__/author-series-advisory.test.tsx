@@ -11,12 +11,12 @@ import {
   type DuplicateAdvisoryCandidate,
 } from "../features/library/authorSeriesDuplicateAdvisory";
 import {
-  AuthorSeriesNameComboboxComponent,
-  AuthorSeriesNameSuggestionsComponent,
+  AuthorSeriesNameCombobox,
+  AuthorSeriesNameSuggestions,
   duplicateAdvisoryDismissesForKey,
   duplicateAdvisorySelection,
   nextDuplicateAdvisoryOption,
-} from "../features/library/components/AuthorSeriesNameComboboxComponent";
+} from "../features/library/components/AuthorSeriesNameCombobox";
 import { validateAuthorSeriesEditDraft } from "../features/library/authorSeriesEditDraft";
 
 const candidate: DuplicateAdvisoryCandidate = {
@@ -57,7 +57,7 @@ describe("Author and Series duplicate advisory", () => {
   });
 
   it("renders the combobox contract and bounded candidate metadata without selecting a match", () => {
-    const input = renderToStaticMarkup(<AuthorSeriesNameComboboxComponent
+    const input = renderToStaticMarkup(<AuthorSeriesNameCombobox
       kind="author"
       value="Ada"
       enabled
@@ -71,7 +71,7 @@ describe("Author and Series duplicate advisory", () => {
     expect(input).toContain('autoComplete="off"');
     expect(input).not.toContain('role="listbox"');
 
-    const listbox = renderToStaticMarkup(<AuthorSeriesNameSuggestionsComponent
+    const listbox = renderToStaticMarkup(<AuthorSeriesNameSuggestions
       id="matches"
       entity="Author"
       candidates={[candidate]}

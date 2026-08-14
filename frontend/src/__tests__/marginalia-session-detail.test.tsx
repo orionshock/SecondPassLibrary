@@ -13,8 +13,8 @@ import {
   renameMarginaliaSession,
   updateMarginaliaSessionNote,
 } from "../features/marginalia/MarginaliaSessionDetailOrchestrator";
-import { MarginaliaSessionNoteEditorComponent } from "../features/marginalia/components/MarginaliaSessionNoteEditorComponent";
-import { MarginaliaSessionTitleEditorComponent } from "../features/marginalia/components/MarginaliaSessionTitleEditorComponent";
+import { MarginaliaSessionNoteEditor } from "../features/marginalia/components/MarginaliaSessionNoteEditor";
+import { MarginaliaSessionTitleEditor } from "../features/marginalia/components/MarginaliaSessionTitleEditor";
 import {
   marginaliaAnnotationOrderingOptions,
   MarginaliaSessionDetailPageRegion,
@@ -86,7 +86,7 @@ function renderDetail(overrides: Partial<Parameters<typeof MarginaliaSessionDeta
   return renderToStaticMarkup(<MemoryRouter><MarginaliaSessionDetailPageRegion
     detail={detail}
     annotations={{ loading: false, items: annotations }}
-    sessionNote={<MarginaliaSessionNoteEditorComponent
+    sessionNote={<MarginaliaSessionNoteEditor
       note={detail.session.notes}
       editable
       draft={detail.session.notes}
@@ -158,7 +158,7 @@ describe("My Marginalia Session Detail", () => {
   it("keeps compact name editing keyboard behavior and active-only controls", () => {
     const onSave = vi.fn();
     const onCancel = vi.fn();
-    const editor = MarginaliaSessionTitleEditorComponent({
+    const editor = MarginaliaSessionTitleEditor({
       displayName: detail.session.name, editable: true, draft: "Changed", editing: true, pending: false,
       onDraftChange: vi.fn(), onEdit: vi.fn(), onSave, onCancel,
     }) as ReactElement<{ children: unknown }>;
@@ -172,7 +172,7 @@ describe("My Marginalia Session Detail", () => {
     expect(onSave).toHaveBeenCalledOnce();
     expect(onCancel).toHaveBeenCalledOnce();
 
-    const closedMarkup = renderToStaticMarkup(MarginaliaSessionTitleEditorComponent({
+    const closedMarkup = renderToStaticMarkup(MarginaliaSessionTitleEditor({
       displayName: "Closed", editable: false, draft: "", editing: false, pending: false,
       onDraftChange: vi.fn(), onEdit: vi.fn(), onSave: vi.fn(), onCancel: vi.fn(),
     }));
@@ -194,7 +194,7 @@ describe("My Marginalia Session Detail", () => {
   it("keeps Session Note save explicit inside the textarea", () => {
     const onSave = vi.fn();
     const onCancel = vi.fn();
-    const editor = MarginaliaSessionNoteEditorComponent({
+    const editor = MarginaliaSessionNoteEditor({
       note: detail.session.notes,
       editable: true,
       draft: "Edited note",
@@ -269,7 +269,7 @@ describe("My Marginalia Session Detail", () => {
 
     const closedMarkup = renderDetail({
       detail: closed,
-      sessionNote: <MarginaliaSessionNoteEditorComponent
+      sessionNote: <MarginaliaSessionNoteEditor
         note={closed.session.notes} editable={false} draft="" editing={false} pending={false}
         onDraftChange={vi.fn()} onEdit={vi.fn()} onSave={vi.fn()} onCancel={vi.fn()}
       />,

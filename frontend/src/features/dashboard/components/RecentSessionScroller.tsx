@@ -3,7 +3,7 @@ import { useCallback, useLayoutEffect, useRef, useState } from "react";
 
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
 import { IconButton } from "../../../components/ui";
-import { RecentSessionCoverCardComponent } from "./RecentSessionCoverCardComponent";
+import { RecentSessionCoverCard } from "./RecentSessionCoverCard";
 
 interface ScrollerState {
   hasOverflow: boolean;
@@ -23,7 +23,7 @@ export function scrollDashboardScroller(element: Pick<HTMLElement, "clientWidth"
   element.scrollBy({ left: direction * Math.max(1, element.clientWidth * 0.85), behavior: "smooth" });
 }
 
-export function RecentSessionScrollerComponent({ items }: { items: RecentMarginaliaSession[] }) {
+export function RecentSessionScroller({ items }: { items: RecentMarginaliaSession[] }) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const [scrollState, setScrollState] = useState<ScrollerState>(initialScrollerState);
   const updateScrollState = useCallback(() => {
@@ -49,7 +49,7 @@ export function RecentSessionScrollerComponent({ items }: { items: RecentMargina
       <IconButton className="dashboard-scroller__control dashboard-scroller__control--next" type="button" aria-label="Next reading sessions" title="Next" disabled={scrollState.atEnd} onClick={() => scrollerRef.current && scrollDashboardScroller(scrollerRef.current, 1)}><MaterialIcon name="chevron_right" /></IconButton>
     </div> : null}
     <div ref={scrollerRef} className="dashboard-scroller__track" aria-label="Recent reading sessions" tabIndex={0} onScroll={updateScrollState}>
-      {items.slice(0, 50).map((item) => <RecentSessionCoverCardComponent key={item.id} item={item} />)}
+      {items.slice(0, 50).map((item) => <RecentSessionCoverCard key={item.id} item={item} />)}
     </div>
   </div>;
 }

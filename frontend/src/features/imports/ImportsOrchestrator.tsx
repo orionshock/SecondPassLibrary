@@ -8,7 +8,7 @@ import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { ErrorPanel } from "../../components/ui";
 import { idleMutationState, LocalValidationError, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
 import { ProductPageShell } from "../../shared/layout/ProductPageShell";
-import type { ImportResultBookNavigation } from "./components/ImportResultItemComponent";
+import type { ImportResultBookNavigation } from "./components/ImportResultItem";
 import { ImportResultPageRegion } from "./regions/ImportResultPageRegion";
 import { ImportUploadPageRegion } from "./regions/ImportUploadPageRegion";
 import "./Imports.css";

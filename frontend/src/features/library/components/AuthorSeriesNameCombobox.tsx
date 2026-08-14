@@ -26,7 +26,7 @@ export function duplicateAdvisoryDismissesForKey(key: string): boolean {
   return key === "Escape";
 }
 
-export function AuthorSeriesNameComboboxComponent({
+export function AuthorSeriesNameCombobox({
   kind,
   value,
   enabled,
@@ -125,7 +125,7 @@ export function AuthorSeriesNameComboboxComponent({
       onKeyDown={handleKeyDown}
       autoFocus
     />
-    {expanded ? <AuthorSeriesNameSuggestionsComponent
+    {expanded ? <AuthorSeriesNameSuggestions
       id={listboxId}
       entity={entity}
       candidates={candidates}
@@ -137,7 +137,7 @@ export function AuthorSeriesNameComboboxComponent({
   </div>;
 }
 
-export function AuthorSeriesNameSuggestionsComponent({
+export function AuthorSeriesNameSuggestions({
   id,
   entity,
   candidates,

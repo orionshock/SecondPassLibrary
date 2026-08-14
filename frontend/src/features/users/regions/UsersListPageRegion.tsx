@@ -3,7 +3,7 @@ import type { ManagedUser, Page, UserOrdering } from "@second-pass/spl-api";
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
 import { Button, ErrorPanel } from "../../../components/ui";
 import { PaginatedListFrame } from "../../../shared/pagination/PaginatedListFrame";
-import { UserRowComponent } from "../components/UserRowComponent";
+import { UserRow } from "../components/UserRow";
 import { nextUserOrdering } from "../usersListQuery";
 
 export function UsersListPageRegion({ page, pageNumber, pageSize, ordering, advancedGroupsEnabled, loading, error, onOrderingChange, onPageChange, onPageSizeChange, onRetry }: {
@@ -44,7 +44,7 @@ export function UsersListPageRegion({ page, pageNumber, pageSize, ordering, adva
           {advancedGroupsEnabled ? <th>Groups / Curates</th> : null}
           <th className="users-actions-heading">Actions</th>
         </tr></thead>
-        <tbody>{page.items.map((user) => <UserRowComponent key={user.id} user={user} showGroups={advancedGroupsEnabled} />)}</tbody>
+        <tbody>{page.items.map((user) => <UserRow key={user.id} user={user} showGroups={advancedGroupsEnabled} />)}</tbody>
       </table></div>}
     </PaginatedListFrame>
   </section>;

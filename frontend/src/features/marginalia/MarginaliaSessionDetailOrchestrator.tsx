@@ -18,8 +18,8 @@ import { useAutoDismissMutationMessage } from "../../shared/feedback/useAutoDism
 import { ProductPageShell } from "../../shared/layout/ProductPageShell";
 import { marginaliaSessionDisplayName } from "../../shared/marginaliaSessionDisplayName";
 import { marginaliaSessionBreadcrumbFallback } from "./marginaliaBreadcrumbs";
-import { MarginaliaSessionNoteEditorComponent } from "./components/MarginaliaSessionNoteEditorComponent";
-import { MarginaliaSessionTitleEditorComponent } from "./components/MarginaliaSessionTitleEditorComponent";
+import { MarginaliaSessionNoteEditor } from "./components/MarginaliaSessionNoteEditor";
+import { MarginaliaSessionTitleEditor } from "./components/MarginaliaSessionTitleEditor";
 import { MarginaliaSessionDetailPageRegion, type MarginaliaAnnotationsLoadState } from "./regions/MarginaliaSessionDetailPageRegion";
 import "./Marginalia.css";
 
@@ -246,7 +246,7 @@ export function MarginaliaSessionDetailOrchestrator() {
   const renameFeedback = mutationFeedback(renameState);
   const noteFeedback = mutationFeedback(noteState);
   const editable = sessionLoad.detail.session.status === "active" && !closeState.pending;
-  const titleEditor = <MarginaliaSessionTitleEditorComponent
+  const titleEditor = <MarginaliaSessionTitleEditor
     displayName={title}
     editable={editable}
     draft={nameDraft}
@@ -258,7 +258,7 @@ export function MarginaliaSessionDetailOrchestrator() {
     onSave={() => void saveName()}
     onCancel={cancelNameEdit}
   />;
-  const noteEditor = <MarginaliaSessionNoteEditorComponent
+  const noteEditor = <MarginaliaSessionNoteEditor
     note={sessionLoad.detail.session.notes}
     editable={editable}
     draft={noteDraft}

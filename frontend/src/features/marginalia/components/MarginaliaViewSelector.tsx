@@ -6,7 +6,7 @@ const views: readonly { view: MarginaliaView; label: string; icon: string }[] = 
   { view: "books", label: "Books", icon: "menu_book" },
 ];
 
-export function MarginaliaViewSelectorComponent({ activeView, onViewChange }: {
+export function MarginaliaViewSelector({ activeView, onViewChange }: {
   activeView: MarginaliaView;
   onViewChange: (view: MarginaliaView) => void;
 }) {

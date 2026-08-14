@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
-import { MarginaliaViewSelectorComponent } from "../features/marginalia/components/MarginaliaViewSelectorComponent";
+import { MarginaliaViewSelector } from "../features/marginalia/components/MarginaliaViewSelector";
 import { MarginaliaBooksPageRegion } from "../features/marginalia/regions/MarginaliaBooksPageRegion";
 import { MarginaliaSessionsPageRegion } from "../features/marginalia/regions/MarginaliaSessionsPageRegion";
 
@@ -35,7 +35,7 @@ const session: MarginaliaSessionSummary = {
 describe("Marginalia view selector", () => {
   it("uses labelled, decorative Dashboard-consistent icons without tab semantics", () => {
     const onViewChange = vi.fn();
-    const selector = MarginaliaViewSelectorComponent({ activeView: "sessions", onViewChange }) as ReactElement<{ children: ReactNode }>;
+    const selector = MarginaliaViewSelector({ activeView: "sessions", onViewChange }) as ReactElement<{ children: ReactNode }>;
     const markup = renderToStaticMarkup(selector);
     expect(markup).toContain('aria-label="Marginalia views"');
     expect(markup).toMatch(/aria-current="page"[^>]*><span[^>]*aria-hidden="true"[^>]*>history<\/span><span>Sessions<\/span>/);

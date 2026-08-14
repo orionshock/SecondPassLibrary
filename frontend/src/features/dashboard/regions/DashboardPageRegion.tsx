@@ -4,8 +4,8 @@ import { Link } from "react-router";
 import { Button, ErrorPanel } from "../../../components/ui";
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
 import { ProductPageShell } from "../../../shared/layout/ProductPageShell";
-import { DashboardActionTileComponent, type DashboardAction } from "../components/DashboardActionTileComponent";
-import { RecentSessionScrollerComponent } from "../components/RecentSessionScrollerComponent";
+import { DashboardActionTile, type DashboardAction } from "../components/DashboardActionTile";
+import { RecentSessionScroller } from "../components/RecentSessionScroller";
 
 export type RecentReadingState =
   | { status: "loading" }
@@ -58,7 +58,7 @@ function RecentReadingPageRegion({ state, onRetry }: { state: RecentReadingState
       <div><p>No recent reading activity yet.</p><p className="muted">Start with a Book from the Library.</p></div>
       <Link className="button button--small button--secondary" to="/library">Browse Library</Link>
     </div> : null}
-    {state.status === "ready" && state.items.length > 0 ? <RecentSessionScrollerComponent items={state.items} /> : null}
+    {state.status === "ready" && state.items.length > 0 ? <RecentSessionScroller items={state.items} /> : null}
   </section>;
 }
 
@@ -97,7 +97,7 @@ function LaunchPad({ title, description, actions }: { title: string; description
       <p>{description}</p>
     </header>
     <nav className={`dashboard-action-grid dashboard-action-grid--count-${actions.length}`} aria-label={`${title} actions`} data-action-count={actions.length}>
-      {actions.map((action) => <DashboardActionTileComponent key={action.to} action={action} />)}
+      {actions.map((action) => <DashboardActionTile key={action.to} action={action} />)}
     </nav>
   </article>;
 }

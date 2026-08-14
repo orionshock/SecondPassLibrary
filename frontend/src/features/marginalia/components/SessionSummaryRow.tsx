@@ -7,7 +7,7 @@ import { marginaliaSessionDisplayName } from "../../../shared/marginaliaSessionD
 import { marginaliaSessionBreadcrumbFallback } from "../marginaliaBreadcrumbs";
 import { marginaliaSessionNoteExcerpt } from "../marginaliaSessionNoteExcerpt";
 
-export function SessionSummaryRowComponent({ session, book }: { session: MarginaliaSessionSummary; book: MarginaliaBookReference }) {
+export function SessionSummaryRow({ session, book }: { session: MarginaliaSessionSummary; book: MarginaliaBookReference }) {
   const sessionName = marginaliaSessionDisplayName(session);
   const bookTitle = book.title || "Untitled book";
   const relevantDate = session.closedAt ?? session.updatedAt;

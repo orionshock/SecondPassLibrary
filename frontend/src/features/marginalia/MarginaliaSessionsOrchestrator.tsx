@@ -15,8 +15,8 @@ import { loadPageWithRecovery } from "../../app/routing/pageRecovery";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
 import { ProductPageShell } from "../../shared/layout/ProductPageShell";
 import { marginaliaListBreadcrumbFallback } from "./marginaliaBreadcrumbs";
-import { MarginaliaSectionActionsComponent } from "./components/MarginaliaSectionActionsComponent";
-import { MarginaliaViewSelectorComponent } from "./components/MarginaliaViewSelectorComponent";
+import { MarginaliaSectionActions } from "./components/MarginaliaSectionActions";
+import { MarginaliaViewSelector } from "./components/MarginaliaViewSelector";
 import {
   marginaliaBooksSdkQuery,
   marginaliaBookSessionsSdkQuery,
@@ -166,10 +166,10 @@ export function MarginaliaSessionsOrchestrator() {
     setQuery(withMarginaliaSearch(queryState, searchDraft.trim()));
   }
 
-  const shellActions = <MarginaliaSectionActionsComponent activeSection="sessions" />;
+  const shellActions = <MarginaliaSectionActions activeSection="sessions" />;
   return <ProductPageShell title="My Marginalia" actions={shellActions}>
     <div className="marginalia-browser">
-      <MarginaliaViewSelectorComponent activeView={queryState.view} onViewChange={changeView} />
+      <MarginaliaViewSelector activeView={queryState.view} onViewChange={changeView} />
       {stage === "sessions" ? <MarginaliaSessionsPageRegion
         page={sessions.page}
         pageNumber={queryState.page}

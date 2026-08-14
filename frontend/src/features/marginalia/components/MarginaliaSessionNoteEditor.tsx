@@ -3,7 +3,7 @@ import type { KeyboardEvent, ReactNode } from "react";
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
 import { IconButton } from "../../../components/ui";
 
-export function MarginaliaSessionNoteEditorComponent({
+export function MarginaliaSessionNoteEditor({
   note,
   editable,
   draft,

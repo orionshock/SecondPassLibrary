@@ -3,7 +3,7 @@ import type { FormEvent } from "react";
 
 import { Button, FormField } from "../../../components/ui";
 import { ActionRow } from "../../../shared/forms/ActionRow";
-import { PairingPageFrameComponent } from "../components/PairingPageFrameComponent";
+import { PairingPageFrame } from "../components/PairingPageFrame";
 
 export function PairingRequestPageRegion({ code, pairing, clientName, pending, error, onCodeChange, onClientNameChange, onLookup, onDecision }: {
   code: string;
@@ -18,7 +18,7 @@ export function PairingRequestPageRegion({ code, pairing, clientName, pending, e
 }) {
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); onLookup(); }
   const actionState = { pending, error };
-  return <PairingPageFrameComponent><form className="form-grid pairing-form" onSubmit={submit}>
+  return <PairingPageFrame><form className="form-grid pairing-form" onSubmit={submit}>
     <FormField label="Code" htmlFor="pairing-code"><div className="control-stack"><input id="pairing-code" value={code} required autoComplete="off" onChange={(event) => onCodeChange(event.target.value)} /><span className="field-help">Enter the code shown in your reader client.</span></div></FormField>
     {!pairing ? <ActionRow state={actionState}><Button type="submit" disabled={pending}>{pending ? "Looking up..." : "Continue"}</Button></ActionRow> : null}
     {pairing ? <>
@@ -27,5 +27,5 @@ export function PairingRequestPageRegion({ code, pairing, clientName, pending, e
       <div className="form-field pairing-readonly-row"><span>Client type</span><span>{pairing.clientType}</span></div>
       <ActionRow state={actionState}><Button type="button" tone="secondary" disabled={pending} onClick={() => onDecision("deny")}>Deny</Button><Button type="button" disabled={pending || !clientName.trim()} onClick={() => onDecision("approve")}>Approve</Button></ActionRow>
     </> : null}
-  </form></PairingPageFrameComponent>;
+  </form></PairingPageFrame>;
 }

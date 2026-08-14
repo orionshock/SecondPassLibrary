@@ -53,7 +53,7 @@ export class CoverPreviewUrlOwner {
   }
 }
 
-export function BookCoverPreviewComponent({
+export function BookCoverPreview({
   coverUrl,
   previewUrl,
   title,
@@ -68,7 +68,7 @@ export function BookCoverPreviewComponent({
   </>;
 }
 
-export function BookCoverEditorComponent({
+export function BookCoverEditor({
   coverUrl,
   title,
   selectedFile,
@@ -172,7 +172,7 @@ export function BookCoverEditorComponent({
           <Button ref={closeButton} type="button" size="small" tone="secondary" disabled={state.pending} onClick={close}>Close</Button>
         </header>
         <div className="book-cover-dialog__body">
-          <div className="book-cover-dialog__preview"><BookCoverPreviewComponent coverUrl={coverUrl} previewUrl={previewUrl} title={title} /></div>
+          <div className="book-cover-dialog__preview"><BookCoverPreview coverUrl={coverUrl} previewUrl={previewUrl} title={title} /></div>
           <div className="book-cover-dialog__controls">
             {error ? <p className="book-cover-dialog__error" role="alert">{error}</p> : null}
             {state.message ? <p className="book-cover-dialog__success" role="status">{state.message}</p> : null}

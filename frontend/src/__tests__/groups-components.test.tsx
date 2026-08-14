@@ -3,7 +3,7 @@ import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
 import type { CompactBook, LibraryGroup, ShelfSummary } from "@second-pass/spl-api";
-import { GroupMemberRowComponent } from "../features/groups/components/GroupMemberRowComponent";
+import { GroupMemberRow } from "../features/groups/components/GroupMemberRow";
 import { GroupBooksPageRegion } from "../features/groups/regions/GroupBooksPageRegion";
 import { GroupHeaderPageRegion } from "../features/groups/regions/GroupHeaderPageRegion";
 import { GroupMembersPageRegion } from "../features/groups/regions/GroupMembersPageRegion";
@@ -190,7 +190,7 @@ describe("Groups read-only regions", () => {
 
   it("renders username and curator state without membership internals", () => {
     const membership = { user: { profileId: "profile", username: "reader" }, isCurator: true };
-    const row = renderToStaticMarkup(<GroupMemberRowComponent membership={membership} />);
+    const row = renderToStaticMarkup(<GroupMemberRow membership={membership} />);
     expect(row).toContain('aria-label="User reader"');
     expect(row).not.toContain("@reader");
     expect(row).toContain("Curator");

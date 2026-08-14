@@ -2,9 +2,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
 import {
-  BookCoverPreviewComponent,
+  BookCoverPreview,
   CoverPreviewUrlOwner,
-} from "../features/library/components/BookCoverEditorComponent";
+} from "../features/library/components/BookCoverEditor";
 
 function imageFile(name = "cover.png", type = "image/png") {
   return new File(["image"], name, { type });
@@ -26,7 +26,7 @@ describe("Book cover replacement preview", () => {
     const file = imageFile();
 
     const previewUrl = await owner.select(file);
-    const markup = renderToStaticMarkup(<BookCoverPreviewComponent
+    const markup = renderToStaticMarkup(<BookCoverPreview
       coverUrl="/media/saved.jpg"
       previewUrl={previewUrl}
       title="Book"
@@ -52,7 +52,7 @@ describe("Book cover replacement preview", () => {
     await owner.select(imageFile());
 
     owner.clear();
-    const markup = renderToStaticMarkup(<BookCoverPreviewComponent coverUrl="/media/saved.jpg" title="Book" />);
+    const markup = renderToStaticMarkup(<BookCoverPreview coverUrl="/media/saved.jpg" title="Book" />);
 
     expect(revokeObjectURL).toHaveBeenCalledWith("blob:cover.png");
     expect(markup).toContain('src="/media/saved.jpg"');
@@ -63,7 +63,7 @@ describe("Book cover replacement preview", () => {
     const { createObjectURL, owner } = previewOwner();
 
     const previewUrl = await owner.select(imageFile("cover.txt", "text/plain"));
-    const markup = renderToStaticMarkup(<BookCoverPreviewComponent
+    const markup = renderToStaticMarkup(<BookCoverPreview
       coverUrl="/media/saved.jpg"
       previewUrl={previewUrl}
       title="Book"

@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { RecentMarginaliaSession } from "@second-pass/spl-api";
 import { DASHBOARD_RECENT_QUERY, DASHBOARD_RECENT_READING_LIMIT } from "../features/dashboard/DashboardOrchestrator";
-import { dashboardScrollerState, scrollDashboardScroller } from "../features/dashboard/components/RecentSessionScrollerComponent";
+import { dashboardScrollerState, scrollDashboardScroller } from "../features/dashboard/components/RecentSessionScroller";
 import { DashboardPageRegion, type RecentReadingState } from "../features/dashboard/regions/DashboardPageRegion";
 
 const recentItem: RecentMarginaliaSession = {

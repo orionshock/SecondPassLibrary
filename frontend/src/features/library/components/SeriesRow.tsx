@@ -1,11 +1,11 @@
 import type { LibrarySeries } from "@second-pass/spl-api";
 
 import { previewBooksForLibrary, selectedLibraryContextNavigationState } from "../libraryPresentation";
-import { bookCountLabel } from "./AuthorRowComponent";
-import { LibraryEntityRowComponent } from "./LibraryEntityRowComponent";
+import { bookCountLabel } from "./AuthorRow";
+import { LibraryEntityRow } from "./LibraryEntityRow";
 
-export function SeriesRowComponent({ series, libraryPath, contextPath }: { series: LibrarySeries; libraryPath: string; contextPath: string }) {
-  return <LibraryEntityRowComponent
+export function SeriesRow({ series, libraryPath, contextPath }: { series: LibrarySeries; libraryPath: string; contextPath: string }) {
+  return <LibraryEntityRow
     title={series.name}
     subtitle={bookCountLabel(series.bookCount)}
     href={contextPath}

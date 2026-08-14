@@ -5,7 +5,7 @@ import type { BookCoverPreviewItem } from "../../../shared/books/BookCoverPrevie
 import { GroupRow } from "../../../shared/groups/GroupRow";
 import { ShelfSummaryRow, type ShelfOwnerBadge } from "../../../shared/shelves/ShelfSummaryRow";
 import { TabList, tabButtonId, tabPanelId, type TabItem } from "../../../shared/tabs/TabList";
-import { BookIdentifierListComponent } from "../components/BookIdentifierListComponent";
+import { BookIdentifierList } from "../components/BookIdentifierList";
 import { formatBookFileSize, formatBookPublishedDate } from "../bookDetailPresentation";
 import type { BookDetailTab } from "../bookTabs";
 
@@ -210,7 +210,7 @@ function BookDetailMetadataSection({ book }: { book: BookDetail }) {
     </section> : null}
     {book.identifiers.length > 0 ? <section className="book-detail-sections-region__metadata-panel">
       <h2>Identifiers</h2>
-      <BookIdentifierListComponent identifiers={book.identifiers} />
+      <BookIdentifierList identifiers={book.identifiers} />
     </section> : null}
   </div>;
 }

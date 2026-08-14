@@ -6,7 +6,7 @@ import { SaveCancelActionRow } from "../../../shared/forms/ActionRow";
 import type { AuthorSeriesEditDraft } from "../authorSeriesEditDraft";
 import type { DuplicateAdvisoryCandidate } from "../authorSeriesDuplicateAdvisory";
 import { titleKind, type LibraryEntityKind } from "../authorSeriesLifecycle";
-import { AuthorSeriesNameComboboxComponent } from "../components/AuthorSeriesNameComboboxComponent";
+import { AuthorSeriesNameCombobox } from "../components/AuthorSeriesNameCombobox";
 
 export function AuthorSeriesEditFormPageRegion({
   kind,
@@ -36,7 +36,7 @@ export function AuthorSeriesEditFormPageRegion({
   const proseLabel = kind === "author" ? "Biography" : "Summary";
   return <form className="author-series-edit-form" autoComplete="off" onSubmit={onSubmit}>
     <FormField label="Name" htmlFor="library-entity-name" error={fieldError(state.error, "name")}>
-      <AuthorSeriesNameComboboxComponent
+      <AuthorSeriesNameCombobox
         kind={kind}
         value={draft.name}
         enabled={advisory.enabled}

@@ -4,10 +4,10 @@ import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
 import type { CatalogTag, CompactBook, LibraryAuthor, LibrarySeries, Page, ShelfSummary } from "@second-pass/spl-api";
-import { BookCoverEditorComponent } from "../features/library/components/BookCoverEditorComponent";
-import { AuthorRowComponent } from "../features/library/components/AuthorRowComponent";
+import { BookCoverEditor } from "../features/library/components/BookCoverEditor";
+import { AuthorRow } from "../features/library/components/AuthorRow";
 import { CompactBookRow } from "../shared/books/CompactBookRow";
-import { SeriesRowComponent } from "../features/library/components/SeriesRowComponent";
+import { SeriesRow } from "../features/library/components/SeriesRow";
 import { readSelectedLibraryContextDisplay } from "../features/library/libraryPresentation";
 import { libraryStateFromSearchParams } from "../features/library/libraryQuery";
 import { AuthorListPageRegion } from "../features/library/regions/AuthorListPageRegion";
@@ -103,7 +103,7 @@ describe("Library Books components", () => {
   });
 
   it("keeps Book Edit cover mutation behind one bounded editor trigger", () => {
-    const markup = renderToStaticMarkup(<BookCoverEditorComponent
+    const markup = renderToStaticMarkup(<BookCoverEditor
       coverUrl="/media/cover.jpg"
       title="Book"
       inputResetKey={0}
@@ -241,7 +241,7 @@ describe("Library Author and Series components", () => {
   };
 
   it("renders compact rows, pluralized counts, bounded previews, fallbacks, and placeholder links", () => {
-    const authorMarkup = renderToStaticMarkup(<MemoryRouter><AuthorRowComponent author={author} libraryPath="/library?view=authors" contextPath="/library?view=authors&author=author-1" /></MemoryRouter>);
+    const authorMarkup = renderToStaticMarkup(<MemoryRouter><AuthorRow author={author} libraryPath="/library?view=authors" contextPath="/library?view=authors&author=author-1" /></MemoryRouter>);
     expect(authorMarkup).toContain("Visible Author");
     expect(authorMarkup).toContain("1 Book");
     expect(authorMarkup).not.toContain("HIDDEN BIOGRAPHY");
@@ -251,7 +251,7 @@ describe("Library Author and Series components", () => {
     expect(authorMarkup).toContain("library-axis-row-component compact-cover-preview-row");
     expect(authorMarkup).toContain("library-axis-row-component__identity compact-cover-preview-row__primary");
 
-    const seriesMarkup = renderToStaticMarkup(<MemoryRouter><SeriesRowComponent series={series} libraryPath="/library?view=series" contextPath="/library?view=series&series=series-1" /></MemoryRouter>);
+    const seriesMarkup = renderToStaticMarkup(<MemoryRouter><SeriesRow series={series} libraryPath="/library?view=series" contextPath="/library?view=series&series=series-1" /></MemoryRouter>);
     expect(seriesMarkup).toContain("Visible Series");
     expect(seriesMarkup).toContain("3 Books");
     expect(seriesMarkup).not.toContain("HIDDEN SUMMARY");

@@ -8,7 +8,7 @@ import { displayUserRole } from "../../../domain/users/presentation";
 import { UserInlineIdentity } from "../../../shared/users/UserInlineIdentity";
 import { usersEditBreadcrumbTrail } from "../usersBreadcrumbs";
 
-export function UserRowComponent({ user, showGroups }: { user: ManagedUser; showGroups: boolean }) {
+export function UserRow({ user, showGroups }: { user: ManagedUser; showGroups: boolean }) {
   const displayName = [user.firstName, user.lastName].filter(Boolean).join(" ") || undefined;
   const memberships = user.groups.filter((group) => !group.isCurator);
   const curates = user.groups.filter((group) => group.isCurator);
