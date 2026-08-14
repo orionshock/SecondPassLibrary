@@ -22,19 +22,29 @@ import {
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useBlocker, useLocation, useNavigate, useOutletContext, useParams } from "react-router";
 
-import type { AppOutletContext } from "../../app/layout/AppOrchestrator";
-import { breadcrumbNavigationState, readIncomingBreadcrumbTrail, resolveBreadcrumbTrail } from "../../app/navigation/breadcrumbs";
-import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { BookCover } from "../../shared/books/BookCover";
-import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
-import { useAutoDismissMutationMessage } from "../../shared/feedback/useAutoDismissMutationMessage";
-import { SaveCancelActionRow } from "../../shared/forms/ActionRow";
-import { ProductPageShell } from "../../shared/layout/ProductPageShell";
-import { tabButtonId, tabPanelId } from "../../shared/tabs/TabList";
-import { bookDetailBreadcrumbFallback, bookEditBreadcrumbTrail, bookEditRelatedBreadcrumbTrail } from "./bookDetailPresentation";
+import type { AppOutletContext } from "../../../app/layout/AppOrchestrator";
+import { breadcrumbNavigationState, readIncomingBreadcrumbTrail, resolveBreadcrumbTrail } from "../../../app/navigation/breadcrumbs";
+import { usePageBreadcrumbs } from "../../../app/navigation/usePageBreadcrumbs";
+import { BookCover } from "../../../shared/books/BookCover";
+import { idleMutationState, normalizeMutationError, type MutationState } from "../../../shared/feedback/mutationState";
+import { useAutoDismissMutationMessage } from "../../../shared/feedback/useAutoDismissMutationMessage";
+import { SaveCancelActionRow } from "../../../shared/forms/ActionRow";
+import { ProductPageShell } from "../../../shared/layout/ProductPageShell";
+import { tabButtonId, tabPanelId } from "../../../shared/tabs/TabList";
+import { bookDetailBreadcrumbFallback, bookEditBreadcrumbTrail, bookEditRelatedBreadcrumbTrail } from "../bookDetailPresentation";
+import { bookEditQueryDuringImmediateMutation, bookEditQueryFromSearchParams, bookEditSearchParams, type BookEditTab } from "../bookTabs";
+import { BookDetailStatePageRegion } from "../regions/BookDetailStatePageRegion";
+import { BookCoverEditor } from "./BookCoverEditor";
+import "./BookEdit.css";
+import { BookEditAuthorsSeriesPageRegion } from "./BookEditAuthorsSeriesPageRegion";
+import { BookEditBookPageRegion } from "./BookEditBookPageRegion";
+import { BookEditCatalogPageRegion } from "./BookEditCatalogPageRegion";
+import { BookEditGroupsPageRegion } from "./BookEditGroupsPageRegion";
+import { BookEditGroupShelvesPageRegion } from "./BookEditGroupShelvesPageRegion";
+import { BookEditIdentifiersPageRegion } from "./BookEditIdentifiersPageRegion";
+import { BookEditTabsPageRegion } from "./BookEditTabsPageRegion";
 import { bookDetailWithUpdatedCover } from "./bookCoverMutation";
 import { bookDetailWithUpdatedGroups, canEditBookGroups } from "./bookGroupMutation";
-import { bookEditQueryDuringImmediateMutation, bookEditQueryFromSearchParams, bookEditSearchParams, type BookEditTab } from "./bookTabs";
 import {
   bookEditDraftFromBook,
   bookEditDraftsEqual,
@@ -42,16 +52,6 @@ import {
   validateBookEditDraft,
   type BookEditDraft,
 } from "./bookEditDraft";
-import { BookDetailStatePageRegion } from "./regions/BookDetailStatePageRegion";
-import { BookEditAuthorsSeriesPageRegion } from "./regions/BookEditAuthorsSeriesPageRegion";
-import { BookEditBookPageRegion } from "./regions/BookEditBookPageRegion";
-import { BookEditCatalogPageRegion } from "./regions/BookEditCatalogPageRegion";
-import { BookEditIdentifiersPageRegion } from "./regions/BookEditIdentifiersPageRegion";
-import { BookEditGroupsPageRegion } from "./regions/BookEditGroupsPageRegion";
-import { BookEditGroupShelvesPageRegion } from "./regions/BookEditGroupShelvesPageRegion";
-import { BookEditTabsPageRegion } from "./regions/BookEditTabsPageRegion";
-import { BookCoverEditor } from "./components/BookCoverEditor";
-import "./BookEdit.css";
 
 type BookLoad = { status: "loading" } | { status: "ready"; book: BookDetail } | { status: "not-found" } | { status: "error"; error: Error };
 type PickerLoad<T> = { loading: boolean; items: T[]; error?: Error };

@@ -5,7 +5,7 @@ import { AddIconButton } from "../../../components/icons/AddIconButton";
 import { RemoveIconButton } from "../../../components/icons/RemoveIconButton";
 import { fieldError } from "../../../shared/feedback/mutationState";
 import { bookIdentifierLabel } from "../bookDetailPresentation";
-import { bookIdentifierSchemeOptions, type BookEditDraft } from "../bookEditDraft";
+import { bookIdentifierSchemeOptions, type BookEditDraft } from "./bookEditDraft";
 
 export function BookEditIdentifiersPageRegion({ draft, error, onChange }: {
   draft: BookEditDraft;

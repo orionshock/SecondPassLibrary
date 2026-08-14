@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   BookCoverPreview,
   CoverPreviewUrlOwner,
-} from "../features/library/components/BookCoverEditor";
+} from "../features/library/bookEdit/BookCoverEditor";
 
 function imageFile(name = "cover.png", type = "image/png") {
   return new File(["image"], name, { type });

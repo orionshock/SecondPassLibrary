@@ -8,7 +8,7 @@ import { RemoveIconButton } from "../../../components/icons/RemoveIconButton";
 import { Button, FormField, IconButton } from "../../../components/UiPrimitives";
 import type { BreadcrumbItem } from "../../../app/navigation/breadcrumbs";
 import { fieldError } from "../../../shared/feedback/mutationState";
-import type { BookEditDraft } from "../bookEditDraft";
+import type { BookEditDraft } from "./bookEditDraft";
 import { libraryEntityContextBreadcrumbs, libraryEntityEditPath, libraryEntityNavigationState, libraryEntityNewPath } from "../authorSeriesLifecycle";
 
 export function BookEditAuthorsSeriesPageRegion({ draft, error, authors, series, authorsLoading, seriesLoading, authorsError, seriesError, breadcrumbTrail, returnTo, onRetryAuthors, onRetrySeries, onChange }: {

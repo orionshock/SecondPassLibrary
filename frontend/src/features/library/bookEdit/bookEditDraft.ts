@@ -5,7 +5,7 @@ import {
   type UpdateBookInput,
 } from "@second-pass/spl-api";
 
-import { LocalValidationError } from "../../shared/feedback/mutationState";
+import { LocalValidationError } from "../../../shared/feedback/mutationState";
 
 export type PublicationPrecision = "" | "year" | "month" | "day";
 

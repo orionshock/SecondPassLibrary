@@ -5,7 +5,7 @@ import { AddIconButton } from "../../../components/icons/AddIconButton";
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
 import { Button, FormField } from "../../../components/UiPrimitives";
 import { fieldError } from "../../../shared/feedback/mutationState";
-import type { BookEditDraft, PublicationPrecision } from "../bookEditDraft";
+import type { BookEditDraft, PublicationPrecision } from "./bookEditDraft";
 
 export function BookEditCatalogPageRegion({ draft, error, tags, tagsLoading, tagsError, onRetryTags, onChange }: {
   draft: BookEditDraft;

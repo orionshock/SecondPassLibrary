@@ -1,2 +1,2 @@
 export { AuthorSeriesEditOrchestrator } from "../../features/library/AuthorSeriesEditOrchestrator";
-export { BookEditOrchestrator } from "../../features/library/BookEditOrchestrator";
+export { BookEditOrchestrator } from "../../features/library/bookEdit/BookEditOrchestrator";

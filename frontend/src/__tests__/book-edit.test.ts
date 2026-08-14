@@ -2,9 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import type { BookDetail, BookIdentifierScheme, CurrentUser } from "@second-pass/spl-api";
 import { LocalValidationError } from "../shared/feedback/mutationState";
-import { bookDetailWithUpdatedCover } from "../features/library/bookCoverMutation";
-import { bookDetailWithUpdatedGroups, canEditBookGroups } from "../features/library/bookGroupMutation";
-import { bookEditDraftFromBook, bookEditDraftsEqual, bookEditInputFromDraft, validateBookEditDraft } from "../features/library/bookEditDraft";
+import { bookDetailWithUpdatedCover } from "../features/library/bookEdit/bookCoverMutation";
+import { bookDetailWithUpdatedGroups, canEditBookGroups } from "../features/library/bookEdit/bookGroupMutation";
+import { bookEditDraftFromBook, bookEditDraftsEqual, bookEditInputFromDraft, validateBookEditDraft } from "../features/library/bookEdit/bookEditDraft";
 import { bookEditQueryDuringImmediateMutation, bookEditQueryFromSearchParams, bookEditSearchParams } from "../features/library/bookTabs";
 
 const book: BookDetail = {

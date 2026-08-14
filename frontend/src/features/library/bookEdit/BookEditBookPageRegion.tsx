@@ -1,6 +1,6 @@
 import { FormField } from "../../../components/UiPrimitives";
 import { fieldError } from "../../../shared/feedback/mutationState";
-import type { BookEditDraft } from "../bookEditDraft";
+import type { BookEditDraft } from "./bookEditDraft";
 
 export function BookEditBookPageRegion({ draft, error, onChange }: {
   draft: BookEditDraft;
