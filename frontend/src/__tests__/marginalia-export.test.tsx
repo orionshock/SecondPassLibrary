@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
-import { AppFrame } from "../app/layout/AppFrame";
+import { AppOrchestrator } from "../app/layout/AppOrchestrator";
 import { appRoutes } from "../app/router";
 import { marginaliaExportBreadcrumbFallback } from "../features/marginalia/marginaliaBreadcrumbs";
 import { marginaliaExportLimitFailure, MarginaliaExportOrchestrator } from "../features/marginalia/MarginaliaExportOrchestrator";
@@ -61,9 +61,9 @@ describe("My Marginalia Export", () => {
   it("registers the route, breadcrumb, and Session-list action", () => {
     expect(appRoutes[0].children.some((route) => route.path === "marginalia/export")).toBe(true);
     expect(marginaliaExportBreadcrumbFallback).toEqual([{ label: "My Marginalia", to: "/marginalia", resetTrail: true }, { label: "Export" }]);
-    const listMarkup = renderToStaticMarkup(<MemoryRouter initialEntries={["/marginalia"]}><Routes><Route element={<AppFrame user={user} server={server} onCurrentUserChange={vi.fn()} />}><Route path="marginalia" element={<MarginaliaSessionsOrchestrator />} /></Route></Routes></MemoryRouter>);
+    const listMarkup = renderToStaticMarkup(<MemoryRouter initialEntries={["/marginalia"]}><Routes><Route element={<AppOrchestrator user={user} server={server} onCurrentUserChange={vi.fn()} />}><Route path="marginalia" element={<MarginaliaSessionsOrchestrator />} /></Route></Routes></MemoryRouter>);
     expect(listMarkup).toContain('href="/marginalia/export"');
-    const exportMarkup = renderToStaticMarkup(<MemoryRouter initialEntries={["/marginalia/export"]}><Routes><Route element={<AppFrame user={user} server={server} onCurrentUserChange={vi.fn()} />}><Route path="marginalia/export" element={<MarginaliaExportOrchestrator />} /></Route></Routes></MemoryRouter>);
+    const exportMarkup = renderToStaticMarkup(<MemoryRouter initialEntries={["/marginalia/export"]}><Routes><Route element={<AppOrchestrator user={user} server={server} onCurrentUserChange={vi.fn()} />}><Route path="marginalia/export" element={<MarginaliaExportOrchestrator />} /></Route></Routes></MemoryRouter>);
     expect(exportMarkup).toContain("<h1>Export Marginalia</h1>");
     expect(exportMarkup).toContain('aria-label="My Marginalia sections"');
     expect(exportMarkup).toContain("Complete archive");

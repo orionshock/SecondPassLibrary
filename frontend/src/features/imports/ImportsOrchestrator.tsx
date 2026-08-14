@@ -2,7 +2,7 @@ import { canSeeImports, uploadLibraryImport, type LibraryImportResult } from "@s
 import { useRef, useState, type FormEvent } from "react";
 import { useOutletContext } from "react-router";
 
-import type { AppOutletContext } from "../../app/layout/AppFrame";
+import type { AppOutletContext } from "../../app/layout/AppOrchestrator";
 import { breadcrumbNavigationState } from "../../app/navigation/breadcrumbs";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { ErrorPanel } from "../../components/ui";

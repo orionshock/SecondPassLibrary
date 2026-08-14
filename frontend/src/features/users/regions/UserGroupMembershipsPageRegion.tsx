@@ -1,7 +1,7 @@
 import type { AssignableGroup, ManagedUserGroup } from "@second-pass/spl-api";
 import { useEffect, useState, type FormEvent } from "react";
 
-import { HelpPopoverComponent } from "../../../components/HelpPopoverComponent";
+import { HelpPopover } from "../../../components/HelpPopover";
 import { RemoveIconButton } from "../../../components/icons/RemoveIconButton";
 import { Button } from "../../../components/ui";
 import type { MutationState } from "../../../shared/feedback/mutationState";
@@ -39,7 +39,7 @@ export function UserGroupMembershipsPageRegion({ memberships, assignableGroups, 
           </div>
           <div className="user-membership-curator">
             {membership.isPublicGroup
-              ? <span className="user-membership-public-label">Public Group <HelpPopoverComponent ariaLabel="Public Group curator help" icon="help" mouseoverText="Only Librarians/Managers may Curate the Public Group" /></span>
+              ? <span className="user-membership-public-label">Public Group <HelpPopover ariaLabel="Public Group curator help" icon="help" mouseoverText="Only Librarians/Managers may Curate the Public Group" /></span>
               : <label><input type="checkbox" checked={membership.isCurator} onChange={(event) => onCuratorChange(membership, event.target.checked)} /> Curator</label>}
           </div>
         </div>;

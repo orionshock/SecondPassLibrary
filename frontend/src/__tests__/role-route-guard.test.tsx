@@ -3,8 +3,8 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
 import { canSeeImports, canSeeServerSettings, canSeeUsers, type CurrentUser, type ServerInfo } from "@second-pass/spl-api";
-import { AppFrame } from "../app/layout/AppFrame";
-import { RoleRouteGuardComponent, unauthorizedRouteFallback } from "../app/navigation/RoleRouteGuardComponent";
+import { AppOrchestrator } from "../app/layout/AppOrchestrator";
+import { RoleRouteGuard, unauthorizedRouteFallback } from "../app/navigation/RoleRouteGuard";
 
 const server: ServerInfo = { name: "SPL", description: "", bannerText: "", advancedLibraryGroupsEnabled: false, readingClientBaseUrl: null, marginaliaProfileUri: "profile", publicGroup: { id: "public", name: "Common Room", description: "" }, version: "dev", releaseDate: "" };
 const reader: CurrentUser = {
@@ -18,8 +18,8 @@ const manager: CurrentUser = { ...reader, username: "manager", role: "manager", 
 function renderGuard(user: CurrentUser, canAccess: (user: CurrentUser) => boolean, onFeatureRender: () => void): string {
   function Feature() { onFeatureRender(); return <p>Protected feature</p>; }
   return renderToStaticMarkup(<MemoryRouter initialEntries={["/protected"]}><Routes>
-    <Route element={<AppFrame user={user} server={server} onCurrentUserChange={vi.fn()} />}>
-      <Route path="protected" element={<RoleRouteGuardComponent canAccess={canAccess}><Feature /></RoleRouteGuardComponent>} />
+    <Route element={<AppOrchestrator user={user} server={server} onCurrentUserChange={vi.fn()} />}>
+      <Route path="protected" element={<RoleRouteGuard canAccess={canAccess}><Feature /></RoleRouteGuard>} />
     </Route>
   </Routes></MemoryRouter>);
 }

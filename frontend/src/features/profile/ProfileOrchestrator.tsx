@@ -9,7 +9,7 @@ import {
 import { useEffect, useState } from "react";
 import { Link, useOutletContext } from "react-router";
 
-import type { AppOutletContext } from "../../app/layout/AppFrame";
+import type { AppOutletContext } from "../../app/layout/AppOrchestrator";
 import { clientPairingBreadcrumbFallback, passwordBreadcrumbFallback, profileBreadcrumbFallback } from "../../app/navigation/accountBreadcrumbs";
 import { breadcrumbNavigationState } from "../../app/navigation/breadcrumbs";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";

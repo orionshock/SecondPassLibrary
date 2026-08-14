@@ -13,7 +13,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useOutletContext, useParams, useSearchParams } from "react-router";
 
-import type { AppOutletContext } from "../../app/layout/AppFrame";
+import type { AppOutletContext } from "../../app/layout/AppOrchestrator";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { loadPageWithRecovery } from "../../app/routing/pageRecovery";
 import { ErrorPanel } from "../../components/ui";

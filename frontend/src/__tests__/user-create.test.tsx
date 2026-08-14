@@ -3,7 +3,7 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
 import { ApiError, type CreateUserResult, type CurrentUser, type ServerInfo } from "@second-pass/spl-api";
-import { AppFrame } from "../app/layout/AppFrame";
+import { AppOrchestrator } from "../app/layout/AppOrchestrator";
 import { UserCreateFormPageRegion } from "../features/users/regions/UserCreateFormPageRegion";
 import { UserCreateSuccessPageRegion } from "../features/users/regions/UserCreateSuccessPageRegion";
 import { createUserInputFromDraft, emptyUserCreateDraft } from "../features/users/userCreateForm";
@@ -86,7 +86,7 @@ describe("User create workflow", () => {
   });
 
   it("links the Users list action to create and keeps breadcrumb ownership on the child route", () => {
-    const markup = renderToStaticMarkup(<MemoryRouter initialEntries={["/users"]}><Routes><Route element={<AppFrame user={owner} server={server} onCurrentUserChange={vi.fn()} />}><Route path="users" element={<UsersListOrchestrator />} /></Route></Routes></MemoryRouter>);
+    const markup = renderToStaticMarkup(<MemoryRouter initialEntries={["/users"]}><Routes><Route element={<AppOrchestrator user={owner} server={server} onCurrentUserChange={vi.fn()} />}><Route path="users" element={<UsersListOrchestrator />} /></Route></Routes></MemoryRouter>);
     expect(markup).toContain('href="/users/new"');
     expect(usersListBreadcrumbFallback).toEqual([]);
     expect(usersCreateBreadcrumbFallback).toEqual([{ label: "Users", to: "/users", resetTrail: true, icon: "user" }, { label: "New" }]);

@@ -2,7 +2,7 @@ import { useId, useState, type CSSProperties } from "react";
 
 import { MaterialIcon } from "./icons/MaterialIcon";
 
-interface HelpPopoverComponentProps {
+interface HelpPopoverProps {
   ariaLabel: string;
   mouseoverText: string;
   icon?: string;
@@ -12,7 +12,7 @@ interface HelpPopoverComponentProps {
   color?: string;
 }
 
-export function HelpPopoverComponent({ ariaLabel, mouseoverText, icon, label, border = false, borderColor, color }: HelpPopoverComponentProps) {
+export function HelpPopover({ ariaLabel, mouseoverText, icon, label, border = false, borderColor, color }: HelpPopoverProps) {
   const descriptionId = useId();
   const [open, setOpen] = useState(false);
   const style: CSSProperties | undefined = borderColor || color ? { borderColor, color } : undefined;

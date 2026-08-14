@@ -7,7 +7,7 @@ import {
 import { useEffect, useState } from "react";
 import { useOutletContext } from "react-router";
 
-import type { AppOutletContext } from "../../app/layout/AppFrame";
+import type { AppOutletContext } from "../../app/layout/AppOrchestrator";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
 import { DashboardPageRegion, type RecentReadingState } from "./regions/DashboardPageRegion";
 import "./Dashboard.css";

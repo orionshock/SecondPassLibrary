@@ -11,7 +11,7 @@ import {
   menuTriggerOpensForKey,
   type AppMenuItem,
 } from "../app/layout/AppMenuComponent";
-import { accountMenuItems } from "../app/layout/AppFrame";
+import { accountMenuItems } from "../app/layout/AppOrchestrator";
 
 const accountItems: readonly AppMenuItem[] = accountMenuItems("/profile/password");
 

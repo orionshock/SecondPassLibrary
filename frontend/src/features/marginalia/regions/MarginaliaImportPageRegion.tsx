@@ -3,7 +3,7 @@ import { useEffect, useRef, type FormEvent, type RefObject } from "react";
 import { Link } from "react-router";
 
 import { Badge, Button, FormField, Surface } from "../../../components/ui";
-import { HelpPopoverComponent } from "../../../components/HelpPopoverComponent";
+import { HelpPopover } from "../../../components/HelpPopover";
 import { BookCoverComponent } from "../../../shared/books/BookCoverComponent";
 import { marginaliaSessionDisplayName } from "../../../shared/marginaliaSessionDisplayName";
 import { ActionFeedbackComponent } from "../../../shared/feedback/ActionFeedbackComponent";
@@ -102,7 +102,7 @@ function MarginaliaImportReview({ preview, draft, editingSessionKeys, selectedCo
               <div>
                 {session.willImport ? <div className="marginalia-import-session__select">
                   <label><input type="checkbox" checked={value.selected} disabled={applyState.pending} onChange={(event) => onDraftChange(key, { ...value, selected: event.target.checked })} /><span>{sessionName}</span></label>
-                  {session.possibleDuplicate && duplicateWarning ? <HelpPopoverComponent ariaLabel={`Why ${sessionName} may be a duplicate Session`} label="Possible Duplicate Session" mouseoverText={duplicateWarning.message} border borderColor="#8f783f" color="#c2a85f" /> : null}
+                  {session.possibleDuplicate && duplicateWarning ? <HelpPopover ariaLabel={`Why ${sessionName} may be a duplicate Session`} label="Possible Duplicate Session" mouseoverText={duplicateWarning.message} border borderColor="#8f783f" color="#c2a85f" /> : null}
                   {sessionFacts}
                 </div> : <div className="marginalia-import-session__select"><span>{sessionName}</span>{sessionFacts}</div>}
                 {session.sourceStatus === "active" ? <div className="marginalia-import-session__facts"><span>Active source Session imports as Closed</span></div> : null}

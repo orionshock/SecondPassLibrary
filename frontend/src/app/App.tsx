@@ -9,7 +9,7 @@ import {
 import { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router";
 
-import { AppFrame } from "./layout/AppFrame";
+import { AppOrchestrator } from "./layout/AppOrchestrator";
 import "../components/ui.css";
 
 type BootstrapState =
@@ -117,7 +117,7 @@ export function AppBootstrapView({
   }
 
   return (
-    <AppFrame
+    <AppOrchestrator
       user={state.user}
       server={state.server}
       onCurrentUserChange={onCurrentUserChange}

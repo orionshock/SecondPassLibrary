@@ -12,9 +12,9 @@ import { Link, Outlet, useLocation } from "react-router";
 import { BreadcrumbsComponent } from "../navigation/BreadcrumbsComponent";
 import type { BreadcrumbItem } from "../navigation/breadcrumbs";
 import { MaterialIcon } from "../../components/icons/MaterialIcon";
-import { RouteModuleBoundaryComponent, RouteModuleLoadingComponent } from "../routing/RouteModuleBoundaryComponent";
+import { RouteModuleBoundary, RouteModuleLoading } from "../routing/RouteModuleBoundary";
 import { AppMenuComponent, type AppMenuItem } from "./AppMenuComponent";
-import "./AppFrame.css";
+import "./AppOrchestrator.css";
 
 export interface AppOutletContext {
   currentUser: CurrentUser;
@@ -65,7 +65,7 @@ export function accountMenuItems(
   ];
 }
 
-export function AppFrame({
+export function AppOrchestrator({
   user,
   server,
   onCurrentUserChange,
@@ -148,11 +148,11 @@ export function AppFrame({
       </div>
 
       <main className="app-content">
-        <RouteModuleBoundaryComponent key={location.pathname}>
-          <Suspense fallback={<RouteModuleLoadingComponent />}>
+        <RouteModuleBoundary key={location.pathname}>
+          <Suspense fallback={<RouteModuleLoading />}>
             <Outlet context={{ currentUser: user, serverInfo: server, onCurrentUserChange, refreshCurrentUser: onRefreshCurrentUser, refreshServerInfo: onRefreshServerInfo, setBreadcrumbs } satisfies AppOutletContext} />
           </Suspense>
-        </RouteModuleBoundaryComponent>
+        </RouteModuleBoundary>
       </main>
 
       <footer className="app-footer">

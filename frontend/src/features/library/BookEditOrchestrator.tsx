@@ -22,7 +22,7 @@ import {
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { useBlocker, useLocation, useNavigate, useOutletContext, useParams } from "react-router";
 
-import type { AppOutletContext } from "../../app/layout/AppFrame";
+import type { AppOutletContext } from "../../app/layout/AppOrchestrator";
 import { breadcrumbNavigationState, readIncomingBreadcrumbTrail, resolveBreadcrumbTrail } from "../../app/navigation/breadcrumbs";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { BookCoverComponent } from "../../shared/books/BookCoverComponent";

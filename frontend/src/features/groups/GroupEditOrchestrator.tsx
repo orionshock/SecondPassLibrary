@@ -14,7 +14,7 @@ import {
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useBlocker, useLocation, useNavigate, useOutletContext, useParams } from "react-router";
 
-import type { AppOutletContext } from "../../app/layout/AppFrame";
+import type { AppOutletContext } from "../../app/layout/AppOrchestrator";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { Button, ErrorPanel } from "../../components/ui";
 import {

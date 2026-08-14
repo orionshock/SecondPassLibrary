@@ -2,7 +2,7 @@ import { changeCurrentUserPassword } from "@second-pass/spl-api";
 import { useReducer, useState, type FormEvent } from "react";
 import { useNavigate, useOutletContext } from "react-router";
 
-import type { AppOutletContext } from "../../app/layout/AppFrame";
+import type { AppOutletContext } from "../../app/layout/AppOrchestrator";
 import { passwordBreadcrumbFallback } from "../../app/navigation/accountBreadcrumbs";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";

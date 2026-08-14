@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
-import { AppFrame } from "../app/layout/AppFrame";
+import { AppOrchestrator } from "../app/layout/AppOrchestrator";
 import { MarginaliaImportOrchestrator, MarginaliaImportRequestGuard, previewSelectedMarginaliaImport } from "../features/marginalia/MarginaliaImportOrchestrator";
 import { MarginaliaSessionsOrchestrator } from "../features/marginalia/MarginaliaSessionsOrchestrator";
 import { marginaliaImportBreadcrumbFallback } from "../features/marginalia/marginaliaBreadcrumbs";
@@ -124,9 +124,9 @@ function renderImport(options: {
 
 describe("My Marginalia Import", () => {
   it("keeps the canonical Import route and preview upload controls", () => {
-    const listMarkup = renderToStaticMarkup(<MemoryRouter initialEntries={["/marginalia"]}><Routes><Route element={<AppFrame user={user} server={server} onCurrentUserChange={vi.fn()} />}><Route path="marginalia" element={<MarginaliaSessionsOrchestrator />} /></Route></Routes></MemoryRouter>);
+    const listMarkup = renderToStaticMarkup(<MemoryRouter initialEntries={["/marginalia"]}><Routes><Route element={<AppOrchestrator user={user} server={server} onCurrentUserChange={vi.fn()} />}><Route path="marginalia" element={<MarginaliaSessionsOrchestrator />} /></Route></Routes></MemoryRouter>);
     expect(listMarkup).toContain('href="/marginalia/import"');
-    const importMarkup = renderToStaticMarkup(<MemoryRouter initialEntries={["/marginalia/import"]}><Routes><Route element={<AppFrame user={user} server={server} onCurrentUserChange={vi.fn()} />}><Route path="marginalia/import" element={<MarginaliaImportOrchestrator />} /></Route></Routes></MemoryRouter>);
+    const importMarkup = renderToStaticMarkup(<MemoryRouter initialEntries={["/marginalia/import"]}><Routes><Route element={<AppOrchestrator user={user} server={server} onCurrentUserChange={vi.fn()} />}><Route path="marginalia/import" element={<MarginaliaImportOrchestrator />} /></Route></Routes></MemoryRouter>);
     expect(importMarkup).toContain("<h1>Import Marginalia</h1>");
     expect(importMarkup).toContain('type="file"');
     expect(importMarkup).toContain("Include empty sessions");

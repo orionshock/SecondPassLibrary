@@ -3,7 +3,7 @@ import { lazy } from "react";
 import { createBrowserRouter } from "react-router";
 
 import { App } from "./App";
-import { RoleRouteGuardComponent } from "./navigation/RoleRouteGuardComponent";
+import { RoleRouteGuard } from "./navigation/RoleRouteGuard";
 import { DashboardOrchestrator } from "../features/dashboard/DashboardOrchestrator";
 import { canCreateGroupMetadata } from "../features/groups/groupMetadataAuthority";
 import { ProductPageShellComponent } from "../shared/layout/ProductPageShellComponent";
@@ -75,29 +75,29 @@ export const appRoutes = [
         path,
         element: <PlaceholderPageRegion title={title} />,
       })),
-      { path: "groups", element: <RoleRouteGuardComponent canAccess={advancedGroupsRouteAvailable}><GroupsListOrchestrator /></RoleRouteGuardComponent> },
-      { path: "groups/new", element: <RoleRouteGuardComponent canAccess={groupCreationRouteAvailable}><GroupCreateOrchestrator /></RoleRouteGuardComponent> },
-      { path: "groups/:groupId/edit", element: <RoleRouteGuardComponent canAccess={advancedGroupsRouteAvailable}><GroupEditOrchestrator /></RoleRouteGuardComponent> },
-      { path: "groups/:groupId", element: <RoleRouteGuardComponent canAccess={advancedGroupsRouteAvailable}><GroupDetailOrchestrator /></RoleRouteGuardComponent> },
+      { path: "groups", element: <RoleRouteGuard canAccess={advancedGroupsRouteAvailable}><GroupsListOrchestrator /></RoleRouteGuard> },
+      { path: "groups/new", element: <RoleRouteGuard canAccess={groupCreationRouteAvailable}><GroupCreateOrchestrator /></RoleRouteGuard> },
+      { path: "groups/:groupId/edit", element: <RoleRouteGuard canAccess={advancedGroupsRouteAvailable}><GroupEditOrchestrator /></RoleRouteGuard> },
+      { path: "groups/:groupId", element: <RoleRouteGuard canAccess={advancedGroupsRouteAvailable}><GroupDetailOrchestrator /></RoleRouteGuard> },
       { path: "shelves", element: <ShelvesListOrchestrator /> },
       { path: "shelves/new", element: <ShelfCreateOrchestrator /> },
       { path: "shelves/:shelfId/edit", element: <ShelfEditOrchestrator /> },
       { path: "shelves/:shelfId", element: <ShelfDetailOrchestrator /> },
       { path: "library", element: <LibraryOrchestrator /> },
       { path: "library/books/:bookId", element: <BookDetailOrchestrator /> },
-      { path: "library/books/:bookId/edit", element: <RoleRouteGuardComponent canAccess={isAtLeastLibrarian}><BookEditOrchestrator /></RoleRouteGuardComponent> },
-      { path: "library/authors/new", element: <RoleRouteGuardComponent canAccess={isAtLeastLibrarian}><AuthorSeriesEditOrchestrator kind="author" mode="new" /></RoleRouteGuardComponent> },
-      { path: "library/authors/:authorId/edit", element: <RoleRouteGuardComponent canAccess={isAtLeastLibrarian}><AuthorSeriesEditOrchestrator kind="author" mode="edit" /></RoleRouteGuardComponent> },
-      { path: "library/series/new", element: <RoleRouteGuardComponent canAccess={isAtLeastLibrarian}><AuthorSeriesEditOrchestrator kind="series" mode="new" /></RoleRouteGuardComponent> },
-      { path: "library/series/:seriesId/edit", element: <RoleRouteGuardComponent canAccess={isAtLeastLibrarian}><AuthorSeriesEditOrchestrator kind="series" mode="edit" /></RoleRouteGuardComponent> },
-      { path: "imports", element: <RoleRouteGuardComponent canAccess={canSeeImports}><ImportsOrchestrator /></RoleRouteGuardComponent> },
+      { path: "library/books/:bookId/edit", element: <RoleRouteGuard canAccess={isAtLeastLibrarian}><BookEditOrchestrator /></RoleRouteGuard> },
+      { path: "library/authors/new", element: <RoleRouteGuard canAccess={isAtLeastLibrarian}><AuthorSeriesEditOrchestrator kind="author" mode="new" /></RoleRouteGuard> },
+      { path: "library/authors/:authorId/edit", element: <RoleRouteGuard canAccess={isAtLeastLibrarian}><AuthorSeriesEditOrchestrator kind="author" mode="edit" /></RoleRouteGuard> },
+      { path: "library/series/new", element: <RoleRouteGuard canAccess={isAtLeastLibrarian}><AuthorSeriesEditOrchestrator kind="series" mode="new" /></RoleRouteGuard> },
+      { path: "library/series/:seriesId/edit", element: <RoleRouteGuard canAccess={isAtLeastLibrarian}><AuthorSeriesEditOrchestrator kind="series" mode="edit" /></RoleRouteGuard> },
+      { path: "imports", element: <RoleRouteGuard canAccess={canSeeImports}><ImportsOrchestrator /></RoleRouteGuard> },
       { path: "profile", element: <ProfileOrchestrator /> },
       { path: "profile/client-pairing", element: <ClientPairingOrchestrator /> },
       { path: "profile/password", element: <PasswordChangeOrchestrator /> },
-      { path: "users", element: <RoleRouteGuardComponent canAccess={canSeeUsers}><UsersListOrchestrator /></RoleRouteGuardComponent> },
-      { path: "users/new", element: <RoleRouteGuardComponent canAccess={canSeeUsers}><UserCreateOrchestrator /></RoleRouteGuardComponent> },
-      { path: "users/:profileId/edit", element: <RoleRouteGuardComponent canAccess={canSeeUsers}><UserEditOrchestrator /></RoleRouteGuardComponent> },
-      { path: "server", element: <RoleRouteGuardComponent canAccess={canSeeServerSettings}><ServerSettingsOrchestrator /></RoleRouteGuardComponent> },
+      { path: "users", element: <RoleRouteGuard canAccess={canSeeUsers}><UsersListOrchestrator /></RoleRouteGuard> },
+      { path: "users/new", element: <RoleRouteGuard canAccess={canSeeUsers}><UserCreateOrchestrator /></RoleRouteGuard> },
+      { path: "users/:profileId/edit", element: <RoleRouteGuard canAccess={canSeeUsers}><UserEditOrchestrator /></RoleRouteGuard> },
+      { path: "server", element: <RoleRouteGuard canAccess={canSeeServerSettings}><ServerSettingsOrchestrator /></RoleRouteGuard> },
       { path: "*", element: <NotFoundPageRegion /> },
     ],
   },

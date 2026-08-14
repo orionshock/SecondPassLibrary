@@ -3,7 +3,7 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
 import type { CurrentUser, ServerInfo } from "@second-pass/spl-api";
-import { AppFrame } from "../app/layout/AppFrame";
+import { AppOrchestrator } from "../app/layout/AppOrchestrator";
 import { ProfileOrchestrator } from "../features/profile/ProfileOrchestrator";
 
 const user: CurrentUser = {
@@ -19,7 +19,7 @@ const server: ServerInfo = { name: "Analytical Library", description: "", banner
 
 describe("ProfileOrchestrator", () => {
   it("composes profile regions from app-owned current-user data", () => {
-    const markup = renderToStaticMarkup(<MemoryRouter initialEntries={["/profile"]}><Routes><Route element={<AppFrame user={user} server={server} onCurrentUserChange={vi.fn()} />}><Route path="profile" element={<ProfileOrchestrator />} /></Route></Routes></MemoryRouter>);
+    const markup = renderToStaticMarkup(<MemoryRouter initialEntries={["/profile"]}><Routes><Route element={<AppOrchestrator user={user} server={server} onCurrentUserChange={vi.fn()} />}><Route path="profile" element={<ProfileOrchestrator />} /></Route></Routes></MemoryRouter>);
     expect(markup).toContain("Ada Lovelace");
     expect(markup).toContain("ada@example.test");
     expect(markup).toContain('aria-label="User ada"');

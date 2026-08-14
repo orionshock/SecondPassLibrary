@@ -3,7 +3,7 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
 import { ApiError, canSeeImports, type CurrentUser, type LibraryImportResult, type ServerInfo } from "@second-pass/spl-api";
-import { AppFrame } from "../app/layout/AppFrame";
+import { AppOrchestrator } from "../app/layout/AppOrchestrator";
 import { readIncomingBreadcrumbTrail } from "../app/navigation/breadcrumbs";
 import { clearImportFileInput, importResultBookNavigation, importsBreadcrumbFallback, ImportsOrchestrator, uploadSelectedLibraryFile } from "../features/imports/ImportsOrchestrator";
 import { ImportResultPageRegion } from "../features/imports/regions/ImportResultPageRegion";
@@ -19,7 +19,7 @@ const server: ServerInfo = { name: "SPL", description: "", bannerText: "", advan
 
 function renderRoute(user: CurrentUser) {
   return renderToStaticMarkup(<MemoryRouter initialEntries={["/imports"]}><Routes>
-    <Route element={<AppFrame user={user} server={server} onCurrentUserChange={vi.fn()} />}>
+    <Route element={<AppOrchestrator user={user} server={server} onCurrentUserChange={vi.fn()} />}>
       <Route path="imports" element={<ImportsOrchestrator />} />
     </Route>
   </Routes></MemoryRouter>);

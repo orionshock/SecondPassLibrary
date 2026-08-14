@@ -4,25 +4,25 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
 import type { CurrentUser, ServerInfo } from "@second-pass/spl-api";
-import { AppFrame, navigationDestinationOwnsPath } from "../app/layout/AppFrame";
+import { AppOrchestrator, navigationDestinationOwnsPath } from "../app/layout/AppOrchestrator";
 import { appRoutes, NotFoundPageRegion, PlaceholderPageRegion, sectionRoutes } from "../app/router";
 import {
-  RouteModuleBoundaryComponent,
-  RouteModuleErrorComponent,
-  RouteModuleLoadingComponent,
-} from "../app/routing/RouteModuleBoundaryComponent";
+  RouteModuleBoundary,
+  RouteModuleError,
+  RouteModuleLoading,
+} from "../app/routing/RouteModuleBoundary";
 import { DashboardOrchestrator } from "../features/dashboard/DashboardOrchestrator";
 
 const user: CurrentUser = { username: "owner", email: "", firstName: "", lastName: "", profileId: "profile", role: "manager", mustChangePassword: false, isOwner: true, isManager: false, isLibrarian: false, isReader: false, canAccessDjangoAdmin: false, groups: [] };
 const server: ServerInfo = { name: "Family Library", description: "Hidden", bannerText: "", advancedLibraryGroupsEnabled: false, readingClientBaseUrl: null, marginaliaProfileUri: "profile", publicGroup: { id: "public", name: "Common Room", description: "" }, version: "0.1.0-dev", releaseDate: "2026-07-20" };
 
 function navMarkup(userOverrides: Partial<CurrentUser> = {}, serverOverrides: Partial<ServerInfo> = {}, path = "/library"): string {
-  return renderToStaticMarkup(<MemoryRouter initialEntries={[path]}><AppFrame user={{ ...user, ...userOverrides }} server={{ ...server, ...serverOverrides }} onCurrentUserChange={vi.fn()} /></MemoryRouter>);
+  return renderToStaticMarkup(<MemoryRouter initialEntries={[path]}><AppOrchestrator user={{ ...user, ...userOverrides }} server={{ ...server, ...serverOverrides }} onCurrentUserChange={vi.fn()} /></MemoryRouter>);
 }
 
 describe("app frame and router", () => {
   it("renders the Dashboard inside the frame", () => {
-    const markup = renderToStaticMarkup(<MemoryRouter><Routes><Route element={<AppFrame user={user} server={{ ...server, bannerText: "Maintenance tonight" }} onCurrentUserChange={vi.fn()} />}><Route index element={<DashboardOrchestrator />} /></Route></Routes></MemoryRouter>);
+    const markup = renderToStaticMarkup(<MemoryRouter><Routes><Route element={<AppOrchestrator user={user} server={{ ...server, bannerText: "Maintenance tonight" }} onCurrentUserChange={vi.fn()} />}><Route index element={<DashboardOrchestrator />} /></Route></Routes></MemoryRouter>);
     expect(markup).toContain('class="app-shell"');
     expect(markup).toContain('class="product-page-shell dashboard-page"');
     expect(markup).toContain('class="dashboard-banner"');
@@ -201,14 +201,14 @@ describe("app frame and router", () => {
   });
 
   it("keeps route loading and lazy-module failures bounded inside the shell", () => {
-    expect(renderToStaticMarkup(<RouteModuleLoadingComponent />)).toContain('data-route-state="loading"');
+    expect(renderToStaticMarkup(<RouteModuleLoading />)).toContain('data-route-state="loading"');
     const reload = vi.fn();
-    const error = RouteModuleErrorComponent({ onReload: reload }) as ReactElement<{ children: ReactNode }>;
+    const error = RouteModuleError({ onReload: reload }) as ReactElement<{ children: ReactNode }>;
     expect(renderToStaticMarkup(error)).toContain('data-route-state="error"');
     const reloadButton = Children.toArray(error.props.children)[1] as ReactElement<{ onClick: () => void }>;
     reloadButton.props.onClick();
     expect(reload).toHaveBeenCalledOnce();
-    expect(RouteModuleBoundaryComponent.getDerivedStateFromError()).toEqual({ failed: true });
+    expect(RouteModuleBoundary.getDerivedStateFromError()).toEqual({ failed: true });
   });
 
   it("guards Groups routes by the server-driven advanced-groups mode, not role rank", () => {

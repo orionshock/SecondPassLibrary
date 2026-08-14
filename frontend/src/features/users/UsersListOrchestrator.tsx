@@ -2,7 +2,7 @@ import { listUsers, type ManagedUser, type Page } from "@second-pass/spl-api";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useOutletContext, useSearchParams } from "react-router";
 
-import type { AppOutletContext } from "../../app/layout/AppFrame";
+import type { AppOutletContext } from "../../app/layout/AppOrchestrator";
 import { breadcrumbNavigationState } from "../../app/navigation/breadcrumbs";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { Button } from "../../components/ui";

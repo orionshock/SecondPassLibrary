@@ -15,7 +15,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { Link, useOutletContext, useParams } from "react-router";
 
-import type { AppOutletContext } from "../../app/layout/AppFrame";
+import type { AppOutletContext } from "../../app/layout/AppOrchestrator";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { ErrorPanel } from "../../components/ui";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";

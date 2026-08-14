@@ -11,7 +11,7 @@ import {
 import { useEffect, useState, type FormEvent } from "react";
 import { useLocation, useOutletContext, useSearchParams } from "react-router";
 
-import type { AppOutletContext } from "../../app/layout/AppFrame";
+import type { AppOutletContext } from "../../app/layout/AppOrchestrator";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { Button, ErrorPanel } from "../../components/ui";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";

@@ -16,7 +16,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useOutletContext, useSearchParams } from "react-router";
 
-import type { AppOutletContext } from "../../app/layout/AppFrame";
+import type { AppOutletContext } from "../../app/layout/AppOrchestrator";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { loadPageWithRecovery } from "../../app/routing/pageRecovery";
 import { normalizeMutationError } from "../../shared/feedback/mutationState";
