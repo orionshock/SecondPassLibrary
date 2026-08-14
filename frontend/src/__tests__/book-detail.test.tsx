@@ -19,8 +19,8 @@ import {
   formatBookFileSize,
   formatBookPublishedDate,
 } from "../features/library/bookDetailPresentation";
-import { BookDetailHeroPageRegion } from "../features/library/regions/BookDetailHeroPageRegion";
-import { BookDetailSectionsPageRegion } from "../features/library/regions/BookDetailSectionsPageRegion";
+import { BookDetailHeroPageRegion } from "../features/library/bookDetail/BookDetailHeroPageRegion";
+import { BookDetailSectionsPageRegion } from "../features/library/bookDetail/BookDetailSectionsPageRegion";
 import { bookDetailQueryFromSearchParams, bookDetailSearchParams } from "../features/library/bookTabs";
 
 const book: BookDetail = {

@@ -5,9 +5,9 @@ import type { BookCoverPreviewItem } from "../../../shared/books/BookCoverPrevie
 import { GroupRow } from "../../../shared/groups/GroupRow";
 import { ShelfSummaryRow, type ShelfOwnerBadge } from "../../../shared/shelves/ShelfSummaryRow";
 import { TabList, tabButtonId, tabPanelId, type TabItem } from "../../../shared/tabs/TabList";
-import { BookIdentifierList } from "../components/BookIdentifierList";
 import { formatBookFileSize, formatBookPublishedDate } from "../bookDetailPresentation";
 import type { BookDetailTab } from "../bookTabs";
+import { BookIdentifierList } from "./BookIdentifierList";
 
 export type BookShelvesState =
   | { status: "idle" }

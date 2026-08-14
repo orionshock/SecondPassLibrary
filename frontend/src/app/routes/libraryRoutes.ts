@@ -1,2 +1,2 @@
-export { BookDetailOrchestrator } from "../../features/library/BookDetailOrchestrator";
+export { BookDetailOrchestrator } from "../../features/library/bookDetail/BookDetailOrchestrator";
 export { LibraryOrchestrator } from "../../features/library/LibraryOrchestrator";

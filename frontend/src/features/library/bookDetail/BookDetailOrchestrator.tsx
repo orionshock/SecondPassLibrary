@@ -7,15 +7,15 @@ import {
   listAllShelvesForBook,
   type BookDetail,
 } from "@second-pass/spl-api";
-import { COMPACT_BOOK_COVER_PREVIEW_SOURCE_LIMIT } from "../../shared/books/bookCoverPreview";
+import { COMPACT_BOOK_COVER_PREVIEW_SOURCE_LIMIT } from "../../../shared/books/bookCoverPreview";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useOutletContext, useParams } from "react-router";
 
-import type { AppOutletContext } from "../../app/layout/AppOrchestrator";
-import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { breadcrumbNavigationState, resolveBreadcrumbTrail } from "../../app/navigation/breadcrumbs";
-import { normalizeMutationError } from "../../shared/feedback/mutationState";
-import { ProductPageShell } from "../../shared/layout/ProductPageShell";
+import type { AppOutletContext } from "../../../app/layout/AppOrchestrator";
+import { usePageBreadcrumbs } from "../../../app/navigation/usePageBreadcrumbs";
+import { breadcrumbNavigationState, resolveBreadcrumbTrail } from "../../../app/navigation/breadcrumbs";
+import { normalizeMutationError } from "../../../shared/feedback/mutationState";
+import { ProductPageShell } from "../../../shared/layout/ProductPageShell";
 import {
   bookDetailBreadcrumbFallback,
   bookEditBreadcrumbTrail,
@@ -23,16 +23,16 @@ import {
   bookGroupPreviewBreadcrumbTrail,
   bookShelfBreadcrumbTrail,
   bookShelfPreviewBreadcrumbTrail,
-} from "./bookDetailPresentation";
-import { bookDetailQueryFromSearchParams, bookDetailSearchParams, type BookDetailTab } from "./bookTabs";
-import { BookDetailHeroPageRegion } from "./regions/BookDetailHeroPageRegion";
+} from "../bookDetailPresentation";
+import { bookDetailQueryFromSearchParams, bookDetailSearchParams, type BookDetailTab } from "../bookTabs";
+import { BookDetailStatePageRegion } from "../regions/BookDetailStatePageRegion";
+import "./BookDetail.css";
+import { BookDetailHeroPageRegion } from "./BookDetailHeroPageRegion";
 import {
   BookDetailSectionsPageRegion,
   type BookGroupsState,
   type BookShelvesState,
-} from "./regions/BookDetailSectionsPageRegion";
-import { BookDetailStatePageRegion } from "./regions/BookDetailStatePageRegion";
-import "./BookDetail.css";
+} from "./BookDetailSectionsPageRegion";
 
 type BookDetailLoadState =
   | { status: "loading" }
