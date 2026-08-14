@@ -12,9 +12,9 @@ import {
   exportMarginaliaSessionFromProductUi,
   renameMarginaliaSession,
   updateMarginaliaSessionNote,
-} from "../features/marginalia/MarginaliaSessionDetailOrchestrator";
-import { MarginaliaSessionNoteEditor } from "../features/marginalia/components/MarginaliaSessionNoteEditor";
-import { MarginaliaSessionTitleEditor } from "../features/marginalia/components/MarginaliaSessionTitleEditor";
+} from "../features/marginalia/sessionDetail/MarginaliaSessionDetailOrchestrator";
+import { MarginaliaSessionNoteEditor } from "../features/marginalia/sessionDetail/MarginaliaSessionNoteEditor";
+import { MarginaliaSessionTitleEditor } from "../features/marginalia/sessionDetail/MarginaliaSessionTitleEditor";
 import {
   marginaliaAnnotationOrderingOptions,
   MarginaliaSessionDetailPageRegion,
@@ -22,7 +22,7 @@ import {
   confirmPermanentSessionDeletion,
   permanentSessionDeletionWarning,
   orderMarginaliaAnnotations,
-} from "../features/marginalia/regions/MarginaliaSessionDetailPageRegion";
+} from "../features/marginalia/sessionDetail/MarginaliaSessionDetailPageRegion";
 import { idleMutationState } from "../shared/feedback/mutationState";
 import { marginaliaSessionDisplayName } from "../shared/marginaliaSessionDisplayName";
 

@@ -10,18 +10,18 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 
-import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { Button, ErrorPanel } from "../../components/UiPrimitives";
-import { saveDownloadedFile, type BrowserDownload } from "../../shared/browser/saveDownloadedFile";
-import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
-import { useAutoDismissMutationMessage } from "../../shared/feedback/useAutoDismissMutationMessage";
-import { ProductPageShell } from "../../shared/layout/ProductPageShell";
-import { marginaliaSessionDisplayName } from "../../shared/marginaliaSessionDisplayName";
-import { marginaliaSessionBreadcrumbFallback } from "./marginaliaBreadcrumbs";
-import { MarginaliaSessionNoteEditor } from "./components/MarginaliaSessionNoteEditor";
-import { MarginaliaSessionTitleEditor } from "./components/MarginaliaSessionTitleEditor";
-import { MarginaliaSessionDetailPageRegion, type MarginaliaAnnotationsLoadState } from "./regions/MarginaliaSessionDetailPageRegion";
-import "./Marginalia.css";
+import { usePageBreadcrumbs } from "../../../app/navigation/usePageBreadcrumbs";
+import { Button, ErrorPanel } from "../../../components/UiPrimitives";
+import { saveDownloadedFile, type BrowserDownload } from "../../../shared/browser/saveDownloadedFile";
+import { idleMutationState, normalizeMutationError, type MutationState } from "../../../shared/feedback/mutationState";
+import { useAutoDismissMutationMessage } from "../../../shared/feedback/useAutoDismissMutationMessage";
+import { ProductPageShell } from "../../../shared/layout/ProductPageShell";
+import { marginaliaSessionDisplayName } from "../../../shared/marginaliaSessionDisplayName";
+import "../Marginalia.css";
+import { marginaliaSessionBreadcrumbFallback } from "../marginaliaBreadcrumbs";
+import { MarginaliaSessionDetailPageRegion, type MarginaliaAnnotationsLoadState } from "./MarginaliaSessionDetailPageRegion";
+import { MarginaliaSessionNoteEditor } from "./MarginaliaSessionNoteEditor";
+import { MarginaliaSessionTitleEditor } from "./MarginaliaSessionTitleEditor";
 
 type SessionLoadState =
   | { status: "loading" }
