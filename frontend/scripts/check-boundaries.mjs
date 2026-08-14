@@ -8,7 +8,33 @@ const featuresSource = join(appSource, "features");
 const sharedComponents = join(appSource, "components");
 const sharedSource = join(appSource, "shared");
 const sdkSource = join(workspace, "packages", "spl-api", "src");
+const frontendTests = join(workspace, "tests");
 const sourceExtensions = new Set([".js", ".jsx", ".mjs", ".cjs", ".ts", ".tsx", ".mts", ".cts"]);
+export const presentationalRoleSuffixes = Object.freeze([
+  "PageRegion",
+  "Dialog",
+  "Panel",
+  "Toolbar",
+  "Row",
+  "Item",
+  "Card",
+  "Tile",
+  "Badge",
+  "Menu",
+  "Editor",
+  "Field",
+  "Frame",
+  "List",
+  "Strip",
+  "Button",
+  "Icon",
+  "Layout",
+  "Shell",
+  "Guard",
+  "Component",
+  "SubComponent",
+]);
+const presentationalFilePattern = new RegExp(`(?:${presentationalRoleSuffixes.join("|")})\\.tsx$`);
 
 const scriptPath = resolve(fileURLToPath(import.meta.url));
 const invokedPath = process.argv[1] ? resolve(process.argv[1]) : null;
@@ -172,8 +198,8 @@ function isTypeOnlyNamedClause(clause) {
   return specifiers.length > 0 && specifiers.every((specifier) => specifier.startsWith("type "));
 }
 
-function isPresentationalFile(file) {
-  return /(?:PageRegion|Component|SubComponent)\.tsx$/.test(file);
+export function isPresentationalFile(file) {
+  return presentationalFilePattern.test(file);
 }
 
 function isSdkSpecifier(specifier) {
@@ -206,6 +232,7 @@ function isWithin(directory, file) {
 }
 
 function isTestOrDeclaration(file) {
+  if (isWithin(frontendTests, file)) return true;
   const path = relative(appSource, file).replaceAll("\\", "/");
   const segments = path.split("/").filter(Boolean);
   return segments.includes("__tests__") || /\.(?:test|spec)\.[cm]?[jt]sx?$/.test(file) || /\.d\.[cm]?ts$/.test(file);
