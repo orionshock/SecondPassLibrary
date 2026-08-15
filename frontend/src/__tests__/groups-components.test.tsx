@@ -4,10 +4,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { CompactBook, LibraryGroup, ShelfSummary } from "@second-pass/spl-api";
 import { GroupMemberRow } from "../features/groups/components/GroupMemberRow";
-import { GroupBooksPageRegion } from "../features/groups/regions/GroupBooksPageRegion";
-import { GroupHeaderPageRegion } from "../features/groups/regions/GroupHeaderPageRegion";
-import { GroupMembersPageRegion } from "../features/groups/regions/GroupMembersPageRegion";
-import { GroupShelvesPageRegion } from "../features/groups/regions/GroupShelvesPageRegion";
+import { GroupBooksPageRegion } from "../features/groups/detail/GroupBooksPageRegion";
+import { GroupHeaderPageRegion } from "../features/groups/detail/GroupHeaderPageRegion";
+import { GroupMembersPageRegion } from "../features/groups/detail/GroupMembersPageRegion";
+import { GroupShelvesPageRegion } from "../features/groups/detail/GroupShelvesPageRegion";
 import { GroupsListPageRegion } from "../features/groups/regions/GroupsListPageRegion";
 import { GroupRow } from "../shared/groups/GroupRow";
 

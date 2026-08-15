@@ -13,21 +13,21 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useOutletContext, useParams, useSearchParams } from "react-router";
 
-import type { AppOutletContext } from "../../app/layout/AppOrchestrator";
-import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { loadPageWithRecovery } from "../../app/routing/pageRecovery";
-import { ErrorPanel } from "../../components/UiPrimitives";
-import { normalizeMutationError } from "../../shared/feedback/mutationState";
-import { ProductPageShell } from "../../shared/layout/ProductPageShell";
+import type { AppOutletContext } from "../../../app/layout/AppOrchestrator";
+import { usePageBreadcrumbs } from "../../../app/navigation/usePageBreadcrumbs";
+import { loadPageWithRecovery } from "../../../app/routing/pageRecovery";
+import { ErrorPanel } from "../../../components/UiPrimitives";
+import { normalizeMutationError } from "../../../shared/feedback/mutationState";
+import { ProductPageShell } from "../../../shared/layout/ProductPageShell";
 import {
   canCreateShelfForGroup,
   shelfCreateNavigationStateForGroup,
   shelfNewPath,
-} from "../../shared/shelves/shelfNavigation";
-import { tabButtonId, tabPanelId } from "../../shared/tabs/TabList";
-import { groupDetailBreadcrumbFallback } from "./groupsBreadcrumbs";
-import { groupEditNavigationState, groupEditPath } from "./groupsBreadcrumbs";
-import { canManageGroup } from "./groupMetadataAuthority";
+} from "../../../shared/shelves/shelfNavigation";
+import { tabButtonId, tabPanelId } from "../../../shared/tabs/TabList";
+import { groupDetailBreadcrumbFallback } from "../groupsBreadcrumbs";
+import { groupEditNavigationState, groupEditPath } from "../groupsBreadcrumbs";
+import { canManageGroup } from "../groupMetadataAuthority";
 import {
   groupBooksSdkQuery,
   groupDetailPath,
@@ -36,12 +36,12 @@ import {
   groupMembersSdkQuery,
   groupShelvesSdkQuery,
   withGroupDetailChange,
-} from "./groupsQuery";
-import { GroupBooksPageRegion } from "./regions/GroupBooksPageRegion";
-import { GroupHeaderPageRegion } from "./regions/GroupHeaderPageRegion";
-import { GroupMembersPageRegion } from "./regions/GroupMembersPageRegion";
-import { GroupShelvesPageRegion } from "./regions/GroupShelvesPageRegion";
-import "./Groups.css";
+} from "../groupsQuery";
+import { GroupBooksPageRegion } from "./GroupBooksPageRegion";
+import { GroupHeaderPageRegion } from "./GroupHeaderPageRegion";
+import { GroupMembersPageRegion } from "./GroupMembersPageRegion";
+import { GroupShelvesPageRegion } from "./GroupShelvesPageRegion";
+import "../Groups.css";
 
 interface PageLoad<Item> {
   page?: Page<Item>;
