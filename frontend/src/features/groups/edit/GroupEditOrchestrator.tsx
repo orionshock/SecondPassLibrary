@@ -14,17 +14,17 @@ import {
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useBlocker, useLocation, useNavigate, useOutletContext, useParams } from "react-router";
 
-import type { AppOutletContext } from "../../app/layout/AppOrchestrator";
-import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { Button, ErrorPanel } from "../../components/UiPrimitives";
+import type { AppOutletContext } from "../../../app/layout/AppOrchestrator";
+import { usePageBreadcrumbs } from "../../../app/navigation/usePageBreadcrumbs";
+import { Button, ErrorPanel } from "../../../components/UiPrimitives";
 import {
   idleMutationState,
   normalizeMutationError,
   type MutationState,
-} from "../../shared/feedback/mutationState";
-import { useAutoDismissMutationMessage } from "../../shared/feedback/useAutoDismissMutationMessage";
-import { ProductPageShell } from "../../shared/layout/ProductPageShell";
-import { tabButtonId, tabPanelId } from "../../shared/tabs/TabList";
+} from "../../../shared/feedback/mutationState";
+import { useAutoDismissMutationMessage } from "../../../shared/feedback/useAutoDismissMutationMessage";
+import { ProductPageShell } from "../../../shared/layout/ProductPageShell";
+import { tabButtonId, tabPanelId } from "../../../shared/tabs/TabList";
 import {
   emptyGroupDraft,
   groupDraftFromGroup,
@@ -32,31 +32,31 @@ import {
   updateGroupInputFromDraft,
   validateGroupDraft,
   type GroupDraft,
-} from "./groupDraft";
-import { confirmGroupBookRemoval } from "./groupBookMutation";
-import { confirmGroupDelete } from "./groupDelete";
-import { canDeleteGroup, canMutateGroupBooks, canMutateGroupMembers, groupMetadataAuthority } from "./groupMetadataAuthority";
-import { GroupMembersEditOrchestrator } from "./GroupMembersEditOrchestrator";
+} from "../groupDraft";
+import { canDeleteGroup, canMutateGroupBooks, canMutateGroupMembers, groupMetadataAuthority } from "../groupMetadataAuthority";
 import {
   groupDetailNavigationStateFromEdit,
   groupDetailPath,
   groupEditBreadcrumbFallback,
   groupEditNavigationState,
   readGroupLifecycleSuccessMessage,
-} from "./groupsBreadcrumbs";
-import { GroupMetadataFormPageRegion } from "./regions/GroupMetadataFormPageRegion";
-import { GroupBookCandidatesPageRegion } from "./regions/GroupBookCandidatesPageRegion";
-import { GroupBooksEditPageRegion } from "./regions/GroupBooksEditPageRegion";
+} from "../groupsBreadcrumbs";
+import "../Groups.css";
 import {
   groupEditQueryDuringImmediateMutation,
   groupEditQueryFromSearchParams,
   groupEditSearchParams,
   type GroupEditTab,
-} from "./groupsQuery";
-import { GroupEditTabsPageRegion } from "./regions/GroupEditTabsPageRegion";
-import { GroupDangerZonePageRegion } from "./regions/GroupDangerZonePageRegion";
-import { GroupPublicDetailsPageRegion } from "./regions/GroupPublicDetailsPageRegion";
-import "./Groups.css";
+} from "../groupsQuery";
+import { GroupMetadataFormPageRegion } from "../regions/GroupMetadataFormPageRegion";
+import { GroupBookCandidatesPageRegion } from "./GroupBookCandidatesPageRegion";
+import { GroupBooksEditPageRegion } from "./GroupBooksEditPageRegion";
+import { GroupDangerZonePageRegion } from "./GroupDangerZonePageRegion";
+import { GroupEditTabsPageRegion } from "./GroupEditTabsPageRegion";
+import { GroupMembersEditOrchestrator } from "./GroupMembersEditOrchestrator";
+import { GroupPublicDetailsPageRegion } from "./GroupPublicDetailsPageRegion";
+import { confirmGroupBookRemoval } from "./groupBookMutation";
+import { confirmGroupDelete } from "./groupDelete";
 
 type GroupLoad =
   | { status: "loading" }

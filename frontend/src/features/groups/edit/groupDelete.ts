@@ -1,4 +1,4 @@
-import { confirmDangerousAction } from "../../shared/confirmations/confirmDangerousAction";
+import { confirmDangerousAction } from "../../../shared/confirmations/confirmDangerousAction";
 
 export function confirmGroupDelete(
   confirm: (message: string) => boolean = window.confirm,

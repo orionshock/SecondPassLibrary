@@ -11,11 +11,11 @@ import {
 } from "@second-pass/spl-api";
 import { useEffect, useState } from "react";
 
-import { normalizeMutationError } from "../../shared/feedback/mutationState";
-import { useAutoDismissMutationMessage } from "../../shared/feedback/useAutoDismissMutationMessage";
+import { normalizeMutationError } from "../../../shared/feedback/mutationState";
+import { useAutoDismissMutationMessage } from "../../../shared/feedback/useAutoDismissMutationMessage";
 import { confirmGroupMemberRemoval } from "./groupBookMutation";
-import { GroupMemberCandidatesPageRegion } from "./regions/GroupMemberCandidatesPageRegion";
-import { GroupMembersEditPageRegion } from "./regions/GroupMembersEditPageRegion";
+import { GroupMemberCandidatesPageRegion } from "./GroupMemberCandidatesPageRegion";
+import { GroupMembersEditPageRegion } from "./GroupMembersEditPageRegion";
 
 interface PageLoad<T> {
   page?: Page<T>;

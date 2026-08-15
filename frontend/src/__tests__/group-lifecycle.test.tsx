@@ -9,8 +9,8 @@ import {
   updateGroupInputFromDraft,
   validateGroupDraft,
 } from "../features/groups/groupDraft";
-import { confirmGroupBookRemoval, confirmGroupMemberRemoval } from "../features/groups/groupBookMutation";
-import { confirmGroupDelete } from "../features/groups/groupDelete";
+import { confirmGroupBookRemoval, confirmGroupMemberRemoval } from "../features/groups/edit/groupBookMutation";
+import { confirmGroupDelete } from "../features/groups/edit/groupDelete";
 import {
   canDeleteGroup,
   canManageGroup,
@@ -25,13 +25,13 @@ import {
   groupNewBreadcrumbs,
 } from "../features/groups/groupsBreadcrumbs";
 import { GroupMetadataFormPageRegion } from "../features/groups/regions/GroupMetadataFormPageRegion";
-import { GroupBookCandidatesPageRegion } from "../features/groups/regions/GroupBookCandidatesPageRegion";
-import { GroupBooksEditPageRegion } from "../features/groups/regions/GroupBooksEditPageRegion";
-import { GroupEditTabsPageRegion } from "../features/groups/regions/GroupEditTabsPageRegion";
-import { GroupDangerZonePageRegion } from "../features/groups/regions/GroupDangerZonePageRegion";
-import { GroupMemberCandidatesPageRegion } from "../features/groups/regions/GroupMemberCandidatesPageRegion";
-import { GroupMembersEditPageRegion } from "../features/groups/regions/GroupMembersEditPageRegion";
-import { GroupPublicDetailsPageRegion } from "../features/groups/regions/GroupPublicDetailsPageRegion";
+import { GroupBookCandidatesPageRegion } from "../features/groups/edit/GroupBookCandidatesPageRegion";
+import { GroupBooksEditPageRegion } from "../features/groups/edit/GroupBooksEditPageRegion";
+import { GroupEditTabsPageRegion } from "../features/groups/edit/GroupEditTabsPageRegion";
+import { GroupDangerZonePageRegion } from "../features/groups/edit/GroupDangerZonePageRegion";
+import { GroupMemberCandidatesPageRegion } from "../features/groups/edit/GroupMemberCandidatesPageRegion";
+import { GroupMembersEditPageRegion } from "../features/groups/edit/GroupMembersEditPageRegion";
+import { GroupPublicDetailsPageRegion } from "../features/groups/edit/GroupPublicDetailsPageRegion";
 import { MemoryRouter } from "react-router";
 
 const baseUser: CurrentUser = {
