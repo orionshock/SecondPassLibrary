@@ -2,17 +2,17 @@ import { downloadCompleteMarginaliaExport, downloadSelectedMarginaliaExport, lis
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useSearchParams } from "react-router";
 
-import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { loadPageWithRecovery } from "../../app/routing/pageRecovery";
-import { saveDownloadedFile } from "../../shared/browser/saveDownloadedFile";
-import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
-import { ProductPageShell } from "../../shared/layout/ProductPageShell";
-import { marginaliaExportBreadcrumbFallback } from "./marginaliaBreadcrumbs";
-import { MarginaliaSectionActions } from "./components/MarginaliaSectionActions";
+import { usePageBreadcrumbs } from "../../../app/navigation/usePageBreadcrumbs";
+import { loadPageWithRecovery } from "../../../app/routing/pageRecovery";
+import { saveDownloadedFile } from "../../../shared/browser/saveDownloadedFile";
+import { idleMutationState, normalizeMutationError, type MutationState } from "../../../shared/feedback/mutationState";
+import { ProductPageShell } from "../../../shared/layout/ProductPageShell";
+import { marginaliaExportBreadcrumbFallback } from "../marginaliaBreadcrumbs";
+import { MarginaliaSectionActions } from "../components/MarginaliaSectionActions";
 import { marginaliaExportSelectedBookCount, marginaliaExportSelectedSessionIds, withMarginaliaExportPageSelection, withMarginaliaExportSessionSelection, type MarginaliaExportSelectionMap } from "./marginaliaExportSelection";
 import { marginaliaExportCandidateQuery, marginaliaExportSearchParams, marginaliaExportStateFromSearchParams, withMarginaliaExportChange } from "./marginaliaExportQuery";
-import { MarginaliaExportPageRegion, type MarginaliaExportLimitFailure } from "./regions/MarginaliaExportPageRegion";
-import "./Marginalia.css";
+import { MarginaliaExportPageRegion, type MarginaliaExportLimitFailure } from "./MarginaliaExportPageRegion";
+import "../Marginalia.css";
 
 interface MarginaliaExportLoadState {
   page?: Page<MarginaliaSessionListItem>;

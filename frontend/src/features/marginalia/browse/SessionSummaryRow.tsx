@@ -5,7 +5,7 @@ import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
 import { BookCover } from "../../../shared/books/BookCover";
 import { marginaliaSessionDisplayName } from "../../../shared/marginaliaSessionDisplayName";
 import { marginaliaSessionBreadcrumbFallback } from "../marginaliaBreadcrumbs";
-import { marginaliaSessionNoteExcerpt } from "../marginaliaSessionNoteExcerpt";
+import { marginaliaSessionNoteExcerpt } from "./marginaliaSessionNoteExcerpt";
 
 export function SessionSummaryRow({ session, book }: { session: MarginaliaSessionSummary; book: MarginaliaBookReference }) {
   const sessionName = marginaliaSessionDisplayName(session);

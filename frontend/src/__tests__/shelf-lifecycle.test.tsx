@@ -33,13 +33,13 @@ import {
   shouldLoadAllShelfGroups,
 } from "../features/shelves/shelfLifecycle";
 import { ShelfDetailsEditPageRegion } from "../features/shelves/regions/ShelfDetailsEditPageRegion";
-import { ShelfEditAddBooksPageRegion } from "../features/shelves/regions/ShelfEditAddBooksPageRegion";
+import { ShelfEditAddBooksPageRegion } from "../features/shelves/edit/ShelfEditAddBooksPageRegion";
 import {
   ShelfEditBooksPageRegion,
   ShelfPositionSelectComponent,
-} from "../features/shelves/regions/ShelfEditBooksPageRegion";
-import { ShelfEditTabsPageRegion } from "../features/shelves/regions/ShelfEditTabsPageRegion";
-import { ShelfHeaderPageRegion } from "../features/shelves/regions/ShelfHeaderPageRegion";
+} from "../features/shelves/edit/ShelfEditBooksPageRegion";
+import { ShelfEditTabsPageRegion } from "../features/shelves/edit/ShelfEditTabsPageRegion";
+import { ShelfHeaderPageRegion } from "../features/shelves/detail/ShelfHeaderPageRegion";
 import { LocalValidationError, idleMutationState } from "../shared/feedback/mutationState";
 
 const baseUser: CurrentUser = {

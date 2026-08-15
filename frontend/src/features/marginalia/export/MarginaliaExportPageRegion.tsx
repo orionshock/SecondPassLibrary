@@ -7,7 +7,7 @@ import { marginaliaSessionDisplayName } from "../../../shared/marginaliaSessionD
 import { ActionFeedback } from "../../../shared/feedback/ActionFeedback";
 import type { MutationState } from "../../../shared/feedback/mutationState";
 import { PaginatedListFrame } from "../../../shared/pagination/PaginatedListFrame";
-import type { MarginaliaExportStatusFilter } from "../marginaliaExportQuery";
+import type { MarginaliaExportStatusFilter } from "./marginaliaExportQuery";
 
 export interface MarginaliaExportLimitFailure {
   message: string;

@@ -11,8 +11,8 @@ import { Link } from "react-router";
 import { Button, ErrorPanel } from "../../../components/UiPrimitives";
 import { CompactBookRow } from "../../../shared/books/CompactBookRow";
 import { PaginatedListFrame } from "../../../shared/pagination/PaginatedListFrame";
-import { SessionSummaryRow } from "../components/SessionSummaryRow";
-import type { MarginaliaStatusFilter } from "../marginaliaQuery";
+import { SessionSummaryRow } from "./SessionSummaryRow";
+import type { MarginaliaStatusFilter } from "./marginaliaQuery";
 
 type SessionRow = MarginaliaSessionListItem | MarginaliaSessionSummary;
 

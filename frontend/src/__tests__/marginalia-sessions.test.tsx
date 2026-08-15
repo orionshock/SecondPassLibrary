@@ -3,9 +3,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
-import { MarginaliaSessionsPageRegion } from "../features/marginalia/regions/MarginaliaSessionsPageRegion";
+import { MarginaliaSessionsPageRegion } from "../features/marginalia/browse/MarginaliaSessionsPageRegion";
 import { marginaliaExportBreadcrumbFallback, marginaliaImportBreadcrumbFallback } from "../features/marginalia/marginaliaBreadcrumbs";
-import { marginaliaSessionNoteExcerpt } from "../features/marginalia/marginaliaSessionNoteExcerpt";
+import { marginaliaSessionNoteExcerpt } from "../features/marginalia/browse/marginaliaSessionNoteExcerpt";
 import { marginaliaSessionDisplayName } from "../shared/marginaliaSessionDisplayName";
 
 const visibleSession: MarginaliaSessionListItem = {

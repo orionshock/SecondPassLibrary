@@ -15,19 +15,19 @@ import {
 import { useEffect, useMemo, useState } from "react";
 import { Link, useOutletContext, useParams } from "react-router";
 
-import type { AppOutletContext } from "../../app/layout/AppOrchestrator";
-import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { ErrorPanel } from "../../components/UiPrimitives";
-import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
-import { ProductPageShell } from "../../shared/layout/ProductPageShell";
-import { UserInlineIdentity } from "../../shared/users/UserInlineIdentity";
-import { UserDetailsPageRegion } from "./regions/UserDetailsPageRegion";
-import { UserGroupMembershipsPageRegion } from "./regions/UserGroupMembershipsPageRegion";
-import { UserPasswordPageRegion } from "./regions/UserPasswordPageRegion";
-import { editableUserRoles } from "./userCreateRoles";
-import { usersEditBreadcrumbFallbackFor } from "./usersBreadcrumbs";
+import type { AppOutletContext } from "../../../app/layout/AppOrchestrator";
+import { usePageBreadcrumbs } from "../../../app/navigation/usePageBreadcrumbs";
+import { ErrorPanel } from "../../../components/UiPrimitives";
+import { idleMutationState, normalizeMutationError, type MutationState } from "../../../shared/feedback/mutationState";
+import { ProductPageShell } from "../../../shared/layout/ProductPageShell";
+import { UserInlineIdentity } from "../../../shared/users/UserInlineIdentity";
+import { UserDetailsPageRegion } from "./UserDetailsPageRegion";
+import { UserGroupMembershipsPageRegion } from "./UserGroupMembershipsPageRegion";
+import { UserPasswordPageRegion } from "./UserPasswordPageRegion";
+import { editableUserRoles } from "../userCreateRoles";
+import { usersEditBreadcrumbFallbackFor } from "../usersBreadcrumbs";
 import { confirmGroupMembershipRemoval, confirmManagedPasswordReset } from "./userEditConfirmations";
-import "./Users.css";
+import "../Users.css";
 
 interface UserEditLoadState {
   loading: boolean;

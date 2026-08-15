@@ -2,19 +2,19 @@ import { listShelves, type Page, type ShelfSummary } from "@second-pass/spl-api"
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router";
 
-import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { loadPageWithRecovery } from "../../app/routing/pageRecovery";
-import { normalizeMutationError } from "../../shared/feedback/mutationState";
-import { ProductPageShell } from "../../shared/layout/ProductPageShell";
-import { ShelvesListPageRegion } from "./regions/ShelvesListPageRegion";
-import { shelvesListBreadcrumbFallback } from "./shelvesBreadcrumbs";
+import { usePageBreadcrumbs } from "../../../app/navigation/usePageBreadcrumbs";
+import { loadPageWithRecovery } from "../../../app/routing/pageRecovery";
+import { normalizeMutationError } from "../../../shared/feedback/mutationState";
+import { ProductPageShell } from "../../../shared/layout/ProductPageShell";
+import { ShelvesListPageRegion } from "./ShelvesListPageRegion";
+import { shelvesListBreadcrumbFallback } from "../shelvesBreadcrumbs";
 import {
   shelvesListSdkQuery,
   shelvesListSearchParams,
   shelvesListStateFromSearchParams,
   withShelvesListChange,
-} from "./shelvesQuery";
-import "./Shelves.css";
+} from "../shelvesQuery";
+import "../Shelves.css";
 
 interface ShelvesLoadState {
   page?: Page<ShelfSummary>;

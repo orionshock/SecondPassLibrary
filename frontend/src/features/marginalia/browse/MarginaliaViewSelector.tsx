@@ -1,5 +1,5 @@
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
-import type { MarginaliaView } from "../marginaliaQuery";
+import type { MarginaliaView } from "./marginaliaQuery";
 
 const views: readonly { view: MarginaliaView; label: string; icon: string }[] = [
   { view: "sessions", label: "Sessions", icon: "history" },

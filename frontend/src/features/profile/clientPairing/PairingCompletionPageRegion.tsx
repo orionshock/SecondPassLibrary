@@ -1,7 +1,7 @@
 import { Link } from "react-router";
 
 import { ActionFeedback } from "../../../shared/feedback/ActionFeedback";
-import { PairingPageFrame } from "../components/PairingPageFrame";
+import { PairingPageFrame } from "./PairingPageFrame";
 
 export function PairingCompletionPageRegion({ message }: { message: string }) {
   return <PairingPageFrame><div className="form-action-row">

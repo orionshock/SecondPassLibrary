@@ -2,8 +2,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
-import { PairingCompletionPageRegion } from "../features/profile/regions/PairingCompletionPageRegion";
-import { PairingRequestPageRegion } from "../features/profile/regions/PairingRequestPageRegion";
+import { PairingCompletionPageRegion } from "../features/profile/clientPairing/PairingCompletionPageRegion";
+import { PairingRequestPageRegion } from "../features/profile/clientPairing/PairingRequestPageRegion";
 
 describe("client pairing regions", () => {
   it("offers completion exits without pairing inputs", () => {

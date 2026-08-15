@@ -6,10 +6,10 @@ import { describe, expect, it, vi } from "vitest";
 import { AppOrchestrator } from "../app/layout/AppOrchestrator";
 import { appRoutes } from "../app/router";
 import { marginaliaExportBreadcrumbFallback } from "../features/marginalia/marginaliaBreadcrumbs";
-import { marginaliaExportLimitFailure, MarginaliaExportOrchestrator } from "../features/marginalia/MarginaliaExportOrchestrator";
-import { marginaliaExportSelectedBookCount, marginaliaExportSelectedSessionIds, withMarginaliaExportPageSelection, withMarginaliaExportSessionSelection } from "../features/marginalia/marginaliaExportSelection";
-import { MarginaliaSessionsOrchestrator } from "../features/marginalia/MarginaliaSessionsOrchestrator";
-import { MarginaliaExportPageRegion, type MarginaliaExportLimitFailure } from "../features/marginalia/regions/MarginaliaExportPageRegion";
+import { marginaliaExportLimitFailure, MarginaliaExportOrchestrator } from "../features/marginalia/export/MarginaliaExportOrchestrator";
+import { marginaliaExportSelectedBookCount, marginaliaExportSelectedSessionIds, withMarginaliaExportPageSelection, withMarginaliaExportSessionSelection } from "../features/marginalia/export/marginaliaExportSelection";
+import { MarginaliaSessionsOrchestrator } from "../features/marginalia/browse/MarginaliaSessionsOrchestrator";
+import { MarginaliaExportPageRegion, type MarginaliaExportLimitFailure } from "../features/marginalia/export/MarginaliaExportPageRegion";
 
 const visibleSession: MarginaliaSessionListItem = {
   id: "session-sensitive-1", name: "Morning notes", status: "active",

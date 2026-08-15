@@ -4,8 +4,8 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
 import { AppOrchestrator } from "../app/layout/AppOrchestrator";
-import { MarginaliaImportOrchestrator, MarginaliaImportRequestGuard, previewSelectedMarginaliaImport } from "../features/marginalia/MarginaliaImportOrchestrator";
-import { MarginaliaSessionsOrchestrator } from "../features/marginalia/MarginaliaSessionsOrchestrator";
+import { MarginaliaImportOrchestrator, MarginaliaImportRequestGuard, previewSelectedMarginaliaImport } from "../features/marginalia/import/MarginaliaImportOrchestrator";
+import { MarginaliaSessionsOrchestrator } from "../features/marginalia/browse/MarginaliaSessionsOrchestrator";
 import { marginaliaImportBreadcrumbFallback } from "../features/marginalia/marginaliaBreadcrumbs";
 import {
   buildMarginaliaImportApplyInput,
@@ -13,8 +13,8 @@ import {
   marginaliaImportBookSelectionState,
   marginaliaImportSelectedCount,
   withMarginaliaImportBookSelection,
-} from "../features/marginalia/marginaliaImportDraft";
-import { MarginaliaImportPageRegion } from "../features/marginalia/regions/MarginaliaImportPageRegion";
+} from "../features/marginalia/import/marginaliaImportDraft";
+import { MarginaliaImportPageRegion } from "../features/marginalia/import/MarginaliaImportPageRegion";
 import { LocalValidationError } from "../shared/feedback/mutationState";
 
 const preview: MarginaliaImportPreview = {

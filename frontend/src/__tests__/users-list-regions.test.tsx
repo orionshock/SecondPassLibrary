@@ -3,8 +3,8 @@ import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
 import type { ManagedUser, Page } from "@second-pass/spl-api";
-import { UsersFiltersPageRegion } from "../features/users/regions/UsersFiltersPageRegion";
-import { UsersListPageRegion } from "../features/users/regions/UsersListPageRegion";
+import { UsersFiltersPageRegion } from "../features/users/list/UsersFiltersPageRegion";
+import { UsersListPageRegion } from "../features/users/list/UsersListPageRegion";
 import { usersListBreadcrumbFallback } from "../features/users/usersBreadcrumbs";
 
 const owner: ManagedUser = {

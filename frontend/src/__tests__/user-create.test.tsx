@@ -4,12 +4,12 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ApiError, type CreateUserResult, type CurrentUser, type ServerInfo } from "@second-pass/spl-api";
 import { AppOrchestrator } from "../app/layout/AppOrchestrator";
-import { UserCreateFormPageRegion } from "../features/users/regions/UserCreateFormPageRegion";
-import { UserCreateSuccessPageRegion } from "../features/users/regions/UserCreateSuccessPageRegion";
-import { createUserInputFromDraft, emptyUserCreateDraft } from "../features/users/userCreateForm";
+import { UserCreateFormPageRegion } from "../features/users/create/UserCreateFormPageRegion";
+import { UserCreateSuccessPageRegion } from "../features/users/create/UserCreateSuccessPageRegion";
+import { createUserInputFromDraft, emptyUserCreateDraft } from "../features/users/create/userCreateForm";
 import { creatableUserRoles } from "../features/users/userCreateRoles";
 import { usersCreateBreadcrumbFallback, usersListBreadcrumbFallback } from "../features/users/usersBreadcrumbs";
-import { UsersListOrchestrator } from "../features/users/UsersListOrchestrator";
+import { UsersListOrchestrator } from "../features/users/list/UsersListOrchestrator";
 
 const owner: CurrentUser = {
   username: "owner", email: "", firstName: "", lastName: "", profileId: "owner-id", role: "manager",

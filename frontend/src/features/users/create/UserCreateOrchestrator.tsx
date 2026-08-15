@@ -2,17 +2,17 @@ import { createUser, type CreateUserResult } from "@second-pass/spl-api";
 import { useReducer, useState, type FormEvent } from "react";
 import { useOutletContext } from "react-router";
 
-import type { AppOutletContext } from "../../app/layout/AppOrchestrator";
-import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { ErrorPanel } from "../../components/UiPrimitives";
-import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
-import { ProductPageShell } from "../../shared/layout/ProductPageShell";
-import { UserCreateFormPageRegion } from "./regions/UserCreateFormPageRegion";
-import { UserCreateSuccessPageRegion } from "./regions/UserCreateSuccessPageRegion";
+import type { AppOutletContext } from "../../../app/layout/AppOrchestrator";
+import { usePageBreadcrumbs } from "../../../app/navigation/usePageBreadcrumbs";
+import { ErrorPanel } from "../../../components/UiPrimitives";
+import { idleMutationState, normalizeMutationError, type MutationState } from "../../../shared/feedback/mutationState";
+import { ProductPageShell } from "../../../shared/layout/ProductPageShell";
+import { UserCreateFormPageRegion } from "./UserCreateFormPageRegion";
+import { UserCreateSuccessPageRegion } from "./UserCreateSuccessPageRegion";
 import { createUserInputFromDraft, emptyUserCreateDraft, userCreateDraftReducer } from "./userCreateForm";
-import { creatableUserRoles } from "./userCreateRoles";
-import { usersCreateBreadcrumbFallback } from "./usersBreadcrumbs";
-import "./Users.css";
+import { creatableUserRoles } from "../userCreateRoles";
+import { usersCreateBreadcrumbFallback } from "../usersBreadcrumbs";
+import "../Users.css";
 
 export function UserCreateOrchestrator() {
   usePageBreadcrumbs(usersCreateBreadcrumbFallback);

@@ -3,14 +3,14 @@ import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
 import { ApiError, type CurrentUser, type ManagedPasswordResetResult, type ManagedUser } from "@second-pass/spl-api";
-import { UserDetailsPageRegion } from "../features/users/regions/UserDetailsPageRegion";
-import { canRemoveMembership, curatorValueForGroup, UserGroupMembershipsPageRegion } from "../features/users/regions/UserGroupMembershipsPageRegion";
-import { UserPasswordPageRegion } from "../features/users/regions/UserPasswordPageRegion";
-import { shouldShowManagedGroupMemberships } from "../features/users/UserEditOrchestrator";
-import { userEditDraftFromUser, userEditDraftReducer } from "../features/users/userEditForm";
+import { UserDetailsPageRegion } from "../features/users/edit/UserDetailsPageRegion";
+import { canRemoveMembership, curatorValueForGroup, UserGroupMembershipsPageRegion } from "../features/users/edit/UserGroupMembershipsPageRegion";
+import { UserPasswordPageRegion } from "../features/users/edit/UserPasswordPageRegion";
+import { shouldShowManagedGroupMemberships } from "../features/users/edit/UserEditOrchestrator";
+import { userEditDraftFromUser, userEditDraftReducer } from "../features/users/edit/userEditForm";
 import { editableUserRoles } from "../features/users/userCreateRoles";
 import { usersEditBreadcrumbFallbackFor, usersEditBreadcrumbTrail } from "../features/users/usersBreadcrumbs";
-import { confirmGroupMembershipRemoval, confirmManagedPasswordReset } from "../features/users/userEditConfirmations";
+import { confirmGroupMembershipRemoval, confirmManagedPasswordReset } from "../features/users/edit/userEditConfirmations";
 
 const target: ManagedUser = {
   id: "target", username: "reader", firstName: "Read", lastName: "Er", email: "reader@example.test", role: "reader",

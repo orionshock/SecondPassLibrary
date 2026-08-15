@@ -13,8 +13,8 @@ import {
   withMarginaliaSearch,
   withMarginaliaView,
   withSelectedMarginaliaBook,
-} from "../features/marginalia/marginaliaQuery";
-import { marginaliaExportCandidateQuery, marginaliaExportSdkQuery, marginaliaExportStateFromSearchParams } from "../features/marginalia/marginaliaExportQuery";
+} from "../features/marginalia/browse/marginaliaQuery";
+import { marginaliaExportCandidateQuery, marginaliaExportSdkQuery, marginaliaExportStateFromSearchParams } from "../features/marginalia/export/marginaliaExportQuery";
 
 describe("My Marginalia list query", () => {
   it("canonicalizes defaults and invalid values", () => {

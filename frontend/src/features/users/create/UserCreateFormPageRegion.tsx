@@ -5,7 +5,7 @@ import { Link } from "react-router";
 import { Button, FormField } from "../../../components/UiPrimitives";
 import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";
 import { ActionRow } from "../../../shared/forms/ActionRow";
-import type { UserCreateDraft, UserCreateDraftField } from "../userCreateForm";
+import type { UserCreateDraft, UserCreateDraftField } from "./userCreateForm";
 import { createUserRoleLabel } from "../userCreateRoles";
 
 export function UserCreateFormPageRegion({ draft, roles, state, onChange, onSubmit }: {

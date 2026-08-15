@@ -2,17 +2,17 @@ import { listUsers, type ManagedUser, type Page } from "@second-pass/spl-api";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useOutletContext, useSearchParams } from "react-router";
 
-import type { AppOutletContext } from "../../app/layout/AppOrchestrator";
-import { breadcrumbNavigationState } from "../../app/navigation/breadcrumbs";
-import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { Button } from "../../components/UiPrimitives";
-import { normalizeMutationError } from "../../shared/feedback/mutationState";
-import { ProductPageShell } from "../../shared/layout/ProductPageShell";
-import { UsersFiltersPageRegion } from "./regions/UsersFiltersPageRegion";
-import { UsersListPageRegion } from "./regions/UsersListPageRegion";
-import { creatableUserRoles } from "./userCreateRoles";
-import "./Users.css";
-import { usersCreateBreadcrumbFallback, usersListBreadcrumbFallback } from "./usersBreadcrumbs";
+import type { AppOutletContext } from "../../../app/layout/AppOrchestrator";
+import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
+import { usePageBreadcrumbs } from "../../../app/navigation/usePageBreadcrumbs";
+import { Button } from "../../../components/UiPrimitives";
+import { normalizeMutationError } from "../../../shared/feedback/mutationState";
+import { ProductPageShell } from "../../../shared/layout/ProductPageShell";
+import { UsersFiltersPageRegion } from "./UsersFiltersPageRegion";
+import { UsersListPageRegion } from "./UsersListPageRegion";
+import { creatableUserRoles } from "../userCreateRoles";
+import "../Users.css";
+import { usersCreateBreadcrumbFallback, usersListBreadcrumbFallback } from "../usersBreadcrumbs";
 import { usersListSdkQuery, usersListSearchParams, usersListStateFromSearchParams, withUsersListChange } from "./usersListQuery";
 
 interface UsersLoadState {

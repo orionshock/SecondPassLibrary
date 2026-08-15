@@ -9,7 +9,7 @@ import { marginaliaSessionDisplayName } from "../../../shared/marginaliaSessionD
 import { ActionFeedback } from "../../../shared/feedback/ActionFeedback";
 import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";
 import { ActionRow } from "../../../shared/forms/ActionRow";
-import { marginaliaImportBookSelectionState, marginaliaImportSelectedCount, type MarginaliaImportBookSelectionState, type MarginaliaImportDraft, type MarginaliaImportSessionDraft } from "../marginaliaImportDraft";
+import { marginaliaImportBookSelectionState, marginaliaImportSelectedCount, type MarginaliaImportBookSelectionState, type MarginaliaImportDraft, type MarginaliaImportSessionDraft } from "./marginaliaImportDraft";
 
 export function MarginaliaImportPageRegion({ preview, draft, result, editingSessionKeys, previewState, applyState, downloadState, inputRef, includeEmptySessions, onIncludeEmptySessionsChange, onFileChange, onPreview, onDraftChange, onBookSelectionChange, onEditingChange, onDownloadUnmatched, onApply }: {
   preview?: MarginaliaImportPreview;

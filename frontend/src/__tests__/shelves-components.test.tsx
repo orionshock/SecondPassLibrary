@@ -3,10 +3,10 @@ import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
 import type { CompactBook, ShelfItem, ShelfItemOrdering, ShelfOrdering, ShelfSummary } from "@second-pass/spl-api";
-import { ShelfHeaderPageRegion } from "../features/shelves/regions/ShelfHeaderPageRegion";
-import { ShelfItemsPageRegion } from "../features/shelves/regions/ShelfItemsPageRegion";
-import { ShelvesListPageRegion } from "../features/shelves/regions/ShelvesListPageRegion";
-import { ShelfScopesPageRegion } from "../features/shelves/regions/ShelfScopesPageRegion";
+import { ShelfHeaderPageRegion } from "../features/shelves/detail/ShelfHeaderPageRegion";
+import { ShelfItemsPageRegion } from "../features/shelves/detail/ShelfItemsPageRegion";
+import { ShelvesListPageRegion } from "../features/shelves/list/ShelvesListPageRegion";
+import { ShelfScopesPageRegion } from "../features/shelves/list/ShelfScopesPageRegion";
 
 const book: CompactBook = {
   id: "book", title: "Visible Book", sortTitle: "Visible Book", subtitle: "Not rendered",

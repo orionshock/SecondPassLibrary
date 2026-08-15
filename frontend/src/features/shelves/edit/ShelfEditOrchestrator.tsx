@@ -19,21 +19,21 @@ import {
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useBlocker, useLocation, useNavigate, useParams } from "react-router";
 
-import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { Button, ErrorPanel } from "../../components/UiPrimitives";
+import { usePageBreadcrumbs } from "../../../app/navigation/usePageBreadcrumbs";
+import { Button, ErrorPanel } from "../../../components/UiPrimitives";
 import {
   idleMutationState,
   normalizeMutationError,
   type MutationState,
-} from "../../shared/feedback/mutationState";
-import { useAutoDismissMutationMessage } from "../../shared/feedback/useAutoDismissMutationMessage";
-import { ProductPageShell } from "../../shared/layout/ProductPageShell";
-import { shelfDetailPathForId } from "../../shared/shelves/shelfNavigation";
-import { tabButtonId, tabPanelId } from "../../shared/tabs/TabList";
-import { ShelfDetailsEditPageRegion } from "./regions/ShelfDetailsEditPageRegion";
-import { ShelfEditAddBooksPageRegion } from "./regions/ShelfEditAddBooksPageRegion";
-import { ShelfEditBooksPageRegion } from "./regions/ShelfEditBooksPageRegion";
-import { ShelfEditTabsPageRegion } from "./regions/ShelfEditTabsPageRegion";
+} from "../../../shared/feedback/mutationState";
+import { useAutoDismissMutationMessage } from "../../../shared/feedback/useAutoDismissMutationMessage";
+import { ProductPageShell } from "../../../shared/layout/ProductPageShell";
+import { shelfDetailPathForId } from "../../../shared/shelves/shelfNavigation";
+import { tabButtonId, tabPanelId } from "../../../shared/tabs/TabList";
+import { ShelfDetailsEditPageRegion } from "../regions/ShelfDetailsEditPageRegion";
+import { ShelfEditAddBooksPageRegion } from "./ShelfEditAddBooksPageRegion";
+import { ShelfEditBooksPageRegion } from "./ShelfEditBooksPageRegion";
+import { ShelfEditTabsPageRegion } from "./ShelfEditTabsPageRegion";
 import {
   emptyShelfDraft,
   shelfDraftFromSummary,
@@ -41,14 +41,14 @@ import {
   updateShelfInputFromDraft,
   validateShelfDraft,
   type ShelfDraft,
-} from "./shelfDraft";
+} from "../shelfDraft";
 import {
   confirmShelfDelete,
   confirmUnavailableShelfItemRemoval,
   readShelfLifecycleSuccessMessage,
   shelfDetailNavigationStateFromEdit,
   shelfEditBreadcrumbs,
-} from "./shelfLifecycle";
+} from "../shelfLifecycle";
 import {
   shelfEditPathWithState,
   shelfEditStateDuringItemMutation,
@@ -56,9 +56,9 @@ import {
   withShelfEditPage,
   withShelfEditTab,
   type ShelfEditUrlState,
-} from "./shelvesQuery";
-import { shelfScopeFromSummary, validBreadcrumbStateForShelf } from "./shelfScopes";
-import "./ShelfLifecycle.css";
+} from "../shelvesQuery";
+import { shelfScopeFromSummary, validBreadcrumbStateForShelf } from "../shelfScopes";
+import "../ShelfLifecycle.css";
 
 type ShelfLoad =
   | { status: "loading" }

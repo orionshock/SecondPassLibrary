@@ -2,7 +2,7 @@ import type { UserRoleFilter, UserStatusFilter } from "@second-pass/spl-api";
 import type { FormEvent } from "react";
 
 import { Button } from "../../../components/UiPrimitives";
-import { visibleUserRoleFilters } from "../usersListQuery";
+import { visibleUserRoleFilters } from "./usersListQuery";
 
 export function UsersFiltersPageRegion({ search, role, isActive, advancedGroupsEnabled, operatorIsOwner, onSearchChange, onSearch, onRoleChange, onStatusChange }: {
   search: string;

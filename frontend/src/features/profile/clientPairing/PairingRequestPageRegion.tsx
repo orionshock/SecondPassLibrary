@@ -3,7 +3,7 @@ import type { FormEvent } from "react";
 
 import { Button, FormField } from "../../../components/UiPrimitives";
 import { ActionRow } from "../../../shared/forms/ActionRow";
-import { PairingPageFrame } from "../components/PairingPageFrame";
+import { PairingPageFrame } from "./PairingPageFrame";
 
 export function PairingRequestPageRegion({ code, pairing, clientName, pending, error, onCodeChange, onClientNameChange, onLookup, onDecision }: {
   code: string;

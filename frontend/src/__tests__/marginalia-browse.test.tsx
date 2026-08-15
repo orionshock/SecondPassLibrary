@@ -4,9 +4,9 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
-import { MarginaliaViewSelector } from "../features/marginalia/components/MarginaliaViewSelector";
-import { MarginaliaBooksPageRegion } from "../features/marginalia/regions/MarginaliaBooksPageRegion";
-import { MarginaliaSessionsPageRegion } from "../features/marginalia/regions/MarginaliaSessionsPageRegion";
+import { MarginaliaViewSelector } from "../features/marginalia/browse/MarginaliaViewSelector";
+import { MarginaliaBooksPageRegion } from "../features/marginalia/browse/MarginaliaBooksPageRegion";
+import { MarginaliaSessionsPageRegion } from "../features/marginalia/browse/MarginaliaSessionsPageRegion";
 
 const book: MarginaliaBookSummary = {
   id: "11111111-1111-4111-8111-111111111111",

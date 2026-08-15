@@ -8,7 +8,7 @@ import {
   usersListStateFromSearchParams,
   visibleUserRoleFilters,
   withUsersListChange,
-} from "../features/users/usersListQuery";
+} from "../features/users/list/usersListQuery";
 
 describe("Users list URL state", () => {
   it("uses page size 20 for an unparameterized Users request without adding it to the URL", () => {

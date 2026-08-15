@@ -3,8 +3,8 @@ import type { ManagedUser, Page, UserOrdering } from "@second-pass/spl-api";
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
 import { Button, ErrorPanel } from "../../../components/UiPrimitives";
 import { PaginatedListFrame } from "../../../shared/pagination/PaginatedListFrame";
-import { UserRow } from "../components/UserRow";
-import { nextUserOrdering } from "../usersListQuery";
+import { UserRow } from "./UserRow";
+import { nextUserOrdering } from "./usersListQuery";
 
 export function UsersListPageRegion({ page, pageNumber, pageSize, ordering, advancedGroupsEnabled, loading, error, onOrderingChange, onPageChange, onPageSizeChange, onRetry }: {
   page?: Page<ManagedUser>;

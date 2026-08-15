@@ -2,25 +2,25 @@ import { ApiError, getShelf, listShelfItems, type Page, type ShelfItem, type She
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useParams, useSearchParams } from "react-router";
 
-import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { loadPageWithRecovery } from "../../app/routing/pageRecovery";
-import { ErrorPanel } from "../../components/UiPrimitives";
-import { normalizeMutationError } from "../../shared/feedback/mutationState";
-import { ProductPageShell } from "../../shared/layout/ProductPageShell";
-import { ShelfHeaderPageRegion } from "./regions/ShelfHeaderPageRegion";
-import { ShelfItemsPageRegion } from "./regions/ShelfItemsPageRegion";
-import { shelfDetailBreadcrumbFallback } from "./shelvesBreadcrumbs";
-import { shelfEditPath } from "../../shared/shelves/shelfNavigation";
-import { shelfEditNavigationState } from "./shelfLifecycle";
-import { shelfScopeFromSummary, validBreadcrumbStateForShelf } from "./shelfScopes";
+import { usePageBreadcrumbs } from "../../../app/navigation/usePageBreadcrumbs";
+import { loadPageWithRecovery } from "../../../app/routing/pageRecovery";
+import { ErrorPanel } from "../../../components/UiPrimitives";
+import { normalizeMutationError } from "../../../shared/feedback/mutationState";
+import { ProductPageShell } from "../../../shared/layout/ProductPageShell";
+import { ShelfHeaderPageRegion } from "./ShelfHeaderPageRegion";
+import { ShelfItemsPageRegion } from "./ShelfItemsPageRegion";
+import { shelfDetailBreadcrumbFallback } from "../shelvesBreadcrumbs";
+import { shelfEditPath } from "../../../shared/shelves/shelfNavigation";
+import { shelfEditNavigationState } from "../shelfLifecycle";
+import { shelfScopeFromSummary, validBreadcrumbStateForShelf } from "../shelfScopes";
 import {
   shelfDetailPath,
   shelfDetailSearchParams,
   shelfDetailStateFromSearchParams,
   shelfItemsSdkQuery,
   withShelfDetailChange,
-} from "./shelvesQuery";
-import "./Shelves.css";
+} from "../shelvesQuery";
+import "../Shelves.css";
 
 interface ItemsLoad {
   page?: Page<ShelfItem>;

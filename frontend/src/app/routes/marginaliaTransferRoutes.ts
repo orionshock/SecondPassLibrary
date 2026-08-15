@@ -1,2 +1,2 @@
-export { MarginaliaExportOrchestrator } from "../../features/marginalia/MarginaliaExportOrchestrator";
-export { MarginaliaImportOrchestrator } from "../../features/marginalia/MarginaliaImportOrchestrator";
+export { MarginaliaExportOrchestrator } from "../../features/marginalia/export/MarginaliaExportOrchestrator";
+export { MarginaliaImportOrchestrator } from "../../features/marginalia/import/MarginaliaImportOrchestrator";

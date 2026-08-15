@@ -1,14 +1,14 @@
 import { applyMarginaliaImport, downloadUnmatchedMarginaliaImport, previewMarginaliaImport, type MarginaliaImportApplyResult, type MarginaliaImportPreview } from "@second-pass/spl-api";
 import { useRef, useState, type FormEvent } from "react";
 
-import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import { idleMutationState, LocalValidationError, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
-import { ProductPageShell } from "../../shared/layout/ProductPageShell";
-import { saveDownloadedFile } from "../../shared/browser/saveDownloadedFile";
+import { usePageBreadcrumbs } from "../../../app/navigation/usePageBreadcrumbs";
+import { idleMutationState, LocalValidationError, normalizeMutationError, type MutationState } from "../../../shared/feedback/mutationState";
+import { ProductPageShell } from "../../../shared/layout/ProductPageShell";
+import { saveDownloadedFile } from "../../../shared/browser/saveDownloadedFile";
 import { createMarginaliaImportDraft, buildMarginaliaImportApplyInput, marginaliaImportSelectedCount, withMarginaliaImportBookSelection, type MarginaliaImportDraft, type MarginaliaImportSessionDraft } from "./marginaliaImportDraft";
-import { marginaliaImportBreadcrumbFallback } from "./marginaliaBreadcrumbs";
-import { MarginaliaSectionActions } from "./components/MarginaliaSectionActions";
-import { MarginaliaImportPageRegion } from "./regions/MarginaliaImportPageRegion";
+import { marginaliaImportBreadcrumbFallback } from "../marginaliaBreadcrumbs";
+import { MarginaliaSectionActions } from "../components/MarginaliaSectionActions";
+import { MarginaliaImportPageRegion } from "./MarginaliaImportPageRegion";
 
 export function MarginaliaImportOrchestrator() {
   usePageBreadcrumbs(marginaliaImportBreadcrumbFallback);
