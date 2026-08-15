@@ -21,7 +21,7 @@ from marginalia.sessions.serializers import MarginaliaSessionDetailEnvelopeSeria
 from marginalia.models import Annotation, ReadingSession
 from marginalia.books.queries import marginalia_books_for_user
 from marginalia.sessions.queries import marginalia_session_for_user
-from marginalia.sessions.services import assign_session_progress
+from marginalia.sessions.progress import assign_session_progress
 
 
 User = get_user_model()

@@ -18,8 +18,10 @@ from marginalia.books.serializers import MarginaliaBookSummarySerializer
 from marginalia.exceptions import BookAccessRequiredError, SessionClosedError
 from marginalia.models import ReadingSession
 
-from .bootstrap import session_detail_envelope
 from .deletion import delete_owned_session
+from .envelopes import session_detail_envelope
+from .metadata import ClosedSessionMutationError, update_session_metadata
+from .progress import replace_progress
 from .queries import (
     marginalia_session_for_user,
     marginalia_sessions_for_book,
@@ -35,11 +37,6 @@ from .serializers import (
     MarginaliaSessionMetadataPatchSerializer,
     MarginaliaSessionSummarySerializer,
     progress_envelope,
-)
-from .services import (
-    ClosedSessionMutationError,
-    replace_progress,
-    update_session_metadata,
 )
 
 

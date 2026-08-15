@@ -6,7 +6,7 @@ from django.utils import timezone
 
 from library.models import Book
 from marginalia.models import Annotation, ReadingSession
-from marginalia.sessions.services import assign_session_progress, clear_session_progress
+from marginalia.sessions.progress import assign_session_progress, clear_session_progress
 
 
 User = get_user_model()

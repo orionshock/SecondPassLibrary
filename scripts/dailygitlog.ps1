@@ -2,7 +2,7 @@ $since = "midnight"
 
 Write-Host "`nToday's commits:`n"
 
-git --no-pager log --since="$since" --pretty=format:"commit %H%nAuthor: %an <%ae>%nDate:   %ad%n%n    %s%n%n%b" --date=iso-local
+git --no-pager log --since="$since" --stat --pretty=format:"commit %H%nAuthor: %an <%ae>%nDate:   %ad%n%n    %s%n%n%b" --date=iso-local
 
 Write-Host "`nToday's totals:`n"
 

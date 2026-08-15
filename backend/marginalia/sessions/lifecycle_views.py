@@ -15,7 +15,8 @@ from marginalia.api import (
 from marginalia.exceptions import BookAccessRequiredError, SessionClosedError
 from marginalia.models import ReadingSession
 
-from .bootstrap import bootstrap_envelope, session_detail_envelope
+from .closing import close_owned_session
+from .envelopes import bootstrap_envelope, session_detail_envelope
 from .idempotency import (
     IdempotencyConflictError,
     IdempotencyInProgressError,
@@ -23,17 +24,16 @@ from .idempotency import (
     normalized_request_hash,
     validate_idempotency_key,
 )
+from .opening import (
+    FinalizationWithoutActiveSessionError,
+    active_session_for_accessible_book,
+    open_or_create_session,
+    start_over_session,
+)
 from .serializers import (
     MarginaliaOpenSerializer,
     MarginaliaSessionCloseSerializer,
     MarginaliaStartOverSerializer,
-)
-from .services import (
-    FinalizationWithoutActiveSessionError,
-    active_session_for_accessible_book,
-    close_owned_session,
-    open_or_create_session,
-    start_over_session,
 )
 
 
