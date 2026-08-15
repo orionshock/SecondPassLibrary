@@ -1,5 +1,5 @@
 import { apiClient, type ApiClient } from "./client";
-import { mapCompactBook, type CompactBookResponse } from "./compactBooks";
+import { mapCompactBook, type CompactBookResponse } from "./library/compactBooks";
 import { ApiError } from "./errors";
 import type { BookPreview, CompactBook } from "./library";
 import { collectPaginatedResults, toPage, type ApiPage, type Page } from "./pagination";

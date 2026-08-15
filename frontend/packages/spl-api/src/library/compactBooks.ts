@@ -1,4 +1,4 @@
-import type { CompactBook } from "./library";
+import type { CompactBook } from "./types";
 
 /** @internal Canonical wire shape for every compact Book projection. */
 export interface CompactBookResponse {
@@ -44,3 +44,4 @@ export function mapCompactBook(response: CompactBookResponse): CompactBook {
     fileFormat: response.file_format,
   };
 }
+

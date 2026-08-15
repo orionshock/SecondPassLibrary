@@ -13,7 +13,7 @@ export default defineConfig(({ command }) => ({
   test: {
     include: [
       "tests/**/*.test.{ts,tsx}",
-      "packages/spl-api/src/__tests__/**/*.test.ts",
+      "packages/spl-api/src/**/__tests__/**/*.test.ts",
     ],
   },
   server: {

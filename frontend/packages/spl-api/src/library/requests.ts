@@ -1,0 +1,82 @@
+import type { ApiClient } from "../client";
+import { ApiError } from "../errors";
+import { collectPaginatedResults, toPage, type ApiPage, type Page } from "../pagination";
+import type { LibraryAxisQuery } from "./types";
+
+export function withQuery(path: string, parameters: URLSearchParams): string {
+  const query = parameters.toString();
+  return `${path}${query ? `?${query}` : ""}`;
+}
+
+export async function listLibraryAxis<Response, Item>(
+  path: string,
+  query: LibraryAxisQuery,
+  mapper: (response: Response) => Item,
+  client: ApiClient,
+): Promise<Page<Item>> {
+  const parameters = new URLSearchParams();
+  const search = query.q?.trim();
+  if (search) parameters.set("q", search);
+  if (query.excludeId) parameters.set("exclude_id", query.excludeId);
+  if (query.tag) parameters.set("tag", query.tag);
+  if (query.ordering) parameters.set("ordering", query.ordering);
+  if (query.includePreviewBooks) parameters.set("include_preview_books", "true");
+  if (query.previewLimit !== undefined) parameters.set("preview_limit", String(query.previewLimit));
+  if (query.page) parameters.set("page", String(query.page));
+  if (query.pageSize) parameters.set("page_size", String(query.pageSize));
+  try {
+    return toPage(await client.request<ApiPage<Response>>(withQuery(path, parameters)), mapper);
+  } catch (error: unknown) {
+    if (!(error instanceof ApiError) || (!error.fields?.preview_limit && !error.fields?.exclude_id)) throw error;
+    const { preview_limit: previewLimit, exclude_id: excludeId, ...fields } = error.fields;
+    throw new ApiError(error.message, error.status, {
+      code: error.code,
+      fields: {
+        ...fields,
+        ...(previewLimit ? { previewLimit } : {}),
+        ...(excludeId ? { excludeId } : {}),
+      },
+    });
+  }
+}
+
+export async function listAllLibraryAxis<Response, Item>(
+  path: string,
+  mapper: (response: Response) => Item,
+  client: ApiClient,
+): Promise<Item[]> {
+  return collectPaginatedResults(
+    `${path}?ordering=name&page_size=200`,
+    (next) => client.request<ApiPage<Response>>(next),
+    mapper,
+  );
+}
+
+export async function mutateLibraryAxis<Response, Item>(
+  path: string,
+  method: "POST" | "PATCH",
+  payload: Record<string, string>,
+  mapper: (response: Response) => Item,
+  client: ApiClient,
+): Promise<Item> {
+  try {
+    const response = await client.request<Response>(path, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return mapper(response);
+  } catch (error: unknown) {
+    if (!(error instanceof ApiError) || !error.fields) throw error;
+    throw new ApiError(error.message, error.status, {
+      code: error.code,
+      fields: Object.fromEntries(
+        Object.entries(error.fields).map(([field, messages]) => [
+          field === "sort_name" ? "sortName" : field,
+          messages,
+        ]),
+      ),
+    });
+  }
+}
+
