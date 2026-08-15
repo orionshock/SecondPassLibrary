@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
-from library.catalog.serializers import BookPreviewSerializer
+from library.catalog.serializers.books import BookPreviewSerializer
 from library.groups.public_group import is_public_group
 from library.models import LibraryGroup
 

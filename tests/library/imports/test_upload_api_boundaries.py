@@ -39,7 +39,7 @@ class LibraryImportUploadBoundaryTests(
     def test_unsafe_epub_preflight_uses_bounded_import_error_response(self):
         self.login_librarian()
 
-        with patch("library.imports.epub.MAX_EPUB_MEMBERS", 3):
+        with patch("library.imports.epub_validation.MAX_EPUB_MEMBERS", 3):
             response = self.client.post(
                 self.url,
                 {"file": upload_file("unsafe.epub", minimal_epub_bytes())},

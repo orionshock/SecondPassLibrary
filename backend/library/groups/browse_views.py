@@ -25,12 +25,12 @@ from library.catalog.preview_books import (
     attach_series_preview_books,
     parse_preview_book_limit,
 )
-from library.catalog.serializers import (
+from library.catalog.serializers.axes import (
     AuthorAxisSerializer,
-    BookListSerializer,
     CatalogTagAxisSerializer,
     SeriesAxisSerializer,
 )
+from library.catalog.serializers.books import BookListSerializer
 from library.catalog.views import book_row_queryset
 from library.models import LibraryGroup
 from library.queries import group_is_visible_to_user, visible_books_for_group

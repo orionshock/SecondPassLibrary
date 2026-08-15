@@ -100,8 +100,8 @@ class EpubArchivePreflightTests(
         batch = zip_bytes(("nested/book.epub", minimal_epub_bytes()))
 
         with (
-            patch("library.imports.epub.MAX_EPUB_MEMBERS", 3),
-            patch("library.imports.epub.epub.read_epub") as read_epub,
+            patch("library.imports.epub_validation.MAX_EPUB_MEMBERS", 3),
+            patch("library.imports.epub_validation.epub.read_epub") as read_epub,
         ):
             result = import_zip_file(
                 batch,
@@ -120,13 +120,13 @@ class EpubArchivePreflightTests(
         limit_patch: dict[str, int] | None = None,
     ) -> None:
         limit_context = (
-            patch.multiple("library.imports.epub", **limit_patch)
+            patch.multiple("library.imports.epub_validation", **limit_patch)
             if limit_patch
             else nullcontext()
         )
         with (
             limit_context,
-            patch("library.imports.epub.epub.read_epub") as read_epub,
+            patch("library.imports.epub_validation.epub.read_epub") as read_epub,
         ):
             result = import_epub_file(
                 data,

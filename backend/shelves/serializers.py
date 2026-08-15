@@ -6,11 +6,8 @@ from rest_framework import serializers
 
 from accounts.users.payloads import compact_user_payload
 from library.groups.public_group import is_public_group
-from library.catalog.serializers import (
-    BookListSerializer,
-    BookPreviewSerializer,
-    RejectUnknownFieldsMixin,
-)
+from library.catalog.serializers.books import BookListSerializer, BookPreviewSerializer
+from library.catalog.serializers.unknown_fields import RejectUnknownFieldsMixin
 
 from .models import Shelf, ShelfItem
 from .policies import request_can_edit_shelf

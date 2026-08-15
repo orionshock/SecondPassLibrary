@@ -12,7 +12,11 @@ from library.api_access import LibraryBearerReadMixin
 from library.catalog.edit_services import update_book_metadata
 from library.catalog.filters import apply_book_filters
 from library.catalog.ordering import apply_book_ordering, parse_book_ordering
-from library.catalog.serializers import BookDetailSerializer, BookListSerializer, BookUpdateSerializer
+from library.catalog.serializers.books import (
+    BookDetailSerializer,
+    BookListSerializer,
+    BookUpdateSerializer,
+)
 from library.groups.book_filters import exclude_books_assigned_to_group
 from library.models import BookAuthor, BookCatalogTag
 from library.queries import visible_books_for_user, visible_groups_for_user

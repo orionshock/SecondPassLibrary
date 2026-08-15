@@ -7,7 +7,7 @@ from uuid import uuid4
 from django.core.files.base import ContentFile
 from django.db import transaction
 
-from library.imports.epub import read_file_with_sha256, validate_epub_bytes
+from library.imports.epub_validation import read_file_with_sha256, validate_epub_bytes
 from library.imports.errors import InvalidEpubImportError
 from library.models import Book
 

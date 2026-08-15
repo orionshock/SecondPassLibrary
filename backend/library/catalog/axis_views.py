@@ -21,7 +21,7 @@ from library.catalog.axes import (
     visible_series_from_books,
     visible_tags_from_books,
 )
-from library.catalog.serializers import (
+from library.catalog.serializers.axes import (
     AuthorAxisSerializer,
     AuthorCreateSerializer,
     AuthorAxisUpdateSerializer,
