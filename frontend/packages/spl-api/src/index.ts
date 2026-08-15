@@ -72,8 +72,6 @@ export {
   type SelectedMarginaliaExportInput,
   type RecentMarginaliaSession,
   type RecentMarginaliaSessionsQuery,
-} from "./marginalia";
-export {
   applyMarginaliaImport,
   downloadUnmatchedMarginaliaImport,
   previewMarginaliaImport,
@@ -86,7 +84,7 @@ export {
   type MarginaliaImportPreviewBook,
   type MarginaliaImportPreviewSession,
   type MarginaliaImportWarning,
-} from "./marginaliaImport";
+} from "./marginalia";
 export type { AttachmentDownload } from "./client";
 export { buildReadingClientBookUrl } from "./readingClientUrl";
 export {

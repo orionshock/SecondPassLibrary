@@ -17,7 +17,7 @@ import {
   updateGroup,
   updateGroupMember,
 } from "@second-pass/spl-api";
-import type { ApiClient } from "../client";
+import type { ApiClient } from "../../client";
 
 describe("Library Groups SDK", () => {
   it("maps paginated group reads and crawls the all-groups picker", async () => {
@@ -331,3 +331,4 @@ describe("Library Groups SDK", () => {
     await expect(deleteGroup("public", failing)).rejects.toBe(error);
   });
 });
+

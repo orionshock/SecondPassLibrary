@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createApiClient, type AttachmentApiClient, type AttachmentDownload } from "../client";
-import { ApiError } from "../errors";
-import { downloadCompleteMarginaliaExport, downloadSelectedMarginaliaExport, MarginaliaExportTooLargeError } from "../marginalia";
+import { createApiClient, type AttachmentApiClient, type AttachmentDownload } from "../../client";
+import { ApiError } from "../../errors";
+import { downloadCompleteMarginaliaExport, downloadSelectedMarginaliaExport, MarginaliaExportTooLargeError } from "..";
 
 const attachment: AttachmentDownload = {
   blob: new Blob(["archive"], { type: "application/json" }),
@@ -97,3 +97,4 @@ describe("Marginalia Export SDK", () => {
     await expect(downloadCompleteMarginaliaExport({}, errorClient)).rejects.toBe(error);
   });
 });
+

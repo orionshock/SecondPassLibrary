@@ -1,5 +1,5 @@
-import { apiClient, type ApiClient, type AttachmentApiClient, type AttachmentDownload } from "./client";
-import type { MarginaliaSessionStatus } from "./marginalia";
+import { apiClient, type ApiClient, type AttachmentApiClient, type AttachmentDownload } from "../client";
+import type { MarginaliaSessionStatus } from "./types";
 
 export type MarginaliaImportUnmatchedReason = "not_found" | "ambiguous_match" | "book_inaccessible";
 
@@ -262,3 +262,4 @@ function jsonRequest(method: string, body: unknown): RequestInit {
     body: JSON.stringify(body),
   };
 }
+

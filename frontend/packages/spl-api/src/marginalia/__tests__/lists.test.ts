@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import type { ApiClient } from "../client";
-import { ApiError } from "../errors";
+import type { ApiClient } from "../../client";
+import { ApiError } from "../../errors";
 import {
   getMarginaliaBook,
   listMarginaliaBooks,
   listMarginaliaBookSessions,
   listMarginaliaSessions,
   listRecentMarginaliaSessions,
-} from "../marginalia";
+} from "..";
 
 const book = {
   id: "book-1",
@@ -165,7 +165,7 @@ describe("Marginalia recent Session SDK", () => {
           last_activity_at: "2026-07-30T12:00:00Z",
           progress: {
             cfi: "epubcfi(/6/8!/4/2)",
-            location_label: "Chapter 08 · 42%",
+            location_label: "Chapter 08 Â· 42%",
             updated_at: "2026-07-30T12:00:00Z",
           },
           book: {
@@ -188,7 +188,7 @@ describe("Marginalia recent Session SDK", () => {
       lastActivityAt: "2026-07-30T12:00:00Z",
       progress: {
         cfi: "epubcfi(/6/8!/4/2)",
-        locationLabel: "Chapter 08 · 42%",
+        locationLabel: "Chapter 08 Â· 42%",
         updatedAt: "2026-07-30T12:00:00Z",
       },
       book: {
@@ -223,3 +223,4 @@ describe("Marginalia recent Session SDK", () => {
     await expect(listRecentMarginaliaSessions({}, client)).rejects.toBe(error);
   });
 });
+
