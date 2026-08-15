@@ -1,10 +1,10 @@
 $since = "midnight"
 
-Write-Host "`nToday's commits with LOC summary:`n"
+Write-Host "`nToday's commits:`n"
 
-git --no-pager log --since="$since" --shortstat --pretty=format:"%h %ad %an %s" --date=short
+git --no-pager log --since="$since" --pretty=format:"commit %H%nAuthor: %an <%ae>%nDate:   %ad%n%n    %s%n%n%b" --date=iso-local
 
-Write-Host "`nTotal LOC changes today:`n"
+Write-Host "`nToday's totals:`n"
 
 $stats = git --no-pager log --since="$since" --numstat --pretty=format:"" |
   Where-Object { $_ -match '^\d+\s+\d+\s+' } |
@@ -24,7 +24,9 @@ if ($null -eq $added) { $added = 0 }
 if ($null -eq $deleted) { $deleted = 0 }
 
 $net = $added - $deleted
+$commits = git rev-list --count --since="$since" HEAD
 
+Write-Host "Commits: $commits"
 Write-Host "Added:   $added"
 Write-Host "Deleted: $deleted"
 Write-Host "Net:     $net"
