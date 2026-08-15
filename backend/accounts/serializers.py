@@ -4,7 +4,6 @@ from rest_framework import serializers
 from core.errors import ErrorCode, api_error_payload
 
 from .models import UserProfile
-from .models import UserClientSession
 
 
 User = get_user_model()
@@ -56,7 +55,6 @@ class CurrentUserPatchSerializer(serializers.Serializer):
                 )
             )
         return super().validate(attrs)
-
 
 class ManagedUserSerializer(serializers.Serializer):
     class ManagedUserGroupSummarySerializer(serializers.Serializer):
@@ -215,18 +213,3 @@ class ManagedUserCreateSerializer(serializers.Serializer):
             )
 
         return super().validate(attrs)
-
-
-class CurrentUserClientSessionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = UserClientSession
-        fields = [
-            "id",
-            "name",
-            "client_type",
-            "created_at",
-            "updated_at",
-            "last_seen_at",
-            "revoked_at",
-        ]
-        read_only_fields = fields

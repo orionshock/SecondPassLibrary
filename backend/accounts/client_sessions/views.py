@@ -4,6 +4,7 @@ from typing import Any, cast
 from urllib.parse import urlencode
 
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -12,14 +13,51 @@ from rest_framework.views import APIView
 from rest_framework import status
 
 from accounts.request_identity import canonical_client_ip
+from accounts import session_control
+from accounts.models import ClientLoginRequest, UserClientSession
 from core import server_settings
 
-from . import client_api
-from .models import ClientLoginRequest
+from . import services
+from .authentication import ClientBearerAuthentication
+from .serializers import CurrentUserClientSessionSerializer
 
 
 PAIRING_CACHE_CONTROL = "no-store, private"
 PAIRING_PRAGMA = "no-cache"
+
+
+class CurrentUserClientSessionsView(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [
+        SessionAuthentication,
+        ClientBearerAuthentication,
+    ]
+
+    def get(self, request):
+        qs = (
+            UserClientSession.objects.filter(user=request.user, revoked_at__isnull=True)
+            .order_by("-created_at", "id")
+        )
+        return Response(CurrentUserClientSessionSerializer(qs, many=True).data)
+
+
+class CurrentUserClientSessionRevokeView(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [
+        SessionAuthentication,
+        ClientBearerAuthentication,
+    ]
+
+    def delete(self, request, session_id: str):
+        # Anti-leakage: only operate on the current user's sessions.
+        obj = get_object_or_404(
+            UserClientSession,
+            pk=session_id,
+            user=request.user,
+            revoked_at__isnull=True,
+        )
+        session_control.revoke_client_session(obj, actor=request.user)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class PairingNoStoreMixin:
@@ -67,13 +105,13 @@ class ClientLoginRequestCreateView(PairingNoStoreMixin, APIView):
         ip = canonical_client_ip(request)
 
         try:
-            obj, code = client_api.create_login_request(
+            obj, code = services.create_login_request(
                 client_name=client_name,
                 client_type=client_type,
                 request_user_agent=ua,
                 request_ip=ip,
             )
-        except client_api.PairingRequestThrottled:
+        except services.PairingRequestThrottled:
             return Response(
                 {"detail": "Pairing request limit reached. Try again later."},
                 status=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -96,7 +134,7 @@ class ClientLoginRequestCreateView(PairingNoStoreMixin, APIView):
                 "poll_url": poll_url,
                 "consume_url": poll_url,
                 "expires_at": obj.expires_at.isoformat(),
-                "interval": client_api.POLL_INTERVAL_SECONDS,
+                "interval": services.POLL_INTERVAL_SECONDS,
             },
             status=status.HTTP_201_CREATED,
         )
@@ -120,13 +158,13 @@ class ClientLoginRequestPollView(PairingNoStoreMixin, APIView):
                 ClientLoginRequest.STATUS_CONSUMED,
                 ClientLoginRequest.STATUS_EXPIRED,
             ):
-                client_api.log_consumption_rejection(
+                services.log_consumption_rejection(
                     login_request=obj,
                     state=state,
                 )
             return Response({"status": state}, status=status.HTTP_200_OK)
 
-        result = client_api.consume_login_request(login_request=obj)
+        result = services.consume_login_request(login_request=obj)
         if result is None:
             obj.refresh_from_db(fields=["status", "expires_at"])
             return Response(
@@ -155,7 +193,7 @@ class ClientPairingLookupView(PairingNoStoreMixin, APIView):
 
     def post(self, request):
         code = str((request.data or {}).get("code") or "").strip()
-        login_request = client_api.get_pending_login_request_for_code(code)
+        login_request = services.get_pending_login_request_for_code(code)
         if login_request is None:
             return Response(
                 {"detail": "Invalid or expired pairing code."},
@@ -163,7 +201,7 @@ class ClientPairingLookupView(PairingNoStoreMixin, APIView):
             )
         return Response(
             {
-                "code": client_api.format_human_code(code),
+                "code": services.format_human_code(code),
                 "client_name": login_request.client_name,
                 "client_type": login_request.client_type,
                 "expires_at": login_request.expires_at.isoformat(),
@@ -179,7 +217,7 @@ class ClientPairingDecisionView(PairingNoStoreMixin, APIView):
         data = cast(dict[str, Any], request.data or {})
         code = str(data.get("code") or "").strip()
         action = str(data.get("action") or "").strip().lower()
-        login_request = client_api.get_pending_login_request_for_code(code)
+        login_request = services.get_pending_login_request_for_code(code)
         if login_request is None:
             return Response(
                 {"detail": "Invalid or expired pairing code."},
@@ -192,13 +230,13 @@ class ClientPairingDecisionView(PairingNoStoreMixin, APIView):
                     raise ValueError("Device/client name is required.")
                 if len(client_name) > 200:
                     raise ValueError("Device/client name is too long.")
-                client_api.approve_login_request(
+                services.approve_login_request(
                     login_request=login_request,
                     user=request.user,
                     client_name=client_name,
                 )
             elif action == "deny":
-                client_api.deny_login_request(login_request=login_request, user=request.user)
+                services.deny_login_request(login_request=login_request, user=request.user)
             else:
                 raise ValueError("Action must be approve or deny.")
         except ValueError as exc:
@@ -222,6 +260,6 @@ def _login_request_state(login_request: ClientLoginRequest | None) -> str:
         ClientLoginRequest.STATUS_EXPIRED,
     ):
         return login_request.status
-    if client_api.is_login_request_expired(login_request, now=timezone.now()):
+    if services.is_login_request_expired(login_request, now=timezone.now()):
         return ClientLoginRequest.STATUS_EXPIRED
     return login_request.status

@@ -11,7 +11,7 @@ from rest_framework import status
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from accounts.roles import is_owner
-from accounts.authentication import ClientBearerAuthentication
+from accounts.client_sessions.authentication import ClientBearerAuthentication
 from core import server_settings
 from core.server_info import server_info_payload
 from library.groups.public_services import configure_public_group

@@ -1,10 +1,12 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .views import (
-    CurrentUserChangePasswordView,
+from .client_sessions.views import (
     CurrentUserClientSessionRevokeView,
     CurrentUserClientSessionsView,
+)
+from .views import (
+    CurrentUserChangePasswordView,
     CurrentUserLogoutOtherWebSessionsView,
     CurrentUserView,
     ManagedUserResetPasswordView,

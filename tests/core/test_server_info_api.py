@@ -5,7 +5,7 @@ from django.core.cache import cache
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
-from accounts.client_api import hash_client_secret
+from accounts.client_sessions.services import hash_client_secret
 from accounts.models import UserClientSession
 from core import server_settings
 from library.groups.public_services import configure_public_group

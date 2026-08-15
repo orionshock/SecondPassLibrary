@@ -10,7 +10,7 @@ from django.test import AsyncClient, TestCase
 from django.utils.http import content_disposition_header
 from rest_framework.test import APIClient
 
-from accounts.client_api import hash_client_secret
+from accounts.client_sessions.services import hash_client_secret
 from accounts.models import UserClientSession, UserProfile
 from library.catalog.downloads import DOWNLOAD_FILENAME_MAX_CHARS, book_download_filename
 from library.models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership

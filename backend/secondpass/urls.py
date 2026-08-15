@@ -58,7 +58,7 @@ urlpatterns = [
     path("api/v1/library/", include(("library.urls", "library"), namespace="library")),
     path(
         "api/v1/client-api/",
-        include(("accounts.client_api_urls", "client_api"), namespace="client_api"),
+        include(("accounts.client_sessions.urls", "client_api"), namespace="client_api"),
     ),
     path(
         "api/v1/accounts/", include(("accounts.urls", "accounts"), namespace="accounts")

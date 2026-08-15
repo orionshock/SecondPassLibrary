@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand, CommandError
 
 from accounts.operational_logging import logger
-from accounts.pairing_cleanup import (
+from accounts.client_sessions.cleanup import (
     DEFAULT_PAIRING_CLEANUP_LIMIT,
     MAX_PAIRING_CLEANUP_LIMIT,
     cleanup_client_pairing_requests,

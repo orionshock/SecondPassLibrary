@@ -90,3 +90,4 @@ def cleanup_client_pairing_requests(
         result.retained_count,
     )
     return result
+

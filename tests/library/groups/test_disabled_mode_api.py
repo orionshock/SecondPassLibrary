@@ -7,7 +7,7 @@ from django.core.cache import cache
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from accounts.client_api import hash_client_secret
+from accounts.client_sessions.services import hash_client_secret
 from accounts.models import UserClientSession, UserProfile
 from core.server_settings import (
     set_advanced_library_groups_enabled,

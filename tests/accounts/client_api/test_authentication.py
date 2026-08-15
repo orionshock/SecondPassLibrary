@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.test import APIClient
 
 from accounts import session_control
-from accounts.client_api import hash_client_secret
+from accounts.client_sessions.services import hash_client_secret
 from accounts.models import ClientLoginRequest, UserClientSession
 from tests.accounts.client_api.helpers import ClientApiTestCase, post_login_request
 from tests.utils.responses import assert_response, response_data_dict

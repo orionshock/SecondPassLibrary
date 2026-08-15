@@ -7,7 +7,7 @@ from django.test import TransactionTestCase, override_settings
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from accounts.client_api import (
+from accounts.client_sessions.services import (
     MAX_ACTIVE_PENDING_REQUESTS_PER_FINGERPRINT,
     MAX_ACTIVE_PENDING_REQUESTS_PER_IP,
     REQUEST_USER_AGENT_MAX_CHARS,

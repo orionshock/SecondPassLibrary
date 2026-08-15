@@ -7,9 +7,9 @@ from django.core.management import call_command
 from django.test import TestCase
 from django.utils import timezone
 
-from accounts.client_api import hash_client_secret
+from accounts.client_sessions.services import hash_client_secret
 from accounts.models import ClientLoginRequest
-from accounts.pairing_cleanup import cleanup_client_pairing_requests
+from accounts.client_sessions.cleanup import cleanup_client_pairing_requests
 
 
 class CleanupClientPairingRequestsTests(TestCase):

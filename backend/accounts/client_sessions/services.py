@@ -15,7 +15,7 @@ from django.utils import timezone
 
 from accounts.operational_logging import logger, user_uuid
 
-from .models import ClientLoginRequest, ClientPairingThrottleSlot, UserClientSession
+from accounts.models import ClientLoginRequest, ClientPairingThrottleSlot, UserClientSession
 
 
 HUMAN_CODE_GROUP_SIZE = 4
@@ -566,3 +566,4 @@ def authenticate_bearer_token(raw_token: str) -> UserClientSession | None:
         session.last_seen_at = now
 
     return session
+

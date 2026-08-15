@@ -15,7 +15,7 @@ from library.models import (
 )
 from library.queries import visible_books_for_user
 from marginalia.models import Annotation, ReadingSession
-from marginalia.sessions.services import delete_owned_session
+from marginalia.sessions.deletion import delete_owned_session
 
 
 User = get_user_model()
@@ -135,7 +135,7 @@ class DeleteOwnedSessionServiceTests(TestCase):
         book_id = str(self.book.pk)
         owner_id = user_uuid(self.user)
 
-        with patch("marginalia.sessions.services.logger.info") as log_info:
+        with patch("marginalia.sessions.deletion.logger.info") as log_info:
             with self.captureOnCommitCallbacks(execute=False) as callbacks:
                 delete_owned_session(user=self.user, session_id=self.active.pk)
 

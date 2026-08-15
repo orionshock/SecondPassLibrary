@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
-from accounts.client_api import hash_client_secret
+from accounts.client_sessions.services import hash_client_secret
 from accounts.models import UserClientSession, UserProfile
 from library.models import LibraryGroup, LibraryGroupMembership
 from tests.utils.responses import assert_response, response_data_dict

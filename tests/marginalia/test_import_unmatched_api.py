@@ -12,7 +12,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
-from accounts.client_api import generate_bearer_token, hash_client_secret
+from accounts.client_sessions.services import generate_bearer_token, hash_client_secret
 from accounts.models import UserClientSession
 from library.models import (
     Book,

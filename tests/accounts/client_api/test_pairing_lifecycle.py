@@ -10,7 +10,7 @@ from django.test import TransactionTestCase
 from django.utils import timezone
 from rest_framework import status
 
-from accounts.client_api import consume_login_request, hash_client_secret
+from accounts.client_sessions.services import consume_login_request, hash_client_secret
 from accounts.models import ClientLoginRequest, UserClientSession
 from tests.accounts.client_api.helpers import ClientApiTestCase, post_login_request
 from tests.testenv.database_connections import orm_worker_connection_scope
@@ -142,7 +142,7 @@ class PairingHttpLifecycleTests(ClientApiTestCase):
 
         with self.captureOnCommitCallbacks(execute=True) as callbacks:
             with patch(
-                "accounts.client_api.UserClientSession.objects.create",
+                "accounts.client_sessions.services.UserClientSession.objects.create",
                 side_effect=RuntimeError("simulated failure"),
             ):
                 with self.assertRaisesRegex(RuntimeError, "simulated failure"):

@@ -10,14 +10,12 @@ from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied, ValidationError as DRFValidationError
-from django.shortcuts import get_object_or_404
 
 from .models import UserProfile
 from .serializers import (
     ChangePasswordSerializer,
     CurrentUserSerializer,
     CurrentUserPatchSerializer,
-    CurrentUserClientSessionSerializer,
     ManagedUserPatchSerializer,
     ManagedUserCreateSerializer,
     ManagedUserListQuerySerializer,
@@ -37,7 +35,7 @@ from .services import (
 from .user_payloads import managed_user_create_envelope, managed_user_payload
 from .user_queries import filter_and_order_managed_users
 from accounts import session_control
-from accounts.authentication import ClientBearerAuthentication
+from accounts.client_sessions.authentication import ClientBearerAuthentication
 from accounts.models import UserClientSession
 from accounts.roles import is_manager, is_owner
 from core.server_settings import advanced_library_groups_enabled
@@ -129,37 +127,6 @@ class CurrentUserLogoutOtherWebSessionsView(APIView):
             reason="manual_revoke",
         )
         return Response({"message": "Other web sessions logged out."}, status=status.HTTP_200_OK)
-
-
-class CurrentUserClientSessionsView(APIView):
-    permission_classes = [IsAuthenticated]
-    authentication_classes = [
-        SessionAuthentication,
-        ClientBearerAuthentication,
-    ]
-
-    def get(self, request):
-        qs = (
-            UserClientSession.objects.filter(user=request.user, revoked_at__isnull=True)
-            .order_by("-created_at", "id")
-        )
-        return Response(CurrentUserClientSessionSerializer(qs, many=True).data)
-
-
-class CurrentUserClientSessionRevokeView(APIView):
-    permission_classes = [IsAuthenticated]
-    authentication_classes = [
-        SessionAuthentication,
-        ClientBearerAuthentication,
-    ]
-
-    def delete(self, request, session_id: str):
-        # Anti-leakage: only operate on the current user's sessions.
-        obj = get_object_or_404(
-            UserClientSession, pk=session_id, user=request.user, revoked_at__isnull=True
-        )
-        session_control.revoke_client_session(obj, actor=request.user)
-        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ManagedUserViewSet(

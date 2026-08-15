@@ -5,7 +5,7 @@ from datetime import timedelta
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from accounts.client_api import consume_login_request, hash_client_secret
+from accounts.client_sessions.services import consume_login_request, hash_client_secret
 from accounts.models import ClientLoginRequest, UserClientSession
 from tests.accounts.client_api.helpers import ClientApiTestCase, post_login_request
 from tests.utils.responses import assert_response, response_data_dict

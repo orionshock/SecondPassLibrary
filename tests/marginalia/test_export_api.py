@@ -11,7 +11,7 @@ from django.test import TestCase
 from rest_framework import status
 from rest_framework.test import APIClient
 
-from accounts.client_api import generate_bearer_token, hash_client_secret
+from accounts.client_sessions.services import generate_bearer_token, hash_client_secret
 from accounts.models import UserClientSession
 from library.models import Author, Book, BookAuthor
 from marginalia.archives import DuplicateBookHashError

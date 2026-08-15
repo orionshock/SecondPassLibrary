@@ -3,7 +3,7 @@ from __future__ import annotations
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import BasePermission, IsAuthenticated, SAFE_METHODS
 
-from accounts.authentication import ClientBearerAuthentication
+from accounts.client_sessions.authentication import ClientBearerAuthentication
 
 
 class SessionWriteOrBearerRead(BasePermission):

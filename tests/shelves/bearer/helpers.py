@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework.test import APITestCase
 
-from accounts.client_api import generate_bearer_token, hash_client_secret
+from accounts.client_sessions.services import generate_bearer_token, hash_client_secret
 from accounts.models import UserClientSession, UserProfile
 from library.groups.public_group import get_public_group
 from library.models import LibraryGroup, LibraryGroupMembership

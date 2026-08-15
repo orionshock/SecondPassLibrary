@@ -15,7 +15,7 @@ from rest_framework import serializers
 
 from library.catalog.preview_books import parse_preview_book_limit
 from library.catalog.ordering import parse_ordering_param
-from accounts.authentication import ClientBearerAuthentication
+from accounts.client_sessions.authentication import ClientBearerAuthentication
 from accounts.models import UserClientSession
 from library.queries import visible_groups_for_user
 

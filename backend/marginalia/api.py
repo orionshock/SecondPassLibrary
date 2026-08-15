@@ -2,7 +2,7 @@ from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import BasePermission, IsAuthenticated
 from rest_framework import status
 
-from accounts.authentication import ClientBearerAuthentication
+from accounts.client_sessions.authentication import ClientBearerAuthentication
 from core.errors import ErrorCode, api_error_response
 
 

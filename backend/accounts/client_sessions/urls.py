@@ -1,6 +1,6 @@
 from django.urls import path
 
-from .client_api_views import (
+from .views import (
     ClientApiDiscoveryView,
     ClientLoginRequestCreateView,
     ClientLoginRequestPollView,
@@ -25,3 +25,4 @@ urlpatterns = [
         name="client_api_login_requests_poll",
     ),
 ]
+

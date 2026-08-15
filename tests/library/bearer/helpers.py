@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from accounts.client_api import hash_client_secret
+from accounts.client_sessions.services import hash_client_secret
 from accounts.models import UserClientSession
 from core.server_settings import set_advanced_library_groups_enabled
 from tests.library.helpers import LibraryCatalogApiFixtureMixin

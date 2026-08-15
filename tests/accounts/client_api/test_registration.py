@@ -6,7 +6,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import status
 
-from accounts.client_api import hash_client_secret, normalize_human_code
+from accounts.client_sessions.services import hash_client_secret, normalize_human_code
 from accounts.models import ClientLoginRequest, UserClientSession
 from tests.accounts.client_api.helpers import ClientApiTestCase, post_login_request
 from tests.utils.responses import assert_response, response_data_dict

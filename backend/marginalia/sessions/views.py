@@ -19,6 +19,7 @@ from marginalia.exceptions import BookAccessRequiredError, SessionClosedError
 from marginalia.models import ReadingSession
 
 from .bootstrap import session_detail_envelope
+from .deletion import delete_owned_session
 from .queries import (
     marginalia_session_for_user,
     marginalia_sessions_for_book,
@@ -37,7 +38,6 @@ from .serializers import (
 )
 from .services import (
     ClosedSessionMutationError,
-    delete_owned_session,
     replace_progress,
     update_session_metadata,
 )

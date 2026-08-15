@@ -3,7 +3,7 @@ from __future__ import annotations
 from rest_framework.authentication import BaseAuthentication, get_authorization_header
 from rest_framework.exceptions import AuthenticationFailed
 
-from .client_api import authenticate_bearer_token
+from .services import authenticate_bearer_token
 
 
 class ClientBearerAuthentication(BaseAuthentication):
@@ -51,3 +51,4 @@ class ClientBearerAuthentication(BaseAuthentication):
             raise AuthenticationFailed("Invalid bearer token.")
 
         return (session.user, session)
+

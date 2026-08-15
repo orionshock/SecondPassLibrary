@@ -10,7 +10,7 @@ from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
-from accounts.client_api import hash_client_secret
+from accounts.client_sessions.services import hash_client_secret
 from accounts.models import UserClientSession, UserProfile, UserWebSession
 from tests.accounts.helpers import create_account_role_users
 from tests.accounts.web_sessions.helpers import authenticated_tracked_client

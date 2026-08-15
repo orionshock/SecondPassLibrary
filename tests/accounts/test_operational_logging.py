@@ -10,7 +10,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from accounts import session_control
-from accounts.client_api import hash_client_secret
+from accounts.client_sessions.services import hash_client_secret
 from accounts.models import UserClientSession, UserWebSession
 from tests.accounts.client_api.helpers import post_login_request
 from tests.accounts.helpers import create_account_role_users
