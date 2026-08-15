@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from accounts.services import get_or_create_profile
+from accounts.profiles import get_or_create_profile
 from tests.shelves.bearer.helpers import ShelvesBearerApiTestCase
 from tests.utils.responses import assert_response, payload_dict, response_data_dict
 

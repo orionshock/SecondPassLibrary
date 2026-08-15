@@ -6,7 +6,8 @@ from accounts.roles import is_owner
 from library.models import LibraryGroupMembership
 from library.groups.public_group import is_public_group
 
-from .services import ManagedUserCreateResult, get_or_create_profile
+from accounts.profiles import get_or_create_profile
+from accounts.users.services import ManagedUserCreateResult
 
 
 def managed_user_group_payloads(user) -> list[dict[str, Any]]:
@@ -60,3 +61,4 @@ def managed_user_create_envelope(result: ManagedUserCreateResult) -> dict[str, A
         "temporary_password": result.temporary_password,
         "message": "Show this password now. It will not be shown again.",
     }
+

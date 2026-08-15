@@ -4,7 +4,7 @@ from typing import Any, cast
 
 from rest_framework import serializers
 
-from accounts.user_payloads import compact_user_payload
+from accounts.users.payloads import compact_user_payload
 from library.groups.public_group import is_public_group
 from library.catalog.serializers import (
     BookListSerializer,

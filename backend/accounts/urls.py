@@ -5,15 +5,10 @@ from .client_sessions.views import (
     CurrentUserClientSessionRevokeView,
     CurrentUserClientSessionsView,
 )
-from .views import (
-    CurrentUserChangePasswordView,
-    CurrentUserLogoutOtherWebSessionsView,
-    CurrentUserView,
-    ManagedUserResetPasswordView,
-    ManagedUserViewSet,
-    UserChoiceListView,
-    UserProfileViewSet,
-)
+from .current_user.views import CurrentUserView, UserProfileViewSet
+from .passwords.views import CurrentUserChangePasswordView, ManagedUserResetPasswordView
+from .users.views import ManagedUserViewSet, UserChoiceListView
+from .web_session_views import CurrentUserLogoutOtherWebSessionsView
 
 app_name = "accounts"
 

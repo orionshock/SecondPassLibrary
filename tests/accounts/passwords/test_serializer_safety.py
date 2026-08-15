@@ -5,7 +5,7 @@ from typing import cast
 from django.test import TestCase
 from rest_framework import serializers
 
-from accounts.serializers import ManagedUserSerializer
+from accounts.users.serializers import ManagedUserSerializer
 
 
 class UserSerializerDoesNotLeakPasswordsTests(TestCase):

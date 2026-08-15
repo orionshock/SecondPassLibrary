@@ -19,7 +19,7 @@ from library.groups.memberships import ensure_user_public_membership
 from library.groups.public_services import configure_public_group
 
 from .models import UserProfile
-from .services import get_or_create_profile
+from .profiles import get_or_create_profile
 
 
 User = get_user_model()

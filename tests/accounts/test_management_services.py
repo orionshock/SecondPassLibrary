@@ -6,7 +6,8 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from accounts.models import UserProfile
-from accounts.services import update_current_user_via_me_api, update_user_via_management_api
+from accounts.current_user.services import update_current_user_via_me_api
+from accounts.users.services import update_user_via_management_api
 from tests.accounts.helpers import create_account_role_users
 
 

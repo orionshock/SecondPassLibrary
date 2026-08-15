@@ -1,7 +1,7 @@
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 
-from accounts.user_payloads import compact_user_payload
+from accounts.users.payloads import compact_user_payload
 
 
 class CompactUserPayloadTests(TestCase):

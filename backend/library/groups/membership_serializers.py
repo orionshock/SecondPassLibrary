@@ -4,7 +4,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 from accounts.models import UserProfile
-from accounts.user_payloads import compact_user_payload
+from accounts.users.payloads import compact_user_payload
 from library.models import LibraryGroupMembership
 
 

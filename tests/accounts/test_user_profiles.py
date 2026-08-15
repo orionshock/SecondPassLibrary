@@ -9,7 +9,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from accounts.models import ExternalIdentity, UserProfile
-from accounts.services import user_supports_local_password
+from accounts.local_passwords import user_supports_local_password
 from tests.utils.responses import (
     assert_response,
     response_data_dict,

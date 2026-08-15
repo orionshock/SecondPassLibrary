@@ -2,21 +2,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Any
-import secrets
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.conf import settings
 from django.db import IntegrityError, transaction
 
-from accounts.operational_logging import logger, user_log_label, user_uuid
+from accounts.local_passwords import generate_temporary_password
+from accounts.models import UserProfile
+from accounts.operational_logging import logger, user_log_label
+from accounts.profiles import get_or_create_profile
 from accounts.roles import RoleRank, effective_role_rank, is_manager, is_owner
 from library.groups.memberships import ensure_user_public_membership
-from library.models import LibraryGroupMembership
-from library.groups.public_group import is_public_group
-
-from .models import UserProfile
 
 
 User = get_user_model()
@@ -33,15 +29,6 @@ class ManagedUserCreateResult:
     user: Any
     temporary_password: str
 
-
-@dataclass(frozen=True)
-class ManagedPasswordResetResult:
-    username: str
-    temporary_password: str
-
-    @property
-    def copy_block(self) -> str:
-        return f"Username: {self.username}\nPassword: {self.temporary_password}"
 
 
 def _is_exact_manager(user) -> bool:
@@ -90,7 +77,7 @@ def _can_manage_user(*, actor, target_user) -> bool:
     return not _is_exact_manager(target_user)
 
 
-def _can_reset_user_password(*, actor, target_user) -> bool:
+def can_reset_user_password(*, actor, target_user) -> bool:
     if getattr(actor, "is_anonymous", False):
         return False
     if getattr(actor, "id", None) == getattr(target_user, "id", None):
@@ -98,24 +85,6 @@ def _can_reset_user_password(*, actor, target_user) -> bool:
     if is_owner(actor):
         return True
     return _can_manage_user(actor=actor, target_user=target_user)
-
-
-def get_or_create_profile(*, user) -> UserProfile:
-    profile, _created = UserProfile.objects.get_or_create(user=user)
-    return profile
-
-
-def user_supports_local_password(user) -> bool:
-    if not user or getattr(user, "is_anonymous", False):
-        return False
-    has_usable_password = getattr(user, "has_usable_password", None)
-    return bool(callable(has_usable_password) and has_usable_password())
-
-
-def _generate_temporary_password() -> str:
-    # Short, URL-safe, cryptographically secure; shown once on create response only.
-    return secrets.token_urlsafe(18)
-
 
 def create_managed_user(
     *,
@@ -155,7 +124,7 @@ def create_managed_user(
     first_name = (first_name or "").strip()
     last_name = (last_name or "").strip()
 
-    temporary_password = _generate_temporary_password()
+    temporary_password = generate_temporary_password()
 
     with transaction.atomic():
         try:
@@ -321,187 +290,3 @@ def update_user_via_management_api(
     )
 
     return UserUpdateResult(user=target_user, profile=profile)
-
-
-def update_current_user_via_me_api(
-    *,
-    user,
-    email: str | None = None,
-    first_name: str | None = None,
-    last_name: str | None = None,
-) -> None:
-    """
-    Safe path for a user to update their own basic contact/profile fields via /accounts/me/.
-
-    Intentionally limited:
-    - Allows: email, first_name, last_name
-    - Disallows: username, role, is_active, password, and all auth internals
-    """
-    if getattr(user, "is_anonymous", False):
-        raise PermissionDenied("Not allowed.")
-
-    updates: dict[str, Any] = {}
-    if email is not None:
-        updates["email"] = email
-    if first_name is not None:
-        updates["first_name"] = first_name
-    if last_name is not None:
-        updates["last_name"] = last_name
-
-    if not updates:
-        return
-
-    for key, value in updates.items():
-        setattr(user, key, value)
-    user.full_clean()
-    user.save(update_fields=[*updates.keys()])
-
-
-def _validate_new_password(*, new_password: str, user) -> None:
-    new_password = (new_password or "").strip()
-    if not new_password:
-        raise ValidationError({"new_password": "New password is required."})
-
-    validators = getattr(settings, "AUTH_PASSWORD_VALIDATORS", None) or []
-    if validators:
-        validate_password(new_password, user=user)
-        return
-
-    # Conventional fallback if validators are disabled.
-    if len(new_password) < 8:
-        raise ValidationError({"new_password": "New password must be at least 8 characters."})
-
-
-def change_current_user_password(
-    *,
-    user,
-    current_password: str,
-    new_password: str,
-    confirm_password: str,
-    current_session_key: str | None,
-) -> None:
-    if getattr(user, "is_anonymous", False):
-        raise PermissionDenied("Not allowed.")
-
-    if not (current_password or ""):
-        raise ValidationError({"current_password": "Current password is required."})
-
-    if not user.check_password(current_password):
-        raise ValidationError({"current_password": "Current password is incorrect."})
-
-    if (new_password or "") != (confirm_password or ""):
-        raise ValidationError({"confirm_password": "Passwords do not match."})
-
-    _validate_new_password(new_password=new_password, user=user)
-    if (new_password or "") == (current_password or ""):
-        raise ValidationError({"new_password": "New password must be different from current password."})
-
-    profile = get_or_create_profile(user=user)
-    forced_change = profile.must_change_password
-    with transaction.atomic():
-        user.set_password(new_password)
-        user.full_clean()
-        user.save(update_fields=["password"])
-
-        if profile.must_change_password:
-            profile.must_change_password = False
-            profile.save(update_fields=["must_change_password", "updated_at"])
-
-        from accounts import session_control
-
-        session_control.user_changed_own_password(user, current_session_key)
-        actor = user_uuid(user)
-        transaction.on_commit(
-            lambda: logger.info(
-                "Self password changed: actor=%s target=%s forced=%s",
-                actor,
-                actor,
-                forced_change,
-            )
-        )
-
-
-def reset_managed_user_password(
-    *,
-    actor,
-    target_user,
-) -> ManagedPasswordResetResult:
-    if getattr(actor, "is_anonymous", False):
-        raise PermissionDenied("Not allowed.")
-
-    if getattr(actor, "id", None) == getattr(target_user, "id", None):
-        raise PermissionDenied("Cannot reset your own password here.")
-
-    if not _can_reset_user_password(actor=actor, target_user=target_user):
-        raise PermissionDenied("Not allowed.")
-
-    temporary_password = _generate_temporary_password()
-
-    with transaction.atomic():
-        target_user.set_password(temporary_password)
-        target_user.full_clean()
-        target_user.save(update_fields=["password"])
-
-        profile = get_or_create_profile(user=target_user)
-        if profile.must_change_password is not True:
-            profile.must_change_password = True
-            profile.full_clean()
-            profile.save(update_fields=["must_change_password", "updated_at"])
-
-        from accounts import session_control
-
-        session_control.admin_reset_user_password(target_user, actor=actor)
-        actor_label = user_log_label(actor)
-        target_label = user_log_label(target_user)
-        transaction.on_commit(
-            lambda: logger.info(
-                "Managed password reset completed: actor=%s target=%s",
-                actor_label,
-                target_label,
-            )
-        )
-    return ManagedPasswordResetResult(
-        username=target_user.get_username(),
-        temporary_password=temporary_password,
-    )
-
-
-def build_current_user_me_payload(*, user) -> dict[str, Any]:
-    profile = get_or_create_profile(user=user)
-
-    memberships = list(
-        LibraryGroupMembership.objects.select_related("group")
-        .filter(user=user)
-        .order_by("group__name", "group__id")
-    )
-
-    groups: list[dict[str, Any]] = []
-    for membership in memberships:
-        group = membership.group
-        public = is_public_group(group)
-        group_payload: dict[str, Any] = {
-            "id": group.id,
-            "name": group.name,
-            "is_public_group": public,
-        }
-        if membership.is_curator:
-            group_payload["is_curator"] = True
-        groups.append(group_payload)
-
-    payload: dict[str, Any] = {
-        "username": user.get_username(),
-        "email": user.email or "",
-        "first_name": user.first_name or "",
-        "last_name": user.last_name or "",
-        "profile_id": profile.id,
-        "role": profile.role,
-        "groups": groups,
-    }
-    owner = is_owner(user)
-    if profile.must_change_password:
-        payload["must_change_password"] = True
-    if owner:
-        payload["is_owner"] = True
-    if owner and settings.SECOND_PASS_ENABLE_DJANGO_ADMIN:
-        payload["can_access_django_admin"] = True
-    return payload

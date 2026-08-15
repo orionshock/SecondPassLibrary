@@ -65,3 +65,4 @@ def filter_and_order_managed_users(
         else:
             ordered_terms.append(term.desc() if descending else term.asc())
     return queryset.order_by(*ordered_terms)
+
