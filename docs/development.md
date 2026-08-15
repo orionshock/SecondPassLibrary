@@ -261,7 +261,7 @@ Practical notes:
 ```powershell
 python backend/manage.py check
 python -m pytest
-npm --prefix frontend run test:vitest -- src/__tests__/app-bootstrap.test.tsx
+npm --prefix frontend run test:vitest -- tests/app/AppBootstrap.test.tsx
 npm --prefix frontend exec -- tsc -b
 npm --prefix frontend run build
 node frontend/scripts/check-boundaries.mjs
@@ -345,9 +345,9 @@ system:
 
 ```powershell
 # Focused file, SDK workspace, Product UI, then complete Vitest.
-npm.cmd --prefix frontend run test:vitest -- --run src/__tests__/app-bootstrap.test.tsx
+npm.cmd --prefix frontend run test:vitest -- --run tests/app/AppBootstrap.test.tsx
 npm.cmd --prefix frontend run test:vitest -- --run packages/spl-api
-npm.cmd --prefix frontend run test:vitest -- --run src
+npm.cmd --prefix frontend run test:vitest -- --run tests
 npm.cmd --prefix frontend run test:vitest -- --run
 
 npm.cmd --prefix frontend exec -- tsc -b
@@ -355,12 +355,10 @@ node frontend/scripts/check-boundaries.mjs
 npm.cmd --prefix frontend run build
 ```
 
-These commands use the current dedicated test roots under `frontend/src/__tests__/`
-and `frontend/packages/spl-api/src/__tests__/`. The organization normalization
-target is a physically separate `frontend/tests/` tree mirroring meaningful
-production ownership without reproducing path layers that add no test value.
-Do not move tests until a dedicated tooling slice updates Vitest discovery and
-the test TypeScript project; update these command examples in that same slice.
+These commands use the dedicated Product UI test root under `frontend/tests/`
+and the SDK contract test root under `frontend/packages/spl-api/src/__tests__/`.
+The Product UI tree mirrors meaningful production ownership without reproducing
+path layers that add no test value.
 
 Use `npm` instead of `npm.cmd` on shells where the executable shim is not
 blocked by PowerShell execution policy.

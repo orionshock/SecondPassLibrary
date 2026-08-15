@@ -12,7 +12,6 @@ export default defineConfig(({ command }) => ({
   plugins: [react()],
   test: {
     include: [
-      "src/__tests__/**/*.test.{ts,tsx}",
       "tests/**/*.test.{ts,tsx}",
       "packages/spl-api/src/__tests__/**/*.test.ts",
     ],

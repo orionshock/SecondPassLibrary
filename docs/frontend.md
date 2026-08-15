@@ -62,11 +62,9 @@ The durable source layout is:
 - `frontend/src/shared/`: cross-feature server-blind behavior and layout;
 - `frontend/src/domain/`: application-facing domain presentation helpers;
 - `frontend/packages/spl-api/`: the first-party transport and adaptation package;
-- `frontend/src/__tests__/`: current dedicated Product UI test root;
+- `frontend/tests/`: dedicated Product UI test root, mirroring meaningful
+  production ownership while remaining physically separate from runtime source;
 - `frontend/packages/spl-api/src/__tests__/`: current SDK contract test root;
-- `frontend/tests/`: approved normalization target for all frontend tests,
-  mirroring meaningful `src/` and SDK ownership while remaining physically
-  separate from production source.
 
 Feature route controllers use the `*Orchestrator` suffix. Major local page
 sections use `*PageRegion`. Other React files use PascalCase names matching
