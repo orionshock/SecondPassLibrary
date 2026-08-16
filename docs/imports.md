@@ -118,14 +118,14 @@ parser or checksum work:
 - aggregate expanded EPUB contents: 1 GiB
 - per-member EPUB compression ratio: 100:1
 - encrypted EPUB members, unsafe member names, and normalized duplicate names are rejected
-- batch ZIP upload: 1 GiB
+- Product UI/API upload: 256 MiB
 - batch ZIP entries: 5,000
 - EPUB member expanded from a batch ZIP: 200 MiB
 - total EPUB members expanded from a batch ZIP: 2 GiB
 - marginalia JSON import: 25 MiB
 
-Large migrations should be split into smaller ZIP batches. Reverse-proxy
-limits may impose a lower ceiling.
+Large migrations should use the local CLI commands below. Reverse-proxy limits
+may impose a lower ceiling on the Product UI/API upload.
 
 Archive members and sidecar references are resolved without exposing or
 trusting unsafe filesystem paths. Import result messages use safe source labels
@@ -142,19 +142,51 @@ Source names exist only for immediate diagnostics and are not retained as Book
 metadata or provenance. Final EPUB and cover files are stored through the
 fields owned by `Book`.
 
-## Operator import command
+## Operator import commands
 
-`python backend/manage.py import_library <path>` imports:
+The three local commands use the same per-candidate validation, metadata,
+cover, duplicate, persistence, and Public Group pipeline as Product UI/API
+imports. Candidates run sequentially and print a permanent result immediately;
+duplicates do not fail the command, while failures and conflicts produce a
+nonzero exit.
 
-- one local `.epub`
-- one local `.zip`
-- one non-recursive directory containing `.epub` and `.zip` files
+`import_library_folder_of_zip <path>` preserves the existing workflow for one
+EPUB, one per-Book ZIP, or a recursively scanned directory of EPUB/ZIP files.
+Each ZIP retains the existing nested EPUB, OPF, and referenced-cover semantics.
+Discovery is path-sorted. The source is limited to 100,000 EPUB/ZIP files and
+500 GiB of source files; each ZIP retains the existing member-count,
+per-EPUB, and aggregate expanded-EPUB limits.
 
-It uses the same import services, checksum duplicate handling, OPF sidecar
-behavior, cover precedence, archive limits, and bounded per-item failures as
-the Product UI/API path. It prints only the current run's item results and
-summary. Duplicate items do not fail the command; failed or conflicting items
-produce a nonzero exit.
+`import_library_aio_zip <zip>` reads one large nested ZIP without bulk
+extraction. A logical directory must contain exactly one EPUB and may contain
+`metadata.opf` and an adjacent or OPF-referenced cover. Ambiguous directories
+fail individually; metadata-only directories are skipped. The outer ZIP is
+limited to 20 GiB compressed, 250,000 members, 100,000 logical candidates, and
+500 GiB of EPUB members. Encrypted, unsafe, colliding, and excessively
+compressed members remain rejected. The ordinary 200 MiB per-EPUB limit still
+applies.
+
+`import_library_tree <directory>` recursively reads the same logical candidate
+shape directly from a local or mounted tree. It does not follow symlinks and
+enforces source-root containment, 100,000 candidates, and 500 GiB of EPUB
+files. For a read-only Docker bind mount, run an ephemeral application
+container, for example:
+
+```sh
+docker compose run --rm --no-deps --user secondpass \
+  -v /host/library:/import:ro --entrypoint python secondpasslibrary \
+  manage.py import_library_tree /import
+```
+
+All modes retain the per-EPUB, OPF, cover, image, and internal archive safety
+limits. They report destination free space and stop before the next candidate
+when less than 1 GiB plus that candidate's compressed size would remain.
+Ctrl+C stops nonzero with the last completed candidate. Rerun the same command;
+completed Books are resolved by existing checksum duplicate detection. There
+is no durable checkpoint or exact resume index.
+
+These are generic EPUB/OPF/cover source adapters. They do not read Calibre
+`metadata.db`, depend on Calibre, or interpret other metadata databases.
 
 Temporary request and batch staging lives under `userdata/imports/` and is
 cleaned according to the relevant synchronous or staged workflow. No database

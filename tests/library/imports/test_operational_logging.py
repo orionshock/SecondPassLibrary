@@ -74,6 +74,25 @@ class ImportOperationalLoggingTests(
         self.assertEqual(result.status, "duplicate")
         error.assert_not_called()
 
+    def test_candidate_pipeline_logs_bounded_lifecycle_context(self):
+        with self.assertLogs("library.imports.epub", level="INFO") as logs:
+            result = import_epub_file(
+                BytesIO(minimal_epub_bytes()),
+                source_filename="private-title.epub",
+                source_label="private/path/private-title.epub",
+                source_method="tree",
+                actor=self.librarian,
+            )
+
+        self.assertEqual(result.status, "imported")
+        self.assertEqual(result.title, "Sample EPUB")
+        self.assertEqual(result.authors, ("Sample Author",))
+        self.assertEqual(len(logs.output), 2)
+        self.assertIn("candidate received", logs.output[0].lower())
+        self.assertIn("source_method=tree", logs.output[0])
+        self.assertIn("status=imported", logs.output[1])
+        self.assertNotIn("private-title.epub", " ".join(logs.output))
+
     def test_unexpected_epub_failure_emits_one_safe_error(self):
         with (
             patch("library.imports.epub._import_epub_file", side_effect=RuntimeError("secret.epub")),

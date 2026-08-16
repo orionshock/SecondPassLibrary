@@ -15,7 +15,7 @@ from library.imports.operational_logging import log_import_batch_completed
 from library.imports.serializers import import_batch_payload
 
 
-MAX_IMPORT_UPLOAD_BYTES = 1024 * 1024 * 1024
+MAX_IMPORT_UPLOAD_BYTES = 256 * 1024 * 1024
 
 
 class ImportUploadView(APIView):

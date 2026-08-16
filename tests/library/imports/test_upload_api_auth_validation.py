@@ -3,6 +3,7 @@ from __future__ import annotations
 from unittest.mock import patch
 
 from library.models import Book
+from library.imports.views import MAX_IMPORT_UPLOAD_BYTES
 from tests.library.imports.helpers import metadata_xml, minimal_epub_bytes, zip_bytes
 from tests.library.imports.upload_api_helpers import (
     LibraryImportUploadApiTestCase,
@@ -15,6 +16,9 @@ class LibraryImportUploadAuthValidationTests(
     IsolatedMediaRootMixin,
     LibraryImportUploadApiTestCase,
 ):
+    def test_web_upload_ceiling_is_256_mib(self):
+        self.assertEqual(MAX_IMPORT_UPLOAD_BYTES, 256 * 1024 * 1024)
+
     def test_unauthenticated_upload_is_rejected(self):
         response = self.client.post(
             self.url,

@@ -37,6 +37,8 @@ def import_epub_file(
     actor=None,
     sidecar_opf: ParsedSidecarOpf | None = None,
     sidecar_cover_bytes: bytes | None = None,
+    source_label: str | None = None,
+    source_method: str = "web",
 ) -> ImportItemResult:
     """
     Safe item-level import wrapper.
@@ -45,9 +47,10 @@ def import_epub_file(
     Unexpected exceptions are also captured here for future batch entrypoints,
     but operator_detail exposes only the exception class for those cases.
     """
-    source_label = safe_source_label(source_filename)
+    source_label = source_label or safe_source_label(source_filename)
+    logger.info("Import candidate received: source_method=%s", source_method)
     try:
-        return _import_epub_file(
+        result = _import_epub_file(
             file_obj,
             source_filename=source_filename,
             source_label=source_label,
@@ -56,23 +59,32 @@ def import_epub_file(
             sidecar_cover_bytes=sidecar_cover_bytes,
         )
     except (InvalidEpubImportError, UnsupportedImportSourceError) as exc:
-        return ImportItemResult(
+        result = ImportItemResult(
             status=IMPORT_STATUS_FAILED,
             source_label=source_label,
             safe_message=safe_import_message(exc),
             operator_detail=operator_import_detail(exc),
+            error_category="invalid_candidate",
         )
     except Exception as exc:
         logger.error(
             "Unexpected EPUB import failure: source_type=epub exception=%s",
             type(exc).__name__,
         )
-        return ImportItemResult(
+        result = ImportItemResult(
             status=IMPORT_STATUS_FAILED,
             source_label=source_label,
             safe_message=safe_import_message(exc),
             operator_detail=operator_import_detail(exc),
+            error_category=("io_error" if isinstance(exc, OSError) else "unexpected"),
         )
+    logger.info(
+        "Import candidate completed: source_method=%s status=%s book=%s",
+        source_method,
+        result.status,
+        getattr(result.book, "pk", "none"),
+    )
+    return result
 
 
 def safe_source_label(source_filename: str) -> str:
@@ -118,7 +130,10 @@ def _import_epub_file(
         status=persistence_result.status,
         book=persistence_result.book,
         message=persistence_result.message,
+        title=metadata.title,
+        authors=tuple(author.name for author in metadata.authors),
     )
+
 
 def _attach_import_cover_if_available(
     *,
@@ -152,14 +167,28 @@ def _item_result_from_persistence_result(
     status: str,
     book,
     message: str,
+    title: str,
+    authors: tuple[str, ...],
 ) -> ImportItemResult:
     if status == IMPORT_STATUS_IMPORTED:
         safe_message = message or "Successfully imported EPUB."
+        error_category = ""
     elif status == IMPORT_STATUS_DUPLICATE:
         safe_message = message or "A book with this checksum already exists."
+        error_category = "checksum_duplicate"
     elif status == IMPORT_STATUS_CONFLICT:
         safe_message = message or "An identifier from this import already belongs to another book."
+        error_category = "identifier_conflict"
     else:
         status = IMPORT_STATUS_FAILED
         safe_message = message or INVALID_EPUB_MESSAGE
-    return ImportItemResult(status=status, source_label=source_label, book=book, safe_message=safe_message)
+        error_category = "persistence_failure"
+    return ImportItemResult(
+        status=status,
+        source_label=source_label,
+        book=book,
+        safe_message=safe_message,
+        title=title,
+        authors=authors,
+        error_category=error_category,
+    )

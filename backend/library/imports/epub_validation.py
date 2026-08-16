@@ -11,9 +11,9 @@ from library.imports.errors import InvalidEpubImportError
 
 
 READ_CHUNK_BYTES = 1024 * 1024
-# EPUBs are compressed application archives. These limits are deliberately
-# below the 1 GiB outer import-upload ceiling and align with the 200 MiB batch
-# EPUB-member limit. They bound work before EbookLib parses any archive data.
+# EPUBs are compressed application archives. The 200 MiB compressed limit fits
+# below the web upload ceiling and is shared by direct, batch, and local CLI
+# candidates. The internal limits bound work before EbookLib parses archive data.
 MAX_EPUB_COMPRESSED_BYTES = 200 * 1024 * 1024
 MAX_EPUB_MEMBERS = 2000
 MAX_EPUB_MEMBER_UNCOMPRESSED_BYTES = 100 * 1024 * 1024
@@ -150,5 +150,4 @@ def _safe_epub_member_name(info: zipfile.ZipInfo) -> str | None:
     if safe_name is None:
         return None
     return safe_name
-
 

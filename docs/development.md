@@ -454,21 +454,21 @@ Safety:
   should use the first-run setup page. It remains a development/demo helper
   only.
 
-## Local Library import command
+## Local Library import commands
 
 Recurring cleanup and repair commands belong to
-[Operations](operations.md). To import a single local EPUB, a ZIP archive, or a non-recursive directory
-(operator-only host/container path):
+[Operations](operations.md). The explicit local source modes are:
 
 ```powershell
-python backend/manage.py import_library "path\to\book.epub"
-python backend/manage.py import_library "path\to\books.zip"
-python backend/manage.py import_library "path\to\directory"
+python backend/manage.py import_library_folder_of_zip "path\to\book.epub"
+python backend/manage.py import_library_folder_of_zip "path\to\per-book-archives"
+python backend/manage.py import_library_aio_zip "path\to\large-library.zip"
+python backend/manage.py import_library_tree "path\to\unpacked-library"
 ```
 
-The command shares the same import services as Product/API imports, supports ZIP
-OPF sidecars, uses the same ZIP limits, and does not create durable import
-history.
+All three commands share the Product/API per-candidate importer and do not
+create durable import history. See [Imports](imports.md) for pairing, safety,
+large-archive, read-only bind-mount, interruption, and rerun behavior.
 
 See also:
 - `docs/api.md` (shared conventions and external contracts)

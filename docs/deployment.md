@@ -124,8 +124,9 @@ The reverse proxy should also:
 
 - own HTTPS redirect and HSTS;
 - replace forwarded protocol and client-address headers;
-- enforce reasonable request-body and header-size limits, with any upload
-  ceiling chosen intentionally against the limits in [Imports](imports.md);
+- enforce reasonable request-body and header-size limits; the Library import
+  request ceiling must permit the documented 256 MiB application limit without
+  becoming a general multi-gigabyte upload path (see [Imports](imports.md));
 - enforce header/read/idle timeouts that still allow expected synchronous
   imports and exports;
 - apply coarse abuse limits to setup, login, and pairing creation without

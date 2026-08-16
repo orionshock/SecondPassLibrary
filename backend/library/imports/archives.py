@@ -30,6 +30,7 @@ class ZipMember:
     safe_name: str
     file_size: int
     archive_name: str = ""
+    compress_size: int = 0
 
     @property
     def source_name(self) -> str:
@@ -145,6 +146,7 @@ def build_zip_index(infos: list[zipfile.ZipInfo]) -> ZipIndex:
             safe_name=safe_name,
             file_size=info.file_size,
             archive_name=info.filename,
+            compress_size=info.compress_size,
         )
         index.members_index[safe_name] = member
 

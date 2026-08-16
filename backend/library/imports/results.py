@@ -18,6 +18,9 @@ class ImportItemResult:
     book: object | None = None
     safe_message: str = ""
     operator_detail: str = ""
+    title: str = ""
+    authors: tuple[str, ...] = ()
+    error_category: str = ""
 
 
 @dataclass
@@ -56,3 +59,43 @@ class ImportBatchResult:
 
     def count_status(self, status: str) -> int:
         return sum(1 for item in self.items if item.status == status)
+
+
+@dataclass
+class ImportRunStats:
+    source_method: str
+    discovered: int = 0
+    presented: int = 0
+    imported: int = 0
+    duplicates: int = 0
+    conflicts: int = 0
+    skipped: int = 0
+    failed: int = 0
+    source_failures: int = 0
+    ambiguous: int = 0
+    processed_bytes: int = 0
+    last_completed_candidate: int = 0
+
+    def record(
+        self,
+        result: ImportItemResult,
+        *,
+        source_failure: bool = False,
+        ambiguous: bool = False,
+        processed_bytes: int = 0,
+    ) -> None:
+        if result.status == IMPORT_STATUS_IMPORTED:
+            self.imported += 1
+        elif result.status == IMPORT_STATUS_DUPLICATE:
+            self.duplicates += 1
+        elif result.status == IMPORT_STATUS_CONFLICT:
+            self.conflicts += 1
+        elif result.status == IMPORT_STATUS_SKIPPED:
+            self.skipped += 1
+        else:
+            self.failed += 1
+        if source_failure:
+            self.source_failures += 1
+        if ambiguous:
+            self.ambiguous += 1
+        self.processed_bytes += max(0, processed_bytes)
