@@ -192,8 +192,9 @@ local debug/static/media behavior and run `python backend/manage.py migrate --no
 first. The setup wizard assumes migrations already exist; it does not create
 database tables during an HTTP request.
 
-Run the maintenance consumer in a second terminal when exercising scheduled or
-Admin-triggered maintenance work:
+`start-dev.ps1` and `start-local-production.ps1` start and supervise the Huey
+maintenance consumer automatically. When using raw `runserver` or Uvicorn,
+start it in a second terminal:
 
 ```powershell
 python backend/manage.py run_huey

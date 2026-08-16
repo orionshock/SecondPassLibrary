@@ -26,6 +26,8 @@ $env:SECOND_PASS_ENABLE_DJANGO_ADMIN = "1"
 $env:SECOND_PASS_ENABLE_WHITENOISE = "1"
 $env:SECOND_PASS_USERDATA_DIR = Join-Path $ProjectRoot "userdata"
 
+$HueyProcess = $null
+
 Push-Location $ProjectRoot
 try {
     if (-not (Test-Path -LiteralPath $ReactPackage -PathType Leaf)) {
@@ -64,6 +66,14 @@ try {
         Remove-Item -LiteralPath $ProductUiAssets -Recurse -Force
     }
 
+    $HueyProcess = Start-Process `
+        -FilePath $PythonExecutable `
+        -ArgumentList "manage.py", "run_huey" `
+        -WorkingDirectory $BackendRoot `
+        -NoNewWindow `
+        -PassThru
+    Write-Host "Huey: maintenance worker running"
+
     $UvicornArgs = @(
         "secondpass.asgi:application",
         "--host", $UvicornHost,
@@ -81,5 +91,9 @@ try {
         Pop-Location
     }
 } finally {
+    if ($null -ne $HueyProcess -and -not $HueyProcess.HasExited) {
+        Stop-Process -Id $HueyProcess.Id
+        $HueyProcess.WaitForExit()
+    }
     Pop-Location
 }

@@ -22,6 +22,7 @@ $env:SECOND_PASS_ENABLE_WHITENOISE = "0"
 $env:SECOND_PASS_USERDATA_DIR = Join-Path $ProjectRoot "userdata"
 
 $ViteProcess = $null
+$HueyProcess = $null
 
 Push-Location $ProjectRoot
 try {
@@ -42,12 +43,24 @@ try {
         -NoNewWindow `
         -PassThru
 
+    $HueyProcess = Start-Process `
+        -FilePath $PythonExecutable `
+        -ArgumentList "manage.py", "run_huey" `
+        -WorkingDirectory $BackendRoot `
+        -NoNewWindow `
+        -PassThru
+
     Write-Host "React UI: http://localhost:5174"
     Write-Host "Django:  http://localhost:8000"
+    Write-Host "Huey:    maintenance worker running"
 
     & $PythonExecutable $ManagePy runserver @args
     exit $LASTEXITCODE
 } finally {
+    if ($null -ne $HueyProcess -and -not $HueyProcess.HasExited) {
+        Stop-Process -Id $HueyProcess.Id
+        $HueyProcess.WaitForExit()
+    }
     if ($null -ne $ViteProcess -and -not $ViteProcess.HasExited) {
         Stop-Process -Id $ViteProcess.Id
         $ViteProcess.WaitForExit()
