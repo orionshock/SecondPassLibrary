@@ -92,6 +92,7 @@ SECOND_PASS_READING_CLIENT_BASE_URL = (
 (USERDATA_DIR / "media").mkdir(parents=True, exist_ok=True)
 (USERDATA_DIR / "imports").mkdir(parents=True, exist_ok=True)
 IMPORTS_DIR = USERDATA_DIR / "imports"
+HUEY_DATABASE_PATH = USERDATA_DIR / "db" / "huey.sqlite3"
 
 
 # Quick-start development settings - unsuitable for production
@@ -131,13 +132,27 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "corsheaders",
     "rest_framework",
+    "huey.contrib.djhuey",
     "web",
     "core.apps.CoreConfig",
     "accounts",
     "library.apps.LibraryConfig",
     "marginalia.apps.MarginaliaConfig",
     "shelves",
+    "maintenance.apps.MaintenanceConfig",
 ]
+
+HUEY = {
+    "huey_class": "huey.SqliteHuey",
+    "name": "secondpass-maintenance",
+    "filename": str(HUEY_DATABASE_PATH),
+    "results": False,
+    "immediate": RUNNING_TESTS,
+    "consumer": {
+        "workers": 1,
+        "worker_type": "thread",
+    },
+}
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
@@ -272,6 +287,7 @@ LOGGING = {
             "core",
             "library",
             "marginalia",
+            "maintenance",
             "shelves",
             "web",
         )

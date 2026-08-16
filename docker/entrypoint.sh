@@ -28,12 +28,22 @@ done
 
 echo "Starting Second Pass Library as uid=$(gosu secondpass id -u) gid=$(gosu secondpass id -g)"
 
-gosu secondpass python manage.py check --deploy
-gosu secondpass python manage.py migrate --noinput
-
-exec gosu secondpass python -m uvicorn secondpass.asgi:application \
-    --host 0.0.0.0 \
-    --port 8000 \
-    --workers 1 \
-    --no-proxy-headers \
-    --no-access-log
+case "${1:-web}" in
+    web)
+        gosu secondpass python manage.py check --deploy
+        gosu secondpass python manage.py migrate --noinput
+        exec gosu secondpass python -m uvicorn secondpass.asgi:application \
+            --host 0.0.0.0 \
+            --port 8000 \
+            --workers 1 \
+            --no-proxy-headers \
+            --no-access-log
+        ;;
+    worker)
+        exec gosu secondpass python manage.py run_huey
+        ;;
+    *)
+        echo "Unknown runtime role: $1" >&2
+        exit 2
+        ;;
+esac

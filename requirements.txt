@@ -4,6 +4,7 @@ EbookLib==0.20
 defusedxml==0.7.1
 django-cors-headers==4.9.0
 django-environ==0.14.0
+huey==3.3.4
 Pillow==12.3.0
 jsonschema==4.26.0
 uvicorn==0.51.0

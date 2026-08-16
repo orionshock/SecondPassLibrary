@@ -54,6 +54,7 @@ class ApplicationLogLevelTests(TestCase):
                 "accounts",
                 "core",
                 "library",
+                "maintenance",
                 "marginalia",
                 "shelves",
                 "web",

@@ -33,9 +33,9 @@ For the default named volume, the existing quiesced backup procedure is:
 
 ```powershell
 New-Item -ItemType Directory -Force backups
-docker compose -f docker/compose.yml stop secondpasslibrary
+docker compose -f docker/compose.yml stop
 docker compose -f docker/compose.yml run --rm --no-deps -v ./backups:/backup --entrypoint python secondpasslibrary -c "import tarfile; archive=tarfile.open('/backup/secondpass-userdata.tar.gz','w:gz'); archive.add('/app/userdata', arcname='userdata'); archive.close()"
-docker compose -f docker/compose.yml start secondpasslibrary
+docker compose -f docker/compose.yml start
 ```
 
 Place `backups/` outside any web-served directory and restrict it with the
@@ -107,6 +107,20 @@ Django Admin is an optional operator service hatch, disabled by default. Set
 needed. Restrict `/admin/` to trusted LAN/VPN clients or a reverse-proxy
 allowlist. Admin is for exceptional repair and inspection, not normal product
 workflows; normal authority is documented in [Permissions](permissions.md).
+
+The Admin **Maintenance Tasks** area is superuser-only. Approved task identity,
+name, description, and executable are fixed in code. Admin controls only
+enabled state and one bounded frequency: Manual only, Hourly, Every 6 hours,
+Every 12 hours, Daily, or Weekly. Definitions initially synchronize as disabled;
+a superuser may still use **Run now** as an explicit override. The run page shows
+queued, running, succeeded, or failed state and a bounded result; application
+logs remain the diagnostic record.
+
+No arbitrary command, callable, argument, or schedule expression can be
+submitted. Library/Book import and development fixture commands are excluded.
+The cleanup management commands and Huey adapters call the same runtime
+operations. CLI commands execute synchronously without the worker; scheduled
+and Admin runs require `maintenance-worker`.
 
 Important repair flows are superuser-only:
 

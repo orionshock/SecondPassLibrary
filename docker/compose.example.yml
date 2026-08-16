@@ -20,5 +20,22 @@ services:
       start_period: 30s
     restart: unless-stopped
 
+  maintenance-worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+      args:
+        APP_UID: 1000
+        APP_GID: 1000
+    env_file:
+      - .env
+    volumes:
+      - secondpass_userdata:/app/userdata
+    command: ["worker"]
+    depends_on:
+      secondpasslibrary:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   secondpass_userdata:

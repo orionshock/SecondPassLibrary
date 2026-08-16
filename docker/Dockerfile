@@ -85,3 +85,4 @@ COPY --from=static-collection /runtime/ /app/
 EXPOSE 8000
 
 ENTRYPOINT ["/app/docker/entrypoint.sh"]
+CMD ["web"]

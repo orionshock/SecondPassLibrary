@@ -1,9 +1,9 @@
 from django.core.management.base import BaseCommand
 
 from shelves.unavailable_item_cleanup import (
-    cleanup_unavailable_user_shelf_items,
     plan_unavailable_user_shelf_items,
 )
+from shelves.maintenance import execute_unavailable_shelf_item_cleanup
 
 
 def _safe_shelf_name(value: str) -> str:
@@ -35,11 +35,9 @@ class Command(BaseCommand):
             self.stdout.write("Dry run only; no changes were made.")
             return
 
-        result = cleanup_unavailable_user_shelf_items()
+        result = execute_unavailable_shelf_item_cleanup()
         self.stdout.write(
             self.style.SUCCESS(
-                "Cleanup complete: "
-                f"{result.removed_item_count} item(s) removed from "
-                f"{result.affected_shelf_count} user-owned shelf/shelves."
+                result.summary
             )
         )

@@ -192,6 +192,16 @@ local debug/static/media behavior and run `python backend/manage.py migrate --no
 first. The setup wizard assumes migrations already exist; it does not create
 database tables during an HTTP request.
 
+Run the maintenance consumer in a second terminal when exercising scheduled or
+Admin-triggered maintenance work:
+
+```powershell
+python backend/manage.py run_huey
+```
+
+The consumer uses `userdata/db/huey.sqlite3`. Existing maintenance management
+commands remain synchronous and do not require Huey to be running.
+
 The setup wizard is not development-only. The same migrated-database/no-active-
 Owner condition is used in production. See `docs/deployment.md`.
 

@@ -2,8 +2,9 @@
 
 Second Pass Library supports one Docker Compose application instance with
 SQLite and persistent Docker storage. The image builds the React Product UI,
-collects static assets, applies migrations at container startup, and runs one
-Uvicorn worker as the non-root `secondpass` user.
+collects static assets, applies migrations at web-container startup, and runs
+one Uvicorn web process plus one Huey maintenance worker as the non-root
+`secondpass` user.
 
 The supported network boundary is a loopback/private application bind behind an
 operator-managed reverse proxy. Direct public exposure of the Uvicorn port is
@@ -27,8 +28,9 @@ complete, mutually consistent database and userdata backup.
 
 ## Docker Compose
 
-The example service is `secondpasslibrary`. It mounts the named volume
-`secondpass_userdata` at `/app/userdata` and publishes only
+The example web service is `secondpasslibrary`; `maintenance-worker` is its
+separate background-maintenance consumer. Both mount the named volume
+`secondpass_userdata` at `/app/userdata`, while only the web service publishes
 `127.0.0.1:8000:8000`. Do not scale the service or increase its worker count
 while it uses SQLite.
 
@@ -62,11 +64,17 @@ UID/GID is `1000:1000`; alternative IDs are Docker build arguments in
 `docker/compose.yml`, not runtime environment variables. The entrypoint creates
 and verifies the required userdata directories before dropping privileges.
 
-Startup performs:
+Web startup performs:
 
 1. `python manage.py check --deploy`
 2. `python manage.py migrate --noinput`
 3. `python -m uvicorn secondpass.asgi:application --host 0.0.0.0 --port 8000 --workers 1 --no-proxy-headers --no-access-log`
+
+After web health succeeds, `maintenance-worker` runs
+`python manage.py run_huey`. Huey's queue uses the separate persistent SQLite
+file `/app/userdata/db/huey.sqlite3`, not Django's application database, and
+the worker exposes no network port. Keep exactly one maintenance worker for
+this SQLite-first deployment.
 
 The container healthcheck calls `/api/v1/health/` with the first allowed host.
 Readiness requires the database, built Product UI index, and writable userdata

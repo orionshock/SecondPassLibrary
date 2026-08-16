@@ -4,8 +4,8 @@ from accounts.operational_logging import logger
 from accounts.client_sessions.cleanup import (
     DEFAULT_PAIRING_CLEANUP_LIMIT,
     MAX_PAIRING_CLEANUP_LIMIT,
-    cleanup_client_pairing_requests,
 )
+from accounts.client_sessions.maintenance import execute_pairing_request_cleanup
 
 
 class Command(BaseCommand):
@@ -25,7 +25,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         try:
-            result = cleanup_client_pairing_requests(
+            result = execute_pairing_request_cleanup(
                 dry_run=options["dry_run"],
                 limit=options["limit"],
             )
@@ -38,15 +38,4 @@ class Command(BaseCommand):
             )
             raise CommandError("Client pairing cleanup failed.") from exc
 
-        self.stdout.write(
-            "dry_run={0} eligible={1} selected={2} would_delete={3} deleted={4} "
-            "skipped_limit={5} retained={6}".format(
-                result.dry_run,
-                result.eligible_count,
-                result.selected_count,
-                result.would_delete_count,
-                result.deleted_count,
-                result.skipped_limit_count,
-                result.retained_count,
-            )
-        )
+        self.stdout.write(result.summary)

@@ -35,6 +35,7 @@ APPLICATION_LOGGER_NAMES = (
     "accounts",
     "core",
     "library",
+    "maintenance",
     "marginalia",
     "shelves",
     "web",
