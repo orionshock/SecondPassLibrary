@@ -235,7 +235,7 @@ class ImportLibraryCommandTests(
         self.assertFalse(Book.objects.exists())
 
     def test_aio_zip_container_limit_is_separate_from_web_upload_limit(self):
-        from library.imports.cli_sources import MAX_AIO_ZIP_COMPRESSED_BYTES
+        from library.imports.aio_zip_source import MAX_AIO_ZIP_COMPRESSED_BYTES
         from library.imports.views import MAX_IMPORT_UPLOAD_BYTES
 
         self.assertGreater(MAX_AIO_ZIP_COMPRESSED_BYTES, MAX_IMPORT_UPLOAD_BYTES)
@@ -248,7 +248,7 @@ class ImportLibraryCommandTests(
             )
 
             with (
-                patch("library.imports.cli_sources.MAX_AIO_ZIP_MEMBERS", 0),
+                patch("library.imports.aio_zip_source.MAX_AIO_ZIP_MEMBERS", 0),
                 self.assertRaises(CommandError),
             ):
                 call_command("import_library_aio_zip", str(archive), stdout=StringIO())

@@ -3,7 +3,7 @@ from pathlib import Path
 from django.core.management.base import BaseCommand
 
 from library.imports.cli_runner import run_cli_import
-from library.imports.cli_sources import TreeSource
+from library.imports.tree_source import TreeSource
 
 
 class Command(BaseCommand):
