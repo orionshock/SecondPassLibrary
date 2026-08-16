@@ -120,7 +120,7 @@ No arbitrary command, callable, argument, or schedule expression can be
 submitted. Library/Book import and development fixture commands are excluded.
 The cleanup management commands and Huey adapters call the same runtime
 operations. CLI commands execute synchronously without the worker; scheduled
-and Admin runs require `maintenance-worker`.
+and Admin runs require `secondpasslibrary-maintenance-worker`.
 
 Important repair flows are superuser-only:
 

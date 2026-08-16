@@ -20,7 +20,7 @@ services:
       start_period: 30s
     restart: unless-stopped
 
-  maintenance-worker:
+  secondpasslibrary-maintenance-worker:
     build:
       context: ..
       dockerfile: docker/Dockerfile
@@ -31,6 +31,7 @@ services:
       - .env
     volumes:
       - secondpass_userdata:/app/userdata
+    network_mode: "none"
     command: ["worker"]
     depends_on:
       secondpasslibrary:
