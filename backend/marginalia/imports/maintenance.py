@@ -22,6 +22,7 @@ def execute_import_stage_cleanup(*, dry_run: bool = False) -> MaintenanceResult:
             "records_deleted": result.records_deleted,
             "files_deleted": result.files_deleted,
             "missing_files": result.missing_files,
+            "failures": result.failures,
         },
     )
     if result.failures:

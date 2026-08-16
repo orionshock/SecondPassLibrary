@@ -7,6 +7,7 @@ from django.utils.html import format_html
 
 from .models import MaintenanceTaskConfig, MaintenanceTaskRun
 from .registry import get_task_definition
+from .results import result_count_label
 from .services import (
     ActiveMaintenanceRunError,
     UnknownMaintenanceTaskError,
@@ -14,21 +15,6 @@ from .services import (
     delete_completed_run_history,
     prune_completed_runs,
 )
-
-
-RESULT_COUNT_LABELS = {
-    "eligible": "Eligible pairing requests",
-    "selected": "Pairing requests processed",
-    "deleted": "Pairing requests deleted",
-    "skipped_limit": "Pairing requests deferred by limit",
-    "retained": "Pairing requests retained",
-    "expired_stages": "Expired import stages",
-    "records_deleted": "Stage records deleted",
-    "files_deleted": "Stage files deleted",
-    "missing_files": "Stage files already missing",
-    "affected_shelves": "User-owned Shelves affected",
-    "removed_items": "Unavailable Shelf items removed",
-}
 
 
 class SuperuserMaintenanceAdminMixin:
@@ -285,10 +271,7 @@ class MaintenanceTaskRunAdmin(SuperuserMaintenanceAdminMixin, admin.ModelAdmin):
                     "run_duration": self._run_duration(run),
                     "run_result_rows": [
                         (
-                            RESULT_COUNT_LABELS.get(
-                                key,
-                                key.replace("_", " ").capitalize(),
-                            ),
+                            result_count_label(key),
                             value,
                         )
                         for key, value in run.result_counts.items()

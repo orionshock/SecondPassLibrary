@@ -6,6 +6,7 @@ from accounts.client_sessions.cleanup import (
     MAX_PAIRING_CLEANUP_LIMIT,
 )
 from accounts.client_sessions.maintenance import execute_pairing_request_cleanup
+from maintenance.cli_presentation import MaintenanceCliPresenter
 
 
 class Command(BaseCommand):
@@ -24,9 +25,15 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        dry_run = options["dry_run"]
+        presenter = MaintenanceCliPresenter(self)
+        presenter.operation(
+            name="Cleanup Client Pairing Requests",
+            mode="Dry run" if dry_run else "Apply",
+        )
         try:
             result = execute_pairing_request_cleanup(
-                dry_run=options["dry_run"],
+                dry_run=dry_run,
                 limit=options["limit"],
             )
         except ValueError as exc:
@@ -38,4 +45,7 @@ class Command(BaseCommand):
             )
             raise CommandError("Client pairing cleanup failed.") from exc
 
-        self.stdout.write(result.summary)
+        presenter.result(
+            result,
+            status="Dry run complete" if dry_run else "Succeeded",
+        )

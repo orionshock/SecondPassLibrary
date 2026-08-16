@@ -53,11 +53,13 @@ class CleanupShelvesTests(ShelfServiceFixtureMixin, TestCase):
         call_command("cleanup_shelves", stdout=output)
 
         text = output.getvalue()
-        self.assertIn("Affected user-owned shelves: 1", text)
-        self.assertIn("Unavailable shelf items: 1", text)
+        self.assertIn("Mode: Dry run", text)
+        self.assertRegex(text, r"User-owned Shelves affected\s+1")
+        self.assertRegex(text, r"Unavailable Shelf items\s+1")
+        self.assertIn("Affected Shelves", text)
         self.assertIn("Private Queue", text)
         self.assertNotIn("Private\nQueue", text)
-        self.assertIn("Dry run only; no changes were made.", text)
+        self.assertIn("Result: Dry run complete; no changes made", text)
         self.assertTrue(ShelfItem.objects.filter(pk=self.unavailable.pk).exists())
 
     def test_apply_removes_only_unavailable_personal_items_and_canonicalizes(self):
@@ -73,7 +75,22 @@ class CleanupShelvesTests(ShelfServiceFixtureMixin, TestCase):
         self.assertEqual(self.accessible.position, 0)
         self.assertEqual(self.group_item.position, 7)
         self.assertTrue(Shelf.objects.filter(pk=self.personal.pk).exists())
-        self.assertIn("Cleanup complete: 1 item(s) removed", output.getvalue())
+        text = output.getvalue()
+        self.assertIn("Mode: Apply", text)
+        self.assertRegex(text, r"Unavailable Shelf items removed\s+1")
+        self.assertIn("Result: Succeeded", text)
+
+    def test_plan_escapes_markup_and_bounds_shelf_names(self):
+        self.personal.name = f"[red]{'X' * 100}[/red]\nQueue"
+        self.personal.save(update_fields=("name", "updated_at"))
+        output = StringIO()
+
+        call_command("cleanup_shelves", stdout=output)
+
+        text = output.getvalue()
+        self.assertIn("[red]", text)
+        self.assertNotIn("\x1b[", text)
+        self.assertNotIn("\nQueue", text)
 
     def test_repeated_apply_is_idempotent(self):
         first = cleanup_unavailable_user_shelf_items()

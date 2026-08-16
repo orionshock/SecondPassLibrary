@@ -124,6 +124,7 @@ class MaintenanceAdminTests(TestCase):
             result_counts={
                 "eligible": 1,
                 "selected": 1,
+                "would_delete": 1,
                 "deleted": 1,
                 "retained": 0,
             },
@@ -136,6 +137,7 @@ class MaintenanceAdminTests(TestCase):
 
         self.assertContains(response, "Eligible pairing requests")
         self.assertContains(response, "Pairing requests processed")
+        self.assertContains(response, "Pairing requests that would be deleted")
         self.assertContains(response, "Pairing requests deleted")
         self.assertContains(response, "Pairing requests retained")
         self.assertContains(response, "Run now by maintenance-owner")

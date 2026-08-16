@@ -24,6 +24,7 @@ def execute_pairing_request_cleanup(
         counts={
             "eligible": result.eligible_count,
             "selected": result.selected_count,
+            "would_delete": result.would_delete_count,
             "deleted": result.deleted_count,
             "skipped_limit": result.skipped_limit_count,
             "retained": result.retained_count,

@@ -88,6 +88,9 @@ class MarginaliaImportStagingTests(IsolatedUserdataMixin, TestCase):
         call_command(
             "cleanup_marginalia_import_stages", dry_run=True, stdout=dry_output
         )
+        self.assertIn("Mode: Dry run", dry_output.getvalue())
+        self.assertRegex(dry_output.getvalue(), r"Expired import stages\s+1")
+        self.assertRegex(dry_output.getvalue(), r"Cleanup failures\s+0")
         self.assertTrue(ImportStage.objects.filter(pk=expired.pk).exists())
         self.assertTrue(stage_file_path(expired.storage_name).exists())
         self.assertNotIn(str(import_stage_root()), dry_output.getvalue())
@@ -97,7 +100,11 @@ class MarginaliaImportStagingTests(IsolatedUserdataMixin, TestCase):
         self.assertFalse(ImportStage.objects.filter(pk=expired.pk).exists())
         self.assertFalse(stage_file_path(expired.storage_name).exists())
         self.assertFalse(orphan.exists())
-        self.assertIn("expired_stages_found=1", output.getvalue())
+        self.assertIn("Mode: Apply", output.getvalue())
+        self.assertRegex(output.getvalue(), r"Expired import stages\s+1")
+        self.assertRegex(output.getvalue(), r"Stage records deleted\s+1")
+        self.assertRegex(output.getvalue(), r"Cleanup failures\s+0")
+        self.assertIn("Result: Succeeded", output.getvalue())
         self.assertNotIn(self.user.username, output.getvalue())
 
         repeated = cleanup_import_stages()
@@ -128,10 +135,13 @@ class MarginaliaImportStagingTests(IsolatedUserdataMixin, TestCase):
                 raise OSError("simulated")
             return real_unlink(path, *args, **kwargs)
 
+        output = StringIO()
         with (
             patch.object(Path, "unlink", fail_stage_file),
             self.assertRaises(CommandError),
         ):
-            call_command("cleanup_marginalia_import_stages", stdout=StringIO())
+            call_command("cleanup_marginalia_import_stages", stdout=output)
 
+        self.assertRegex(output.getvalue(), r"Cleanup failures\s+1")
+        self.assertIn("Result: Completed with failures", output.getvalue())
         self.assertTrue(ImportStage.objects.filter(pk=stage.pk).exists())

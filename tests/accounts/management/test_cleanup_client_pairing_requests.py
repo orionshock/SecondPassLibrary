@@ -73,7 +73,7 @@ class CleanupClientPairingRequestsTests(TestCase):
         self.assertTrue(ClientLoginRequest.objects.filter(pk=active.pk).exists())
         self.assertTrue(ClientLoginRequest.objects.filter(pk=recent_denied.pk).exists())
 
-    def test_cleanup_is_idempotent_and_command_reports_bounded_summary(self):
+    def test_cleanup_is_idempotent_and_command_renders_apply_counts(self):
         self._request(
             status=ClientLoginRequest.STATUS_PENDING,
             expires_at=timezone.now() - timedelta(minutes=1),
@@ -83,11 +83,12 @@ class CleanupClientPairingRequestsTests(TestCase):
         call_command("cleanup_client_pairing_requests", stdout=output)
         second = cleanup_client_pairing_requests()
 
-        self.assertIn(
-            "dry_run=False eligible=1 selected=1 would_delete=0 deleted=1 "
-            "skipped_limit=0 retained=0",
-            output.getvalue(),
-        )
+        text = output.getvalue()
+        self.assertIn("Cleanup Client Pairing Requests", text)
+        self.assertIn("Mode: Apply", text)
+        self.assertRegex(text, r"Eligible pairing requests\s+1")
+        self.assertRegex(text, r"Pairing requests deleted\s+1")
+        self.assertIn("Result: Succeeded", text)
         self.assertEqual(second.eligible_count, 0)
         self.assertEqual(second.selected_count, 0)
         self.assertEqual(second.deleted_count, 0)
@@ -103,10 +104,31 @@ class CleanupClientPairingRequestsTests(TestCase):
         call_command("cleanup_client_pairing_requests", limit=1, stdout=output)
 
         self.assertEqual(ClientLoginRequest.objects.count(), 1)
-        self.assertIn(
-            "eligible=2 selected=1 would_delete=0 deleted=1 skipped_limit=1 retained=1",
-            output.getvalue(),
+        text = output.getvalue()
+        self.assertRegex(text, r"Eligible pairing requests\s+2")
+        self.assertRegex(text, r"Pairing requests processed\s+1")
+        self.assertRegex(text, r"Pairing requests deferred by limit\s+1")
+        self.assertRegex(text, r"Pairing requests retained\s+1")
+
+    def test_dry_run_renders_would_delete_without_ansi_or_mutation(self):
+        request = self._request(
+            status=ClientLoginRequest.STATUS_PENDING,
+            expires_at=timezone.now() - timedelta(minutes=1),
         )
+        output = StringIO()
+
+        call_command(
+            "cleanup_client_pairing_requests",
+            dry_run=True,
+            stdout=output,
+        )
+
+        text = output.getvalue()
+        self.assertIn("Mode: Dry run", text)
+        self.assertRegex(text, r"Pairing requests that would be deleted\s+1")
+        self.assertIn("Result: Dry run complete", text)
+        self.assertNotIn("\x1b[", text)
+        self.assertTrue(ClientLoginRequest.objects.filter(pk=request.pk).exists())
 
     def test_cleanup_logs_do_not_include_pairing_secrets(self):
         code = "PAIR-CODE"
