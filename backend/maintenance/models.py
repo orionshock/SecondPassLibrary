@@ -32,7 +32,7 @@ class MaintenanceFrequency(models.TextChoices):
 
 class MaintenanceTaskConfig(models.Model):
     task_key = models.CharField(max_length=100, unique=True, editable=False)
-    enabled = models.BooleanField(default=False)
+    enabled = models.BooleanField(default=True)
     frequency = models.CharField(
         max_length=16,
         choices=MaintenanceFrequency.choices,

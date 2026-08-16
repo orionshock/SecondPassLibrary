@@ -18,7 +18,7 @@ class MaintenanceTaskDefinition:
     description: str
     default_frequency: MaintenanceFrequency
     execute: Callable[[], MaintenanceResult]
-    default_enabled: bool = False
+    default_enabled: bool = True
 
 
 TASK_DEFINITIONS = (

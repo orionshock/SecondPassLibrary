@@ -31,7 +31,7 @@ class Migration(migrations.Migration):
                     "task_key",
                     models.CharField(editable=False, max_length=100, unique=True),
                 ),
-                ("enabled", models.BooleanField(default=False)),
+                ("enabled", models.BooleanField(default=True)),
                 (
                     "frequency",
                     models.CharField(

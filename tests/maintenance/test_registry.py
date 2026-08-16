@@ -23,6 +23,7 @@ class MaintenanceRegistryTests(TestCase):
         }
         self.assertEqual(set(configurations), {item.key for item in TASK_DEFINITIONS})
         for definition in TASK_DEFINITIONS:
+            self.assertTrue(definition.default_enabled)
             configuration = configurations[definition.key]
             self.assertEqual(configuration.frequency, definition.default_frequency)
             self.assertEqual(configuration.enabled, definition.default_enabled)
@@ -39,6 +40,17 @@ class MaintenanceRegistryTests(TestCase):
 
         with self.assertRaises(ValidationError):
             configuration.full_clean()
+
+    def test_synchronization_preserves_an_existing_disabled_choice(self):
+        definition = TASK_DEFINITIONS[0]
+        configuration = MaintenanceTaskConfig.objects.get(task_key=definition.key)
+        configuration.enabled = False
+        configuration.save()
+
+        synchronize_task_configurations()
+
+        configuration.refresh_from_db()
+        self.assertFalse(configuration.enabled)
 
     def test_disabled_and_manual_configurations_have_no_due_time(self):
         disabled = MaintenanceTaskConfig.objects.create(
