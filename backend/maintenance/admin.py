@@ -11,7 +11,24 @@ from .services import (
     ActiveMaintenanceRunError,
     UnknownMaintenanceTaskError,
     create_admin_run,
+    delete_completed_run_history,
+    prune_completed_runs,
 )
+
+
+RESULT_COUNT_LABELS = {
+    "eligible": "Eligible pairing requests",
+    "selected": "Pairing requests processed",
+    "deleted": "Pairing requests deleted",
+    "skipped_limit": "Pairing requests deferred by limit",
+    "retained": "Pairing requests retained",
+    "expired_stages": "Expired import stages",
+    "records_deleted": "Stage records deleted",
+    "files_deleted": "Stage files deleted",
+    "missing_files": "Stage files already missing",
+    "affected_shelves": "User-owned Shelves affected",
+    "removed_items": "Unavailable Shelf items removed",
+}
 
 
 class SuperuserMaintenanceAdminMixin:
@@ -158,6 +175,8 @@ class MaintenanceTaskConfigAdmin(SuperuserMaintenanceAdminMixin, admin.ModelAdmi
 @admin.register(MaintenanceTaskRun)
 class MaintenanceTaskRunAdmin(SuperuserMaintenanceAdminMixin, admin.ModelAdmin):
     actions = None
+    change_form_template = "admin/maintenance/maintenancetaskrun/change_form.html"
+    change_list_template = "admin/maintenance/maintenancetaskrun/change_list.html"
     list_display = (
         "task_name",
         "trigger",
@@ -187,6 +206,97 @@ class MaintenanceTaskRunAdmin(SuperuserMaintenanceAdminMixin, admin.ModelAdmin):
     def has_change_permission(self, request, obj=None):
         return False
 
+    def get_urls(self):
+        return [
+            path(
+                "prune-history/",
+                self.admin_site.admin_view(self.prune_history_view),
+                name="maintenance_task_run_prune_history",
+            ),
+            path(
+                "delete-history/",
+                self.admin_site.admin_view(self.delete_history_view),
+                name="maintenance_task_run_delete_history",
+            ),
+        ] + super().get_urls()
+
+    def prune_history_view(self, request):
+        if not self.has_view_permission(request):
+            raise Http404
+        if request.method == "POST":
+            deleted = prune_completed_runs()
+            self.message_user(
+                request,
+                f"Pruned {deleted} completed maintenance task run(s).",
+                level=messages.SUCCESS,
+            )
+            return redirect("admin:maintenance_maintenancetaskrun_changelist")
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Prune Maintenance Task Run History",
+            "opts": self.model._meta,
+        }
+        return TemplateResponse(
+            request,
+            "admin/maintenance/maintenancetaskrun/prune_history.html",
+            context,
+        )
+
+    def delete_history_view(self, request):
+        if not self.has_view_permission(request):
+            raise Http404
+        if request.method == "POST":
+            deleted = delete_completed_run_history()
+            self.message_user(
+                request,
+                f"Deleted {deleted} completed maintenance task run(s).",
+                level=messages.SUCCESS,
+            )
+            return redirect("admin:maintenance_maintenancetaskrun_changelist")
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Delete Completed Maintenance Task Run History",
+            "opts": self.model._meta,
+        }
+        return TemplateResponse(
+            request,
+            "admin/maintenance/maintenancetaskrun/delete_history.html",
+            context,
+        )
+
+    def change_view(self, request, object_id, form_url="", extra_context=None):
+        run = self.get_object(request, object_id)
+        context = dict(extra_context or {})
+        if run is not None:
+            definition = get_task_definition(run.task_key)
+            context.update(
+                {
+                    "run_task_name": (
+                        definition.name
+                        if definition
+                        else f"Retired task: {run.task_key}"
+                    ),
+                    "run_task_description": (
+                        definition.description
+                        if definition
+                        else "No registered executor is available for this task."
+                    ),
+                    "run_source": self._run_source(run),
+                    "run_duration": self._run_duration(run),
+                    "run_result_rows": [
+                        (
+                            RESULT_COUNT_LABELS.get(
+                                key,
+                                key.replace("_", " ").capitalize(),
+                            ),
+                            value,
+                        )
+                        for key, value in run.result_counts.items()
+                    ],
+                }
+            )
+        return super().change_view(request, object_id, form_url, context)
+
     @admin.display(description="Task")
     def task_name(self, obj):
         definition = get_task_definition(obj.task_key)
@@ -200,3 +310,20 @@ class MaintenanceTaskRunAdmin(SuperuserMaintenanceAdminMixin, admin.ModelAdmin):
             if definition
             else "No registered executor is available for this task key."
         )
+
+    @staticmethod
+    def _run_source(run):
+        if run.trigger == MaintenanceTaskRun.Trigger.ADMIN:
+            return (
+                f"Run now by {run.requested_by}"
+                if run.requested_by is not None
+                else "Run now by a former user"
+            )
+        return "Scheduled maintenance"
+
+    @staticmethod
+    def _run_duration(run):
+        if run.started_at is None or run.completed_at is None:
+            return None
+        seconds = (run.completed_at - run.started_at).total_seconds()
+        return f"{seconds:.2f} seconds"

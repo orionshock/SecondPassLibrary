@@ -1,0 +1,89 @@
+{% extends "admin/change_form.html" %}
+{% load i18n admin_urls static %}
+
+{% block title %}{{ run_task_name }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+{% block content_title %}{% endblock %}
+{% block content_subtitle %}{% endblock %}
+
+{% block extrastyle %}
+{{ block.super }}
+<link rel="stylesheet" href="{% static 'maintenance/admin.css' %}">
+{% endblock %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">Maintenance</a>
+  &rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">Task Runs</a>
+  &rsaquo; {{ run_task_name }}
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main" class="maintenance-run">
+  <ul class="object-tools">
+    <li><a href="{{ request.path }}">Refresh</a></li>
+  </ul>
+
+  <header class="maintenance-run__header">
+    <p class="maintenance-run__eyebrow">Maintenance run</p>
+    <h1>{{ run_task_name }}</h1>
+    <p class="maintenance-run__description">{{ run_task_description }}</p>
+    <p class="maintenance-run__status maintenance-run__status--{{ original.status }}">
+      {{ original.get_status_display }}
+    </p>
+  </header>
+
+  <section class="module maintenance-run__section">
+    <h2>Execution</h2>
+    <dl class="maintenance-run__details">
+      <div>
+        <dt>Source</dt>
+        <dd>{{ run_source }}</dd>
+      </div>
+      <div>
+        <dt>Queued</dt>
+        <dd>{{ original.queued_at }}</dd>
+      </div>
+      <div>
+        <dt>Started</dt>
+        <dd>{{ original.started_at|default:'Not started' }}</dd>
+      </div>
+      <div>
+        <dt>Completed</dt>
+        <dd>{{ original.completed_at|default:'Not completed' }}</dd>
+      </div>
+      {% if run_duration %}
+      <div>
+        <dt>Duration</dt>
+        <dd>{{ run_duration }}</dd>
+      </div>
+      {% endif %}
+    </dl>
+  </section>
+
+  <section class="module maintenance-run__section">
+    <h2>{% if original.status == 'failed' %}Failure{% else %}Results{% endif %}</h2>
+    {% if original.status == 'failed' %}
+      <p class="errornote">{{ original.failure_summary|default:'Task failed. Review application logs for details.' }}</p>
+    {% elif run_result_rows %}
+      <dl class="maintenance-run__results">
+        {% for label, value in run_result_rows %}
+        <div>
+          <dt>{{ label }}</dt>
+          <dd>{{ value }}</dd>
+        </div>
+        {% endfor %}
+      </dl>
+    {% elif original.result_summary %}
+      <p>{{ original.result_summary }}</p>
+    {% else %}
+      <p>This run has not produced a result yet. Use Refresh to check again.</p>
+    {% endif %}
+  </section>
+
+  <p class="maintenance-run__back">
+    <a href="{% url opts|admin_urlname:'changelist' %}">Back to task runs</a>
+  </p>
+</div>
+{% endblock %}

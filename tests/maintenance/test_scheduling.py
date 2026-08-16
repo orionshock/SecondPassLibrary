@@ -81,3 +81,31 @@ class MaintenanceSchedulingTests(TestCase):
         )
         self.assertEqual(MaintenanceFrequency.DAILY.interval, timedelta(days=1))
         self.assertEqual(MaintenanceFrequency.WEEKLY.interval, timedelta(days=7))
+
+    def test_dispatcher_automatic_retention_keeps_90_days_and_active_runs(self):
+        now = timezone.now()
+        expired = MaintenanceTaskRun.objects.create(
+            configuration=self.configuration,
+            task_key=self.configuration.task_key,
+            trigger=MaintenanceTaskRun.Trigger.SCHEDULED,
+            status=MaintenanceTaskRun.Status.SUCCEEDED,
+            completed_at=now - timedelta(days=91),
+        )
+        retained = MaintenanceTaskRun.objects.create(
+            configuration=self.configuration,
+            task_key=self.configuration.task_key,
+            trigger=MaintenanceTaskRun.Trigger.SCHEDULED,
+            status=MaintenanceTaskRun.Status.SUCCEEDED,
+            completed_at=now - timedelta(days=8),
+        )
+        active = MaintenanceTaskRun.objects.create(
+            configuration=self.configuration,
+            task_key=self.configuration.task_key,
+            trigger=MaintenanceTaskRun.Trigger.ADMIN,
+        )
+
+        dispatch_due_tasks(now=now)
+
+        self.assertFalse(MaintenanceTaskRun.objects.filter(pk=expired.pk).exists())
+        self.assertTrue(MaintenanceTaskRun.objects.filter(pk=retained.pk).exists())
+        self.assertTrue(MaintenanceTaskRun.objects.filter(pk=active.pk).exists())

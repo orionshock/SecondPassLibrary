@@ -18,7 +18,8 @@ ACTIVE_STATUSES = (
     MaintenanceTaskRun.Status.RUNNING,
 )
 FAILURE_SUMMARY = "Task failed. Review application logs for details."
-RUN_RETENTION = timedelta(days=90)
+AUTOMATIC_RUN_RETENTION = timedelta(days=90)
+PRUNED_RUN_RETENTION = timedelta(days=7)
 
 
 class UnknownMaintenanceTaskError(Exception):
@@ -128,7 +129,7 @@ def dispatch_due_tasks(*, now=None) -> int:
                 continue
             enqueued_ids.append(run.pk)
             transaction.on_commit(lambda run_id=run.pk: enqueue_run(run_id))
-    _prune_old_runs(now=now)
+    prune_expired_runs(now=now)
     return len(enqueued_ids)
 
 
@@ -215,15 +216,54 @@ def _store_failed_run(run, summary):
     )
 
 
-def _prune_old_runs(*, now) -> None:
+def prune_completed_runs(*, now=None, limit: int = 1000) -> int:
+    now = now or timezone.now()
+    return _delete_completed_runs_before(
+        cutoff=now - PRUNED_RUN_RETENTION,
+        limit=limit,
+    )
+
+
+def prune_expired_runs(*, now=None, limit: int = 1000) -> int:
+    now = now or timezone.now()
+    return _delete_completed_runs_before(
+        cutoff=now - AUTOMATIC_RUN_RETENTION,
+        limit=limit,
+    )
+
+
+def _delete_completed_runs_before(*, cutoff, limit: int) -> int:
+    if limit < 1 or limit > 1000:
+        raise ValueError("limit must be between 1 and 1000.")
     stale_ids = list(
         MaintenanceTaskRun.objects.filter(
             status__in=(
                 MaintenanceTaskRun.Status.SUCCEEDED,
                 MaintenanceTaskRun.Status.FAILED,
             ),
-            completed_at__lt=now - RUN_RETENTION,
-        ).values_list("pk", flat=True)[:1000]
+            completed_at__lt=cutoff,
+        ).values_list("pk", flat=True)[:limit]
     )
-    if stale_ids:
-        MaintenanceTaskRun.objects.filter(pk__in=stale_ids).delete()
+    if not stale_ids:
+        return 0
+    deleted, _details = MaintenanceTaskRun.objects.filter(pk__in=stale_ids).delete()
+    return deleted
+
+
+def delete_completed_run_history(*, limit: int = 1000) -> int:
+    if limit < 1 or limit > 1000:
+        raise ValueError("limit must be between 1 and 1000.")
+    completed_ids = list(
+        MaintenanceTaskRun.objects.filter(
+            status__in=(
+                MaintenanceTaskRun.Status.SUCCEEDED,
+                MaintenanceTaskRun.Status.FAILED,
+            )
+        ).values_list("pk", flat=True)[:limit]
+    )
+    if not completed_ids:
+        return 0
+    deleted, _details = MaintenanceTaskRun.objects.filter(
+        pk__in=completed_ids
+    ).delete()
+    return deleted

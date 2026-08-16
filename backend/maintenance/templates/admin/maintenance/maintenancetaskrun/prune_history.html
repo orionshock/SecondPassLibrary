@@ -1,0 +1,27 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">Maintenance</a>
+  &rsaquo; <a href="{% url 'admin:maintenance_maintenancetaskrun_changelist' %}">Task Runs</a>
+  &rsaquo; Prune to last 7 days
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+  <p>
+    This removes completed maintenance task runs older than 7 days, up to
+    1,000 records per request. Recent, queued, and running records remain.
+  </p>
+  <form method="post">
+    {% csrf_token %}
+    <div class="submit-row">
+      <a href="{% url 'admin:maintenance_maintenancetaskrun_changelist' %}" class="closelink">Cancel</a>
+      <input type="submit" value="Prune to last 7 days" class="default">
+    </div>
+  </form>
+</div>
+{% endblock %}
