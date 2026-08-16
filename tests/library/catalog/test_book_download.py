@@ -12,7 +12,10 @@ from rest_framework.test import APIClient
 
 from accounts.client_sessions.services import hash_client_secret
 from accounts.models import UserClientSession, UserProfile
-from library.catalog.downloads import DOWNLOAD_FILENAME_MAX_CHARS, book_download_filename
+from library.catalog.download_filenames import (
+    DOWNLOAD_FILENAME_MAX_CHARS,
+    book_download_filename,
+)
 from library.models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from tests.testenv.filesystem import IsolatedMediaRootMixin
 from tests.utils.users import set_user_role

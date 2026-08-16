@@ -11,7 +11,7 @@ from rest_framework.views import APIView
 
 from core.errors import ErrorCode, api_error_response
 from library.api_access import LibraryBearerReadMixin
-from library.catalog.downloads import book_download_filename
+from library.catalog.download_filenames import book_download_filename
 from library.models import Book
 from library.queries import visible_books_for_user
 from library.storage_diagnostics import log_storage_issue

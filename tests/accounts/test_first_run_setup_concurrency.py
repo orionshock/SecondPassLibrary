@@ -10,7 +10,7 @@ from django.core.cache import cache
 from django.db import connection
 from django.test import TestCase, TransactionTestCase
 
-from accounts.bootstrap import (
+from accounts.first_owner_setup import (
     FIRST_OWNER_SETUP_GUARD_KEY,
     SetupAlreadyComplete,
     create_first_owner,

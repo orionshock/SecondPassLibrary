@@ -12,7 +12,7 @@ from django.http import HttpRequest, HttpResponse
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_POST
 
-from accounts.bootstrap import (
+from accounts.first_owner_setup import (
     SetupAlreadyComplete,
     create_first_owner,
     has_active_owner,

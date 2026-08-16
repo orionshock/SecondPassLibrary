@@ -15,7 +15,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from accounts.models import UserProfile
-from accounts.bootstrap import has_active_owner
+from accounts.first_owner_setup import has_active_owner
 from accounts.profiles import get_or_create_profile
 from core import server_settings
 from library.groups.memberships import add_user_to_group, remove_user_from_group
