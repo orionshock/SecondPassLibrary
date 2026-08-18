@@ -1,4 +1,4 @@
-import type { BookOrdering, BookPreview } from "../library";
+import type { BookOrdering, BookPreview, LibrarySearchOrdering } from "../library";
 
 export interface LibraryGroup {
   id: string;
@@ -26,8 +26,19 @@ export interface UpdateGroupInput { name?: string; description?: string; }
 export interface GroupBooksQuery {
   q?: string;
   tag?: string;
+  authorId?: string;
+  seriesId?: string;
+  publisher?: string;
   excludeShelfId?: string;
   ordering?: BookOrdering;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface GroupBookSearchQuery {
+  q: string;
+  excludeShelfId?: string;
+  ordering?: LibrarySearchOrdering;
   page?: number;
   pageSize?: number;
 }

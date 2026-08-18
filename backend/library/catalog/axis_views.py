@@ -14,8 +14,8 @@ from accounts.roles import is_librarian
 
 from library.api_access import LibraryBearerReadMixin
 from library.catalog.axes import (
+    apply_axis_filters,
     apply_axis_ordering,
-    apply_axis_search,
     parse_axis_ordering,
     visible_authors_from_books,
     visible_series_from_books,
@@ -62,7 +62,9 @@ class _BaseAxisMixin(LibraryBearerReadMixin):
     supports_preview_books = False
 
     def visible_books(self):
-        return visible_books_for_user(self.request.user, cached=self.use_cached_visibility)
+        return visible_books_for_user(
+            self.request.user, cached=self.use_cached_visibility
+        )
 
     def axis_queryset(self):
         raise NotImplementedError
@@ -93,27 +95,13 @@ class _BaseAxisListView(_BaseAxisMixin, ListAPIView):
 
     def get_queryset(self):
         queryset = self.axis_queryset()
-        queryset = apply_axis_search(
+        queryset = apply_axis_filters(
             queryset,
             self.request.query_params,
             include_normalized=self.search_normalized_name,
+            supports_exclude_id=self.supports_exclude_id,
         )
-        if self.supports_exclude_id:
-            queryset = self.exclude_axis_id(queryset)
         return apply_axis_ordering(queryset, parse_axis_ordering(self.request))
-
-    def exclude_axis_id(self, queryset):
-        values = self.request.query_params.getlist("exclude_id")
-        if not values:
-            return queryset
-        raw = values[0].strip() if len(values) == 1 else ""
-        if not raw:
-            raise serializers.ValidationError({"exclude_id": "Invalid id."})
-        try:
-            axis_id = queryset.model._meta.pk.to_python(raw)
-        except (DjangoValidationError, TypeError, ValueError) as exc:
-            raise serializers.ValidationError({"exclude_id": "Invalid id."}) from exc
-        return queryset.exclude(pk=axis_id)
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
@@ -167,9 +155,16 @@ class AuthorAxisMixin(_BaseAxisMixin):
     supports_preview_books = True
 
     def axis_queryset(self):
-        if is_session_catalog_manager(self.request) and not self.has_catalog_tag_filter():
-            return Author.objects.annotate(book_count=Count("book_authors__book", distinct=True))
-        visible_books = apply_catalog_tag_filter(self.visible_books(), self.request.query_params)
+        if (
+            is_session_catalog_manager(self.request)
+            and not self.has_catalog_tag_filter()
+        ):
+            return Author.objects.annotate(
+                book_count=Count("book_authors__book", distinct=True)
+            )
+        visible_books = apply_catalog_tag_filter(
+            self.visible_books(), self.request.query_params
+        )
         return visible_authors_from_books(visible_books)
 
     def attach_preview_books(self, parents, *, limit):
@@ -197,7 +192,9 @@ class AuthorListView(AuthorAxisMixin, _BaseAxisListView):
                 exc.message_dict if hasattr(exc, "message_dict") else exc.messages
             ) from exc
         author.book_count = 0
-        response_serializer = AuthorAxisSerializer(author, context=self.get_serializer_context())
+        response_serializer = AuthorAxisSerializer(
+            author, context=self.get_serializer_context()
+        )
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
 
@@ -234,9 +231,16 @@ class SeriesAxisMixin(_BaseAxisMixin):
     supports_preview_books = True
 
     def axis_queryset(self):
-        if is_session_catalog_manager(self.request) and not self.has_catalog_tag_filter():
-            return Series.objects.annotate(book_count=Count("book_series__book", distinct=True))
-        visible_books = apply_catalog_tag_filter(self.visible_books(), self.request.query_params)
+        if (
+            is_session_catalog_manager(self.request)
+            and not self.has_catalog_tag_filter()
+        ):
+            return Series.objects.annotate(
+                book_count=Count("book_series__book", distinct=True)
+            )
+        visible_books = apply_catalog_tag_filter(
+            self.visible_books(), self.request.query_params
+        )
         return visible_series_from_books(visible_books)
 
     def attach_preview_books(self, parents, *, limit):
@@ -260,7 +264,9 @@ class SeriesListView(SeriesAxisMixin, _BaseAxisListView):
                 exc.message_dict if hasattr(exc, "message_dict") else exc.messages
             ) from exc
         series.book_count = 0
-        response_serializer = SeriesAxisSerializer(series, context=self.get_serializer_context())
+        response_serializer = SeriesAxisSerializer(
+            series, context=self.get_serializer_context()
+        )
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
 

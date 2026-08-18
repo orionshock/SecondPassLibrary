@@ -62,6 +62,13 @@ class LibraryBearerGroupReadTests(LibraryBearerApiTestCase):
             {"Fantasy": 1, "Mystery": 1},
         )
 
+        search = self.bearer_get(
+            f"/api/v1/library/groups/{custom.id}/search",
+            {"q": "visible"},
+        )
+        self.assertEqual(search.status_code, 200)
+        self.assertEqual(search.json()["count"], 2)
+
     def test_group_author_and_series_previews_are_bearer_group_scoped(self):
         base = f"/api/v1/library/groups/{self.public.id}/"
         authors = self.bearer_get(
@@ -74,18 +81,25 @@ class LibraryBearerGroupReadTests(LibraryBearerApiTestCase):
         )
 
         self.assertEqual(authors.status_code, 200)
-        alpha = next(row for row in authors.json()["results"] if row["name"] == "Alpha Author")
+        alpha = next(
+            row for row in authors.json()["results"] if row["name"] == "Alpha Author"
+        )
         self.assertNotIn(
             "Hidden Dresden",
             [book["title"] for book in alpha["preview_books"]],
         )
         self.assertEqual(
-            {set(book) == {"id", "title", "cover_url"} for book in alpha["preview_books"]},
+            {
+                set(book) == {"id", "title", "cover_url"}
+                for book in alpha["preview_books"]
+            },
             {True},
         )
 
         self.assertEqual(series.status_code, 200)
-        first = next(row for row in series.json()["results"] if row["name"] == "First Series")
+        first = next(
+            row for row in series.json()["results"] if row["name"] == "First Series"
+        )
         self.assertEqual(
             [book["title"] for book in first["preview_books"]],
             ["Visible Two", "Visible One"],
@@ -96,3 +110,7 @@ class LibraryBearerGroupReadTests(LibraryBearerApiTestCase):
         for axis in ["books", "authors", "series", "tags"]:
             with self.subTest(axis=axis):
                 self.assertEqual(self.bearer_get(f"{base}{axis}/").status_code, 404)
+        self.assertEqual(
+            self.bearer_get(f"{base}search", {"q": "book"}).status_code,
+            404,
+        )

@@ -47,13 +47,25 @@ class LibraryGroupBrowseTests(TestCase):
         LibraryGroupMembership.objects.create(user=self.reader, group=self.family)
         LibraryGroupMembership.objects.create(user=self.other, group=self.hidden)
 
-        self.alpha = Author.objects.create(name="Alpha Author", sort_name="Alpha Author")
+        self.alpha = Author.objects.create(
+            name="Alpha Author", sort_name="Alpha Author"
+        )
         self.beta = Author.objects.create(name="Beta Author", sort_name="Beta Author")
-        self.gamma = Author.objects.create(name="Gamma Author", sort_name="Gamma Author")
-        self.first_series = Series.objects.create(name="First Series", sort_name="First Series")
-        self.second_series = Series.objects.create(name="Second Series", sort_name="Second Series")
-        self.fantasy = CatalogTag.objects.create(name="Fantasy", normalized_name="fantasy", slug="fantasy")
-        self.mystery = CatalogTag.objects.create(name="Mystery", normalized_name="mystery", slug="mystery")
+        self.gamma = Author.objects.create(
+            name="Gamma Author", sort_name="Gamma Author"
+        )
+        self.first_series = Series.objects.create(
+            name="First Series", sort_name="First Series"
+        )
+        self.second_series = Series.objects.create(
+            name="Second Series", sort_name="Second Series"
+        )
+        self.fantasy = CatalogTag.objects.create(
+            name="Fantasy", normalized_name="fantasy", slug="fantasy"
+        )
+        self.mystery = CatalogTag.objects.create(
+            name="Mystery", normalized_name="mystery", slug="mystery"
+        )
 
         self.club_alpha = create_catalog_book(
             "Club Alpha",
@@ -110,7 +122,9 @@ class LibraryGroupBrowseTests(TestCase):
         response = self.client.get(f"/api/v1/library/groups/{self.club.id}/books/")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response_titles(response), ["Club Alpha", "Club Beta", "Shared Book"])
+        self.assertEqual(
+            response_titles(response), ["Club Alpha", "Club Beta", "Shared Book"]
+        )
         row = response.json()["results"][0]
         self.assertEqual([tag["name"] for tag in row["catalog_tags"]], ["Fantasy"])
         self.assertNotIn("tags", row)
@@ -164,6 +178,12 @@ class LibraryGroupBrowseTests(TestCase):
                 )
                 self.assertEqual(response.status_code, 404)
 
+        search = self.client.get(
+            f"/api/v1/library/groups/{self.hidden.id}/search",
+            {"q": "book", "ordering": "created_at"},
+        )
+        self.assertEqual(search.status_code, 404)
+
     def test_group_books_q_filter_order_and_pagination_compose(self):
         response = self.client.get(
             f"/api/v1/library/groups/{self.club.id}/books/",
@@ -179,7 +199,33 @@ class LibraryGroupBrowseTests(TestCase):
         self.assertEqual(response_titles(response), ["Club Alpha"])
         self.assertIsNone(response.json()["next"])
 
-    def test_group_books_q_matches_broad_search_fields_within_group(self):
+    def test_group_books_q_matches_only_title_and_sort_title(self):
+        self.club_alpha.sort_title = "Private Catalog Alias"
+        self.club_alpha.save(update_fields=["sort_title", "updated_at"])
+
+        title = self.client.get(
+            f"/api/v1/library/groups/{self.club.id}/books/", {"q": "club alpha"}
+        )
+        sort_title = self.client.get(
+            f"/api/v1/library/groups/{self.club.id}/books/", {"q": "catalog alias"}
+        )
+
+        self.assertEqual(response_titles(title), ["Club Alpha"])
+        self.assertEqual(response_titles(sort_title), ["Club Alpha"])
+        for term in (
+            "beta author",
+            "first series",
+            "fantasy",
+            "alpha house",
+            "dresden file",
+        ):
+            with self.subTest(term=term):
+                response = self.client.get(
+                    f"/api/v1/library/groups/{self.club.id}/books/", {"q": term}
+                )
+                self.assertEqual(response_titles(response), [])
+
+    def test_group_search_matches_global_broad_fields_within_group(self):
         self.club_alpha.subtitle = "Private subtitle"
         self.club_alpha.save(update_fields=["subtitle", "updated_at"])
         BookIdentifier.objects.create(
@@ -202,10 +248,42 @@ class LibraryGroupBrowseTests(TestCase):
         for term, expected in cases.items():
             with self.subTest(term=term):
                 response = self.client.get(
-                    f"/api/v1/library/groups/{self.club.id}/books/", {"q": term}
+                    f"/api/v1/library/groups/{self.club.id}/search", {"q": term}
                 )
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response_titles(response), expected)
+
+    def test_group_search_blank_query_ordering_and_pagination_match_global_search(self):
+        endpoint = f"/api/v1/library/groups/{self.club.id}/search"
+        for query in ({}, {"q": ""}, {"q": "  "}):
+            with self.subTest(query=query):
+                response = self.client.get(endpoint, query)
+                self.assertEqual(
+                    response.json(),
+                    {"count": 0, "next": None, "previous": None, "results": []},
+                )
+
+        orderings = {
+            "title": "Club Alpha",
+            "-title": "Club Beta",
+            "author": "Club Alpha",
+            "-author": "Club Beta",
+            "series": "Club Alpha",
+            "-series": "Club Alpha",
+        }
+        for ordering, expected_first in orderings.items():
+            with self.subTest(ordering=ordering):
+                response = self.client.get(
+                    endpoint,
+                    {"q": "club", "ordering": ordering, "page_size": 1},
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(response.json()["count"], 2)
+                self.assertEqual(response_titles(response), [expected_first])
+
+        invalid = self.client.get(endpoint, {"q": "club", "ordering": "publisher"})
+        self.assertEqual(invalid.status_code, 400)
+        self.assertIn("ordering", invalid.json())
 
     def test_group_books_exclude_shelf_composes_with_filters_order_and_pagination(self):
         shelf = Shelf.objects.create(
@@ -269,8 +347,7 @@ class LibraryGroupBrowseTests(TestCase):
             f"/api/v1/library/groups/{self.club.id}/books/",
             {"exclude_shelf": str(family_shelf.id)},
         )
-        self.assertEqual(mismatch.status_code, 400)
-        self.assertIn("exclude_shelf", mismatch.json())
+        self.assertEqual(mismatch.status_code, 404)
 
         malformed = self.client.get(
             f"/api/v1/library/groups/{self.club.id}/books/",
@@ -296,6 +373,39 @@ class LibraryGroupBrowseTests(TestCase):
         self.assertEqual(missing.status_code, 404)
         self.assertEqual(hidden.status_code, 404)
 
+    def test_group_search_exclude_shelf_requires_the_requested_group_owner(self):
+        club_shelf = Shelf.objects.create(
+            name="Club shelf",
+            owner_type=Shelf.OWNER_TYPE_GROUP,
+            owner_group=self.club,
+            created_by=self.reader,
+        )
+        ShelfItem.objects.create(
+            shelf=club_shelf,
+            book=self.club_alpha,
+            position=0,
+            added_by=self.reader,
+        )
+        endpoint = f"/api/v1/library/groups/{self.club.id}/search"
+
+        excluded = self.client.get(
+            endpoint,
+            {"q": "club", "exclude_shelf": str(club_shelf.id)},
+        )
+        self.assertEqual(response_titles(excluded), ["Club Beta"])
+
+        personal = Shelf.objects.create(
+            name="Personal",
+            owner_type=Shelf.OWNER_TYPE_USER,
+            owner_user=self.reader,
+            created_by=self.reader,
+        )
+        mismatch = self.client.get(
+            endpoint,
+            {"q": "club", "exclude_shelf": str(personal.id)},
+        )
+        self.assertEqual(mismatch.status_code, 404)
+
     def test_group_books_first_and_subsequent_pages_use_normal_envelope(self):
         url = f"/api/v1/library/groups/{self.club.id}/books/"
 
@@ -314,14 +424,18 @@ class LibraryGroupBrowseTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response_names(response), ["Alpha Author", "Beta Author"])
-        self.assertEqual(response_book_counts(response), {"Alpha Author": 2, "Beta Author": 1})
+        self.assertEqual(
+            response_book_counts(response), {"Alpha Author": 2, "Beta Author": 1}
+        )
 
     def test_group_series_include_only_group_series_and_count_group_books(self):
         response = self.client.get(f"/api/v1/library/groups/{self.club.id}/series/")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response_names(response), ["First Series", "Second Series"])
-        self.assertEqual(response_book_counts(response), {"First Series": 2, "Second Series": 1})
+        self.assertEqual(
+            response_book_counts(response), {"First Series": 2, "Second Series": 1}
+        )
 
     def test_group_author_and_series_preview_books_are_exact_group_scoped(self):
         authors = self.client.get(
@@ -338,14 +452,18 @@ class LibraryGroupBrowseTests(TestCase):
         )
 
         self.assertEqual(authors.status_code, 200)
-        alpha = next(row for row in authors.json()["results"] if row["name"] == "Alpha Author")
+        alpha = next(
+            row for row in authors.json()["results"] if row["name"] == "Alpha Author"
+        )
         self.assertEqual(preview_titles(alpha), ["Club Alpha", "Shared Book"])
         self.assertNotIn("Family Gamma", preview_titles(alpha))
         for preview in alpha["preview_books"]:
             self.assertEqual(set(preview), {"id", "title", "cover_url"})
 
         self.assertEqual(series.status_code, 200)
-        second = next(row for row in series.json()["results"] if row["name"] == "Second Series")
+        second = next(
+            row for row in series.json()["results"] if row["name"] == "Second Series"
+        )
         self.assertEqual(preview_titles(second), ["Shared Book"])
         self.assertNotIn("Family Gamma", preview_titles(second))
 
@@ -361,7 +479,10 @@ class LibraryGroupBrowseTests(TestCase):
                 )
                 self.assertEqual(limited.status_code, 200)
                 self.assertTrue(
-                    all(len(row["preview_books"]) == 1 for row in limited.json()["results"])
+                    all(
+                        len(row["preview_books"]) == 1
+                        for row in limited.json()["results"]
+                    )
                 )
 
                 disabled = self.client.get(
@@ -370,7 +491,9 @@ class LibraryGroupBrowseTests(TestCase):
                 )
                 self.assertEqual(disabled.status_code, 200)
                 self.assertTrue(
-                    all("preview_books" not in row for row in disabled.json()["results"])
+                    all(
+                        "preview_books" not in row for row in disabled.json()["results"]
+                    )
                 )
 
                 invalid = self.client.get(
@@ -417,6 +540,34 @@ class LibraryGroupBrowseTests(TestCase):
         self.assertEqual(response_names(authors), ["Alpha Author"])
         self.assertEqual(response_book_counts(authors), {"Alpha Author": 2})
         self.assertEqual(response_names(series), ["First Series", "Second Series"])
+
+    def test_group_author_and_series_share_normalized_search_and_exclude_id(self):
+        self.beta.normalized_name = "pen name"
+        self.beta.save(update_fields=["normalized_name", "updated_at"])
+        self.second_series.normalized_name = "alternate saga"
+        self.second_series.save(update_fields=["normalized_name", "updated_at"])
+
+        authors = self.client.get(
+            f"/api/v1/library/groups/{self.club.id}/authors/",
+            {"q": "  PEN   NAME ", "exclude_id": str(self.alpha.id)},
+        )
+        series = self.client.get(
+            f"/api/v1/library/groups/{self.club.id}/series/",
+            {"q": "  ALTERNATE   SAGA ", "exclude_id": str(self.first_series.id)},
+        )
+
+        self.assertEqual(response_names(authors), ["Beta Author"])
+        self.assertEqual(response_names(series), ["Second Series"])
+
+    def test_group_tag_counts_use_the_complete_scoped_population(self):
+        books = self.client.get(
+            f"/api/v1/library/groups/{self.club.id}/books/",
+            {"page_size": 1},
+        )
+        tags = self.client.get(f"/api/v1/library/groups/{self.club.id}/tags/")
+
+        self.assertEqual(len(books.json()["results"]), 1)
+        self.assertEqual(response_book_counts(tags), {"Fantasy": 2, "Mystery": 1})
 
     def test_invalid_ordering_returns_400_for_visible_group_axis_endpoints(self):
         endpoints = ["books", "authors", "series", "tags"]

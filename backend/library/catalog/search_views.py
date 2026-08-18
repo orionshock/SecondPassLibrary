@@ -20,17 +20,26 @@ from shelves.policies import can_edit_shelf
 SEARCH_ORDERINGS = {"title", "-title", "author", "-author", "series", "-series"}
 
 
+def book_search_queryset(queryset, request):
+    term = str(request.query_params.get("q") or "").strip()
+    if not term:
+        queryset = queryset.none()
+    else:
+        queryset = apply_broad_book_search(queryset, term)
+    queryset = book_row_queryset(queryset)
+    ordering = parse_ordering_param(
+        request,
+        allowed=SEARCH_ORDERINGS,
+        default="title",
+    )
+    return apply_book_ordering(queryset, ordering)
+
+
 class UserBookVerseSearchView(LibraryBearerReadMixin, ListAPIView):
     serializer_class = BookListSerializer
 
     def get_queryset(self):
         queryset = visible_books_for_user(self.request.user, cached=False)
-        term = str(self.request.query_params.get("q") or "").strip()
-        if not term:
-            queryset = queryset.none()
-        else:
-            queryset = apply_broad_book_search(queryset, term)
-
         queryset = _exclude_shelf_books(
             queryset,
             user=self.request.user,
@@ -41,13 +50,7 @@ class UserBookVerseSearchView(LibraryBearerReadMixin, ListAPIView):
             user=self.request.user,
             raw_group_id=self.request.query_params.get("exclude_group", ""),
         )
-        queryset = book_row_queryset(queryset)
-        ordering = parse_ordering_param(
-            self.request,
-            allowed=SEARCH_ORDERINGS,
-            default="title",
-        )
-        return apply_book_ordering(queryset, ordering)
+        return book_search_queryset(queryset, self.request)
 
 
 def _exclude_shelf_books(queryset, *, user, raw_shelf_id: str):

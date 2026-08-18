@@ -5,11 +5,18 @@ export type BookOrdering =
   | "series_index" | "-series_index"
   | "publisher" | "-publisher";
 
+export type LibrarySearchOrdering =
+  | "title" | "-title"
+  | "author" | "-author"
+  | "series" | "-series";
+
 export interface LibraryBooksQuery {
   q?: string;
   tag?: string;
   authorId?: string;
   seriesId?: string;
+  publisher?: string;
+  excludeGroupId?: string;
   ordering?: BookOrdering;
   page?: number;
   pageSize?: number;
@@ -19,7 +26,7 @@ export interface LibraryBookSearchQuery {
   q: string;
   excludeShelfId?: string;
   excludeGroupId?: string;
-  ordering?: BookOrdering;
+  ordering?: LibrarySearchOrdering;
   page?: number;
   pageSize?: number;
 }
@@ -33,6 +40,13 @@ export interface LibraryAxisQuery {
   ordering?: LibraryAxisOrdering;
   includePreviewBooks?: boolean;
   previewLimit?: number;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface LibraryTagQuery {
+  q?: string;
+  ordering?: LibraryAxisOrdering;
   page?: number;
   pageSize?: number;
 }
@@ -183,4 +197,3 @@ export interface BookDetail {
   file: BookFileDetail | null;
   groups: BookGroupSummary[];
 }
-

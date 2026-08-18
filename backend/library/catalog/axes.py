@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Count, F, Q, QuerySet, Value
 from django.db.models.functions import Coalesce, NullIf
 from rest_framework.exceptions import ValidationError
@@ -36,16 +37,44 @@ def visible_tags_from_books(visible_books: QuerySet[Book]) -> QuerySet[CatalogTa
     )
 
 
-def apply_axis_search(queryset: QuerySet, query_params, *, include_normalized: bool = False) -> QuerySet:
+def apply_axis_search(
+    queryset: QuerySet, query_params, *, include_normalized: bool = False
+) -> QuerySet:
     term = (query_params.get("q") or "").strip()
     if not term:
         return queryset
     condition = Q(name__icontains=term) | Q(sort_name__icontains=term)
     if include_normalized:
-        condition |= Q(
-            normalized_name__icontains=normalize_catalog_entity_name(term)
-        )
+        condition |= Q(normalized_name__icontains=normalize_catalog_entity_name(term))
     return queryset.filter(condition)
+
+
+def apply_axis_filters(
+    queryset: QuerySet,
+    query_params,
+    *,
+    include_normalized: bool,
+    supports_exclude_id: bool,
+) -> QuerySet:
+    queryset = apply_axis_search(
+        queryset,
+        query_params,
+        include_normalized=include_normalized,
+    )
+    if not supports_exclude_id:
+        return queryset
+
+    values = query_params.getlist("exclude_id")
+    if not values:
+        return queryset
+    raw = values[0].strip() if len(values) == 1 else ""
+    if not raw:
+        raise ValidationError({"exclude_id": "Invalid id."})
+    try:
+        axis_id = queryset.model._meta.pk.to_python(raw)
+    except (DjangoValidationError, TypeError, ValueError) as exc:
+        raise ValidationError({"exclude_id": "Invalid id."}) from exc
+    return queryset.exclude(pk=axis_id)
 
 
 def parse_axis_ordering(request) -> str:
@@ -54,7 +83,9 @@ def parse_axis_ordering(request) -> str:
         return "name"
     if raw not in AXIS_ORDERINGS:
         raise ValidationError(
-            {"ordering": f"Invalid ordering. Use one of: {', '.join(sorted(AXIS_ORDERINGS))}."}
+            {
+                "ordering": f"Invalid ordering. Use one of: {', '.join(sorted(AXIS_ORDERINGS))}."
+            }
         )
     return raw
 
@@ -65,13 +96,19 @@ def apply_axis_ordering(queryset: QuerySet, ordering: str) -> QuerySet:
     queryset = _with_name_sort(queryset)
 
     if axis == "name":
-        return queryset.order_by(_ordered("_name_sort", descending), _ordered("name", descending), "id")
+        return queryset.order_by(
+            _ordered("_name_sort", descending), _ordered("name", descending), "id"
+        )
     if axis == "book_count":
-        return queryset.order_by(_ordered("book_count", descending), "_name_sort", "name", "id")
+        return queryset.order_by(
+            _ordered("book_count", descending), "_name_sort", "name", "id"
+        )
     raise ValidationError({"ordering": "Invalid ordering."})
 
 
-def _with_visible_count(queryset: QuerySet, *, relation: str, visible_books: QuerySet[Book]) -> QuerySet:
+def _with_visible_count(
+    queryset: QuerySet, *, relation: str, visible_books: QuerySet[Book]
+) -> QuerySet:
     return (
         queryset.annotate(
             book_count=Count(
@@ -86,7 +123,9 @@ def _with_visible_count(queryset: QuerySet, *, relation: str, visible_books: Que
 
 
 def _with_name_sort(queryset: QuerySet) -> QuerySet:
-    return queryset.annotate(_name_sort=Coalesce(NullIf("sort_name", Value("")), F("name")))
+    return queryset.annotate(
+        _name_sort=Coalesce(NullIf("sort_name", Value("")), F("name"))
+    )
 
 
 def _ordered(field_name: str, descending: bool):

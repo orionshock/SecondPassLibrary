@@ -20,6 +20,7 @@ class LibraryBearerRouteInventoryTests(SimpleTestCase):
             "group-detail",
             "group-author-list",
             "group-book-list",
+            "group-bookverse-search",
             "group-series-list",
             "group-tag-list",
             "series-list",
@@ -36,10 +37,14 @@ class LibraryBearerRouteInventoryTests(SimpleTestCase):
         }
         routes = {pattern.name: pattern.callback.view_class for pattern in urlpatterns}
 
-        self.assertEqual(set(routes), readable | mutation_only_with_boundary | session_only)
+        self.assertEqual(
+            set(routes), readable | mutation_only_with_boundary | session_only
+        )
         for name in readable | mutation_only_with_boundary:
             with self.subTest(route=name):
                 self.assertTrue(issubclass(routes[name], LibraryBearerReadMixin))
         for name in session_only:
             with self.subTest(route=name):
-                self.assertEqual(routes[name].authentication_classes, [SessionAuthentication])
+                self.assertEqual(
+                    routes[name].authentication_classes, [SessionAuthentication]
+                )

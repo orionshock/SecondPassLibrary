@@ -3,7 +3,7 @@ import {
   ApiError,
   deleteShelf,
   getShelf,
-  listGroupBooks,
+  searchGroupBooks,
   listShelfEditorItems,
   moveShelfItem,
   removeShelfItem,
@@ -212,7 +212,7 @@ export function ShelfEditOrchestrator() {
     };
     const request = shelf.ownerType === "group"
       ? shelf.ownerGroup
-        ? listGroupBooks(shelf.ownerGroup.id, query)
+        ? searchGroupBooks(shelf.ownerGroup.id, query)
         : Promise.reject(new Error("Shelf owner group is unavailable."))
       : searchLibraryBooks(query);
     request.then((page) => {

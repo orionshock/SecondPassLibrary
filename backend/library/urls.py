@@ -18,6 +18,7 @@ from library.groups.book_assignment_views import (
 )
 from library.groups.browse_views import (
     GroupAuthorListView,
+    GroupBookSearchView,
     GroupCatalogTagListView,
     GroupSeriesListView,
 )
@@ -44,12 +45,23 @@ urlpatterns = [
     ),
     path("search", UserBookVerseSearchView.as_view(), name="bookverse-search"),
     path("groups/", LibraryGroupListView.as_view(), name="group-list"),
-    path("groups/<uuid:group_id>/", LibraryGroupDetailView.as_view(), name="group-detail"),
-    path("groups/<uuid:group_id>/authors/", GroupAuthorListView.as_view(), name="group-author-list"),
+    path(
+        "groups/<uuid:group_id>/", LibraryGroupDetailView.as_view(), name="group-detail"
+    ),
+    path(
+        "groups/<uuid:group_id>/authors/",
+        GroupAuthorListView.as_view(),
+        name="group-author-list",
+    ),
     path(
         "groups/<uuid:group_id>/books/",
         GroupBookAssignmentListView.as_view(),
         name="group-book-list",
+    ),
+    path(
+        "groups/<uuid:group_id>/search",
+        GroupBookSearchView.as_view(),
+        name="group-bookverse-search",
     ),
     path(
         "groups/<uuid:group_id>/books/<uuid:book_id>/",
@@ -66,8 +78,16 @@ urlpatterns = [
         LibraryGroupMembershipDetailView.as_view(),
         name="group-membership-detail",
     ),
-    path("groups/<uuid:group_id>/series/", GroupSeriesListView.as_view(), name="group-series-list"),
-    path("groups/<uuid:group_id>/tags/", GroupCatalogTagListView.as_view(), name="group-tag-list"),
+    path(
+        "groups/<uuid:group_id>/series/",
+        GroupSeriesListView.as_view(),
+        name="group-series-list",
+    ),
+    path(
+        "groups/<uuid:group_id>/tags/",
+        GroupCatalogTagListView.as_view(),
+        name="group-tag-list",
+    ),
     path("imports/", ImportUploadView.as_view(), name="import-upload"),
     path("series/", SeriesListView.as_view(), name="series-list"),
     path("series/<uuid:axis_id>/", SeriesDetailView.as_view(), name="series-detail"),

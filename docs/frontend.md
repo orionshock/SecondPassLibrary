@@ -125,6 +125,12 @@ server. Orchestrators own navigation-restorable URL state; row and region code
 renders the returned page rather than re-sorting or re-filtering it. Client
 validation may improve feedback but must not replace server validation.
 
+The SDK exposes explicit global and Group Library read methods for Book browse,
+broad search, Authors, Series, and Catalog Tags. Paired methods share query
+serialization and response mapping internally while retaining resource-specific
+public names; callers do not select scope through a generic SDK abstraction or
+deep-import domain internals.
+
 ## Routing and shell behavior
 
 React Router owns Product UI navigation. Django's retained shell routes serve

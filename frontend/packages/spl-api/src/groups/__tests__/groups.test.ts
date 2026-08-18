@@ -9,11 +9,15 @@ import {
   getGroup,
   listAllLibraryGroups,
   listAllGroupsForBook,
+  listGroupAuthors,
   listGroupBooks,
   listGroupMembers,
+  listGroupSeries,
+  listGroupTags,
   listGroups,
   removeBookFromGroup,
   removeGroupMember,
+  searchGroupBooks,
   updateGroup,
   updateGroupMember,
 } from "@second-pass/spl-api";
@@ -70,7 +74,8 @@ describe("Library Groups SDK", () => {
       previewBooks: [{ id: "preview", title: "Preview", coverUrl: "/cover.jpg" }],
     });
     await expect(listGroupBooks("group/id", {
-      q: " book ", tag: "fantasy", excludeShelfId: "shelf/id", ordering: "-author", page: 2, pageSize: 30,
+      q: " book ", tag: "fantasy", authorId: "author/id", seriesId: "series/id",
+      publisher: "A Press", excludeShelfId: "shelf/id", ordering: "-author", page: 2, pageSize: 30,
     }, client)).resolves.toMatchObject({
       items: [{
         id: "book", title: "Book", authors: [{ id: "author", name: "Author" }],
@@ -86,8 +91,43 @@ describe("Library Groups SDK", () => {
     expect(members.items[0]).not.toHaveProperty("createdAt");
     expect(calls).toEqual([
       "/api/v1/library/groups/group%2Fid/?include_preview_books=true",
-      "/api/v1/library/groups/group%2Fid/books/?q=book&tag=fantasy&exclude_shelf=shelf%2Fid&ordering=-author&page=2&page_size=30",
+      "/api/v1/library/groups/group%2Fid/books/?q=book&tag=fantasy&author=author%2Fid&series=series%2Fid&publisher=A+Press&exclude_shelf=shelf%2Fid&ordering=-author&page=2&page_size=30",
       "/api/v1/library/groups/group%2Fid/memberships/?page=3&page_size=40",
+    ]);
+  });
+
+  it("maps Group broad search and scoped axes through the shared Library wire models", async () => {
+    const calls: string[] = [];
+    const responses = [
+      { count: 0, next: null, previous: null, results: [] },
+      { count: 1, next: null, previous: null, results: [{ id: "a1", name: "Ada", sort_name: "Ada", biography: "", book_count: 2, preview_books: [] }] },
+      { count: 1, next: null, previous: null, results: [{ id: "s1", name: "Saga", sort_name: "Saga", summary: "", book_count: 1 }] },
+      { count: 1, next: null, previous: null, results: [{ id: "t1", name: "Fantasy", slug: "fantasy", book_count: 3 }] },
+    ];
+    const client: ApiClient = { request: async <T>(path: string) => {
+      calls.push(path);
+      return responses.shift() as T;
+    } };
+
+    await searchGroupBooks("group/id", {
+      q: " Book ", excludeShelfId: "shelf/id", ordering: "-series", page: 2, pageSize: 30,
+    }, client);
+    await expect(listGroupAuthors("group/id", {
+      q: " Ada ", excludeId: "author/id", tag: "history", ordering: "-book_count",
+      includePreviewBooks: true, previewLimit: 4, page: 2, pageSize: 20,
+    }, client)).resolves.toMatchObject({ items: [{ id: "a1", bookCount: 2, previewBooks: [] }] });
+    await expect(listGroupSeries("group/id", { q: " Saga " }, client)).resolves.toMatchObject({
+      items: [{ id: "s1", bookCount: 1 }],
+    });
+    await expect(listGroupTags("group/id", { q: " Fantasy ", ordering: "-book_count" }, client)).resolves.toMatchObject({
+      items: [{ id: "t1", bookCount: 3 }],
+    });
+
+    expect(calls).toEqual([
+      "/api/v1/library/groups/group%2Fid/search?q=Book&exclude_shelf=shelf%2Fid&ordering=-series&page=2&page_size=30",
+      "/api/v1/library/groups/group%2Fid/authors/?q=Ada&exclude_id=author%2Fid&tag=history&ordering=-book_count&include_preview_books=true&preview_limit=4&page=2&page_size=20",
+      "/api/v1/library/groups/group%2Fid/series/?q=Saga",
+      "/api/v1/library/groups/group%2Fid/tags/?q=Fantasy&ordering=-book_count",
     ]);
   });
 
@@ -331,4 +371,3 @@ describe("Library Groups SDK", () => {
     await expect(deleteGroup("public", failing)).rejects.toBe(error);
   });
 });
-

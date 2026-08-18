@@ -7,15 +7,9 @@ from rest_framework.exceptions import ValidationError
 from library.models import Author, Book, Series
 
 
-def apply_book_filters(
-    queryset: QuerySet[Book], query_params, *, broad_search: bool = False
-) -> QuerySet[Book]:
+def apply_book_filters(queryset: QuerySet[Book], query_params) -> QuerySet[Book]:
     term = query_params.get("q", "").strip()
-    queryset = (
-        apply_broad_book_search(queryset, term)
-        if broad_search
-        else _apply_title_search(queryset, term)
-    )
+    queryset = _apply_title_search(queryset, term)
 
     author_id = _pk_param(query_params, "author", Author)
     if author_id:
@@ -60,10 +54,7 @@ def apply_broad_book_search(queryset: QuerySet[Book], term: str) -> QuerySet[Boo
 def _apply_title_search(queryset: QuerySet[Book], term: str) -> QuerySet[Book]:
     if not term:
         return queryset
-    return queryset.filter(
-        Q(title__icontains=term)
-        | Q(sort_title__icontains=term)
-    )
+    return queryset.filter(Q(title__icontains=term) | Q(sort_title__icontains=term))
 
 
 def _pk_param(query_params, name: str, model) -> object | None:

@@ -26,7 +26,9 @@ def book_row_queryset(queryset):
     return queryset.select_related("book_series__series").prefetch_related(
         Prefetch(
             "book_authors",
-            queryset=BookAuthor.objects.select_related("author").order_by("position", "id"),
+            queryset=BookAuthor.objects.select_related("author").order_by(
+                "position", "id"
+            ),
         ),
         Prefetch(
             "book_catalog_tags",
@@ -41,6 +43,12 @@ def book_row_queryset(queryset):
 
 def book_detail_queryset(queryset):
     return book_row_queryset(queryset).prefetch_related("identifiers")
+
+
+def book_browse_queryset(queryset, request):
+    queryset = book_row_queryset(queryset)
+    queryset = apply_book_filters(queryset, request.query_params)
+    return apply_book_ordering(queryset, parse_book_ordering(request))
 
 
 def attach_visible_groups_to_book(*, book, user):
@@ -62,9 +70,7 @@ class BookListView(LibraryBearerReadMixin, ListAPIView):
             user=self.request.user,
             raw_group_id=self.request.query_params.get("exclude_group", ""),
         )
-        queryset = book_row_queryset(queryset)
-        queryset = apply_book_filters(queryset, self.request.query_params)
-        return apply_book_ordering(queryset, parse_book_ordering(self.request))
+        return book_browse_queryset(queryset, self.request)
 
 
 class BookDetailView(LibraryBearerReadMixin, RetrieveUpdateAPIView):
@@ -116,7 +122,10 @@ class BookDetailView(LibraryBearerReadMixin, RetrieveUpdateAPIView):
         refreshed = attach_visible_groups_to_book(
             book=self.get_queryset().get(pk=book.pk), user=request.user
         )
-        return Response(BookDetailSerializer(refreshed, context={"request": request}).data, status=status.HTTP_200_OK)
+        return Response(
+            BookDetailSerializer(refreshed, context={"request": request}).data,
+            status=status.HTTP_200_OK,
+        )
 
     def update(self, request, *args, **kwargs):
         return self.partial_update(request, *args, **kwargs)

@@ -1,23 +1,30 @@
 import { apiClient, type ApiClient } from "../client";
 import { mapCompactBook, type CompactBookResponse } from "../library/compactBooks";
 import type { CompactBook } from "../library";
+import { bookBrowseParameters, bookSearchParameters, withQuery } from "../library/requests";
 import { collectPaginatedResults, toPage, type ApiPage, type Page } from "../pagination";
 import { mapBookAssignmentError, mapBookGroupAssignment, mapLibraryGroup } from "./mappers";
-import type { BookGroupAssignment, GroupBooksQuery, LibraryGroup } from "./types";
+import type { BookGroupAssignment, GroupBooksQuery, GroupBookSearchQuery, LibraryGroup } from "./types";
 import type { BookGroupAssignmentResponse, LibraryGroupResponse } from "./wire";
 
 export async function listGroupBooks(groupId: string, query: GroupBooksQuery = {}, client: ApiClient = apiClient): Promise<Page<CompactBook>> {
-  const parameters = new URLSearchParams();
-  const search = query.q?.trim();
-  if (search) parameters.set("q", search);
-  if (query.tag) parameters.set("tag", query.tag);
-  if (query.excludeShelfId) parameters.set("exclude_shelf", query.excludeShelfId);
-  if (query.ordering) parameters.set("ordering", query.ordering);
-  if (query.page) parameters.set("page", String(query.page));
-  if (query.pageSize) parameters.set("page_size", String(query.pageSize));
-  const suffix = parameters.size ? `?${parameters.toString()}` : "";
+  const parameters = bookBrowseParameters(query);
   return toPage(
-    await client.request<ApiPage<CompactBookResponse>>(`/api/v1/library/groups/${encodeURIComponent(groupId)}/books/${suffix}`),
+    await client.request<ApiPage<CompactBookResponse>>(withQuery(`/api/v1/library/groups/${encodeURIComponent(groupId)}/books/`, parameters)),
+    mapCompactBook,
+  );
+}
+
+export async function searchGroupBooks(
+  groupId: string,
+  query: GroupBookSearchQuery,
+  client: ApiClient = apiClient,
+): Promise<Page<CompactBook>> {
+  return toPage(
+    await client.request<ApiPage<CompactBookResponse>>(withQuery(
+      `/api/v1/library/groups/${encodeURIComponent(groupId)}/search`,
+      bookSearchParameters(query),
+    )),
     mapCompactBook,
   );
 }

@@ -158,6 +158,40 @@ be deterministic, with stable fallback identities where display values can
 tie. List, detail, nested collection, preview, and mutation paths must not use
 different visibility universes merely because they serialize different shapes.
 
+## Library read scopes
+
+Authenticated Library reads expose paired global and Group-scoped collections:
+
+- `books/`, `authors/`, `series/`, and `tags/` under either `/library/` or
+  `/library/groups/{group_id}/`;
+- broad search at `/library/search` or
+  `/library/groups/{group_id}/search`.
+
+The global scope contains every Book visible to the principal. The Group scope
+first resolves a visible Group, then contains only visible Books assigned to
+that Group; inaccessible Groups return `404` before query processing. Both
+scopes then use the same filtering, ordering, compact-Book projection, axis
+projection, previews, counts, and pagination.
+
+Book browse `q` matches only title and sort title. Broad search `q` additionally
+matches subtitle, Author and Series names, identifier values, Catalog Tag
+names, publisher, and description. Search accepts only `title`, `-title`,
+`author`, `-author`, `series`, and `-series` ordering. Missing or blank search
+text returns an empty normal page.
+
+Author and Series collections share normalized-name matching, `exclude_id`,
+Catalog Tag filtering, previews, and axis ordering. Their counts and previews
+derive from the same scoped Book population. Catalog Tag counts likewise use
+the complete scoped population, independent of Book-page pagination.
+Group-scoped `exclude_shelf` accepts only a readable Shelf owned by that exact
+Group; mismatched or inaccessible Shelves use the non-enumerating `404`
+boundary. Global contextual exclusions retain their existing authority rules.
+
+Library detail and Book mutation/download/import routes remain global. Group
+routes add only Group-specific assignment, membership, and Group-owned Shelf
+authority; the API does not duplicate Book, Author, Series, or Tag detail
+resources beneath a Group.
+
 ## Visibility and anti-enumeration
 
 Authorization belongs to backend query and service boundaries. React route

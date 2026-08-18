@@ -11,15 +11,14 @@ from rest_framework.response import Response
 
 from library.api_access import LibraryBearerReadMixin
 from library.catalog.axes import (
+    apply_axis_filters,
     apply_axis_ordering,
-    apply_axis_search,
     parse_axis_ordering,
     visible_authors_from_books,
     visible_series_from_books,
     visible_tags_from_books,
 )
-from library.catalog.filters import apply_book_filters, apply_catalog_tag_filter
-from library.catalog.ordering import apply_book_ordering, parse_book_ordering
+from library.catalog.filters import apply_catalog_tag_filter
 from library.catalog.preview_books import (
     attach_author_preview_books,
     attach_series_preview_books,
@@ -31,7 +30,8 @@ from library.catalog.serializers.axes import (
     SeriesAxisSerializer,
 )
 from library.catalog.serializers.books import BookListSerializer
-from library.catalog.views import book_row_queryset
+from library.catalog.search_views import book_search_queryset
+from library.catalog.views import book_browse_queryset
 from library.models import LibraryGroup
 from library.queries import group_is_visible_to_user, visible_books_for_group
 from shelves.models import Shelf
@@ -59,19 +59,29 @@ class GroupBookListView(GroupBrowseMixin, ListAPIView):
 
     def get_queryset(self):
         group = self.get_group()
-        queryset = book_row_queryset(
-            visible_books_for_group(self.request.user, group, cached=True)
-        )
+        queryset = visible_books_for_group(self.request.user, group, cached=True)
         queryset = _exclude_group_shelf_books(
             queryset,
             user=self.request.user,
             group=group,
             raw_shelf_id=self.request.query_params.get("exclude_shelf"),
         )
-        queryset = apply_book_filters(
-            queryset, self.request.query_params, broad_search=True
+        return book_browse_queryset(queryset, self.request)
+
+
+class GroupBookSearchView(GroupBrowseMixin, ListAPIView):
+    serializer_class = BookListSerializer
+
+    def get_queryset(self):
+        group = self.get_group()
+        queryset = visible_books_for_group(self.request.user, group, cached=False)
+        queryset = _exclude_group_shelf_books(
+            queryset,
+            user=self.request.user,
+            group=group,
+            raw_shelf_id=self.request.query_params.get("exclude_shelf"),
         )
-        return apply_book_ordering(queryset, parse_book_ordering(self.request))
+        return book_search_queryset(queryset, self.request)
 
 
 def _exclude_group_shelf_books(queryset, *, user, group, raw_shelf_id):
@@ -90,18 +100,14 @@ def _exclude_group_shelf_books(queryset, *, user, group, raw_shelf_id):
     shelf = filter_readable_shelves(shelves, user=user).filter(pk=shelf_id).first()
     if shelf is None:
         raise Http404
-    if (
-        shelf.owner_type != Shelf.OWNER_TYPE_GROUP
-        or shelf.owner_group_id != group.id
-    ):
-        raise ValidationError(
-            {"exclude_shelf": "Shelf must be owned by the requested group."}
-        )
+    if shelf.owner_type != Shelf.OWNER_TYPE_GROUP or shelf.owner_group_id != group.id:
+        raise Http404
     return queryset.exclude(shelf_items__shelf=shelf)
 
 
 class GroupAxisListMixin(GroupBrowseMixin, ListAPIView):
     search_normalized_name = False
+    supports_exclude_id = False
     supports_preview_books = False
 
     def axis_queryset(self):
@@ -123,10 +129,11 @@ class GroupAxisListMixin(GroupBrowseMixin, ListAPIView):
 
     def get_queryset(self):
         queryset = self.axis_queryset()
-        queryset = apply_axis_search(
+        queryset = apply_axis_filters(
             queryset,
             self.request.query_params,
             include_normalized=self.search_normalized_name,
+            supports_exclude_id=self.supports_exclude_id,
         )
         return apply_axis_ordering(queryset, parse_axis_ordering(self.request))
 
@@ -148,6 +155,8 @@ class GroupAxisListMixin(GroupBrowseMixin, ListAPIView):
 
 class GroupAuthorListView(GroupAxisListMixin):
     serializer_class = AuthorAxisSerializer
+    search_normalized_name = True
+    supports_exclude_id = True
     supports_preview_books = True
 
     def axis_queryset(self):
@@ -168,6 +177,8 @@ class GroupAuthorListView(GroupAxisListMixin):
 
 class GroupSeriesListView(GroupAxisListMixin):
     serializer_class = SeriesAxisSerializer
+    search_normalized_name = True
+    supports_exclude_id = True
     supports_preview_books = True
 
     def axis_queryset(self):

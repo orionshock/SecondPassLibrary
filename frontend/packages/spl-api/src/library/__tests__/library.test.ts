@@ -247,9 +247,9 @@ describe("Library SDK", () => {
       return { count: 1, next: null, previous: null, results: [compactWireBook] } as T;
     } };
 
-    const page = await listBooks({ q: " Book ", tag: "fantasy", ordering: "-author", page: 2, pageSize: 30 }, client);
+    const page = await listBooks({ q: " Book ", tag: "fantasy", publisher: "A Press", excludeGroupId: "group/id", ordering: "-author", page: 2, pageSize: 30 }, client);
 
-    expect(calls).toEqual(["/api/v1/library/books/?q=Book&tag=fantasy&ordering=-author&page=2&page_size=30"]);
+    expect(calls).toEqual(["/api/v1/library/books/?q=Book&tag=fantasy&publisher=A+Press&exclude_group=group%2Fid&ordering=-author&page=2&page_size=30"]);
     expect(page.items[0]).toEqual({
       id: "book-1", title: "The Book", sortTitle: "Book, The", subtitle: "Hidden subtitle",
       authors: [{ id: "author-1", name: "Ada Author" }],
@@ -304,13 +304,13 @@ describe("Library SDK", () => {
         { id: "history", name: "History", slug: "history", book_count: 31 },
       ] } as T;
     } };
-    await expect(listCatalogTags({ ordering: "-book_count", page: 2, pageSize: 50 }, client)).resolves.toMatchObject({
+    await expect(listCatalogTags({ q: " Fantasy ", ordering: "-book_count", page: 2, pageSize: 50 }, client)).resolves.toMatchObject({
       items: [
         { id: "fantasy", name: "Fantasy", slug: "fantasy", bookCount: 7 },
         { id: "history", name: "History", slug: "history", bookCount: 31 },
       ],
     });
-    expect(calls).toEqual(["/api/v1/library/tags/?ordering=-book_count&page=2&page_size=50"]);
+    expect(calls).toEqual(["/api/v1/library/tags/?q=Fantasy&ordering=-book_count&page=2&page_size=50"]);
   });
 
   it("requests 200 Catalog Tags at a time and follows every next page", async () => {
@@ -395,4 +395,3 @@ describe("Library SDK", () => {
     expect(series).not.toHaveProperty("previewBooks");
   });
 });
-

@@ -1,11 +1,59 @@
 import type { ApiClient } from "../client";
 import { ApiError } from "../errors";
 import { collectPaginatedResults, toPage, type ApiPage, type Page } from "../pagination";
-import type { LibraryAxisQuery } from "./types";
+import type { BookOrdering, LibraryAxisQuery, LibrarySearchOrdering } from "./types";
+
+interface BookBrowseQueryParameters {
+  q?: string;
+  tag?: string;
+  authorId?: string;
+  seriesId?: string;
+  publisher?: string;
+  excludeShelfId?: string;
+  excludeGroupId?: string;
+  ordering?: BookOrdering;
+  page?: number;
+  pageSize?: number;
+}
+
+interface BookSearchQueryParameters {
+  q: string;
+  excludeShelfId?: string;
+  excludeGroupId?: string;
+  ordering?: LibrarySearchOrdering;
+  page?: number;
+  pageSize?: number;
+}
 
 export function withQuery(path: string, parameters: URLSearchParams): string {
   const query = parameters.toString();
   return `${path}${query ? `?${query}` : ""}`;
+}
+
+export function bookBrowseParameters(query: BookBrowseQueryParameters): URLSearchParams {
+  const parameters = new URLSearchParams();
+  const search = query.q?.trim();
+  if (search) parameters.set("q", search);
+  if (query.tag) parameters.set("tag", query.tag);
+  if (query.authorId) parameters.set("author", query.authorId);
+  if (query.seriesId) parameters.set("series", query.seriesId);
+  if (query.publisher) parameters.set("publisher", query.publisher);
+  if (query.excludeShelfId) parameters.set("exclude_shelf", query.excludeShelfId);
+  if (query.excludeGroupId) parameters.set("exclude_group", query.excludeGroupId);
+  if (query.ordering) parameters.set("ordering", query.ordering);
+  if (query.page) parameters.set("page", String(query.page));
+  if (query.pageSize) parameters.set("page_size", String(query.pageSize));
+  return parameters;
+}
+
+export function bookSearchParameters(query: BookSearchQueryParameters): URLSearchParams {
+  const parameters = new URLSearchParams({ q: query.q.trim() });
+  if (query.excludeShelfId) parameters.set("exclude_shelf", query.excludeShelfId);
+  if (query.excludeGroupId) parameters.set("exclude_group", query.excludeGroupId);
+  if (query.ordering) parameters.set("ordering", query.ordering);
+  if (query.page) parameters.set("page", String(query.page));
+  if (query.pageSize) parameters.set("page_size", String(query.pageSize));
+  return parameters;
 }
 
 export async function listLibraryAxis<Response, Item>(
@@ -79,4 +127,3 @@ export async function mutateLibraryAxis<Response, Item>(
     });
   }
 }
-

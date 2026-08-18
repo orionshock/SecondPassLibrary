@@ -3,20 +3,12 @@ import { ApiError } from "../errors";
 import { toPage, type ApiPage, type Page } from "../pagination";
 import { mapCompactBook, type CompactBookResponse } from "./compactBooks";
 import { mapBookDetail } from "./mappers";
-import { withQuery } from "./requests";
+import { bookBrowseParameters, bookSearchParameters, withQuery } from "./requests";
 import type { BookDetail, CompactBook, LibraryBookSearchQuery, LibraryBooksQuery, UpdateBookInput } from "./types";
 import type { BookDetailResponse } from "./wire";
 
 export async function listBooks(query: LibraryBooksQuery = {}, client: ApiClient = apiClient): Promise<Page<CompactBook>> {
-  const parameters = new URLSearchParams();
-  const search = query.q?.trim();
-  if (search) parameters.set("q", search);
-  if (query.tag) parameters.set("tag", query.tag);
-  if (query.authorId) parameters.set("author", query.authorId);
-  if (query.seriesId) parameters.set("series", query.seriesId);
-  if (query.ordering) parameters.set("ordering", query.ordering);
-  if (query.page) parameters.set("page", String(query.page));
-  if (query.pageSize) parameters.set("page_size", String(query.pageSize));
+  const parameters = bookBrowseParameters(query);
   return toPage(
     await client.request<ApiPage<CompactBookResponse>>(withQuery("/api/v1/library/books/", parameters)),
     mapCompactBook,
@@ -27,12 +19,7 @@ export async function searchLibraryBooks(
   query: LibraryBookSearchQuery,
   client: ApiClient = apiClient,
 ): Promise<Page<CompactBook>> {
-  const parameters = new URLSearchParams({ q: query.q.trim() });
-  if (query.excludeShelfId) parameters.set("exclude_shelf", query.excludeShelfId);
-  if (query.excludeGroupId) parameters.set("exclude_group", query.excludeGroupId);
-  if (query.ordering) parameters.set("ordering", query.ordering);
-  if (query.page) parameters.set("page", String(query.page));
-  if (query.pageSize) parameters.set("page_size", String(query.pageSize));
+  const parameters = bookSearchParameters(query);
   return toPage(
     await client.request<ApiPage<CompactBookResponse>>(
       withQuery("/api/v1/library/search", parameters),
@@ -103,4 +90,3 @@ export async function clearBookCover(
     { method: "DELETE" },
   ));
 }
-
