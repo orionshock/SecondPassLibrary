@@ -4,6 +4,7 @@ from typing import Any, cast
 from urllib.parse import urlencode
 
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework.authentication import SessionAuthentication
@@ -28,10 +29,7 @@ PAIRING_PRAGMA = "no-cache"
 
 class CurrentUserClientSessionsView(APIView):
     permission_classes = [IsAuthenticated]
-    authentication_classes = [
-        SessionAuthentication,
-        ClientBearerAuthentication,
-    ]
+    authentication_classes = [SessionAuthentication]
 
     def get(self, request):
         qs = (
@@ -49,15 +47,32 @@ class CurrentUserClientSessionRevokeView(APIView):
     ]
 
     def delete(self, request, session_id: str):
-        # Anti-leakage: only operate on the current user's sessions.
-        obj = get_object_or_404(
+        obj = _client_session_revoke_target(request=request, session_id=session_id)
+        session_control.revoke_client_session(obj, actor=request.user)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+def _client_session_revoke_target(*, request, session_id: str) -> UserClientSession:
+    authenticator = request.successful_authenticator
+    if isinstance(authenticator, ClientBearerAuthentication):
+        authenticated_session = request.auth
+        if not isinstance(authenticated_session, UserClientSession):
+            raise Http404
+        queryset = UserClientSession.objects.filter(
+            pk=authenticated_session.pk,
+            revoked_at__isnull=True,
+        )
+        return get_object_or_404(queryset, pk=session_id)
+
+    if isinstance(authenticator, SessionAuthentication):
+        return get_object_or_404(
             UserClientSession,
             pk=session_id,
             user=request.user,
             revoked_at__isnull=True,
         )
-        session_control.revoke_client_session(obj, actor=request.user)
-        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    raise Http404
 
 
 class PairingNoStoreMixin:

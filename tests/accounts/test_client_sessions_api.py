@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.test import APITestCase
+from rest_framework.test import APIClient, APITestCase
 
 from accounts.client_sessions.services import hash_client_secret
 from accounts.models import UserClientSession
@@ -45,6 +45,21 @@ class CurrentUserClientSessionsApiTests(APITestCase):
             expires_at=None,
             revoked_at=None,
         )
+        self.revoked = UserClientSession.objects.create(
+            user=self.user1,
+            name="Revoked Reader",
+            client_type="reader",
+            token_hash=hash_client_secret("spl_testtoken_revoked"),
+            last_seen_at=None,
+            expires_at=None,
+            revoked_at=timezone.now(),
+        )
+
+    @staticmethod
+    def bearer_client(token: str) -> APIClient:
+        client = APIClient()
+        client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
+        return client
 
     def test_anonymous_denied(self):
         r = self.client.get("/api/v1/accounts/me/client-sessions/")
@@ -81,3 +96,70 @@ class CurrentUserClientSessionsApiTests(APITestCase):
         self.client.force_login(self.user1)
         r = self.client.delete(f"/api/v1/accounts/me/client-sessions/{self.other.id}/")
         self.assertEqual(r.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_browser_delete_missing_and_revoked_sessions_share_not_found_boundary(self):
+        self.client.force_login(self.user1)
+
+        revoked = self.client.delete(
+            f"/api/v1/accounts/me/client-sessions/{self.revoked.id}/"
+        )
+        missing = self.client.delete(
+            "/api/v1/accounts/me/client-sessions/"
+            "00000000-0000-0000-0000-000000000000/"
+        )
+
+        self.assertEqual(revoked.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(missing.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(revoked.json(), missing.json())
+
+    def test_bearer_cannot_list_client_sessions(self):
+        response = self.bearer_client("spl_testtoken_1").get(
+            "/api/v1/accounts/me/client-sessions/"
+        )
+
+        self.assertIn(
+            response.status_code,
+            (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
+        )
+
+    def test_bearer_can_revoke_only_its_authenticated_client_session(self):
+        bearer = self.bearer_client("spl_testtoken_1")
+
+        response = bearer.delete(
+            f"/api/v1/accounts/me/client-sessions/{self.s1.id}/"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.s1.refresh_from_db(from_queryset=None)
+        self.assertIsNotNone(self.s1.revoked_at)
+        rejected = bearer.get("/api/v1/accounts/me/")
+        self.assertIn(
+            rejected.status_code,
+            (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
+        )
+
+    def test_bearer_other_owned_foreign_revoked_and_missing_targets_are_not_found(self):
+        bearer = self.bearer_client("spl_testtoken_1")
+        target_urls = (
+            f"/api/v1/accounts/me/client-sessions/{self.s2.id}/",
+            f"/api/v1/accounts/me/client-sessions/{self.other.id}/",
+            f"/api/v1/accounts/me/client-sessions/{self.revoked.id}/",
+            "/api/v1/accounts/me/client-sessions/"
+            "00000000-0000-0000-0000-000000000000/",
+        )
+
+        responses = [bearer.delete(url) for url in target_urls]
+
+        self.assertTrue(
+            all(
+                response.status_code == status.HTTP_404_NOT_FOUND
+                for response in responses
+            )
+        )
+        self.assertTrue(
+            all(response.json() == responses[0].json() for response in responses)
+        )
+        self.s2.refresh_from_db(from_queryset=None)
+        self.other.refresh_from_db(from_queryset=None)
+        self.assertIsNone(self.s2.revoked_at)
+        self.assertIsNone(self.other.revoked_at)
