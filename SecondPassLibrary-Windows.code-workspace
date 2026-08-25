@@ -5,6 +5,26 @@
     }
   ],
   "settings": {
+    "explorer.excludeGitIgnore": false,
+    "files.exclude": {
+      "**/.agents": true,
+      "**/.coverage*": true,
+      "**/.env": true,
+      "**/.git": true,
+      "**/.pytest_cache": true,
+      "**/.ruff_cache": true,
+      "**/.venv": true,
+      "**/__pycache__": true,
+      "**/*.egg-info": true,
+      "**/*.py[cod]": true,
+      "**/*.tsbuildinfo": true,
+      "**/build": true,
+      "**/coverage": true,
+      "**/dist": true,
+      "**/node_modules": true,
+      "**/out": true,
+      "**/var": true,
+    },
     "python.analysis.extraPaths": [
       "${workspaceFolder}/backend"
     ],
@@ -15,41 +35,30 @@
       "mv": true,
       "true": true,
     },
+    "LineCount.includes": [
+      "backend/**/*",
+      "frontend/index.html",
+      "frontend/src/**/*",
+      "frontend/packages/spl-api/src/**/*"
+    ],
     "LineCount.excludes": [
-      "*.md",
-      "*.png",
-      "**/__init__.py",
       "**/__pycache__/**",
       "**/__tests__/**",
-      "**/.pytest_cache/**",
-      "**/TestFiles/**",
-      "**/.ruff_cache/**",
-      "**/.venv/**",
-      "**/.vscode/**",
-      "**/coverage/**",
-      "**/dist/**",
-      "**/migrations/*.py",
-      "**/node_modules/**",
-      "**/out/**",
-      "**/package-lock.json",
-      "**/test/**",
-      "**/tests/**",
-      "**/*.tsbuildinfo",
-      "**/userdata/**",
-      "**/var/**",
-      ".coverage",
-      "**/.env.example",
-      ".gitattributes",
-      ".git",
-      ".gitignore",
-      "SecondPassLibrary.code-workspace",
-      "**/docs/**",
-      "pyrightconfig.json",
-      "requirements.txt",
-      "**/tools/**",
-      "backend/web/static/web/favicon.png",
-      "**/backend/web/product_ui/**"
+      "**/migrations/**",
+      "backend/web/product_ui/**",
+      "backend/var/**",
+      "**/*.png"
     ],
+    "LineCount.showStatusBarItem": true,
+    "LineCount.output": {
+      "txt": true,
+      "json": false,
+      "csv": false,
+      "md": false,
+      "outdir": ".linecount"
+    },
+    "LineCount.sort": "filename",
+    "LineCount.order": "asc",
     "sqltools.connections": [
       {
         "previewLimit": 50,
@@ -67,7 +76,8 @@
       "ms-python.debugpy",
       "ms-python.vscode-python-envs",
       "charliermarsh.ruff",
-      "vitest.explorer"
+      "vitest.explorer",
+      "yycalm.linecount"
     ]
   }
 }

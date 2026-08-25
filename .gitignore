@@ -14,6 +14,7 @@ TestFiles/
 # Generated deploy/build artifacts
 var/
 out/
+.linecount/
 build/
 dist/
 *.egg-info/
