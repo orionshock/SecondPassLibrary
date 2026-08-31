@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 
 from .client_sessions.views import (
     CurrentUserClientSessionRevokeView,
+    CurrentUserClientSessionsRevokeAllView,
     CurrentUserClientSessionsView,
 )
 from .current_user.views import CurrentUserView, UserProfileViewSet
@@ -33,6 +34,11 @@ urlpatterns = [
         "me/client-sessions/",
         CurrentUserClientSessionsView.as_view(),
         name="accounts_me_client_sessions",
+    ),
+    path(
+        "me/client-sessions/revoke-all/",
+        CurrentUserClientSessionsRevokeAllView.as_view(),
+        name="accounts_me_client_sessions_revoke_all",
     ),
     path(
         "me/client-sessions/<str:session_id>/",

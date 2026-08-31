@@ -51,6 +51,13 @@
   gap: 1rem;
 }
 
+.session-management-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .section-divider {
   height: 1px;
   margin: 0.25rem 0;

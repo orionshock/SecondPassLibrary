@@ -1,6 +1,7 @@
 import {
   listClientSessions,
   logoutOtherWebSessions,
+  revokeAllClientSessions,
   revokeClientSession,
   updateCurrentUser,
   type ClientSession,
@@ -20,7 +21,7 @@ import { AccountSessionsPageRegion } from "./regions/AccountSessionsPageRegion";
 import { GroupMembershipsPageRegion } from "./regions/GroupMembershipsPageRegion";
 import { ProfileDetailsPageRegion } from "./regions/ProfileDetailsPageRegion";
 import "./Profile.css";
-import { confirmClientSessionRevoke, confirmLogoutOtherWebSessions } from "./profileConfirmations";
+import { confirmAllClientSessionsRevoke, confirmClientSessionRevoke, confirmLogoutOtherWebSessions } from "./profileConfirmations";
 
 export function ProfileOrchestrator() {
   usePageBreadcrumbs(profileBreadcrumbFallback);
@@ -29,6 +30,7 @@ export function ProfileOrchestrator() {
   const [sessions, setSessions] = useState<ClientSession[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(true);
   const [clientState, setClientState] = useState<MutationState>(idleMutationState);
+  const [bulkClientState, setBulkClientState] = useState<MutationState>(idleMutationState);
   const [webState, setWebState] = useState<MutationState>(idleMutationState);
 
   useEffect(() => {
@@ -74,6 +76,18 @@ export function ProfileOrchestrator() {
     }
   }
 
+  async function revokeAllSessions() {
+    if (!confirmAllClientSessionsRevoke()) return;
+    setBulkClientState({ pending: true });
+    try {
+      await revokeAllClientSessions();
+      setSessions([]);
+      setBulkClientState({ pending: false, message: "All devices/apps disconnected." });
+    } catch (error: unknown) {
+      setBulkClientState({ pending: false, error: normalizeMutationError(error) });
+    }
+  }
+
   return <ProductPageShell className="account-page" title="Profile" actions={<Link className="button" to="/profile/password" state={breadcrumbNavigationState(passwordBreadcrumbFallback)}>Change password</Link>}>
     <ProfileDetailsPageRegion user={currentUser} state={profileState} onSave={saveProfile} onClearStatus={() => setProfileState(idleMutationState)} />
     <GroupMembershipsPageRegion user={currentUser} advancedGroupsEnabled={serverInfo.advancedLibraryGroupsEnabled} />
@@ -81,9 +95,11 @@ export function ProfileOrchestrator() {
       sessions={sessions}
       loading={sessionsLoading}
       clientState={clientState}
+      bulkClientState={bulkClientState}
       webState={webState}
       clientPairingLinkState={breadcrumbNavigationState(clientPairingBreadcrumbFallback)}
       onLogoutOthers={logoutOthers}
+      onRevokeAllSessions={revokeAllSessions}
       onRevokeSession={revokeSession}
     />
   </ProductPageShell>;

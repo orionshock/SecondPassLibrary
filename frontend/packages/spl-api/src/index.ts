@@ -16,6 +16,7 @@ export {
   listClientSessions,
   logoutCurrentWebSession,
   logoutOtherWebSessions,
+  revokeAllClientSessions,
   revokeClientSession,
   type ClientSession,
 } from "./accountSessions";

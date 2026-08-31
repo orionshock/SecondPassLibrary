@@ -39,6 +39,19 @@ class CurrentUserClientSessionsView(APIView):
         return Response(CurrentUserClientSessionSerializer(qs, many=True).data)
 
 
+class CurrentUserClientSessionsRevokeAllView(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [SessionAuthentication]
+
+    def post(self, request):
+        session_control.revoke_all_api_sessions(
+            request.user,
+            actor=request.user,
+            reason="manual_revoke",
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 class CurrentUserClientSessionRevokeView(APIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = [

@@ -163,3 +163,66 @@ class CurrentUserClientSessionsApiTests(APITestCase):
         self.other.refresh_from_db(from_queryset=None)
         self.assertIsNone(self.s2.revoked_at)
         self.assertIsNone(self.other.revoked_at)
+
+    def test_browser_can_revoke_all_owned_active_client_sessions(self):
+        revoked_at = self.revoked.revoked_at
+        revoked_updated_at = self.revoked.updated_at
+        self.client.force_login(self.user1)
+
+        response = self.client.post(
+            "/api/v1/accounts/me/client-sessions/revoke-all/"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.s1.refresh_from_db(from_queryset=None)
+        self.s2.refresh_from_db(from_queryset=None)
+        self.other.refresh_from_db(from_queryset=None)
+        self.revoked.refresh_from_db(from_queryset=None)
+        self.assertIsNotNone(self.s1.revoked_at)
+        self.assertIsNotNone(self.s2.revoked_at)
+        self.assertIsNone(self.other.revoked_at)
+        self.assertEqual(self.revoked.revoked_at, revoked_at)
+        self.assertEqual(self.revoked.updated_at, revoked_updated_at)
+
+        active = assert_response(
+            self.client.get("/api/v1/accounts/me/client-sessions/")
+        )
+        self.assertEqual(active.status_code, status.HTTP_200_OK)
+        self.assertEqual(response_data_list(active), [])
+
+        for token in ("spl_testtoken_1", "spl_testtoken_2"):
+            rejected = self.bearer_client(token).get("/api/v1/accounts/me/")
+            self.assertIn(
+                rejected.status_code,
+                (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
+            )
+
+    def test_bearer_cannot_revoke_all_client_sessions(self):
+        response = self.bearer_client("spl_testtoken_1").post(
+            "/api/v1/accounts/me/client-sessions/revoke-all/"
+        )
+
+        self.assertIn(
+            response.status_code,
+            (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
+        )
+        self.s1.refresh_from_db(from_queryset=None)
+        self.s2.refresh_from_db(from_queryset=None)
+        self.assertIsNone(self.s1.revoked_at)
+        self.assertIsNone(self.s2.revoked_at)
+
+    def test_browser_revoke_all_is_idempotent_with_no_active_sessions(self):
+        UserClientSession.objects.filter(user=self.user1, revoked_at__isnull=True).update(
+            revoked_at=timezone.now()
+        )
+        self.revoked.refresh_from_db(from_queryset=None)
+        existing_revoked_at = self.revoked.revoked_at
+        self.client.force_login(self.user1)
+
+        first = self.client.post("/api/v1/accounts/me/client-sessions/revoke-all/")
+        second = self.client.post("/api/v1/accounts/me/client-sessions/revoke-all/")
+
+        self.assertEqual(first.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(second.status_code, status.HTTP_204_NO_CONTENT)
+        self.revoked.refresh_from_db(from_queryset=None)
+        self.assertEqual(self.revoked.revoked_at, existing_revoked_at)

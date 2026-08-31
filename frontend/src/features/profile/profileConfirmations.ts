@@ -10,3 +10,10 @@ export function confirmClientSessionRevoke(
 export function confirmLogoutOtherWebSessions(confirmAction?: (message: string) => boolean): boolean {
   return confirmDangerousAction("Log out all other web sessions? This browser will remain signed in.", confirmAction);
 }
+
+export function confirmAllClientSessionsRevoke(confirmAction?: (message: string) => boolean): boolean {
+  return confirmDangerousAction(
+    "Disconnect all devices/apps? All paired Reader/app sessions will be revoked and their bearer tokens will stop authenticating immediately. This browser will remain signed in.",
+    confirmAction,
+  );
+}

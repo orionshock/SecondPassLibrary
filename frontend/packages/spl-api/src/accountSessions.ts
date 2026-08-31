@@ -36,6 +36,10 @@ export async function revokeClientSession(sessionId: string, client: ApiClient =
   await client.request<void>(`/api/v1/accounts/me/client-sessions/${encodeURIComponent(sessionId)}/`, { method: "DELETE" });
 }
 
+export async function revokeAllClientSessions(client: ApiClient = apiClient): Promise<void> {
+  await client.request<void>("/api/v1/accounts/me/client-sessions/revoke-all/", { method: "POST" });
+}
+
 function mapClientSession(response: ClientSessionResponse): ClientSession {
   return {
     id: response.id,
