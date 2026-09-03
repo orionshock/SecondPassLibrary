@@ -72,6 +72,33 @@ class BookAdminLayoutTests(IsolatedMediaRootMixin, TestCase):
         )
         self.assertIn("RelatedFieldWidgetWrapper", type(form.fields["selected_authors"].widget).__name__)
 
+    def test_book_description_is_sanitized_by_admin_form(self):
+        form_class = self.model_admin.get_form(self.request, self.book)
+        form = form_class(
+            data={
+                "title": self.book.title,
+                "subtitle": "",
+                "description": (
+                    '<p class="admin">Safe <i>description</i></p>'
+                    '<img src="bad"><script>alert("no")</script>'
+                ),
+                "publisher": "",
+                "language": "",
+                "published_date_precision": "",
+                "selected_authors": [],
+                "selected_catalog_tags": [],
+            },
+            instance=self.book,
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        form.save()
+        self.book.refresh_from_db()
+        self.assertEqual(
+            self.book.description,
+            "<p>Safe <i>description</i></p>",
+        )
+
     def test_series_uses_current_relationship_inline(self):
         series = Series.objects.create(name="Current Series")
         BookSeries.objects.create(book=self.book, series=series, series_index="2.50")

@@ -4,6 +4,7 @@ import { Link } from "react-router";
 import { BookCover } from "../../../shared/books/BookCover";
 import { selectedLibraryContextNavigationState } from "../libraryPresentation";
 import { bookSeriesDisplay, formatBookPublishedDate } from "../bookDetailPresentation";
+import { BookDescription } from "./BookDescription";
 
 export function BookDetailHeroPageRegion({ book, canEdit = false, editNavigationState, readingClientBookUrl }: { book: BookDetail; canEdit?: boolean; editNavigationState?: unknown; readingClientBookUrl?: string }) {
   const publishedDate = formatBookPublishedDate(book);
@@ -37,7 +38,7 @@ export function BookDetailHeroPageRegion({ book, canEdit = false, editNavigation
       {book.catalogTags.length > 0 ? <div className="book-detail-hero-region__tags" aria-label="Catalog Tags">
         {book.catalogTags.map((tag) => <span key={tag.id}>{tag.name}</span>)}
       </div> : null}
-      {book.description ? <p className="book-detail-hero-region__description">{book.description}</p> : null}
+      {book.description ? <div className="book-detail-hero-region__description"><BookDescription sanitizedHtml={book.description} /></div> : null}
       {book.file?.downloadUrl || !book.file || canEdit || readingClientBookUrl ? <div className="book-detail-hero-region__actions">
         {readingClientBookUrl && book.file ? <a
           className="button button--medium button--primary"

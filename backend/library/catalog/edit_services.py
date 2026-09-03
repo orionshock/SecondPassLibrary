@@ -3,6 +3,7 @@ from __future__ import annotations
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
+from library.catalog.description_html import sanitize_book_description
 from library.catalog.names import (
     AmbiguousCatalogEntityName,
     find_single_normalized_name_match,
@@ -27,6 +28,11 @@ def update_book_metadata(
     identifiers: list[dict] | None = None,
     catalog_tags: list[str] | None = None,
 ) -> Book:
+    scalar_fields = dict(scalar_fields)
+    if "description" in scalar_fields:
+        scalar_fields["description"] = sanitize_book_description(
+            scalar_fields["description"]
+        )
     for field, value in scalar_fields.items():
         setattr(book, field, value)
     book.full_clean()

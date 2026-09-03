@@ -141,6 +141,24 @@ class SingleEpubImportServiceTests(
         )
         self.assertTrue(CatalogTag.objects.filter(normalized_name="fantasy").exists())
 
+    def test_import_sanitizes_html_description_from_epub_metadata(self):
+        metadata_xml = """
+        <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+          <dc:title>Described Book</dc:title>
+          <dc:description>&lt;p class="calibre"&gt;A &lt;strong&gt;rich&lt;/strong&gt; description&lt;/p&gt;&lt;script&gt;alert("no")&lt;/script&gt;</dc:description>
+        </metadata>
+        """
+
+        result = import_epub_file(
+            BytesIO(minimal_epub_bytes(metadata_xml=metadata_xml)),
+            source_filename="described.epub",
+        )
+
+        self.assertEqual(
+            result.book.description,
+            "<p>A <strong>rich</strong> description</p>",
+        )
+
     def test_identifier_conflict_returns_conflict_item_result(self):
         existing_book = Book.objects.create(title="Existing", checksum="existing-book")
         BookIdentifier.objects.create(

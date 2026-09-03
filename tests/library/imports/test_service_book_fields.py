@@ -28,6 +28,22 @@ class ImportPersistenceBookFieldTests(ImportPersistenceFixtureMixin, TestCase):
         self.assertEqual(book.checksum, "abc123")
         self.assertEqual(book.file_size, 1234)
 
+    def test_sanitizes_imported_description_before_persistence(self):
+        result = persist_imported_book(
+            metadata=sample_metadata(
+                description=(
+                    '<p class="calibre">Allowed <em>structure</em></p>'
+                    '<script>alert("no")</script><img src="external">'
+                )
+            ),
+            checksum="sanitized-description",
+        )
+
+        self.assertEqual(
+            result.book.description,
+            "<p>Allowed <em>structure</em></p>",
+        )
+
     def test_persists_partial_published_date_fields(self):
         result = persist_imported_book(
             metadata=sample_metadata(

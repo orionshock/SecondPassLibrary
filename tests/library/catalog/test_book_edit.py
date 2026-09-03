@@ -396,6 +396,33 @@ class LibraryBookEditApiTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertEqual(BookIdentifier.objects.filter(book=self.visible_one).count(), 1)
         self.assertTrue(BookIdentifier.objects.filter(pk=self.identifier.id).exists())
 
+    def test_patch_sanitizes_description_and_returns_stored_html_unchanged(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+        dirty = (
+            '<p class="lead">Safe <strong>description</strong> &amp; entity</p>'
+            '<a href="https://example.test">link text</a>'
+            '<script>alert("no")</script>'
+        )
+
+        response = self.client.patch(
+            f"/api/v1/library/books/{self.visible_one.id}/",
+            data={"description": dirty},
+            content_type="application/json",
+        )
+
+        expected = (
+            "<p>Safe <strong>description</strong> &amp; entity</p>link text"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["description"], expected)
+        self.visible_one.refresh_from_db()
+        self.assertEqual(self.visible_one.description, expected)
+
+        read = self.client.get(f"/api/v1/library/books/{self.visible_one.id}/")
+        self.assertEqual(read.status_code, 200)
+        self.assertEqual(read.json()["description"], expected)
+
     def test_librarian_patch_creates_and_assigns_new_series(self):
         self.client.logout()
         self.assertTrue(self.client.login(username="manager", password="pw"))
