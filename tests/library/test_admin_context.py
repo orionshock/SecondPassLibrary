@@ -79,7 +79,11 @@ class LibraryContextAdminTests(TestCase):
         book = Book.objects.create(title="Context Book")
         BookAuthor.objects.create(book=book, author=author, position=0)
         BookSeries.objects.create(book=book, series=series)
-        BookGroupAssignment.objects.create(book=book, group=group, added_by=self.operator)
+        assignment = BookGroupAssignment.objects.create(
+            book=book,
+            group=group,
+            added_by=self.operator,
+        )
 
         response = self.client.get(
             reverse("admin:library_librarygroup_change", args=[group.pk])
@@ -88,18 +92,23 @@ class LibraryContextAdminTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Users and memberships")
         self.assertContains(response, "Assigned Books")
-        self.assertContains(response, "Context Book")
+        membership_url = reverse(
+            "admin:library_librarygroupmembership_change",
+            args=[membership.pk],
+        )
+        user_url = reverse("admin:auth_user_change", args=[user.pk])
+        book_url = reverse("admin:library_book_change", args=[book.pk])
+        self.assertContains(response, f'href="{user_url}">reader</a>')
+        self.assertContains(response, f'href="{membership_url}">Member</a>')
+        self.assertContains(response, f'href="{book_url}">Context Book</a>')
         self.assertContains(response, "Context Author")
         self.assertContains(response, "Context Series")
-        self.assertContains(response, reverse("admin:auth_user_change", args=[user.pk]))
-        self.assertContains(
-            response,
-            reverse(
-                "admin:library_librarygroupmembership_change",
-                args=[membership.pk],
-            ),
-        )
-        self.assertContains(response, reverse("admin:library_book_change", args=[book.pk]))
+        self.assertNotContains(response, str(membership))
+        self.assertNotContains(response, str(assignment))
+        self.assertNotContains(response, "column-membership_link")
+        self.assertNotContains(response, "column-added_by")
+        self.assertNotContains(response, "column-created_at")
+        self.assertContains(response, "Remove relationship")
 
     def test_group_context_removes_only_selected_relationships_not_objects(self):
         group = LibraryGroup.objects.create(name="Remove From")
@@ -175,8 +184,13 @@ class LibraryContextAdminTests(TestCase):
         ]
         response = self.client.get(reverse("admin:library_author_change", args=[author.pk]))
         self.assertEqual(response.status_code, 200)
-        for book in books:
-            self.assertContains(response, reverse("admin:library_book_change", args=[book.pk]))
+        for book, relationship in zip(books, relationships, strict=True):
+            book_url = reverse("admin:library_book_change", args=[book.pk])
+            self.assertContains(response, f'href="{book_url}">{book.title}</a>')
+            self.assertNotContains(response, str(relationship))
+        self.assertNotContains(response, "column-created_at")
+        self.assertNotContains(response, "column-updated_at")
+        self.assertContains(response, "Remove relationship")
 
         inline = AuthorBookContextInline(Author, admin.site)
         FormSet = inline.get_formset(self.request, author)
@@ -198,8 +212,13 @@ class LibraryContextAdminTests(TestCase):
         relationships = [BookSeries.objects.create(book=book, series=series) for book in books]
         response = self.client.get(reverse("admin:library_series_change", args=[series.pk]))
         self.assertEqual(response.status_code, 200)
-        for book in books:
-            self.assertContains(response, reverse("admin:library_book_change", args=[book.pk]))
+        for book, relationship in zip(books, relationships, strict=True):
+            book_url = reverse("admin:library_book_change", args=[book.pk])
+            self.assertContains(response, f'href="{book_url}">{book.title}</a>')
+            self.assertNotContains(response, str(relationship))
+        self.assertNotContains(response, "column-created_at")
+        self.assertNotContains(response, "column-updated_at")
+        self.assertContains(response, "Remove relationship")
 
         inline = SeriesBookContextInline(Series, admin.site)
         FormSet = inline.get_formset(self.request, series)

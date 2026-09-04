@@ -166,12 +166,11 @@ class UserProfileInline(admin.StackedInline):
 class UserGroupMembershipInline(admin.TabularInline):
     model = LibraryGroupMembership
     fk_name = "user"
+    template = "admin/edit_inline/contextual_tabular.html"
     fields = [
         "group_link",
-        "membership_role",
-        "created_at",
+        "membership_role_link",
         "updated_at",
-        "membership_link",
     ]
     readonly_fields = fields
     extra = 0
@@ -191,17 +190,13 @@ class UserGroupMembershipInline(admin.TabularInline):
         return format_html('<a href="{}">{}</a>', url, obj.group.name)
 
     @admin.display(description="Role", ordering="is_curator")
-    def membership_role(self, obj):
-        return "Curator" if obj.is_curator else "Member"
-
-    @admin.display(description="Edit membership")
-    def membership_link(self, obj):
+    def membership_role_link(self, obj):
         url = reverse(
             "admin:library_librarygroupmembership_change",
             args=[obj.pk],
         )
-        return format_html('<a href="{}">Edit</a>', url)
-
+        role = "Curator" if obj.is_curator else "Member"
+        return format_html('<a href="{}">{}</a>', url, role)
 
 class SecondPassUserAdmin(DjangoUserAdmin):
     filter_horizontal = _without_unused_auth_user_fields(

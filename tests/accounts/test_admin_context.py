@@ -39,19 +39,16 @@ class UserAdminContextTests(TestCase):
         self.assertContains(response, "Profile")
         self.assertContains(response, 'name="profile-0-role"')
         self.assertContains(response, "Library Group memberships")
-        self.assertContains(response, "Readers")
-        self.assertContains(response, "Curator")
-        self.assertContains(
-            response,
-            reverse("admin:library_librarygroup_change", args=[group.pk]),
+        membership_url = reverse(
+            "admin:library_librarygroupmembership_change",
+            args=[membership.pk],
         )
-        self.assertContains(
-            response,
-            reverse(
-                "admin:library_librarygroupmembership_change",
-                args=[membership.pk],
-            ),
-        )
+        group_url = reverse("admin:library_librarygroup_change", args=[group.pk])
+        self.assertContains(response, f'href="{group_url}">Readers</a>')
+        self.assertContains(response, f'href="{membership_url}">Curator</a>')
+        self.assertNotContains(response, str(membership))
+        self.assertNotContains(response, "column-created_at")
+        self.assertNotContains(response, "column-membership_link")
         for route in (
             "admin:marginalia_readingsession_changelist",
             "admin:accounts_userclientsession_changelist",

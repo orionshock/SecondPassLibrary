@@ -110,6 +110,10 @@ class MarginaliaAdminTests(IsolatedUserdataMixin, TestCase):
     def test_session_page_shows_only_its_annotations_with_direct_edit_links(self):
         session = self.create_session()
         annotation = self.create_annotation(session)
+        deleted = self.create_annotation(session, client_id="deleted-annotation")
+        deleted.highlight_text = "Deleted selected text"
+        deleted.is_deleted = True
+        deleted.save(update_fields=["highlight_text", "is_deleted", "updated_at"])
         other_book = Book.objects.create(title="Other Book", checksum="e" * 64)
         other_session = self.create_session(book=other_book)
         other = self.create_annotation(other_session, client_id="other-annotation")
@@ -124,11 +128,19 @@ class MarginaliaAdminTests(IsolatedUserdataMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Selected text")
         self.assertNotContains(response, "Other Session selected text")
-        self.assertContains(
-            response,
-            reverse("admin:marginalia_annotation_change", args=[annotation.pk]),
+        annotation_url = reverse(
+            "admin:marginalia_annotation_change",
+            args=[annotation.pk],
         )
+        self.assertContains(response, f'href="{annotation_url}">Highlight</a>')
+        self.assertNotContains(response, str(annotation))
+        self.assertNotContains(response, "column-kind")
+        self.assertNotContains(response, "column-is_deleted")
+        self.assertNotContains(response, "column-created_at")
+        self.assertContains(response, "column-deleted_state")
+        self.assertContains(response, ">Deleted</strong>", count=1)
         self.assertContains(response, "Soft delete")
+        self.assertContains(response, "Hard delete permanently")
         self.assertContains(response, "hard delete is permanent")
 
     def test_session_context_soft_and_hard_delete_only_selected_annotations(self):

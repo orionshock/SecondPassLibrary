@@ -47,25 +47,22 @@ class SessionAnnotationInline(admin.TabularInline):
     model = Annotation
     form = SessionAnnotationForm
     formset = SessionAnnotationFormSet
+    template = "admin/edit_inline/contextual_tabular.html"
     fields = [
         "annotation_link",
-        "kind",
         "quote_preview",
         "note_preview",
         "location_label",
-        "is_deleted",
-        "created_at",
+        "deleted_state",
         "updated_at",
         "soft_delete",
     ]
     readonly_fields = [
         "annotation_link",
-        "kind",
         "quote_preview",
         "note_preview",
         "location_label",
-        "is_deleted",
-        "created_at",
+        "deleted_state",
         "updated_at",
     ]
     extra = 0
@@ -81,7 +78,7 @@ class SessionAnnotationInline(admin.TabularInline):
     @admin.display(description="Annotation")
     def annotation_link(self, obj):
         url = reverse("admin:marginalia_annotation_change", args=[obj.pk])
-        return format_html('<a href="{}">Edit</a>', url)
+        return format_html('<a href="{}">{}</a>', url, obj.get_kind_display())
 
     @admin.display(description="Quote")
     def quote_preview(self, obj):
@@ -90,6 +87,12 @@ class SessionAnnotationInline(admin.TabularInline):
     @admin.display(description="Note")
     def note_preview(self, obj):
         return _bounded_preview(obj.comment_text) or "-"
+
+    @admin.display(description="State")
+    def deleted_state(self, obj):
+        if obj.is_deleted:
+            return format_html('<strong class="errornote">{}</strong>', "Deleted")
+        return format_html("<span>{}</span>", "")
 
 
 @admin.register(ReadingSession)

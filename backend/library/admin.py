@@ -606,12 +606,11 @@ class RelationshipRemovalFormSet(BaseInlineFormSet):
 class GroupMembershipContextInline(admin.TabularInline):
     model = LibraryGroupMembership
     formset = RelationshipRemovalFormSet
+    template = "admin/edit_inline/contextual_tabular.html"
     fields = [
         "user_link",
-        "membership_role",
-        "created_at",
+        "membership_role_link",
         "updated_at",
-        "membership_link",
     ]
     readonly_fields = fields
     extra = 0
@@ -630,27 +629,22 @@ class GroupMembershipContextInline(admin.TabularInline):
         return format_html('<a href="{}">{}</a>', url, obj.user.get_username())
 
     @admin.display(description="Role", ordering="is_curator")
-    def membership_role(self, obj):
-        return "Curator" if obj.is_curator else "Member"
-
-    @admin.display(description="Edit membership")
-    def membership_link(self, obj):
+    def membership_role_link(self, obj):
         url = reverse(
             "admin:library_librarygroupmembership_change",
             args=[obj.pk],
         )
-        return format_html('<a href="{}">Edit</a>', url)
-
+        role = "Curator" if obj.is_curator else "Member"
+        return format_html('<a href="{}">{}</a>', url, role)
 
 class GroupBookContextInline(admin.TabularInline):
     model = BookGroupAssignment
     formset = RelationshipRemovalFormSet
+    template = "admin/edit_inline/contextual_tabular.html"
     fields = [
         "book_link",
         "primary_author",
         "series_name",
-        "added_by",
-        "created_at",
     ]
     readonly_fields = fields
     extra = 0
@@ -731,7 +725,8 @@ class LibraryGroupAdmin(admin.ModelAdmin):
 class AuthorBookContextInline(admin.TabularInline):
     model = BookAuthor
     formset = RelationshipRemovalFormSet
-    fields = ["book_link", "position", "series_name", "created_at", "updated_at"]
+    template = "admin/edit_inline/contextual_tabular.html"
+    fields = ["book_link", "position", "series_name"]
     readonly_fields = fields
     extra = 0
     verbose_name = "Authored Book"
@@ -765,7 +760,8 @@ class AuthorAdmin(admin.ModelAdmin):
 class SeriesBookContextInline(admin.TabularInline):
     model = BookSeries
     formset = RelationshipRemovalFormSet
-    fields = ["book_link", "primary_author", "series_index", "created_at", "updated_at"]
+    template = "admin/edit_inline/contextual_tabular.html"
+    fields = ["book_link", "primary_author", "series_index"]
     readonly_fields = fields
     extra = 0
     verbose_name = "Series Book"
