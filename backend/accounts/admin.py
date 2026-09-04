@@ -4,7 +4,12 @@ from django.contrib.admin.sites import NotRegistered
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import ValidationError
+from django.urls import reverse
+from django.utils.html import format_html, format_html_join
 from types import MethodType
+from urllib.parse import urlencode
+
+from library.models import LibraryGroupMembership
 
 from .models import (
     ClientLoginRequest,
@@ -36,29 +41,6 @@ def _fieldsets_without_unused_auth_user_fields(fieldsets):
         updated["fields"] = _without_unused_auth_user_fields(updated.get("fields", ()))
         cleaned.append((title, updated))
     return tuple(cleaned)
-
-
-class SecondPassUserAdmin(DjangoUserAdmin):
-    filter_horizontal = _without_unused_auth_user_fields(
-        DjangoUserAdmin.filter_horizontal
-    )
-    list_filter = _without_unused_auth_user_fields(DjangoUserAdmin.list_filter)
-
-    def get_fieldsets(self, request, obj=None):
-        return _fieldsets_without_unused_auth_user_fields(
-            super().get_fieldsets(request, obj=obj)
-        )
-
-try:
-    admin.site.unregister(Group)
-except NotRegistered:
-    pass
-
-try:
-    admin.site.unregister(User)
-except NotRegistered:
-    pass
-admin.site.register(User, SecondPassUserAdmin)
 
 
 def _sort_accounts_admin_models(app):
@@ -137,6 +119,130 @@ class UserProfileAdminForm(forms.ModelForm):
     class Meta:
         model = UserProfile
         fields = "__all__"
+
+
+class UserProfileInline(admin.StackedInline):
+    model = UserProfile
+    form = UserProfileAdminForm
+    fields = [
+        "role",
+        "must_change_password",
+        "profile_id",
+        "external_subject_id",
+        "created_at",
+        "updated_at",
+    ]
+    readonly_fields = [
+        "profile_id",
+        "external_subject_id",
+        "created_at",
+        "updated_at",
+    ]
+    extra = 0
+    max_num = 1
+    can_delete = False
+    verbose_name_plural = "Profile"
+
+    @admin.display(description="Profile ID")
+    def profile_id(self, obj: UserProfile):
+        return obj.id
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def get_formset(self, request, obj=None, **kwargs):
+        FormSet = super().get_formset(request, obj=obj, **kwargs)
+        BaseForm = FormSet.form
+
+        class RequestForm(BaseForm):
+            def __init__(self, *args, **inner_kwargs):
+                inner_kwargs["request"] = request
+                super().__init__(*args, **inner_kwargs)
+
+        FormSet.form = RequestForm
+        return FormSet
+
+
+class UserGroupMembershipInline(admin.TabularInline):
+    model = LibraryGroupMembership
+    fk_name = "user"
+    fields = [
+        "group_link",
+        "membership_role",
+        "created_at",
+        "updated_at",
+        "membership_link",
+    ]
+    readonly_fields = fields
+    extra = 0
+    can_delete = False
+    verbose_name = "Library Group membership"
+    verbose_name_plural = "Library Group memberships"
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("group")
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    @admin.display(description="Group", ordering="group__name")
+    def group_link(self, obj):
+        url = reverse("admin:library_librarygroup_change", args=[obj.group_id])
+        return format_html('<a href="{}">{}</a>', url, obj.group.name)
+
+    @admin.display(description="Role", ordering="is_curator")
+    def membership_role(self, obj):
+        return "Curator" if obj.is_curator else "Member"
+
+    @admin.display(description="Edit membership")
+    def membership_link(self, obj):
+        url = reverse(
+            "admin:library_librarygroupmembership_change",
+            args=[obj.pk],
+        )
+        return format_html('<a href="{}">Edit</a>', url)
+
+
+class SecondPassUserAdmin(DjangoUserAdmin):
+    filter_horizontal = _without_unused_auth_user_fields(
+        DjangoUserAdmin.filter_horizontal
+    )
+    list_filter = _without_unused_auth_user_fields(DjangoUserAdmin.list_filter)
+    inlines = [UserProfileInline, UserGroupMembershipInline]
+    readonly_fields = (*DjangoUserAdmin.readonly_fields, "related_records")
+
+    def get_fieldsets(self, request, obj=None):
+        fieldsets = _fieldsets_without_unused_auth_user_fields(
+            super().get_fieldsets(request, obj=obj)
+        )
+        if obj is None:
+            return fieldsets
+        return (*fieldsets, ("Related records", {"fields": ["related_records"]}))
+
+    @admin.display(description="Account activity")
+    def related_records(self, obj):
+        links = [
+            ("Marginalia Sessions", "admin:marginalia_readingsession_changelist"),
+            ("Client/device sessions", "admin:accounts_userclientsession_changelist"),
+            ("Browser/web sessions", "admin:accounts_userwebsession_changelist"),
+        ]
+        rendered = []
+        for label, route in links:
+            url = f"{reverse(route)}?{urlencode({'user__id__exact': obj.pk})}"
+            rendered.append(format_html('<a href="{}">{}</a>', url, label))
+        return format_html_join("", "{}<br>", ((item,) for item in rendered))
+
+
+try:
+    admin.site.unregister(Group)
+except NotRegistered:
+    pass
+
+try:
+    admin.site.unregister(User)
+except NotRegistered:
+    pass
+admin.site.register(User, SecondPassUserAdmin)
 
 
 @admin.register(UserProfile)
@@ -230,13 +336,15 @@ class ExternalIdentityAdmin(admin.ModelAdmin):
 @admin.register(UserWebSession)
 class UserWebSessionAdmin(admin.ModelAdmin):
     list_display = [
-        "user",
+        "user_account",
         "session_key",
         "ip_address",
         "short_user_agent",
         "created_at",
         "updated_at",
     ]
+    list_display_links = ["session_key"]
+    list_filter = [("user", admin.RelatedOnlyFieldListFilter)]
     search_fields = [
         "user__username",
         "user__email",
@@ -259,6 +367,11 @@ class UserWebSessionAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
+
+    @admin.display(description="User", ordering="user__username")
+    def user_account(self, obj):
+        url = reverse("admin:auth_user_change", args=[obj.user_id])
+        return format_html('<a href="{}">{}</a>', url, obj.user.get_username())
 
     def short_user_agent(self, obj: UserWebSession):
         ua = obj.user_agent or ""
@@ -315,7 +428,7 @@ class ClientLoginRequestAdmin(admin.ModelAdmin):
 @admin.register(UserClientSession)
 class UserClientSessionAdmin(admin.ModelAdmin):
     list_display = [
-        "user",
+        "user_account",
         "name",
         "client_type",
         "last_seen_at",
@@ -323,8 +436,13 @@ class UserClientSessionAdmin(admin.ModelAdmin):
         "revoked_at",
         "created_at",
     ]
+    list_display_links = ["name"]
     search_fields = ["user__username", "user__email", "name", "client_type"]
-    list_filter = ["client_type", "revoked_at"]
+    list_filter = [
+        ("user", admin.RelatedOnlyFieldListFilter),
+        "client_type",
+        "revoked_at",
+    ]
     readonly_fields = [
         "id",
         "user",
@@ -344,3 +462,8 @@ class UserClientSessionAdmin(admin.ModelAdmin):
 
     def has_change_permission(self, request, obj=None):
         return False
+
+    @admin.display(description="User", ordering="user__username")
+    def user_account(self, obj):
+        url = reverse("admin:auth_user_change", args=[obj.user_id])
+        return format_html('<a href="{}">{}</a>', url, obj.user.get_username())

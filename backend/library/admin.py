@@ -7,6 +7,8 @@ from django.contrib.admin.widgets import FilteredSelectMultiple, RelatedFieldWid
 from django.core.exceptions import PermissionDenied
 from django.http import Http404, HttpResponseRedirect
 from django.db.models import Count, Prefetch
+from django.forms.formsets import DELETION_FIELD_NAME
+from django.forms.models import BaseInlineFormSet
 from django.utils.html import format_html
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
@@ -592,19 +594,213 @@ def _bounded_file_repair_error(exc):
     return "Stored EPUB repair could not be completed."
 
 
+class RelationshipRemovalFormSet(BaseInlineFormSet):
+    removal_label = "Remove relationship"
+
+    def add_fields(self, form, index):
+        super().add_fields(form, index)
+        if DELETION_FIELD_NAME in form.fields:
+            form.fields[DELETION_FIELD_NAME].label = self.removal_label
+
+
+class GroupMembershipContextInline(admin.TabularInline):
+    model = LibraryGroupMembership
+    formset = RelationshipRemovalFormSet
+    fields = [
+        "user_link",
+        "membership_role",
+        "created_at",
+        "updated_at",
+        "membership_link",
+    ]
+    readonly_fields = fields
+    extra = 0
+    verbose_name = "User membership"
+    verbose_name_plural = "Users and memberships — removal deletes only the membership"
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("user")
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    @admin.display(description="User", ordering="user__username")
+    def user_link(self, obj):
+        url = reverse("admin:auth_user_change", args=[obj.user_id])
+        return format_html('<a href="{}">{}</a>', url, obj.user.get_username())
+
+    @admin.display(description="Role", ordering="is_curator")
+    def membership_role(self, obj):
+        return "Curator" if obj.is_curator else "Member"
+
+    @admin.display(description="Edit membership")
+    def membership_link(self, obj):
+        url = reverse(
+            "admin:library_librarygroupmembership_change",
+            args=[obj.pk],
+        )
+        return format_html('<a href="{}">Edit</a>', url)
+
+
+class GroupBookContextInline(admin.TabularInline):
+    model = BookGroupAssignment
+    formset = RelationshipRemovalFormSet
+    fields = [
+        "book_link",
+        "primary_author",
+        "series_name",
+        "added_by",
+        "created_at",
+    ]
+    readonly_fields = fields
+    extra = 0
+    verbose_name = "Assigned Book"
+    verbose_name_plural = "Assigned Books — removal deletes only the Group assignment"
+
+    def get_queryset(self, request):
+        return (
+            super()
+            .get_queryset(request)
+            .select_related("book__book_series__series", "added_by")
+            .prefetch_related(
+                Prefetch(
+                    "book__book_authors",
+                    queryset=BookAuthor.objects.select_related("author").order_by(
+                        "position", "id"
+                    ),
+                    to_attr="_admin_group_book_authors",
+                )
+            )
+        )
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    @admin.display(description="Book", ordering="book__title")
+    def book_link(self, obj):
+        url = reverse("admin:library_book_change", args=[obj.book_id])
+        return format_html('<a href="{}">{}</a>', url, obj.book.title)
+
+    @admin.display(description="Primary author")
+    def primary_author(self, obj):
+        rows = getattr(obj.book, "_admin_group_book_authors", ())
+        primary = next(iter(rows), None)
+        return primary.author.name if primary else "-"
+
+    @admin.display(description="Series", ordering="book__book_series__series__name")
+    def series_name(self, obj):
+        book_series = getattr(obj.book, "book_series", None)
+        return book_series.series.name if book_series else "-"
+
+
 @admin.register(LibraryGroup)
 class LibraryGroupAdmin(admin.ModelAdmin):
     search_fields = ["name"]
+    inlines = [GroupMembershipContextInline, GroupBookContextInline]
+
+    def save_formset(self, request, form, formset, change):
+        if formset.model is LibraryGroupMembership:
+            formset.save(commit=False)
+            removed = 0
+            for membership in formset.deleted_objects:
+                removed += membership_services.remove_user_from_group(
+                    user=membership.user,
+                    group=form.instance,
+                    actor=request.user,
+                )
+            formset.save_m2m()
+            if removed:
+                self.message_user(request, f"Removed {removed} membership(s).")
+            return
+        if formset.model is BookGroupAssignment:
+            formset.save(commit=False)
+            removed = 0
+            for assignment in formset.deleted_objects:
+                removed += book_assignment_services.remove_book_from_group(
+                    book=assignment.book,
+                    group=form.instance,
+                    actor=request.user,
+                )
+            formset.save_m2m()
+            if removed:
+                self.message_user(request, f"Removed {removed} Book assignment(s).")
+            return
+        return super().save_formset(request, form, formset, change)
+
+
+class AuthorBookContextInline(admin.TabularInline):
+    model = BookAuthor
+    formset = RelationshipRemovalFormSet
+    fields = ["book_link", "position", "series_name", "created_at", "updated_at"]
+    readonly_fields = fields
+    extra = 0
+    verbose_name = "Authored Book"
+    verbose_name_plural = "Books by this Author — removal does not delete the Book"
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related(
+            "book__book_series__series"
+        )
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    @admin.display(description="Book", ordering="book__title")
+    def book_link(self, obj):
+        url = reverse("admin:library_book_change", args=[obj.book_id])
+        return format_html('<a href="{}">{}</a>', url, obj.book.title)
+
+    @admin.display(description="Series", ordering="book__book_series__series__name")
+    def series_name(self, obj):
+        book_series = getattr(obj.book, "book_series", None)
+        return book_series.series.name if book_series else "-"
 
 
 @admin.register(Author)
 class AuthorAdmin(admin.ModelAdmin):
     search_fields = ["name", "sort_name", "normalized_name"]
+    inlines = [AuthorBookContextInline]
+
+
+class SeriesBookContextInline(admin.TabularInline):
+    model = BookSeries
+    formset = RelationshipRemovalFormSet
+    fields = ["book_link", "primary_author", "series_index", "created_at", "updated_at"]
+    readonly_fields = fields
+    extra = 0
+    verbose_name = "Series Book"
+    verbose_name_plural = "Books in this Series — removal does not delete the Book"
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related("book").prefetch_related(
+            Prefetch(
+                "book__book_authors",
+                queryset=BookAuthor.objects.select_related("author").order_by(
+                    "position", "id"
+                ),
+                to_attr="_admin_series_book_authors",
+            )
+        )
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    @admin.display(description="Book", ordering="book__title")
+    def book_link(self, obj):
+        url = reverse("admin:library_book_change", args=[obj.book_id])
+        return format_html('<a href="{}">{}</a>', url, obj.book.title)
+
+    @admin.display(description="Primary author")
+    def primary_author(self, obj):
+        rows = getattr(obj.book, "_admin_series_book_authors", ())
+        primary = next(iter(rows), None)
+        return primary.author.name if primary else "-"
 
 
 @admin.register(Series)
 class SeriesAdmin(admin.ModelAdmin):
     search_fields = ["name", "sort_name", "normalized_name"]
+    inlines = [SeriesBookContextInline]
 
 
 class CatalogTagAdminForm(forms.ModelForm):

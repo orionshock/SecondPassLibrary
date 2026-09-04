@@ -1,13 +1,19 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+import logging
 
 from django.db import transaction
 from django.db.models import F
+from django.utils import timezone
 
+from core.operational_logging import info_on_commit, user_log_label
 from library.queries import visible_books_for_user
 from marginalia.exceptions import BookAccessRequiredError, SessionClosedError
 from marginalia.models import Annotation, ReadingSession
+
+
+logger = logging.getLogger(__name__)
 
 
 @transaction.atomic
@@ -74,6 +80,42 @@ def synchronize_annotations(*, user, session_id, operations: Sequence[dict]) -> 
         annotation.save(update_fields=[*changed_fields, "updated_at"])
 
     return session
+
+
+@transaction.atomic
+def soft_delete_annotations(*, session, annotation_ids, actor=None) -> int:
+    """Tombstone selected annotations belonging to one Reading Session."""
+    updated = Annotation.objects.filter(
+        session=session,
+        pk__in=annotation_ids,
+        is_deleted=False,
+    ).update(is_deleted=True, updated_at=timezone.now())
+    if updated:
+        info_on_commit(
+            logger,
+            "Marginalia annotations soft deleted by operator: count=%d actor=%s",
+            updated,
+            user_log_label(actor),
+        )
+    return updated
+
+
+@transaction.atomic
+def hard_delete_annotations(*, session, annotation_ids, actor=None) -> int:
+    """Permanently delete selected annotations belonging to one Reading Session."""
+    _deleted_total, deleted_by_model = Annotation.objects.filter(
+        session=session,
+        pk__in=annotation_ids,
+    ).delete()
+    deleted = deleted_by_model.get(Annotation._meta.label, 0)
+    if deleted:
+        info_on_commit(
+            logger,
+            "Marginalia annotations permanently deleted by operator: count=%d actor=%s",
+            deleted,
+            user_log_label(actor),
+        )
+    return deleted
 
 
 def _operation_client_id(operation: dict) -> str:

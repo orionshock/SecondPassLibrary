@@ -1,23 +1,32 @@
 from datetime import timedelta
+from types import SimpleNamespace
 
 from django.contrib import admin
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth import get_user_model
 from django.db import connection
-from django.test import RequestFactory, TestCase
+from django.test import RequestFactory, TestCase, override_settings
 from django.test.utils import CaptureQueriesContext
+from django.urls import path, reverse
 from django.utils import timezone
 
 from library.models import Book
-from marginalia.admin import AnnotationAdmin, ImportStageAdmin, ReadingSessionAdmin
+from marginalia.admin import (
+    AnnotationAdmin,
+    ImportStageAdmin,
+    ReadingSessionAdmin,
+    SessionAnnotationInline,
+)
 from marginalia.imports.staging import stage_file_path
 from marginalia.models import Annotation, ImportStage, ReadingSession
 from tests.testenv.filesystem import IsolatedUserdataMixin
 
 
 User = get_user_model()
+urlpatterns = [path("admin/", admin.site.urls)]
 
 
+@override_settings(ROOT_URLCONF=__name__)
 class MarginaliaAdminTests(IsolatedUserdataMixin, TestCase):
     def setUp(self):
         self.site = AdminSite()
@@ -78,7 +87,7 @@ class MarginaliaAdminTests(IsolatedUserdataMixin, TestCase):
         self.assertEqual(
             self.session_admin.list_display,
             [
-                "user",
+                "user_account",
                 "book",
                 "display_name",
                 "status",
@@ -97,6 +106,74 @@ class MarginaliaAdminTests(IsolatedUserdataMixin, TestCase):
         self.assertEqual(self.annotation_admin.autocomplete_fields, ["session"])
         self.assertIn("state", self.stage_admin.list_filter)
         self.assertEqual(self.stage_admin.autocomplete_fields, ["user"])
+
+    def test_session_page_shows_only_its_annotations_with_direct_edit_links(self):
+        session = self.create_session()
+        annotation = self.create_annotation(session)
+        other_book = Book.objects.create(title="Other Book", checksum="e" * 64)
+        other_session = self.create_session(book=other_book)
+        other = self.create_annotation(other_session, client_id="other-annotation")
+        other.highlight_text = "Other Session selected text"
+        other.save(update_fields=["highlight_text", "updated_at"])
+        self.client.force_login(self.operator)
+
+        response = self.client.get(
+            reverse("admin:marginalia_readingsession_change", args=[session.pk])
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Selected text")
+        self.assertNotContains(response, "Other Session selected text")
+        self.assertContains(
+            response,
+            reverse("admin:marginalia_annotation_change", args=[annotation.pk]),
+        )
+        self.assertContains(response, "Soft delete")
+        self.assertContains(response, "hard delete is permanent")
+
+    def test_session_context_soft_and_hard_delete_only_selected_annotations(self):
+        session = self.create_session()
+        soft = self.create_annotation(session, client_id="soft")
+        hard = self.create_annotation(session, client_id="hard")
+        keep = self.create_annotation(session, client_id="keep")
+        other_book = Book.objects.create(title="Other Book", checksum="f" * 64)
+        other_session = self.create_session(book=other_book)
+        other = self.create_annotation(other_session, client_id="other")
+        inline = SessionAnnotationInline(ReadingSession, self.site)
+        FormSet = inline.get_formset(self.request, session)
+        prefix = FormSet.get_default_prefix()
+        rows = list(FormSet(instance=session, prefix=prefix).get_queryset())
+        data = {
+            f"{prefix}-TOTAL_FORMS": str(len(rows)),
+            f"{prefix}-INITIAL_FORMS": str(len(rows)),
+            f"{prefix}-MIN_NUM_FORMS": "0",
+            f"{prefix}-MAX_NUM_FORMS": "1000",
+        }
+        for index, row in enumerate(rows):
+            data[f"{prefix}-{index}-id"] = str(row.pk)
+            data[f"{prefix}-{index}-session"] = str(session.pk)
+            if row.pk == soft.pk:
+                data[f"{prefix}-{index}-soft_delete"] = "on"
+            if row.pk == hard.pk:
+                data[f"{prefix}-{index}-DELETE"] = "on"
+        formset = FormSet(data=data, instance=session, prefix=prefix)
+        self.assertTrue(formset.is_valid(), formset.errors)
+        self.session_admin.message_user = lambda *args, **kwargs: None
+
+        self.session_admin.save_formset(
+            self.request,
+            SimpleNamespace(instance=session),
+            formset,
+            True,
+        )
+
+        soft.refresh_from_db()
+        keep.refresh_from_db()
+        other.refresh_from_db()
+        self.assertTrue(soft.is_deleted)
+        self.assertFalse(Annotation.objects.filter(pk=hard.pk).exists())
+        self.assertFalse(keep.is_deleted)
+        self.assertFalse(other.is_deleted)
 
     def test_detail_pages_expose_persisted_fields_without_fake_raw_token(self):
         session_fields = _fieldset_names(self.session_admin.fieldsets)

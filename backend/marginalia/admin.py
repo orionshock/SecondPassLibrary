@@ -2,9 +2,15 @@ from functools import partial
 
 from django.contrib import admin
 from django.contrib.admin import DateFieldListFilter
+from django import forms
 from django.db import transaction
 from django.db.models import Count
+from django.forms.formsets import DELETION_FIELD_NAME
+from django.forms.models import BaseInlineFormSet
+from django.urls import reverse
+from django.utils.html import format_html
 
+from marginalia.annotations import services as annotation_services
 from marginalia.imports.staging import (
     ImportStageStorageError,
     delete_stage_file,
@@ -13,10 +19,83 @@ from marginalia.imports.staging import (
 from marginalia.models import Annotation, ImportStage, ReadingSession
 
 
+def _bounded_preview(value, *, limit=100):
+    preview = " ".join(str(value or "").split())
+    return preview if len(preview) <= limit else f"{preview[: limit - 3]}..."
+
+
+class SessionAnnotationForm(forms.ModelForm):
+    soft_delete = forms.BooleanField(
+        required=False,
+        label="Soft delete",
+        help_text="Store the existing tombstone; the Annotation row remains.",
+    )
+
+    class Meta:
+        model = Annotation
+        fields = []
+
+
+class SessionAnnotationFormSet(BaseInlineFormSet):
+    def add_fields(self, form, index):
+        super().add_fields(form, index)
+        if DELETION_FIELD_NAME in form.fields:
+            form.fields[DELETION_FIELD_NAME].label = "Hard delete permanently"
+
+
+class SessionAnnotationInline(admin.TabularInline):
+    model = Annotation
+    form = SessionAnnotationForm
+    formset = SessionAnnotationFormSet
+    fields = [
+        "annotation_link",
+        "kind",
+        "quote_preview",
+        "note_preview",
+        "location_label",
+        "is_deleted",
+        "created_at",
+        "updated_at",
+        "soft_delete",
+    ]
+    readonly_fields = [
+        "annotation_link",
+        "kind",
+        "quote_preview",
+        "note_preview",
+        "location_label",
+        "is_deleted",
+        "created_at",
+        "updated_at",
+    ]
+    extra = 0
+    verbose_name = "Annotation"
+    verbose_name_plural = "Annotations — soft delete keeps a tombstone; hard delete is permanent"
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).order_by("-created_at", "-id")
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    @admin.display(description="Annotation")
+    def annotation_link(self, obj):
+        url = reverse("admin:marginalia_annotation_change", args=[obj.pk])
+        return format_html('<a href="{}">Edit</a>', url)
+
+    @admin.display(description="Quote")
+    def quote_preview(self, obj):
+        return _bounded_preview(obj.highlight_text) or "-"
+
+    @admin.display(description="Note")
+    def note_preview(self, obj):
+        return _bounded_preview(obj.comment_text) or "-"
+
+
 @admin.register(ReadingSession)
 class ReadingSessionAdmin(admin.ModelAdmin):
     list_display = [
-        "user",
+        "user_account",
         "book",
         "display_name",
         "status",
@@ -26,7 +105,9 @@ class ReadingSessionAdmin(admin.ModelAdmin):
         "has_progress",
         "annotation_count",
     ]
+    list_display_links = ["display_name"]
     list_filter = [
+        ("user", admin.RelatedOnlyFieldListFilter),
         "status",
         ("started_at", DateFieldListFilter),
         ("closed_at", DateFieldListFilter),
@@ -61,6 +142,7 @@ class ReadingSessionAdmin(admin.ModelAdmin):
     ]
     date_hierarchy = "updated_at"
     list_per_page = 50
+    inlines = [SessionAnnotationInline]
 
     def get_queryset(self, request):
         return (
@@ -69,6 +151,11 @@ class ReadingSessionAdmin(admin.ModelAdmin):
             .select_related("user", "book")
             .annotate(_admin_annotation_count=Count("annotations"))
         )
+
+    @admin.display(description="User", ordering="user__username")
+    def user_account(self, obj):
+        url = reverse("admin:auth_user_change", args=[obj.user_id])
+        return format_html('<a href="{}">{}</a>', url, obj.user.get_username())
 
     @admin.display(description="Session", ordering="name")
     def display_name(self, obj: ReadingSession) -> str:
@@ -81,6 +168,36 @@ class ReadingSessionAdmin(admin.ModelAdmin):
     @admin.display(description="Annotations", ordering="_admin_annotation_count")
     def annotation_count(self, obj: ReadingSession) -> int:
         return obj._admin_annotation_count
+
+    def save_formset(self, request, form, formset, change):
+        if formset.model is not Annotation:
+            return super().save_formset(request, form, formset, change)
+
+        formset.save(commit=False)
+        hard_delete_ids = {obj.pk for obj in formset.deleted_objects}
+        soft_delete_ids = {
+            inline_form.instance.pk
+            for inline_form in formset.forms
+            if inline_form.cleaned_data.get("soft_delete")
+            and not inline_form.cleaned_data.get(DELETION_FIELD_NAME)
+        }
+        soft_deleted = annotation_services.soft_delete_annotations(
+            session=form.instance,
+            annotation_ids=soft_delete_ids,
+            actor=request.user,
+        )
+        hard_deleted = annotation_services.hard_delete_annotations(
+            session=form.instance,
+            annotation_ids=hard_delete_ids,
+            actor=request.user,
+        )
+        formset.save_m2m()
+        if soft_deleted or hard_deleted:
+            self.message_user(
+                request,
+                f"Soft deleted {soft_deleted} annotation(s); permanently deleted "
+                f"{hard_deleted} annotation(s).",
+            )
 
 
 @admin.register(Annotation)
@@ -97,6 +214,7 @@ class AnnotationAdmin(admin.ModelAdmin):
         "updated_at",
     ]
     list_filter = [
+        ("session__user", admin.RelatedOnlyFieldListFilter),
         "kind",
         "is_deleted",
         ("created_at", DateFieldListFilter),
