@@ -80,7 +80,7 @@ class MarginaliaAdminTests(IsolatedUserdataMixin, TestCase):
         )
         return stage, path
 
-    def test_models_are_registered_with_useful_operator_configuration(self):
+    def test_registered_models_and_retained_annotation_admin_are_configured(self):
         self.assertIsInstance(admin.site._registry[ReadingSession], ReadingSessionAdmin)
         self.assertIsInstance(admin.site._registry[Annotation], AnnotationAdmin)
         self.assertIsInstance(admin.site._registry[ImportStage], ImportStageAdmin)
@@ -107,7 +107,7 @@ class MarginaliaAdminTests(IsolatedUserdataMixin, TestCase):
         self.assertIn("state", self.stage_admin.list_filter)
         self.assertEqual(self.stage_admin.autocomplete_fields, ["user"])
 
-    def test_session_page_shows_only_its_annotations_with_direct_edit_links(self):
+    def test_session_page_shows_only_its_annotations_without_redundant_labels(self):
         session = self.create_session()
         annotation = self.create_annotation(session)
         deleted = self.create_annotation(session, client_id="deleted-annotation")
@@ -134,6 +134,9 @@ class MarginaliaAdminTests(IsolatedUserdataMixin, TestCase):
         )
         self.assertContains(response, f'href="{annotation_url}">Highlight</a>')
         self.assertNotContains(response, str(annotation))
+        annotation_response = self.client.get(annotation_url)
+        self.assertEqual(annotation_response.status_code, 200)
+        self.assertContains(annotation_response, annotation.client_id)
         self.assertNotContains(response, "column-kind")
         self.assertNotContains(response, "column-is_deleted")
         self.assertNotContains(response, "column-created_at")
@@ -142,6 +145,14 @@ class MarginaliaAdminTests(IsolatedUserdataMixin, TestCase):
         self.assertContains(response, "Soft delete")
         self.assertContains(response, "Hard delete permanently")
         self.assertContains(response, "hard delete is permanent")
+
+    def test_annotation_admin_is_hidden_from_global_index(self):
+        self.client.force_login(self.operator)
+
+        response = self.client.get(reverse("admin:index"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(response, "Annotations")
 
     def test_session_context_soft_and_hard_delete_only_selected_annotations(self):
         session = self.create_session()

@@ -24,8 +24,8 @@ class BookGroupAssignmentAdminTests(SimpleTestCase):
         self.request = RequestFactory().post("/admin/library/bookgroupassignment/add/")
         self.request.user = get_user_model()(username="operator")
 
-    def test_join_table_is_registered_with_service_backed_operations(self):
-        self.assertIsInstance(admin.site._registry[BookGroupAssignment], BookGroupAssignmentAdmin)
+    def test_unregistered_join_table_admin_retains_service_backed_operations(self):
+        self.assertNotIn(BookGroupAssignment, admin.site._registry)
         self.assertNotIn("id", self.model_admin.list_display)
         self.assertEqual(self.model_admin.list_display_links, ["book"])
         self.assertEqual(self.model_admin.actions, ["remove_assignments"])
@@ -86,15 +86,12 @@ class LibraryGroupMembershipAdminTests(SimpleTestCase):
         "library.admin.server_settings.advanced_library_groups_enabled",
         return_value=True,
     )
-    def test_user_group_assignments_are_registered_with_service_operations(
+    def test_unregistered_user_group_admin_retains_service_operations(
         self,
         advanced_groups_enabled,
         is_public,
     ):
-        self.assertIsInstance(
-            admin.site._registry[LibraryGroupMembership],
-            LibraryGroupMembershipAdmin,
-        )
+        self.assertNotIn(LibraryGroupMembership, admin.site._registry)
         self.assertNotIn("id", self.model_admin.list_display)
         self.assertEqual(self.model_admin.list_display_links, ["user"])
         self.assertEqual(self.model_admin.actions, ["remove_assignments"])

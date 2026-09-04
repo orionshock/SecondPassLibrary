@@ -609,7 +609,7 @@ class GroupMembershipContextInline(admin.TabularInline):
     template = "admin/edit_inline/contextual_tabular.html"
     fields = [
         "user_link",
-        "membership_role_link",
+        "membership_role",
         "updated_at",
     ]
     readonly_fields = fields
@@ -629,13 +629,8 @@ class GroupMembershipContextInline(admin.TabularInline):
         return format_html('<a href="{}">{}</a>', url, obj.user.get_username())
 
     @admin.display(description="Role", ordering="is_curator")
-    def membership_role_link(self, obj):
-        url = reverse(
-            "admin:library_librarygroupmembership_change",
-            args=[obj.pk],
-        )
-        role = "Curator" if obj.is_curator else "Member"
-        return format_html('<a href="{}">{}</a>', url, role)
+    def membership_role(self, obj):
+        return "Curator" if obj.is_curator else "Member"
 
 class GroupBookContextInline(admin.TabularInline):
     model = BookGroupAssignment
@@ -1083,11 +1078,12 @@ class CatalogTagAdmin(admin.ModelAdmin):
         )
 
 
-@admin.register(LibraryGroupMembership)
 class LibraryGroupMembershipAdmin(
     AdvancedGroupsAssignmentAdminMixin,
     admin.ModelAdmin,
 ):
+    # Retained temporarily as a cleanup candidate. Membership operations now live
+    # on contextual User and Library Group Admin pages; this class is unregistered.
     list_display = ["user", "group", "is_curator", "created_at", "updated_at"]
     list_display_links = ["user"]
     list_filter = ["group", "is_curator"]
@@ -1164,11 +1160,12 @@ class LibraryGroupMembershipAdmin(
             )
         self.message_user(request, f"Removed {removed} user-group assignment(s).")
 
-@admin.register(BookGroupAssignment)
 class BookGroupAssignmentAdmin(
     AdvancedGroupsAssignmentAdminMixin,
     admin.ModelAdmin,
 ):
+    # Retained temporarily as a cleanup candidate. Assignment operations now live
+    # on contextual Library Group Admin pages; this class is unregistered.
     list_display = ["book", "group", "added_by", "created_at", "updated_at"]
     list_display_links = ["book"]
     list_filter = ["group"]

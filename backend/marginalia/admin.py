@@ -205,6 +205,8 @@ class ReadingSessionAdmin(admin.ModelAdmin):
 
 @admin.register(Annotation)
 class AnnotationAdmin(admin.ModelAdmin):
+    # Registered only to preserve direct Annotation change forms linked from
+    # Reading Sessions. Keep it hidden from the global Admin index/changelist UI.
     list_display = [
         "session",
         "session_user",
@@ -256,6 +258,9 @@ class AnnotationAdmin(admin.ModelAdmin):
     ]
     date_hierarchy = "updated_at"
     list_per_page = 50
+
+    def get_model_perms(self, request):
+        return {}
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related(

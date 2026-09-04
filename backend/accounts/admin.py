@@ -169,7 +169,7 @@ class UserGroupMembershipInline(admin.TabularInline):
     template = "admin/edit_inline/contextual_tabular.html"
     fields = [
         "group_link",
-        "membership_role_link",
+        "membership_role",
         "updated_at",
     ]
     readonly_fields = fields
@@ -190,13 +190,8 @@ class UserGroupMembershipInline(admin.TabularInline):
         return format_html('<a href="{}">{}</a>', url, obj.group.name)
 
     @admin.display(description="Role", ordering="is_curator")
-    def membership_role_link(self, obj):
-        url = reverse(
-            "admin:library_librarygroupmembership_change",
-            args=[obj.pk],
-        )
-        role = "Curator" if obj.is_curator else "Member"
-        return format_html('<a href="{}">{}</a>', url, role)
+    def membership_role(self, obj):
+        return "Curator" if obj.is_curator else "Member"
 
 class SecondPassUserAdmin(DjangoUserAdmin):
     filter_horizontal = _without_unused_auth_user_fields(
@@ -240,8 +235,9 @@ except NotRegistered:
 admin.site.register(User, SecondPassUserAdmin)
 
 
-@admin.register(UserProfile)
 class UserProfileAdmin(admin.ModelAdmin):
+    # Retained temporarily as a cleanup candidate. UserProfile editing now belongs
+    # to UserProfileInline on the unified User Admin and this class is unregistered.
     form = UserProfileAdminForm
     list_display = [
         "username",

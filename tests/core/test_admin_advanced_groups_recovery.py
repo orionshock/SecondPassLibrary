@@ -382,22 +382,15 @@ class AdvancedGroupsRecoveryAdminTests(IsolatedMediaRootMixin, TestCase):
             "Disable and consolidate into Public/Common Room",
         )
 
-    def test_disabled_state_hides_assignment_admin_sections_but_keeps_routes_available(self):
+    def test_disabled_state_keeps_assignment_admin_sections_unregistered(self):
         self._login_owner()
         server_settings.set_advanced_library_groups_enabled(False)
-        urls = [
-            reverse("admin:library_librarygroupmembership_changelist"),
-            reverse("admin:library_librarygroupmembership_add"),
-            reverse("admin:library_bookgroupassignment_changelist"),
-            reverse("admin:library_bookgroupassignment_add"),
-        ]
 
         index = self.client.get(reverse("admin:index"))
         self.assertNotContains(index, "User Group Assignments")
         self.assertNotContains(index, "Book Group Assignments")
-        for url in urls:
-            with self.subTest(url=url):
-                self.assertEqual(self.client.get(url).status_code, 200)
+        self.assertNotIn(LibraryGroupMembership, admin.site._registry)
+        self.assertNotIn(BookGroupAssignment, admin.site._registry)
 
     def test_disabled_state_book_delete_allows_related_assignment_cleanup(self):
         self._login_owner()
@@ -433,22 +426,12 @@ class AdvancedGroupsRecoveryAdminTests(IsolatedMediaRootMixin, TestCase):
         self.assertFalse(get_user_model().objects.filter(pk=user.pk).exists())
         self.assertFalse(LibraryGroupMembership.objects.filter(pk=membership.pk).exists())
 
-    def test_enabled_state_shows_assignment_admin_routes(self):
+    def test_enabled_state_keeps_assignment_admin_sections_unregistered(self):
         self._login_owner()
 
         index = self.client.get(reverse("admin:index"))
 
-        self.assertContains(index, "User Group Assignments")
-        self.assertContains(index, "Book Group Assignments")
-        self.assertEqual(
-            self.client.get(
-                reverse("admin:library_librarygroupmembership_changelist")
-            ).status_code,
-            200,
-        )
-        self.assertEqual(
-            self.client.get(
-                reverse("admin:library_bookgroupassignment_changelist")
-            ).status_code,
-            200,
-        )
+        self.assertNotContains(index, "User Group Assignments")
+        self.assertNotContains(index, "Book Group Assignments")
+        self.assertNotIn(LibraryGroupMembership, admin.site._registry)
+        self.assertNotIn(BookGroupAssignment, admin.site._registry)

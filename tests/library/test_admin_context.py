@@ -58,17 +58,14 @@ class LibraryContextAdminTests(TestCase):
     def test_existing_global_changelists_remain_registered(self):
         for model, route in (
             (LibraryGroup, "admin:library_librarygroup_changelist"),
-            (
-                LibraryGroupMembership,
-                "admin:library_librarygroupmembership_changelist",
-            ),
-            (BookGroupAssignment, "admin:library_bookgroupassignment_changelist"),
             (Author, "admin:library_author_changelist"),
             (Series, "admin:library_series_changelist"),
             (Book, "admin:library_book_changelist"),
         ):
             self.assertIn(model, admin.site._registry)
             self.assertEqual(self.client.get(reverse(route)).status_code, 200)
+        self.assertNotIn(LibraryGroupMembership, admin.site._registry)
+        self.assertNotIn(BookGroupAssignment, admin.site._registry)
 
     def test_group_page_renders_memberships_books_and_direct_edit_links(self):
         group = LibraryGroup.objects.create(name="Context Group")
@@ -92,14 +89,10 @@ class LibraryContextAdminTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Users and memberships")
         self.assertContains(response, "Assigned Books")
-        membership_url = reverse(
-            "admin:library_librarygroupmembership_change",
-            args=[membership.pk],
-        )
         user_url = reverse("admin:auth_user_change", args=[user.pk])
         book_url = reverse("admin:library_book_change", args=[book.pk])
         self.assertContains(response, f'href="{user_url}">reader</a>')
-        self.assertContains(response, f'href="{membership_url}">Member</a>')
+        self.assertContains(response, "Member")
         self.assertContains(response, f'href="{book_url}">Context Book</a>')
         self.assertContains(response, "Context Author")
         self.assertContains(response, "Context Series")

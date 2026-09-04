@@ -39,13 +39,9 @@ class UserAdminContextTests(TestCase):
         self.assertContains(response, "Profile")
         self.assertContains(response, 'name="profile-0-role"')
         self.assertContains(response, "Library Group memberships")
-        membership_url = reverse(
-            "admin:library_librarygroupmembership_change",
-            args=[membership.pk],
-        )
         group_url = reverse("admin:library_librarygroup_change", args=[group.pk])
         self.assertContains(response, f'href="{group_url}">Readers</a>')
-        self.assertContains(response, f'href="{membership_url}">Curator</a>')
+        self.assertContains(response, "Curator")
         self.assertNotContains(response, str(membership))
         self.assertNotContains(response, "column-created_at")
         self.assertNotContains(response, "column-membership_link")
@@ -127,7 +123,5 @@ class UserAdminContextTests(TestCase):
             }
             self.assertTrue({self.target.pk, self.other.pk} <= unfiltered_user_ids)
 
-    def test_standalone_profile_admin_remains_registered(self):
-        self.assertIn(UserProfile, admin.site._registry)
-        response = self.client.get(reverse("admin:accounts_userprofile_changelist"))
-        self.assertEqual(response.status_code, 200)
+    def test_standalone_profile_admin_is_not_registered(self):
+        self.assertNotIn(UserProfile, admin.site._registry)
