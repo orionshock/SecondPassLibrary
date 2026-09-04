@@ -23,6 +23,7 @@ from library.groups.consolidation import (
     execute_advanced_groups_disable_plan,
 )
 from . import server_settings
+from .admin_menu import install_admin_menu
 from .models import ServerSetting
 
 
@@ -561,3 +562,6 @@ def _setting_operator_copy(key):
             "Enabled/disabled status with explicit recovery guidance."
         ),
     }.get(key, "Managed server setting.")
+
+
+install_admin_menu()

@@ -1,5 +1,3 @@
-from types import MethodType
-
 from django import forms
 from django.contrib import admin, messages
 from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
@@ -57,13 +55,6 @@ from .models import (
 )
 
 
-LIBRARY_ADMIN_MODEL_ORDER = {
-    "Book": (10, "Books"),
-    "CatalogTag": (20, "Catalog Tags"),
-    "LibraryGroup": (30, "Library Groups"),
-}
-
-
 def _install_view_only_related_widget_controls():
     if hasattr(RelatedFieldWidgetWrapper, "_secondpass_original_get_context"):
         return
@@ -83,40 +74,6 @@ def _install_view_only_related_widget_controls():
 
 
 _install_view_only_related_widget_controls()
-
-
-def _sort_library_admin_models(app):
-    for model in app["models"]:
-        configuration = LIBRARY_ADMIN_MODEL_ORDER.get(model["object_name"])
-        if configuration is not None:
-            model["name"] = configuration[1]
-    app["models"].sort(
-        key=lambda model: (
-            LIBRARY_ADMIN_MODEL_ORDER.get(model["object_name"], (100, ""))[0],
-            model["name"],
-        )
-    )
-
-
-def _install_library_admin_app_list_ordering():
-    if hasattr(admin.site, "_secondpass_library_original_get_app_list"):
-        return
-
-    admin.site._secondpass_library_original_get_app_list = admin.site.get_app_list
-
-    def get_app_list(self, request, app_label=None):
-        app_list = self._secondpass_library_original_get_app_list(request, None)
-        library_app = next(
-            (app for app in app_list if app["app_label"] == "library"),
-            None,
-        )
-        if library_app is not None:
-            _sort_library_admin_models(library_app)
-        if app_label is not None:
-            app_list = [app for app in app_list if app["app_label"] == app_label]
-        return app_list
-
-    admin.site.get_app_list = MethodType(get_app_list, admin.site)
 
 
 class StoredEpubRepairAdminForm(forms.Form):
@@ -1059,6 +1016,3 @@ class CatalogTagAdmin(admin.ModelAdmin):
             "admin/library/catalogtag/merge_selected.html",
             context,
         )
-
-
-_install_library_admin_app_list_ordering()

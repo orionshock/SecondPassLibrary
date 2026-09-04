@@ -6,7 +6,6 @@ from django.contrib.auth.models import Group, User
 from django.core.exceptions import ValidationError
 from django.urls import reverse
 from django.utils.html import format_html, format_html_join
-from types import MethodType
 from urllib.parse import urlencode
 
 from library.models import LibraryGroupMembership
@@ -21,14 +20,6 @@ from .models import (
 
 
 UNUSED_AUTH_USER_FIELDS = {"groups", "user_permissions"}
-ACCOUNTS_ADMIN_MODEL_ORDER = {
-    "User": 10,
-    "UserWebSession": 30,
-    "UserClientSession": 40,
-    "ClientLoginRequest": 50,
-}
-
-
 def _without_unused_auth_user_fields(fields):
     return tuple(field for field in fields if field not in UNUSED_AUTH_USER_FIELDS)
 
@@ -40,51 +31,6 @@ def _fieldsets_without_unused_auth_user_fields(fieldsets):
         updated["fields"] = _without_unused_auth_user_fields(updated.get("fields", ()))
         cleaned.append((title, updated))
     return tuple(cleaned)
-
-
-def _sort_accounts_admin_models(app):
-    app["models"].sort(
-        key=lambda model: (
-            ACCOUNTS_ADMIN_MODEL_ORDER.get(model["object_name"], 100),
-            model["name"],
-        )
-    )
-
-
-def _move_user_admin_into_accounts(app_list):
-    auth_app = next((app for app in app_list if app["app_label"] == "auth"), None)
-    accounts_app = next(
-        (app for app in app_list if app["app_label"] == "accounts"), None
-    )
-    if auth_app is None or accounts_app is None:
-        return app_list
-
-    auth_models = auth_app["models"]
-    user_models = [model for model in auth_models if model["model"] is User]
-    auth_app["models"] = [model for model in auth_models if model["model"] is not User]
-    accounts_app["models"].extend(user_models)
-    _sort_accounts_admin_models(accounts_app)
-
-    return [app for app in app_list if app["app_label"] != "auth" or app["models"]]
-
-
-def _install_secondpass_admin_app_list_ordering():
-    if hasattr(admin.site, "_secondpass_original_get_app_list"):
-        return
-
-    admin.site._secondpass_original_get_app_list = admin.site.get_app_list
-
-    def get_app_list(self, request, app_label=None):
-        app_list = self._secondpass_original_get_app_list(request, None)
-        app_list = _move_user_admin_into_accounts(app_list)
-        if app_label is not None:
-            app_list = [app for app in app_list if app["app_label"] == app_label]
-        return app_list
-
-    admin.site.get_app_list = MethodType(get_app_list, admin.site)
-
-
-_install_secondpass_admin_app_list_ordering()
 
 
 class UserProfileAdminForm(forms.ModelForm):
