@@ -91,14 +91,14 @@ class PairingRequestLimitTests(ClientApiTestCase):
         TRUST_X_FORWARDED_FOR=True,
         TRUSTED_PROXY_IPS=["10.0.0.5"],
     )
-    def test_forwarded_for_uses_rightmost_untrusted_ip_from_trusted_peer(self):
+    def test_forwarded_for_uses_first_ip_from_trusted_peer(self):
         response = self._post(
             remote_addr="10.0.0.5",
             forwarded_for="192.0.2.99, 198.51.100.20",
         )
 
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(ClientLoginRequest.objects.get().request_ip, "198.51.100.20")
+        self.assertEqual(ClientLoginRequest.objects.get().request_ip, "192.0.2.99")
 
     @override_settings(
         TRUST_X_FORWARDED_FOR=True,

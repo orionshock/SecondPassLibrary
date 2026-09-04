@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from django.contrib.auth import get_user_model
+from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APITestCase
 
@@ -24,6 +25,42 @@ class UserWebSessionMiddlewareTests(APITestCase):
 
         tracked = UserWebSession.objects.get(session_key=session_key)
         self.assertEqual(tracked.user.pk, user.pk)
+
+    @override_settings(
+        TRUST_X_FORWARDED_FOR=True,
+        TRUSTED_PROXY_IPS=["10.0.0.2"],
+    )
+    def test_tracks_effective_client_ip_from_trusted_proxy(self):
+        User.objects.create_user(username="u", password="pw")
+        self.client.login(username="u", password="pw")
+
+        response = assert_response(
+            self.client.get(
+                "/api/v1/accounts/me/",
+                REMOTE_ADDR="10.0.0.2",
+                HTTP_X_FORWARDED_FOR="203.0.113.10, 10.0.0.2",
+            )
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        tracked = UserWebSession.objects.get(session_key=self.client.session.session_key)
+        self.assertEqual(tracked.ip_address, "203.0.113.10")
+
+    def test_tracks_valid_remote_address_and_ignores_untrusted_forwarding(self):
+        User.objects.create_user(username="u", password="pw")
+        self.client.login(username="u", password="pw")
+
+        response = assert_response(
+            self.client.get(
+                "/api/v1/accounts/me/",
+                REMOTE_ADDR="2001:0db8:0:0::1",
+                HTTP_X_FORWARDED_FOR="203.0.113.10",
+            )
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        tracked = UserWebSession.objects.get(session_key=self.client.session.session_key)
+        self.assertEqual(tracked.ip_address, "2001:db8::1")
 
     def test_anonymous_request_does_not_track_user_web_session(self):
         response = assert_response(self.client.get("/api/v1/accounts/me/"))

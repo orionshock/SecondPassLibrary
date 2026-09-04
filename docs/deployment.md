@@ -116,8 +116,9 @@ DJANGO_TRUST_X_FORWARDED_FOR=1
 DJANGO_TRUSTED_PROXY_IPS=127.0.0.1,::1
 ```
 
-The application walks the forwarded chain from the trusted peer toward the
-client and uses the rightmost untrusted address. Do not enable this for an
+For a request received from an exact trusted peer, the application uses the
+first address in `X-Forwarded-For`. The proxy must replace that header rather
+than append to an untrusted client-supplied value. Do not enable this for an
 untrusted, shared, or pass-through proxy.
 
 The reverse proxy should also:

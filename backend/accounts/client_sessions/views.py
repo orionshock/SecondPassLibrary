@@ -13,7 +13,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 
-from accounts.request_identity import canonical_client_ip
+from accounts.request_identity import get_client_ip
 from accounts import session_control
 from accounts.models import ClientLoginRequest, UserClientSession
 from core import server_settings
@@ -130,7 +130,7 @@ class ClientLoginRequestCreateView(PairingNoStoreMixin, APIView):
         client_type = str(data.get("client_type") or "").strip()
 
         ua = request.META.get("HTTP_USER_AGENT") or ""
-        ip = canonical_client_ip(request)
+        ip = get_client_ip(request)
 
         try:
             obj, code = services.create_login_request(

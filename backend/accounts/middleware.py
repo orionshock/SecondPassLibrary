@@ -7,6 +7,7 @@ from django.shortcuts import redirect
 from django.utils import timezone
 
 from accounts.operational_logging import logger, user_uuid
+from accounts.request_identity import get_client_ip
 
 from .models import UserProfile, UserWebSession
 
@@ -158,7 +159,7 @@ class UserWebSessionMiddleware:
                 return response
 
             user_agent = (request.META.get("HTTP_USER_AGENT") or "")[:4000]
-            ip_address = request.META.get("REMOTE_ADDR") or None
+            ip_address = get_client_ip(request)
 
             now = timezone.now()
             defaults = {"user": user, "user_agent": user_agent, "ip_address": ip_address}

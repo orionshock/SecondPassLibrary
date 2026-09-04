@@ -18,7 +18,7 @@ from .login_throttle import (
     release_login_reservation,
     reserve_login_attempt,
 )
-from .request_identity import canonical_client_ip
+from .request_identity import get_client_ip
 
 
 User = get_user_model()
@@ -40,7 +40,7 @@ class ThrottledAuthenticationForm(AuthenticationForm):
 
         try:
             reservation = reserve_login_attempt(
-                source_ip=canonical_client_ip(self.request),
+                source_ip=get_client_ip(self.request),
                 username=username,
             )
         except LoginTemporarilyThrottled as exc:
