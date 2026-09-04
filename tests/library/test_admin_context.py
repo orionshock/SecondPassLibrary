@@ -13,6 +13,7 @@ from library.admin import (
     LibraryGroupAdmin,
     SeriesAdmin,
     SeriesBookContextInline,
+    _sort_library_admin_models,
 )
 from library.models import (
     Author,
@@ -55,7 +56,7 @@ class LibraryContextAdminTests(TestCase):
         self.request.user = self.operator
         self.client.force_login(self.operator)
 
-    def test_existing_global_changelists_remain_registered(self):
+    def test_primary_changelists_remain_without_relationship_changelists(self):
         for model, route in (
             (LibraryGroup, "admin:library_librarygroup_changelist"),
             (Author, "admin:library_author_changelist"),
@@ -66,6 +67,22 @@ class LibraryContextAdminTests(TestCase):
             self.assertEqual(self.client.get(reverse(route)).status_code, 200)
         self.assertNotIn(LibraryGroupMembership, admin.site._registry)
         self.assertNotIn(BookGroupAssignment, admin.site._registry)
+
+    def test_library_menu_orders_only_registered_primary_models(self):
+        app = {
+            "models": [
+                {"object_name": "LibraryGroup", "name": "Groups"},
+                {"object_name": "Book", "name": "Books"},
+                {"object_name": "CatalogTag", "name": "Tags"},
+            ]
+        }
+
+        _sort_library_admin_models(app)
+
+        self.assertEqual(
+            [model["name"] for model in app["models"]],
+            ["Books", "Catalog Tags", "Library Groups"],
+        )
 
     def test_group_page_renders_memberships_books_and_direct_edit_links(self):
         group = LibraryGroup.objects.create(name="Context Group")

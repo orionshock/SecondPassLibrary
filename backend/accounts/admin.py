@@ -23,7 +23,6 @@ from .models import (
 UNUSED_AUTH_USER_FIELDS = {"groups", "user_permissions"}
 ACCOUNTS_ADMIN_MODEL_ORDER = {
     "User": 10,
-    "UserProfile": 20,
     "UserWebSession": 30,
     "UserClientSession": 40,
     "ClientLoginRequest": 50,
@@ -233,47 +232,6 @@ try:
 except NotRegistered:
     pass
 admin.site.register(User, SecondPassUserAdmin)
-
-
-class UserProfileAdmin(admin.ModelAdmin):
-    # Retained temporarily as a cleanup candidate. UserProfile editing now belongs
-    # to UserProfileInline on the unified User Admin and this class is unregistered.
-    form = UserProfileAdminForm
-    list_display = [
-        "username",
-        "profile_id",
-        "role",
-        "external_subject_id",
-        "created_at",
-    ]
-    list_display_links = ["username"]
-    search_fields = ["user__username", "user__email", "external_subject_id"]
-    list_filter = ["role"]
-    readonly_fields = [
-        "profile_id",
-        "external_subject_id",
-        "created_at",
-        "updated_at",
-    ]
-    list_select_related = ["user"]
-
-    @admin.display(ordering="user__username", description="Username")
-    def username(self, obj: UserProfile):
-        return obj.user.get_username()
-
-    @admin.display(description="Profile ID")
-    def profile_id(self, obj: UserProfile):
-        return obj.id
-
-    def get_form(self, request, obj=None, **kwargs):
-        Form = super().get_form(request, obj, **kwargs)
-
-        class RequestForm(Form):
-            def __init__(self, *args, **inner_kwargs):
-                inner_kwargs["request"] = request
-                super().__init__(*args, **inner_kwargs)
-
-        return RequestForm
 
 
 @admin.register(ExternalIdentity)

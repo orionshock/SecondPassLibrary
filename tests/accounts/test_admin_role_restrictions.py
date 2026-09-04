@@ -12,7 +12,7 @@ from django.urls import clear_url_caches, set_urlconf
 
 import secondpass.urls
 
-from accounts.admin import SecondPassUserAdmin, UserProfileAdmin
+from accounts.admin import SecondPassUserAdmin, UserProfileInline
 from accounts.models import (
     ClientLoginRequest,
     ExternalIdentity,
@@ -34,10 +34,10 @@ def _reload_project_urls() -> None:
     importlib.reload(secondpass.urls)
 
 
-class UserProfileAdminRoleRestrictionTest(TestCase):
+class UserProfileInlineRoleRestrictionTest(TestCase):
     def setUp(self):
         self.site = _DummySite()
-        self.admin = UserProfileAdmin(UserProfile, self.site)
+        self.admin = UserProfileInline(User, self.site)
         self.factory = RequestFactory()
 
         self.owner = User.objects.create_superuser(
@@ -52,11 +52,14 @@ class UserProfileAdminRoleRestrictionTest(TestCase):
         )
         self.profile = UserProfile.objects.get(user=self.target)
 
+    def profile_form(self, request):
+        return self.admin.get_formset(request, obj=self.target).form
+
     def test_non_owner_cannot_promote_to_manager(self):
         request = self.factory.post("/admin/accounts/userprofile/")
         request.user = self.staff
 
-        Form = self.admin.get_form(request, obj=self.profile)
+        Form = self.profile_form(request)
         form = Form(
             data={
                 "user": cast(int, self.target.pk),
@@ -75,7 +78,7 @@ class UserProfileAdminRoleRestrictionTest(TestCase):
         request = self.factory.post("/admin/accounts/userprofile/")
         request.user = self.staff
 
-        Form = self.admin.get_form(request, obj=self.profile)
+        Form = self.profile_form(request)
         form = Form(
             data={
                 "user": cast(int, self.target.pk),
@@ -91,7 +94,7 @@ class UserProfileAdminRoleRestrictionTest(TestCase):
         request = self.factory.post("/admin/accounts/userprofile/")
         request.user = self.owner
 
-        Form = self.admin.get_form(request, obj=self.profile)
+        Form = self.profile_form(request)
         form = Form(
             data={
                 "user": cast(int, self.target.pk),
@@ -103,23 +106,14 @@ class UserProfileAdminRoleRestrictionTest(TestCase):
         self.assertTrue(form.is_valid(), form.errors)
 
     def test_profile_id_is_visible_in_admin(self):
-        self.assertIn("profile_id", self.admin.list_display)
+        self.assertIn("profile_id", self.admin.fields)
         self.assertIn("profile_id", self.admin.readonly_fields)
         self.assertIn("external_subject_id", self.admin.readonly_fields)
         self.assertEqual(self.admin.profile_id(self.profile), self.profile.id)
         self.assertEqual(
-            UserProfileAdmin.profile_id.short_description,
+            UserProfileInline.profile_id.short_description,
             "Profile ID",
         )
-
-    def test_profile_delete_permission_uses_standard_admin_permissions(self):
-        owner_request = self.factory.get("/")
-        owner_request.user = self.owner
-        self.assertTrue(self.admin.has_delete_permission(owner_request, self.profile))
-
-        staff_request = self.factory.get("/")
-        staff_request.user = self.staff
-        self.assertFalse(self.admin.has_delete_permission(staff_request, self.profile))
 
     def test_owner_can_delete_user_through_django_admin(self):
         ExternalIdentity.objects.create(
@@ -178,17 +172,6 @@ class UserProfileAdminRoleRestrictionTest(TestCase):
         self.assertEqual(perms_needed, set())
         self.assertEqual(protected, [])
 
-    def test_username_is_primary_clickable_sort_column(self):
-        self.assertEqual(self.admin.list_display[0], "username")
-        self.assertEqual(self.admin.list_display_links, ["username"])
-        self.assertEqual(self.admin.username(self.profile), "target")
-        self.assertEqual(UserProfileAdmin.username.short_description, "Username")
-        self.assertEqual(
-            UserProfileAdmin.username.admin_order_field,
-            "user__username",
-        )
-
-
 class BuiltInAuthAdminSurfaceTest(TestCase):
     def setUp(self):
         self.factory = RequestFactory()
@@ -219,7 +202,6 @@ class BuiltInAuthAdminSurfaceTest(TestCase):
             account_model_names,
             [
                 "User",
-                "UserProfile",
                 "UserWebSession",
                 "UserClientSession",
                 "ClientLoginRequest",
@@ -241,7 +223,6 @@ class BuiltInAuthAdminSurfaceTest(TestCase):
             account_model_names,
             [
                 "User",
-                "UserProfile",
                 "UserWebSession",
                 "UserClientSession",
                 "ClientLoginRequest",
@@ -282,9 +263,9 @@ class BuiltInAuthAdminSurfaceTest(TestCase):
 
         self.assertTrue(user_admin.has_delete_permission(request, self.owner))
 
-    def test_accounts_models_remain_registered(self):
+    def test_accounts_primary_models_remain_registered_without_user_profiles(self):
         self.assertIn(User, admin.site._registry)
-        self.assertIn(UserProfile, admin.site._registry)
+        self.assertNotIn(UserProfile, admin.site._registry)
         self.assertIn(UserWebSession, admin.site._registry)
         self.assertIn(UserClientSession, admin.site._registry)
         self.assertIn(ClientLoginRequest, admin.site._registry)

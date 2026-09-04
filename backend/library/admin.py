@@ -41,7 +41,6 @@ from library.catalog.tag_services import (
 )
 from library.groups import memberships as membership_services
 from library.groups import book_assignments as book_assignment_services
-from library.groups.public_group import is_public_group
 
 from .models import (
     Author,
@@ -62,8 +61,6 @@ LIBRARY_ADMIN_MODEL_ORDER = {
     "Book": (10, "Books"),
     "CatalogTag": (20, "Catalog Tags"),
     "LibraryGroup": (30, "Library Groups"),
-    "LibraryGroupMembership": (40, "User Group Assignments"),
-    "BookGroupAssignment": (50, "Book Group Assignments"),
 }
 
 
@@ -136,20 +133,6 @@ class StoredEpubRepairAdminForm(forms.Form):
             "progress, highlights, notes, and bookmarks."
         ),
     )
-
-
-class AdvancedGroupsAssignmentAdminMixin:
-    @staticmethod
-    def _advanced_groups_enabled():
-        return server_settings.advanced_library_groups_enabled()
-
-    def get_model_perms(self, request):
-        if not self._advanced_groups_enabled():
-            return {}
-        return super().get_model_perms(request)
-
-    def has_module_permission(self, request):
-        return self._advanced_groups_enabled() and super().has_module_permission(request)
 
 
 class BookAdminForm(forms.ModelForm):
@@ -1076,145 +1059,6 @@ class CatalogTagAdmin(admin.ModelAdmin):
             "admin/library/catalogtag/merge_selected.html",
             context,
         )
-
-
-class LibraryGroupMembershipAdmin(
-    AdvancedGroupsAssignmentAdminMixin,
-    admin.ModelAdmin,
-):
-    # Retained temporarily as a cleanup candidate. Membership operations now live
-    # on contextual User and Library Group Admin pages; this class is unregistered.
-    list_display = ["user", "group", "is_curator", "created_at", "updated_at"]
-    list_display_links = ["user"]
-    list_filter = ["group", "is_curator"]
-    search_fields = ["user__username", "user__email", "group__name"]
-    readonly_fields = [
-        "id",
-        "user",
-        "group",
-        "created_at",
-        "updated_at",
-    ]
-    actions = ["remove_assignments"]
-
-    def get_queryset(self, request):
-        return super().get_queryset(request).select_related("user", "group")
-
-    def get_readonly_fields(self, request, obj=None):
-        if obj is None:
-            return ["id", "created_at", "updated_at"]
-        return self.readonly_fields
-
-    def get_fields(self, request, obj=None):
-        fields = ["user", "group"]
-        if self._can_edit_curator(obj):
-            fields.append("is_curator")
-        if obj is not None:
-            fields.extend(["created_at", "updated_at"])
-        return fields
-
-    @staticmethod
-    def _can_edit_curator(obj):
-        return bool(
-            obj is not None
-            and server_settings.advanced_library_groups_enabled()
-            and not is_public_group(obj.group)
-        )
-
-    def save_model(self, request, obj, form, change):
-        if change:
-            if self._can_edit_curator(obj):
-                membership_services.set_group_membership_curator(
-                    membership=obj,
-                    is_curator=obj.is_curator,
-                    actor=request.user,
-                )
-            return
-        membership = membership_services.add_user_to_group(
-            user=obj.user,
-            group=obj.group,
-            is_curator=obj.is_curator,
-            actor=request.user,
-        )
-        obj.pk = membership.pk
-        obj.is_curator = membership.is_curator
-        obj.created_at = membership.created_at
-        obj.updated_at = membership.updated_at
-
-    def delete_model(self, request, obj):
-        membership_services.remove_user_from_group(
-            user=obj.user,
-            group=obj.group,
-            actor=request.user,
-        )
-
-    @admin.action(description="Remove selected user-group assignments")
-    def remove_assignments(self, request, queryset):
-        removed = 0
-        memberships = list(queryset.select_related("user", "group"))
-        for membership in memberships:
-            removed += membership_services.remove_user_from_group(
-                user=membership.user,
-                group=membership.group,
-                actor=request.user,
-            )
-        self.message_user(request, f"Removed {removed} user-group assignment(s).")
-
-class BookGroupAssignmentAdmin(
-    AdvancedGroupsAssignmentAdminMixin,
-    admin.ModelAdmin,
-):
-    # Retained temporarily as a cleanup candidate. Assignment operations now live
-    # on contextual Library Group Admin pages; this class is unregistered.
-    list_display = ["book", "group", "added_by", "created_at", "updated_at"]
-    list_display_links = ["book"]
-    list_filter = ["group"]
-    search_fields = ["book__title", "book__checksum", "group__name", "added_by__username"]
-    readonly_fields = ["id", "book", "group", "added_by", "created_at", "updated_at"]
-    actions = ["remove_assignments"]
-
-    def get_queryset(self, request):
-        return super().get_queryset(request).select_related("book", "group", "added_by")
-
-    def get_readonly_fields(self, request, obj=None):
-        if obj is None:
-            return ["id", "added_by", "created_at", "updated_at"]
-        return self.readonly_fields
-
-    def save_model(self, request, obj, form, change):
-        if change:
-            return
-        assignment = book_assignment_services.add_book_to_group(
-            book=obj.book,
-            group=obj.group,
-            actor=request.user,
-        )
-        obj.pk = assignment.pk
-        obj.added_by = assignment.added_by
-        obj.created_at = assignment.created_at
-        obj.updated_at = assignment.updated_at
-
-    def delete_model(self, request, obj):
-        book_assignment_services.remove_book_from_group(
-            book=obj.book,
-            group=obj.group,
-            actor=request.user,
-        )
-
-    @admin.action(description="Remove selected book-group assignments")
-    def remove_assignments(self, request, queryset):
-        removed = 0
-        assignments = list(queryset.select_related("book", "group"))
-        for assignment in assignments:
-            removed += book_assignment_services.remove_book_from_group(
-                book=assignment.book,
-                group=assignment.group,
-                actor=request.user,
-            )
-        self.message_user(request, f"Removed {removed} book-group assignment(s).")
-
-    def has_change_permission(self, request, obj=None):
-        return False
 
 
 _install_library_admin_app_list_ordering()
