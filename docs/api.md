@@ -179,6 +179,16 @@ names, publisher, and description. Search accepts only `title`, `-title`,
 `author`, `-author`, `series`, and `-series` ordering. Missing or blank search
 text returns an empty normal page.
 
+Book detail `description` is server-sanitized limited HTML, not arbitrary HTML
+and not guaranteed plain text. Clients should render paragraphs and line
+breaks, bold/strong text, italic/emphasized text, and ordered/unordered lists;
+HTML entities have normal HTML semantics. Plain text remains a valid value. If
+a client cannot safely present the complete supported subset, it should show a
+safe plain-text fallback rather than raw HTML source. Clients must not reproduce
+Calibre sanitization rules or establish a separate interpretation policy. The
+exact tag allowlist, no-attribute rule, persistence boundary, and security
+rationale are owned by [Book description HTML contract](imports.md#book-description-html-contract).
+
 Author and Series collections share normalized-name matching, `exclude_id`,
 Catalog Tag filtering, previews, and axis ordering. Their counts and previews
 derive from the same scoped Book population. Catalog Tag counts likewise use
