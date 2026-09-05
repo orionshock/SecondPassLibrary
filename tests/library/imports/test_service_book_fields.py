@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.core.exceptions import ValidationError
 from django.test import TestCase
 
 from library.imports.services import IMPORT_STATUS_IMPORTED, persist_imported_book
@@ -43,6 +44,15 @@ class ImportPersistenceBookFieldTests(ImportPersistenceFixtureMixin, TestCase):
             result.book.description,
             "<p>Allowed <em>structure</em></p>",
         )
+
+    def test_rejects_over_limit_description_without_persisting_book(self):
+        with self.assertRaises(ValidationError):
+            persist_imported_book(
+                metadata=sample_metadata(description="x" * 25_001),
+                checksum="over-limit-description",
+            )
+
+        self.assertFalse(Book.objects.filter(checksum="over-limit-description").exists())
 
     def test_persists_partial_published_date_fields(self):
         result = persist_imported_book(

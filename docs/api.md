@@ -77,9 +77,10 @@ operation-specific rather than a universal API mechanism.
 
 ## Sanitized limited HTML
 
-Book descriptions, Author biographies, Series summaries, the Server
-Description, and the Server Banner Message use one server-sanitized
-limited-HTML contract. The authoritative tag allowlist is exactly `p`, `br`,
+Book descriptions, Author biographies, Series summaries, Library Group
+descriptions, Shelf descriptions, the Server Description, and the Server
+Banner Message use one server-sanitized limited-HTML contract. The
+authoritative tag allowlist is exactly `p`, `br`,
 `b`, `strong`, `i`, `em`, `ul`, `ol`, and `li`. No attributes are allowed.
 Unsupported markup is stripped; `script` and `style` elements and their
 contents are discarded. Links, images, headings, tables, layout elements,
@@ -92,6 +93,14 @@ Plain text remains valid, raw newlines do not acquire invented paragraph or
 line-break markup, and HTML entities retain their normal HTML meaning. The
 Product UI uses one narrow rendering boundary and a restricted WYSIWYG editor;
 it does not establish a second sanitizer or a Markdown contract.
+
+Book descriptions, Author biographies, Series summaries, Library Group
+descriptions, and Shelf descriptions have a maximum stored length of 25,000
+characters. The server sanitizes first and then measures the complete
+serialized HTML fragment, so formatting markup counts toward the limit.
+Over-limit values are rejected and are never silently truncated. Server
+Description and Server Banner Message retain their intentionally shorter
+field-specific limits.
 
 Marginalia Session deletion is deliberately not a bulk or selected-ID
 operation. Its intended shape is the single-resource request

@@ -10,3 +10,15 @@
 .sanitized-rich-text ol {
   margin-block: 0.7rem;
 }
+
+.sanitized-rich-text--compact p,
+.sanitized-rich-text--compact ul,
+.sanitized-rich-text--compact ol,
+.sanitized-rich-text--compact li {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sanitized-rich-text--compact li + li::before { content: " · "; }

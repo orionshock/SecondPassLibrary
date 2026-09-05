@@ -199,6 +199,38 @@ class ShelfWriteContractTests(BaseShelvesAPITest):
         self.assertEqual(detail["name"], "Shelf")
         self.assertEqual(detail["description"], "")
 
+    def test_description_uses_shared_sanitizer_and_limit(self):
+        self.client.login(username="reader", password="pw")
+        created = assert_response(
+            self.client.post(
+                "/api/v1/shelves/",
+                data={
+                    "name": "Formatted Shelf",
+                    "owner_type": "user",
+                    "description": '<p class="no">Allowed <em>text</em></p><script>bad()</script>',
+                },
+                format="json",
+            )
+        )
+        self.assertEqual(created.status_code, status.HTTP_201_CREATED)
+        shelf_id = response_data_dict(created)["id"]
+        self.assertEqual(
+            response_data_dict(created)["description"],
+            "<p>Allowed <em>text</em></p>",
+        )
+
+        rejected = assert_response(
+            self.client.patch(
+                f"/api/v1/shelves/{shelf_id}/",
+                data={"description": "x" * 25_001},
+                format="json",
+            )
+        )
+        self.assertEqual(rejected.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("description", response_data_dict(rejected))
+        shelf = Shelf.objects.get(pk=shelf_id)
+        self.assertEqual(shelf.description, "<p>Allowed <em>text</em></p>")
+
     def test_item_add_hides_missing_and_inaccessible_books(self):
         self.client.login(username="reader", password="pw")
         shelf_id = self._create_personal_shelf()

@@ -34,7 +34,7 @@ describe("server settings SDK", () => {
     await updatePublicLibrarySettings({ name: " Public ", description: " Shared " }, client);
     expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({ server_name: "New name", server_description: "<p>Desc</p>", server_banner_message: "<strong>Banner</strong>" });
     expect(JSON.parse(String(calls[1]?.init?.body))).toEqual({ second_pass_reader_web_client_url: "https://reader.example.com/" });
-    expect(JSON.parse(String(calls[2]?.init?.body))).toEqual({ public_group_name: "Public", public_group_description: "Shared" });
+    expect(JSON.parse(String(calls[2]?.init?.body))).toEqual({ public_group_name: "Public", public_group_description: " Shared " });
     expect(calls.every(({ init }) => init?.method === "PATCH")).toBe(true);
   });
 

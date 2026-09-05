@@ -1,6 +1,12 @@
 from django.test import SimpleTestCase
 
-from core.rich_text import sanitize_limited_html
+from django.core.exceptions import ValidationError
+
+from core.rich_text import (
+    DESCRIPTIVE_PROSE_MAX_LENGTH,
+    sanitize_descriptive_prose,
+    sanitize_limited_html,
+)
 
 
 class LimitedRichTextSanitizerTests(SimpleTestCase):
@@ -50,3 +56,17 @@ class LimitedRichTextSanitizerTests(SimpleTestCase):
             sanitize_limited_html("<ul><li><p>Nested <em>value</em></p></li></ul>"),
             "<ul><li><p>Nested <em>value</em></p></li></ul>",
         )
+
+    def test_descriptive_prose_limit_measures_sanitized_serialized_html(self):
+        accepted = "x" * DESCRIPTIVE_PROSE_MAX_LENGTH
+
+        self.assertEqual(sanitize_descriptive_prose(accepted), accepted)
+        self.assertEqual(
+            sanitize_descriptive_prose(
+                f'<script>{"x" * (DESCRIPTIVE_PROSE_MAX_LENGTH + 1)}</script>safe'
+            ),
+            "safe",
+        )
+
+        with self.assertRaises(ValidationError):
+            sanitize_descriptive_prose(f"<p>{accepted}</p>")

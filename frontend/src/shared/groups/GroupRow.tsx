@@ -1,6 +1,7 @@
 import { Link } from "react-router";
 
 import { Badge } from "../../components/UiPrimitives";
+import { SanitizedRichText } from "../../components/SanitizedRichText";
 import { BookCoverPreviewStrip, type BookCoverPreviewItem } from "../books/BookCoverPreviewStrip";
 import "./GroupRow.css";
 
@@ -25,7 +26,7 @@ export function GroupRow({ group, detailPath, navigationState, isCurator, previe
         {group.isPublicGroup ? <Badge tone="success">Public</Badge> : null}
         {isCurator ? <Badge tone="accent">Curator</Badge> : null}
       </div>
-      {group.description ? <p>{group.description}</p> : null}
+      {group.description ? <SanitizedRichText html={group.description} className="sanitized-rich-text--compact group-row-component__description" /> : null}
     </div>
     {hasPreviews ? <BookCoverPreviewStrip books={previewBooks} /> : null}
   </article>;

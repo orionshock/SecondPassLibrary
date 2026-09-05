@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.files.base import ContentFile
 
 from library.cover_services import replace_book_cover
@@ -58,11 +59,15 @@ def import_epub_file(
             sidecar_opf=sidecar_opf,
             sidecar_cover_bytes=sidecar_cover_bytes,
         )
-    except (InvalidEpubImportError, UnsupportedImportSourceError) as exc:
+    except (InvalidEpubImportError, UnsupportedImportSourceError, DjangoValidationError) as exc:
         result = ImportItemResult(
             status=IMPORT_STATUS_FAILED,
             source_label=source_label,
-            safe_message=safe_import_message(exc),
+            safe_message=(
+                INVALID_EPUB_MESSAGE
+                if isinstance(exc, DjangoValidationError)
+                else safe_import_message(exc)
+            ),
             operator_detail=operator_import_detail(exc),
             error_category="invalid_candidate",
         )

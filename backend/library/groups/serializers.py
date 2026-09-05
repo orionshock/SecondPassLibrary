@@ -46,7 +46,9 @@ class _RejectUnknownFieldsMixin:
 
 class LibraryGroupCreateSerializer(_RejectUnknownFieldsMixin, serializers.Serializer):
     name = serializers.CharField(max_length=255, allow_blank=False, trim_whitespace=True)
-    description = serializers.CharField(required=False, allow_blank=True)
+    description = serializers.CharField(
+        required=False, allow_blank=True, trim_whitespace=False
+    )
 
 
 class LibraryGroupPatchSerializer(_RejectUnknownFieldsMixin, serializers.Serializer):
@@ -56,7 +58,9 @@ class LibraryGroupPatchSerializer(_RejectUnknownFieldsMixin, serializers.Seriali
         allow_blank=False,
         trim_whitespace=True,
     )
-    description = serializers.CharField(required=False, allow_blank=True)
+    description = serializers.CharField(
+        required=False, allow_blank=True, trim_whitespace=False
+    )
 
     def changes_field(self, field: str) -> bool:
         if field not in self.validated_data:

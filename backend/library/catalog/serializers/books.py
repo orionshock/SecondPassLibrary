@@ -265,7 +265,9 @@ class BookUpdateSerializer(RejectUnknownFieldsMixin, serializers.Serializer):
     title = serializers.CharField(max_length=512, required=False)
     sort_title = serializers.CharField(max_length=512, required=False, allow_blank=True)
     subtitle = serializers.CharField(max_length=512, required=False, allow_blank=True)
-    description = serializers.CharField(required=False, allow_blank=True)
+    description = serializers.CharField(
+        required=False, allow_blank=True, trim_whitespace=False
+    )
     publisher = serializers.CharField(max_length=255, required=False, allow_blank=True)
     language = serializers.CharField(max_length=64, required=False, allow_blank=True)
     published_year = serializers.IntegerField(required=False, allow_null=True, min_value=1, max_value=9999)
@@ -369,4 +371,3 @@ class BookUpdateSerializer(RejectUnknownFieldsMixin, serializers.Serializer):
 
         if errors:
             raise serializers.ValidationError(errors)
-

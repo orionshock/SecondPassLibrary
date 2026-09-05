@@ -2,6 +2,7 @@ import type { LibraryGroup } from "@second-pass/spl-api";
 import { Link } from "react-router";
 
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
+import { SanitizedRichText } from "../../../components/SanitizedRichText";
 import { Badge, Button, ErrorPanel, PageHeader } from "../../../components/UiPrimitives";
 import { TabList, type TabItem } from "../../../shared/tabs/TabList";
 import type { GroupDetailTab } from "../groupsQuery";
@@ -50,7 +51,7 @@ export function GroupHeaderPageRegion({
         {group.isPublicGroup ? <Badge tone="success">Public</Badge> : null}
         {isCurator ? <Badge tone="accent">Curator</Badge> : null}
       </span>}
-      description={group.description || undefined}
+      description={group.description ? <SanitizedRichText html={group.description} /> : undefined}
     />
     <TabList
       tabs={groupDetailTabs}

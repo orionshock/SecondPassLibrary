@@ -52,7 +52,7 @@ describe("Server Settings", () => {
     expect(edit).toContain('class="form-field"');
     expect(edit).toContain('id="server-settings-name"');
     expect(edit).toContain("limited-rich-text-editor");
-    expect(edit).toContain(`${settings.general.description.length} / 1000`);
+    expect(edit).toContain(`${settings.general.description.length} / 1,000`);
     expect(edit).toContain(`${settings.general.bannerText.length} / 500`);
     expect(edit).not.toContain('id="server-settings-reader-web-client"');
     expect(serverSettingsFormId("general")).toBe("server-settings-general-form");
@@ -86,7 +86,8 @@ describe("Server Settings", () => {
   it("renders Public Library read/edit fields through its own form", () => {
     const edit = renderToStaticMarkup(<PublicLibraryPageRegion settings={settings.publicLibrary} draft={settings.publicLibrary} editing state={{ pending: false }} onChange={vi.fn()} onSubmit={vi.fn()} />);
     expect(edit).toContain('id="server-settings-public-name"');
-    expect(edit).toContain('id="server-settings-public-description"');
+    expect(edit).toContain("limited-rich-text-editor");
+    expect(edit).toContain("/ 25,000");
     expect(edit).toContain('id="server-settings-public-library-form"');
   });
 

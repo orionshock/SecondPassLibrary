@@ -10,6 +10,7 @@ from core.operational_logging import (
     safe_log_label,
     user_log_label,
 )
+from core.rich_text import sanitize_descriptive_prose
 from library.groups.book_assignments import restore_selected_books_without_groups
 from library.groups.memberships import restore_selected_users_without_groups
 from library.groups.public_group import (
@@ -24,7 +25,12 @@ logger = logging.getLogger(__name__)
 
 
 def create_library_group(*, name: str, description: str = "", actor=None) -> LibraryGroup:
-    group = LibraryGroup(name=_required_name(name), description=description or "")
+    group = LibraryGroup(
+        name=_required_name(name),
+        description=sanitize_descriptive_prose(
+            description, field_name="description"
+        ),
+    )
     group.full_clean()
     group.save()
     group_id = str(group.pk)
@@ -53,7 +59,7 @@ def update_library_group(
             group.name = value
             update_fields.append("name")
     if description is not None:
-        value = description or ""
+        value = sanitize_descriptive_prose(description, field_name="description")
         if group.description != value:
             group.description = value
             update_fields.append("description")

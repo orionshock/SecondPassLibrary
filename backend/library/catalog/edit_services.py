@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.core.exceptions import ValidationError
 from django.db import transaction
 
-from core.rich_text import sanitize_limited_html
+from core.rich_text import sanitize_descriptive_prose
 from library.catalog.names import (
     AmbiguousCatalogEntityName,
     find_single_normalized_name_match,
@@ -30,8 +30,8 @@ def update_book_metadata(
 ) -> Book:
     scalar_fields = dict(scalar_fields)
     if "description" in scalar_fields:
-        scalar_fields["description"] = sanitize_limited_html(
-            scalar_fields["description"]
+        scalar_fields["description"] = sanitize_descriptive_prose(
+            scalar_fields["description"], field_name="description"
         )
     for field, value in scalar_fields.items():
         setattr(book, field, value)

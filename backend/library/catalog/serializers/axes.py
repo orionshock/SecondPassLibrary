@@ -41,25 +41,33 @@ class SeriesAxisSerializer(PreviewBooksAxisMixin, serializers.ModelSerializer):
 class AuthorAxisUpdateSerializer(RejectUnknownFieldsMixin, serializers.Serializer):
     name = serializers.CharField(max_length=255, required=False)
     sort_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
-    biography = serializers.CharField(required=False, allow_blank=True)
+    biography = serializers.CharField(
+        required=False, allow_blank=True, trim_whitespace=False
+    )
 
 
 class AuthorCreateSerializer(RejectUnknownFieldsMixin, serializers.Serializer):
     name = serializers.CharField(max_length=255)
     sort_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
-    biography = serializers.CharField(required=False, allow_blank=True)
+    biography = serializers.CharField(
+        required=False, allow_blank=True, trim_whitespace=False
+    )
 
 
 class SeriesAxisUpdateSerializer(RejectUnknownFieldsMixin, serializers.Serializer):
     name = serializers.CharField(max_length=255, required=False)
     sort_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
-    summary = serializers.CharField(required=False, allow_blank=True)
+    summary = serializers.CharField(
+        required=False, allow_blank=True, trim_whitespace=False
+    )
 
 
 class SeriesCreateSerializer(RejectUnknownFieldsMixin, serializers.Serializer):
     name = serializers.CharField(max_length=255)
     sort_name = serializers.CharField(max_length=255, required=False, allow_blank=True)
-    summary = serializers.CharField(required=False, allow_blank=True)
+    summary = serializers.CharField(
+        required=False, allow_blank=True, trim_whitespace=False
+    )
 
 
 class CatalogTagAxisSerializer(serializers.ModelSerializer):
@@ -69,4 +77,3 @@ class CatalogTagAxisSerializer(serializers.ModelSerializer):
         model = CatalogTag
         fields = ["id", "name", "slug", "book_count"]
         read_only_fields = fields
-

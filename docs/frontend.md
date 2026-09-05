@@ -104,7 +104,8 @@ empty, or error states. Regions render those states and call supplied actions;
 they do not catch `ApiError`, examine HTTP status codes, or translate server
 field names. API-provided text is normally rendered through React's escaped
 text handling. Book descriptions, Author biographies, Series summaries,
-Server Description, and Server Banner Message are the narrow exceptions: they follow the server-owned
+Library Group descriptions, Shelf descriptions, Server Description, and
+Server Banner Message are the narrow exceptions: they follow the server-owned
 [sanitized limited HTML](api.md#sanitized-limited-html) contract. Product UI
 renders them through one shared boundary and must not scatter additional
 unsafe-HTML sites or add an independently configured React sanitizer. Server
@@ -114,6 +115,12 @@ server allowlist remains the security boundary. The shared editor also offers
 a raw-HTML source mode; moving back to rendered mode reapplies the restricted
 Tiptap schema, and persistence still passes through the server sanitizer. No
 Markdown interpretation exists.
+
+The five Library descriptive-prose fields use the shared editor's 25,000
+serialized-HTML character counter. Formatting markup counts; the counter is
+editing guidance, while the server's sanitize-then-measure validation remains
+authoritative. Compact Group and Shelf rows use bounded rich-text presentation
+rather than exposing HTML source or expanding into full prose views.
 
 Downloads and other attachments use the shared SDK attachment client. The SDK
 owns credentials, safe filenames, content types, JSON error detection, and

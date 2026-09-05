@@ -87,6 +87,39 @@ class ShelfAdminSafetyTests(TestCase):
         self.assertFalse(form.is_valid())
         self.assertIn("visibility", form.errors)
 
+    def test_shelf_description_admin_uses_shared_sanitizer_and_limit(self):
+        shelf = Shelf(
+            name="Formatted",
+            owner_type=Shelf.OWNER_TYPE_USER,
+            owner_user=self.user,
+            visibility=Shelf.VISIBILITY_PRIVATE,
+        )
+        valid = ShelfAdminForm(
+            data={
+                "name": shelf.name,
+                "description": '<p class="no">Safe <em>shelf</em></p><script>bad()</script>',
+                "owner_type": Shelf.OWNER_TYPE_USER,
+                "owner_user": str(self.user.pk),
+                "visibility": Shelf.VISIBILITY_PRIVATE,
+            },
+            instance=shelf,
+        )
+        self.assertTrue(valid.is_valid(), valid.errors)
+        self.assertEqual(valid.cleaned_data["description"], "<p>Safe <em>shelf</em></p>")
+
+        invalid = ShelfAdminForm(
+            data={
+                "name": shelf.name,
+                "description": "x" * 25_001,
+                "owner_type": Shelf.OWNER_TYPE_USER,
+                "owner_user": str(self.user.pk),
+                "visibility": Shelf.VISIBILITY_PRIVATE,
+            },
+            instance=shelf,
+        )
+        self.assertFalse(invalid.is_valid())
+        self.assertIn("description", invalid.errors)
+
     def test_owner_fields_readonly_and_field_order_is_diagnostic(self):
         self.request.user = self.user
         readonly = self.shelf_admin.get_readonly_fields(

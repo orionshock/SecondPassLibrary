@@ -53,19 +53,19 @@ class LibraryPublicGroupServiceTests(LibraryGroupServiceTestCase):
         self.assertEqual(configured.description, "Updated")
         self.assertTrue(is_public_group(configured))
 
-    def test_configure_public_group_normalizes_name_and_description(self):
+    def test_configure_public_group_normalizes_name_and_preserves_description_text(self):
         configured = configure_public_group(
             name="  Trimmed Room  ",
             description="  Trimmed description  ",
         )
 
         self.assertEqual(configured.name, "Trimmed Room")
-        self.assertEqual(configured.description, "Trimmed description")
+        self.assertEqual(configured.description, "  Trimmed description  ")
 
         configured = configure_public_group(name="   ", description="   ")
 
         self.assertEqual(configured.name, DEFAULT_PUBLIC_GROUP_NAME)
-        self.assertEqual(configured.description, "")
+        self.assertEqual(configured.description, "   ")
 
     def test_configure_public_group_preserves_explicit_blank_description(self):
         configured = configure_public_group(
@@ -82,7 +82,7 @@ class LibraryPublicGroupServiceTests(LibraryGroupServiceTestCase):
         group_updated_at = configured.updated_at
         setting_updated_at = setting.updated_at
 
-        same = configure_public_group(name="  Stable Public  ", description="   ")
+        same = configure_public_group(name="  Stable Public  ", description="")
         setting.refresh_from_db()
 
         self.assertEqual(same.pk, configured.pk)

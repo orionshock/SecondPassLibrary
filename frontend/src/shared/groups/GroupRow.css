@@ -29,7 +29,7 @@
 
 .group-row-component h2 a { color: #72d1fa; }
 
-.group-row-component p {
+.group-row-component__description {
   display: -webkit-box;
   overflow: hidden;
   margin: 0.35rem 0 0;

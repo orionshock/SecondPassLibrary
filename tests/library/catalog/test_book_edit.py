@@ -423,6 +423,21 @@ class LibraryBookEditApiTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertEqual(read.status_code, 200)
         self.assertEqual(read.json()["description"], expected)
 
+    def test_patch_rejects_description_over_sanitized_html_limit(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        response = self.client.patch(
+            f"/api/v1/library/books/{self.visible_one.id}/",
+            data={"description": "x" * 25_001},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("description", response.json())
+        self.visible_one.refresh_from_db()
+        self.assertEqual(self.visible_one.description, "dresden case file")
+
     def test_librarian_patch_creates_and_assigns_new_series(self):
         self.client.logout()
         self.assertTrue(self.client.login(username="manager", password="pw"))

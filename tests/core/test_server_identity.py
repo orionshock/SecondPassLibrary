@@ -130,6 +130,38 @@ class ServerIdentitySettingsTests(TestCase):
             self.assertEqual(response.status_code, 400)
             self.assertIn("second_pass_reader_web_client_url", response.json())
 
+    def test_public_group_description_uses_shared_rich_text_contract(self):
+        owner = User.objects.create_user(
+            username="owner",
+            password="pw",
+            is_superuser=True,
+            is_staff=True,
+        )
+        self.client.force_login(owner)
+
+        accepted = self.client.patch(
+            "/api/v1/server/settings/",
+            data={
+                "public_group_description": (
+                    '<p class="no">Shared <em>books</em></p><script>bad()</script>'
+                )
+            },
+            content_type="application/json",
+        )
+        self.assertEqual(accepted.status_code, 200)
+        self.assertEqual(
+            accepted.json()["public_group_description"],
+            "<p>Shared <em>books</em></p>",
+        )
+
+        rejected = self.client.patch(
+            "/api/v1/server/settings/",
+            data={"public_group_description": "x" * 25_001},
+            content_type="application/json",
+        )
+        self.assertEqual(rejected.status_code, 400)
+        self.assertIn("public_group_description", rejected.json())
+
     def test_advanced_library_groups_enable_endpoint_is_one_way(self):
         owner = User.objects.create_user(
             username="owner",

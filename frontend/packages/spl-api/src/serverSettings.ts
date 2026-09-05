@@ -77,7 +77,7 @@ export async function updatePublicLibrarySettings(
 ): Promise<ServerSettings> {
   return patchServerSettings({
     public_group_name: input.name.trim(),
-    public_group_description: input.description.trim(),
+    public_group_description: input.description,
   }, client);
 }
 

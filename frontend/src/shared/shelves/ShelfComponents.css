@@ -57,7 +57,7 @@
 
 .shelf-summary-row-component h2 a { color: #72d1fa; }
 
-.shelf-summary-row-component p {
+.shelf-summary-row-component__description {
   display: -webkit-box;
   overflow: hidden;
   margin: 0.3rem 0;

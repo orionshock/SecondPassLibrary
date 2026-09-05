@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.db import transaction
 from django.db.models.deletion import ProtectedError
 
-from core.rich_text import sanitize_limited_html
+from core.rich_text import sanitize_descriptive_prose
 from library.catalog.names import normalize_catalog_entity_name
 from library.models import Author, BookAuthor, BookSeries, Series
 
@@ -33,7 +33,7 @@ def create_author(*, name: str, sort_name: str = "", biography: str = "") -> Aut
         name=name,
         sort_name=sort_name or name,
         normalized_name=normalize_catalog_entity_name(name),
-        biography=sanitize_limited_html(biography),
+        biography=sanitize_descriptive_prose(biography, field_name="biography"),
     )
     author.full_clean()
     author.save()
@@ -45,7 +45,9 @@ def update_author(*, author: Author, fields: dict) -> Author:
         return author
     fields = dict(fields)
     if "biography" in fields:
-        fields["biography"] = sanitize_limited_html(fields["biography"])
+        fields["biography"] = sanitize_descriptive_prose(
+            fields["biography"], field_name="biography"
+        )
     for field, value in fields.items():
         setattr(author, field, value)
     if "name" in fields:
@@ -64,7 +66,9 @@ def update_series(*, series: Series, fields: dict) -> Series:
         return series
     fields = dict(fields)
     if "summary" in fields:
-        fields["summary"] = sanitize_limited_html(fields["summary"])
+        fields["summary"] = sanitize_descriptive_prose(
+            fields["summary"], field_name="summary"
+        )
     for field, value in fields.items():
         setattr(series, field, value)
     if "name" in fields:
@@ -83,7 +87,7 @@ def create_series(*, name: str, sort_name: str = "", summary: str = "") -> Serie
         name=name,
         sort_name=sort_name or name,
         normalized_name=normalize_catalog_entity_name(name),
-        summary=sanitize_limited_html(summary),
+        summary=sanitize_descriptive_prose(summary, field_name="summary"),
     )
     series.full_clean()
     series.save()

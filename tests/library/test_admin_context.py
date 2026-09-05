@@ -11,6 +11,7 @@ from library.admin import (
     GroupBookContextInline,
     GroupMembershipContextInline,
     LibraryGroupAdmin,
+    LibraryGroupAdminForm,
     SeriesAdmin,
     SeriesBookContextInline,
 )
@@ -169,6 +170,27 @@ class LibraryContextAdminTests(TestCase):
         self.assertEqual(User.objects.filter(pk__in=[user.pk for user in users]).count(), 2)
         self.assertEqual(Book.objects.filter(pk__in=[book.pk for book in books]).count(), 2)
 
+    def test_group_description_admin_uses_shared_sanitizer_and_limit(self):
+        group = LibraryGroup.objects.create(name="Admin Group")
+        valid = LibraryGroupAdminForm(
+            data={
+                "name": group.name,
+                "description": '<p class="no">Safe <em>group</em></p><script>bad()</script>',
+            },
+            instance=group,
+        )
+        self.assertTrue(valid.is_valid(), valid.errors)
+        valid.save()
+        group.refresh_from_db()
+        self.assertEqual(group.description, "<p>Safe <em>group</em></p>")
+
+        invalid = LibraryGroupAdminForm(
+            data={"name": group.name, "description": "x" * 25_001},
+            instance=group,
+        )
+        self.assertFalse(invalid.is_valid())
+        self.assertIn("description", invalid.errors)
+
     def test_author_context_links_books_and_removes_only_selected_relationship(self):
         author = Author.objects.create(name="Context Author")
         books = [Book.objects.create(title=f"Authored {index}") for index in range(2)]
@@ -217,6 +239,18 @@ class LibraryContextAdminTests(TestCase):
         author.refresh_from_db()
         self.assertEqual(author.biography, "<p>Safe <em>bio</em></p>")
 
+        over_limit = form_class(
+            data={
+                "name": author.name,
+                "sort_name": "",
+                "normalized_name": "",
+                "biography": "x" * 25_001,
+            },
+            instance=author,
+        )
+        self.assertFalse(over_limit.is_valid())
+        self.assertIn("biography", over_limit.errors)
+
     def test_series_context_links_books_and_removes_only_selected_relationship(self):
         series = Series.objects.create(name="Context Series")
         books = [Book.objects.create(title=f"Series Book {index}") for index in range(2)]
@@ -262,3 +296,15 @@ class LibraryContextAdminTests(TestCase):
         form.save()
         series.refresh_from_db()
         self.assertEqual(series.summary, "<ul><li>Safe</li></ul>")
+
+        over_limit = form_class(
+            data={
+                "name": series.name,
+                "sort_name": "",
+                "normalized_name": "",
+                "summary": "x" * 25_001,
+            },
+            instance=series,
+        )
+        self.assertFalse(over_limit.is_valid())
+        self.assertIn("summary", over_limit.errors)

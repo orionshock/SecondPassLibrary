@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { MaterialIcon } from "./icons/MaterialIcon";
 import "./LimitedRichTextEditor.css";
 
+export const DESCRIPTIVE_PROSE_MAX_LENGTH = 25_000;
+
 const extensions = [StarterKit.configure({
   blockquote: false,
   code: false,
@@ -108,21 +110,28 @@ export function LimitedRichTextEditor({
         onClick={showRaw ? openRenderedEditor : openRawEditor}
       >{showRaw ? "Show rendered" : "Show raw"}</button>
     </div>
-    {showRaw
-      ? <textarea
-        id={id}
-        className="limited-rich-text-editor__raw"
-        value={value}
-        disabled={disabled}
-        maxLength={maxLength}
-        spellCheck={false}
-        onChange={(event) => onChange(event.target.value)}
-      />
-      : <EditorContent editor={editor} />}
+    <div className="limited-rich-text-editor__body">
+      {showRaw
+        ? <textarea
+          id={id}
+          className="limited-rich-text-editor__raw"
+          value={value}
+          disabled={disabled}
+          maxLength={maxLength}
+          spellCheck={false}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        : <EditorContent className="limited-rich-text-editor__rendered" editor={editor} />}
+    </div>
     {maxLength !== undefined ? <div
       className={`limited-rich-text-editor__count${overLimit ? " limited-rich-text-editor__count--over" : ""}`}
       aria-live="polite"
       title="Stored HTML characters"
-    >{value.length} / {maxLength}</div> : null}
+    >
+      <span>{showRaw
+        ? "Only supported tags are retained."
+        : "Formatting counts toward the character limit."}</span>
+      <span>{value.length.toLocaleString("en-US")} / {maxLength.toLocaleString("en-US")}</span>
+    </div> : null}
   </div>;
 }

@@ -132,7 +132,12 @@ class ServerSettingsView(APIView):
                 )
             except DjangoValidationError as exc:
                 for field, messages in exc.message_dict.items():
-                    errors.setdefault(field, []).extend(messages)
+                    wire_field = (
+                        "public_group_description"
+                        if field == "description"
+                        else field
+                    )
+                    errors.setdefault(wire_field, []).extend(messages)
 
         if errors:
             raise ValidationError(detail=errors)

@@ -574,6 +574,21 @@ class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertEqual(response.json()["name"], "Updated Author Name")
         self.assertEqual(response.json()["biography"], self.alpha.biography)
 
+    def test_librarian_cannot_patch_biography_over_sanitized_html_limit(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        response = self.client.patch(
+            f"/api/v1/library/authors/{self.alpha.id}/",
+            data={"biography": "x" * 25_001},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("biography", response.json())
+        self.alpha.refresh_from_db()
+        self.assertEqual(self.alpha.biography, "")
+
     def test_reader_cannot_patch_biography(self):
         response = self.client.patch(
             f"/api/v1/library/authors/{self.alpha.id}/",

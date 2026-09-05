@@ -2,6 +2,7 @@ import type { ShelfSummary } from "@second-pass/spl-api";
 import { Link } from "react-router";
 
 import { Badge, Button, ErrorPanel, PageHeader } from "../../../components/UiPrimitives";
+import { SanitizedRichText } from "../../../components/SanitizedRichText";
 import { UserInlineIdentity } from "../../../shared/users/UserInlineIdentity";
 
 export function ShelfHeaderPageRegion({ shelf, loading, error, editPath, editNavigationState, onRetry }: {
@@ -22,7 +23,7 @@ export function ShelfHeaderPageRegion({ shelf, loading, error, editPath, editNav
       <span>{shelf.name}</span>
       {shelf.ownerGroup?.isPublicGroup ? <Badge tone="success">Public</Badge> : null}
       </span>}
-      description={shelf.description || undefined}
+      description={shelf.description ? <SanitizedRichText html={shelf.description} /> : undefined}
       actions={shelf.canEdit && editPath ? <Link className="button-link button--secondary" to={editPath} state={editNavigationState}>Edit Shelf</Link> : undefined}
     />
     <div className="shelf-detail-header__facts">

@@ -4,6 +4,8 @@ from typing import Any
 
 from django.core.exceptions import PermissionDenied, ValidationError
 
+from core.rich_text import sanitize_descriptive_prose
+
 from .models import Shelf
 from .policies import can_create_shelf, can_edit_shelf
 
@@ -31,7 +33,9 @@ def create_shelf(
 
     shelf = Shelf(
         name=name,
-        description=description,
+        description=sanitize_descriptive_prose(
+            description, field_name="description"
+        ),
         owner_type=owner_type,
         owner_user=owner_user,
         owner_group=owner_group,
@@ -56,6 +60,11 @@ def update_shelf(actor, shelf: Shelf, **fields: Any) -> Shelf:
     for k in list(fields.keys()):
         if k not in allowed:
             raise ValidationError(f"Unsupported field: {k}")
+
+    if "description" in fields:
+        fields["description"] = sanitize_descriptive_prose(
+            fields["description"], field_name="description"
+        )
 
     for k, v in fields.items():
         setattr(shelf, k, v)

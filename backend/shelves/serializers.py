@@ -86,7 +86,9 @@ class ShelfSerializer(serializers.ModelSerializer):
 
 class ShelfCreateSerializer(RejectUnknownFieldsMixin, serializers.Serializer):
     name = serializers.CharField(max_length=255)
-    description = serializers.CharField(required=False, allow_blank=True)
+    description = serializers.CharField(
+        required=False, allow_blank=True, trim_whitespace=False
+    )
     owner_type = serializers.ChoiceField(choices=[Shelf.OWNER_TYPE_USER, Shelf.OWNER_TYPE_GROUP])
     owner_group = serializers.UUIDField(required=False, allow_null=True)
     visibility = serializers.ChoiceField(
@@ -112,7 +114,9 @@ class ShelfCreateSerializer(RejectUnknownFieldsMixin, serializers.Serializer):
 
 class ShelfPatchSerializer(RejectUnknownFieldsMixin, serializers.Serializer):
     name = serializers.CharField(max_length=255, required=False)
-    description = serializers.CharField(required=False, allow_blank=True)
+    description = serializers.CharField(
+        required=False, allow_blank=True, trim_whitespace=False
+    )
     visibility = serializers.ChoiceField(
         choices=[Shelf.VISIBILITY_PRIVATE, Shelf.VISIBILITY_LISTED],
         required=False,

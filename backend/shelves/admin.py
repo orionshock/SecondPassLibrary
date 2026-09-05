@@ -14,6 +14,7 @@ from core.admin_widgets import (
     UserRelatedViewOnlyControlsMixin,
     keep_only_view_related_control_for_models,
 )
+from core.rich_text import sanitize_descriptive_prose
 from library.models import LibraryGroup
 
 from .models import Shelf, ShelfItem
@@ -24,6 +25,13 @@ class ShelfAdminForm(forms.ModelForm):
     class Meta:
         model = Shelf
         fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["description"].strip = False
+
+    def clean_description(self):
+        return sanitize_descriptive_prose(self.cleaned_data.get("description"))
 
     def clean(self):
         cleaned_data = super().clean()

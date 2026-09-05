@@ -25,6 +25,19 @@ class LibraryGroupCrudServiceTests(LibraryGroupServiceTestCase):
         self.assertEqual(group.name, "New")
         self.assertEqual(group.description, "After")
 
+    def test_group_description_uses_shared_sanitizer_and_limit(self):
+        group = create_library_group(
+            name="Formatted",
+            description='<p class="no">Allowed <em>text</em></p><script>bad()</script>',
+        )
+        self.assertEqual(group.description, "<p>Allowed <em>text</em></p>")
+
+        with self.assertRaises(ValidationError):
+            update_library_group(group=group, description="x" * 25_001)
+
+        group.refresh_from_db()
+        self.assertEqual(group.description, "<p>Allowed <em>text</em></p>")
+
     def test_delete_normal_group_removes_group(self):
         group = create_library_group(name="Temporary")
 

@@ -1,7 +1,10 @@
 import type { FormEvent } from "react";
 
 import { FormField } from "../../../components/UiPrimitives";
-import { LimitedRichTextEditor } from "../../../components/LimitedRichTextEditor";
+import {
+  DESCRIPTIVE_PROSE_MAX_LENGTH,
+  LimitedRichTextEditor,
+} from "../../../components/LimitedRichTextEditor";
 import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";
 import { SaveCancelActionRow } from "../../../shared/forms/ActionRow";
 import type { AuthorSeriesEditDraft } from "./authorSeriesEditDraft";
@@ -52,7 +55,7 @@ export function AuthorSeriesEditFormPageRegion({
       <input id="library-entity-sort-name" value={draft.sortName} maxLength={255} autoComplete="off" onChange={(event) => onChange("sortName", event.target.value)} />
     </FormField>
     <FormField label={proseLabel} htmlFor="library-entity-prose" error={fieldError(state.error, proseField)}>
-      <LimitedRichTextEditor id="library-entity-prose" value={draft.prose} onChange={(value) => onChange("prose", value)} />
+      <LimitedRichTextEditor id="library-entity-prose" value={draft.prose} maxLength={DESCRIPTIVE_PROSE_MAX_LENGTH} onChange={(value) => onChange("prose", value)} />
     </FormField>
     <SaveCancelActionRow
       state={state}

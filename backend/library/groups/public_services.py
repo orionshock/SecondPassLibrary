@@ -15,6 +15,7 @@ from core.operational_logging import (
     suppress_state_change_logging,
 )
 from core.server_settings import set_server_setting
+from core.rich_text import sanitize_descriptive_prose
 from library.groups.public_group import (
     DEFAULT_PUBLIC_GROUP_NAME,
     PUBLIC_GROUP_ID_SETTING,
@@ -209,4 +210,6 @@ def _public_group_name(name: str | None) -> str:
 
 
 def _public_group_description(description: str | None) -> str:
-    return str(description or "").strip()
+    return sanitize_descriptive_prose(
+        description, field_name="description"
+    )

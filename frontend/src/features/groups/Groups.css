@@ -193,8 +193,6 @@
   background: var(--surface);
 }
 
-.group-detail-page .page-description { white-space: pre-wrap; }
-
 .group-detail-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

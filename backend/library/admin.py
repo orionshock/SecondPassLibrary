@@ -12,7 +12,7 @@ from django.template.response import TemplateResponse
 from django.urls import path, reverse
 
 from core import server_settings
-from core.rich_text import sanitize_limited_html
+from core.rich_text import sanitize_descriptive_prose
 from library.file_repair import (
     ChecksumChangeConfirmationRequired,
     ChecksumCollisionError,
@@ -121,6 +121,7 @@ class BookAdminForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.fields["description"].strip = False
         if self.instance.pk:
             self.fields["selected_authors"].initial = self.instance.authors.all()
             self.fields["selected_catalog_tags"].initial = (
@@ -164,7 +165,7 @@ class BookAdminForm(forms.ModelForm):
         return upload
 
     def clean_description(self):
-        return sanitize_limited_html(self.cleaned_data.get("description"))
+        return sanitize_descriptive_prose(self.cleaned_data.get("description"))
 
     def save(self, commit=True):
         book = super().save(commit=commit)
@@ -622,8 +623,22 @@ class GroupBookContextInline(admin.TabularInline):
         return book_series.series.name if book_series else "-"
 
 
+class LibraryGroupAdminForm(forms.ModelForm):
+    class Meta:
+        model = LibraryGroup
+        fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["description"].strip = False
+
+    def clean_description(self):
+        return sanitize_descriptive_prose(self.cleaned_data.get("description"))
+
+
 @admin.register(LibraryGroup)
 class LibraryGroupAdmin(admin.ModelAdmin):
+    form = LibraryGroupAdminForm
     search_fields = ["name"]
     inlines = [GroupMembershipContextInline, GroupBookContextInline]
 
@@ -691,8 +706,12 @@ class AuthorAdminForm(forms.ModelForm):
         model = Author
         fields = "__all__"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["biography"].strip = False
+
     def clean_biography(self):
-        return sanitize_limited_html(self.cleaned_data.get("biography"))
+        return sanitize_descriptive_prose(self.cleaned_data.get("biography"))
 
 
 @admin.register(Author)
@@ -743,8 +762,12 @@ class SeriesAdminForm(forms.ModelForm):
         model = Series
         fields = "__all__"
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["summary"].strip = False
+
     def clean_summary(self):
-        return sanitize_limited_html(self.cleaned_data.get("summary"))
+        return sanitize_descriptive_prose(self.cleaned_data.get("summary"))
 
 
 @admin.register(Series)

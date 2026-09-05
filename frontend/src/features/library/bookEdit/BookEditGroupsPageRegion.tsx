@@ -56,7 +56,6 @@ export function BookEditGroupsPageRegion({
           className={group.isPublicGroup ? "book-edit-group-assignment book-edit-group-assignment--public" : "book-edit-group-assignment"}
           to={`/groups/${encodeURIComponent(group.id)}`}
           state={groupNavigationState?.(group)}
-          title={group.description || undefined}
         >
           <MaterialIcon name={group.isPublicGroup ? "public" : "group"} size={17} />
           <span>{group.name}</span>

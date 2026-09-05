@@ -1,5 +1,6 @@
 import { Link } from "react-router";
 
+import { SanitizedRichText } from "../../components/SanitizedRichText";
 import { BookCoverPreviewStrip, type BookCoverPreviewItem } from "../books/BookCoverPreviewStrip";
 import { GroupBadge } from "../groups/GroupBadge";
 import { UserInlineIdentity } from "../users/UserInlineIdentity";
@@ -38,7 +39,7 @@ export function ShelfSummaryRow({ name, description, itemCount, detailPath, navi
           {itemCount} {itemCount === 1 ? "book" : "books"}
         </span>
       </div>
-      {description ? <p>{description}</p> : null}
+      {description ? <SanitizedRichText html={description} className="sanitized-rich-text--compact shelf-summary-row-component__description" /> : null}
     </div>
     {hasPreviews ? <BookCoverPreviewStrip books={previewBooks} /> : null}
   </article>;

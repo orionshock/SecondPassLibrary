@@ -80,8 +80,6 @@
   border-bottom: 1px solid var(--border);
 }
 
-.shelf-detail-page .page-description { white-space: pre-wrap; }
-
 .shelf-items-region { margin-top: 0.8rem; }
 
 .shelf-items-controls {

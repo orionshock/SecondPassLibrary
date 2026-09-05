@@ -54,6 +54,8 @@ describe("Library descriptive metadata editing", () => {
     expect(editor?.getAttribute("contenteditable")).toBe("true");
     expect(editor?.innerHTML).toContain("<strong>description</strong>");
     expect(container.querySelector("textarea#book-edit-description")).toBeNull();
+    expect(container.querySelector(".limited-rich-text-editor__count")?.textContent)
+      .toContain("/ 25,000");
   });
 
   it("loads Author biography and Series summary through the same editing behavior", async () => {
@@ -80,6 +82,8 @@ describe("Library descriptive metadata editing", () => {
     />));
     expect(container.querySelector<HTMLElement>("#library-entity-prose")?.innerHTML)
       .toContain("<strong>biography</strong>");
+    expect(container.querySelector(".limited-rich-text-editor__count")?.textContent)
+      .toContain("/ 25,000");
 
     await act(async () => root?.render(<AuthorSeriesEditFormPageRegion
       {...common}

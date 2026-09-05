@@ -120,7 +120,8 @@ describe("Group metadata lifecycle contracts", () => {
     />);
     expect(markup).toContain('id="group-name"');
     expect(markup).toContain("disabled");
-    expect(markup).toContain('id="group-description"');
+    expect(markup).toContain("limited-rich-text-editor");
+    expect(markup).toContain("/ 25,000");
   });
 
   it("builds canonical create/edit routes and fallback breadcrumbs", () => {
@@ -159,8 +160,13 @@ describe("Group metadata lifecycle contracts", () => {
   });
 
   it("renders Public Details as read-only policy context rather than an error", () => {
-    const markup = renderToStaticMarkup(<GroupPublicDetailsPageRegion group={publicGroup} />);
+    const markup = renderToStaticMarkup(<GroupPublicDetailsPageRegion group={{
+      ...publicGroup,
+      description: "<p>Shared <em>catalog</em></p>",
+    }} />);
     expect(markup).toContain('aria-label="Public group: Readers"');
+    expect(markup).toContain("<em>catalog</em>");
+    expect(markup).not.toContain("&lt;p&gt;");
     expect(markup).toContain("Server Settings");
     expect(markup).not.toContain('role="alert"');
   });
@@ -269,4 +275,3 @@ describe("Group metadata lifecycle contracts", () => {
     }
   });
 });
-

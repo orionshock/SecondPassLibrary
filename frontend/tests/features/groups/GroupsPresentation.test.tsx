@@ -32,7 +32,8 @@ describe("Groups read-only regions", () => {
     expect(markup).toContain('href="/groups/group"');
     expect(markup).toContain("Public");
     expect(markup).toContain("Curator");
-    expect(markup).toContain("&lt;b&gt;Add, edit, and delete books&lt;/b&gt;");
+    expect(markup).toContain("<b>Add, edit, and delete books</b>");
+    expect(markup).not.toContain("&lt;b&gt;");
     expect(markup).not.toContain("<form");
     expect(markup).not.toContain('href="/groups/group/edit"');
     expect(markup).not.toContain('aria-label="Delete');
@@ -252,4 +253,3 @@ describe("Groups read-only regions", () => {
     expect(failed).toMatch(/<button[^>]+type="button"/);
   });
 });
-

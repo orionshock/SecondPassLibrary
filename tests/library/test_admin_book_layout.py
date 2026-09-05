@@ -99,6 +99,25 @@ class BookAdminLayoutTests(IsolatedMediaRootMixin, TestCase):
             "<p>Safe <i>description</i></p>",
         )
 
+    def test_book_description_limit_cannot_be_bypassed_in_admin(self):
+        form_class = self.model_admin.get_form(self.request, self.book)
+        form = form_class(
+            data={
+                "title": self.book.title,
+                "subtitle": "",
+                "description": "x" * 25_001,
+                "publisher": "",
+                "language": "",
+                "published_date_precision": "",
+                "selected_authors": [],
+                "selected_catalog_tags": [],
+            },
+            instance=self.book,
+        )
+
+        self.assertFalse(form.is_valid())
+        self.assertIn("description", form.errors)
+
     def test_series_uses_current_relationship_inline(self):
         series = Series.objects.create(name="Current Series")
         BookSeries.objects.create(book=self.book, series=series, series_index="2.50")

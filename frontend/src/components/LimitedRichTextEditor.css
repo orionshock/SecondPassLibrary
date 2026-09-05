@@ -71,8 +71,21 @@
   background: var(--border);
 }
 
-.limited-rich-text-editor__content {
+.limited-rich-text-editor__body {
   min-height: 8rem;
+  overflow: auto;
+  resize: vertical;
+}
+
+.limited-rich-text-editor__rendered {
+  min-height: inherit;
+  height: 100%;
+}
+
+.limited-rich-text-editor__content {
+  min-height: inherit;
+  height: 100%;
+  box-sizing: border-box;
   padding: 0.75rem 0.85rem;
   outline: none;
   line-height: 1.5;
@@ -82,7 +95,9 @@
 .limited-rich-text-editor .limited-rich-text-editor__raw {
   display: block;
   width: 100%;
-  min-height: 8rem;
+  min-height: inherit;
+  height: 100%;
+  box-sizing: border-box;
   margin: 0;
   padding: 0.75rem 0.85rem;
   border: 0;
@@ -93,10 +108,13 @@
   font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
   font-size: 0.85rem;
   line-height: 1.5;
-  resize: vertical;
+  resize: none;
 }
 
 .limited-rich-text-editor__count {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
   padding: 0.25rem 0.6rem 0.35rem;
   border-top: 1px solid var(--border);
   color: var(--muted);

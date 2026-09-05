@@ -2,6 +2,10 @@ import type { LibraryGroup, ShelfSummary } from "@second-pass/spl-api";
 import type { FormEvent } from "react";
 
 import { Button, ErrorPanel, FormField } from "../../../components/UiPrimitives";
+import {
+  DESCRIPTIVE_PROSE_MAX_LENGTH,
+  LimitedRichTextEditor,
+} from "../../../components/LimitedRichTextEditor";
 import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";
 import { SaveCancelActionRow } from "../../../shared/forms/ActionRow";
 import { GroupBadge } from "../../../shared/groups/GroupBadge";
@@ -64,7 +68,7 @@ export function ShelfDetailsEditPageRegion({
         <input id="shelf-name" value={draft.name} maxLength={255} autoFocus onChange={(event) => onChange("name", event.target.value)} />
       </FormField>
       <FormField label="Description" htmlFor="shelf-description" error={fieldError(mutation.error, "description")}>
-        <textarea id="shelf-description" value={draft.description} onChange={(event) => onChange("description", event.target.value)} />
+        <LimitedRichTextEditor id="shelf-description" value={draft.description} maxLength={DESCRIPTIVE_PROSE_MAX_LENGTH} onChange={(value) => onChange("description", value)} />
       </FormField>
       {draft.ownerType === "user" ? <FormField label="Visibility" htmlFor="shelf-visibility" error={fieldError(mutation.error, "visibility")}>
         <select id="shelf-visibility" value={draft.visibility} onChange={(event) => onChange("visibility", event.target.value as ShelfDraft["visibility"])}>

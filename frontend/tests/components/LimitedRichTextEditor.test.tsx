@@ -38,7 +38,7 @@ describe("LimitedRichTextEditor", () => {
     expect(content?.innerHTML).toContain("<strong>this server</strong>");
     expect(content?.innerHTML).toContain("<ul><li><p>Private</p></li></ul>");
     expect(onChange).not.toHaveBeenCalled();
-    expect(container.textContent).toContain(`${initialHtml.length} / 1000`);
+    expect(container.textContent).toContain(`${initialHtml.length} / 1,000`);
 
     await act(async () => root?.render(<LimitedRichTextEditor
       id="description"
@@ -90,6 +90,8 @@ describe("LimitedRichTextEditor", () => {
     }
 
     await act(async () => root?.render(<Harness />));
+    const editorBody = container.querySelector<HTMLElement>(".limited-rich-text-editor__body");
+    if (editorBody) editorBody.style.height = "240px";
     await act(async () => {
       container?.querySelector<HTMLButtonElement>(".limited-rich-text-editor__mode-control")?.click();
     });
@@ -97,6 +99,10 @@ describe("LimitedRichTextEditor", () => {
     const raw = container.querySelector<HTMLTextAreaElement>("textarea#description");
     expect(raw?.value).toBe("<p>About <strong>SPL</strong></p>");
     expect(raw?.maxLength).toBe(1000);
+    expect(container.querySelector(".limited-rich-text-editor__body")).toBe(editorBody);
+    expect(editorBody?.style.height).toBe("240px");
+    expect(container.querySelector(".limited-rich-text-editor__count")?.textContent)
+      .toContain(`${raw?.value.length} / 1,000`);
 
     await act(async () => {
       if (!raw) return;
@@ -118,6 +124,8 @@ describe("LimitedRichTextEditor", () => {
       container?.querySelector<HTMLButtonElement>(".limited-rich-text-editor__mode-control")?.click();
     });
     const rendered = container.querySelector<HTMLElement>("#description")?.innerHTML ?? "";
+    expect(container.querySelector(".limited-rich-text-editor__body")).toBe(editorBody);
+    expect(editorBody?.style.height).toBe("240px");
     expect(rendered).toContain("Heading");
     expect(rendered).toContain("Link");
     expect(rendered).not.toMatch(/<(?:h1|a)\b/);

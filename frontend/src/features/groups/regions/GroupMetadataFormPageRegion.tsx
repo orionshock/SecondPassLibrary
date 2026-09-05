@@ -1,6 +1,10 @@
 import type { FormEvent } from "react";
 
 import { FormField } from "../../../components/UiPrimitives";
+import {
+  DESCRIPTIVE_PROSE_MAX_LENGTH,
+  LimitedRichTextEditor,
+} from "../../../components/LimitedRichTextEditor";
 import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";
 import { SaveCancelActionRow } from "../../../shared/forms/ActionRow";
 import type { GroupDraft } from "../groupDraft";
@@ -36,12 +40,12 @@ export function GroupMetadataFormPageRegion({
       />
     </FormField>
     <FormField label="Description" htmlFor="group-description" error={fieldError(state.error, "description")}>
-      <textarea
+      <LimitedRichTextEditor
         id="group-description"
         value={draft.description}
         disabled={disabled}
-        autoFocus={!nameEditable}
-        onChange={(event) => onChange("description", event.target.value)}
+        maxLength={DESCRIPTIVE_PROSE_MAX_LENGTH}
+        onChange={(value) => onChange("description", value)}
       />
     </FormField>
     <SaveCancelActionRow

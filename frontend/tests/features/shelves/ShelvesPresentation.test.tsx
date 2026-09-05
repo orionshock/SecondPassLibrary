@@ -62,7 +62,8 @@ describe("Shelves read-only regions", () => {
     const personal = renderList(personalShelf, "personal");
     expect(personal).toContain('href="/shelves/shelf"');
     expect(personal).toContain("Favorites");
-    expect(personal).toContain("&lt;b&gt;Reader picks&lt;/b&gt;");
+    expect(personal).toContain("<b>Reader picks</b>");
+    expect(personal).not.toContain("&lt;b&gt;");
     expect(personal).toContain('aria-label="Open Visible Book"');
     expect(personal).toContain('aria-label="Shelves pagination, top"');
     expect(personal).toContain('aria-label="Shelves pagination, bottom"');
@@ -119,4 +120,3 @@ describe("Shelves read-only regions", () => {
     expect(renderItems("-author")).toContain("Author Z-A");
   });
 });
-

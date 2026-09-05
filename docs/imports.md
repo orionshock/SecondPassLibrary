@@ -69,6 +69,10 @@ unchanged: there is no read-time sanitizer, plain-text conversion, or markup
 reinterpretation at projection time. Imported and operator-edited metadata is
 untrusted regardless of its source.
 
+After sanitization, the complete serialized description must not exceed
+25,000 characters. Markup counts toward the limit. An over-limit import
+candidate fails without truncating or partially persisting the Book.
+
 When this contract was introduced, a temporary pre-release data migration
 normalized existing stored Book descriptions with the same effective policy.
 That migration is historical implementation context, not a compatibility

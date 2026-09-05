@@ -471,6 +471,21 @@ class LibrarySeriesAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertEqual(response.json()["name"], "Updated Series Name")
         self.assertEqual(response.json()["summary"], self.first_series.summary)
 
+    def test_librarian_cannot_patch_summary_over_sanitized_html_limit(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        response = self.client.patch(
+            f"/api/v1/library/series/{self.first_series.id}/",
+            data={"summary": "x" * 25_001},
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("summary", response.json())
+        self.first_series.refresh_from_db()
+        self.assertEqual(self.first_series.summary, "")
+
     def test_reader_cannot_patch_summary(self):
         response = self.client.patch(
             f"/api/v1/library/series/{self.first_series.id}/",

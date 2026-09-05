@@ -62,6 +62,31 @@ const groupShelf: ShelfSummary = {
 };
 
 describe("Shelf lifecycle contracts", () => {
+  it("uses the shared rich-text editor and renderer for Shelf descriptions", () => {
+    const editMarkup = renderToStaticMarkup(<ShelfDetailsEditPageRegion
+      mode="new"
+      draft={{ ...emptyShelfDraft, name: "Shelf", description: "<p>Rich</p>" }}
+      groups={[]}
+      groupsLoading={false}
+      mutation={idleMutationState}
+      deleteMutation={idleMutationState}
+      onChange={vi.fn()}
+      onOwnerTypeChange={vi.fn()}
+      onSubmit={vi.fn()}
+      onCancel={vi.fn()}
+      onDelete={vi.fn()}
+    />);
+    const detailMarkup = renderToStaticMarkup(<MemoryRouter><ShelfHeaderPageRegion
+      shelf={{ ...personalShelf, description: "<p>Rich <em>description</em></p>" }}
+      loading={false}
+      onRetry={vi.fn()}
+    /></MemoryRouter>);
+
+    expect(editMarkup).toContain("/ 25,000");
+    expect(detailMarkup).toContain("<em>description</em>");
+    expect(detailMarkup).not.toContain("&lt;p&gt;");
+  });
+
   it("normalizes create/edit drafts and sends only writable metadata", () => {
     expect(shelfDraftFromSummary(personalShelf)).toEqual({
       name: "Favorites", description: "Reader picks", ownerType: "user",
@@ -362,4 +387,3 @@ describe("Shelf lifecycle contracts", () => {
     expect(buttons.every((button) => button.includes("disabled"))).toBe(true);
   });
 });
-
