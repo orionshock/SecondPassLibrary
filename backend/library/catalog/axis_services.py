@@ -3,6 +3,7 @@ from __future__ import annotations
 from django.db import transaction
 from django.db.models.deletion import ProtectedError
 
+from core.rich_text import sanitize_limited_html
 from library.catalog.names import normalize_catalog_entity_name
 from library.models import Author, BookAuthor, BookSeries, Series
 
@@ -32,7 +33,7 @@ def create_author(*, name: str, sort_name: str = "", biography: str = "") -> Aut
         name=name,
         sort_name=sort_name or name,
         normalized_name=normalize_catalog_entity_name(name),
-        biography=biography,
+        biography=sanitize_limited_html(biography),
     )
     author.full_clean()
     author.save()
@@ -42,6 +43,9 @@ def create_author(*, name: str, sort_name: str = "", biography: str = "") -> Aut
 def update_author(*, author: Author, fields: dict) -> Author:
     if not fields:
         return author
+    fields = dict(fields)
+    if "biography" in fields:
+        fields["biography"] = sanitize_limited_html(fields["biography"])
     for field, value in fields.items():
         setattr(author, field, value)
     if "name" in fields:
@@ -58,6 +62,9 @@ def update_author(*, author: Author, fields: dict) -> Author:
 def update_series(*, series: Series, fields: dict) -> Series:
     if not fields:
         return series
+    fields = dict(fields)
+    if "summary" in fields:
+        fields["summary"] = sanitize_limited_html(fields["summary"])
     for field, value in fields.items():
         setattr(series, field, value)
     if "name" in fields:
@@ -76,7 +83,7 @@ def create_series(*, name: str, sort_name: str = "", summary: str = "") -> Serie
         name=name,
         sort_name=sort_name or name,
         normalized_name=normalize_catalog_entity_name(name),
-        summary=summary,
+        summary=sanitize_limited_html(summary),
     )
     series.full_clean()
     series.save()

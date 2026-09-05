@@ -103,16 +103,17 @@ domain results and failures into plain loading, pending, validation, success,
 empty, or error states. Regions render those states and call supplied actions;
 they do not catch `ApiError`, examine HTTP status codes, or translate server
 field names. API-provided text is normally rendered through React's escaped
-text handling. Book descriptions, Server Description, and Server Banner
-Message are the narrow exceptions: they follow the server-owned
+text handling. Book descriptions, Author biographies, Series summaries,
+Server Description, and Server Banner Message are the narrow exceptions: they follow the server-owned
 [sanitized limited HTML](api.md#sanitized-limited-html) contract. Product UI
 renders them through one shared boundary and must not scatter additional
 unsafe-HTML sites or add an independently configured React sanitizer. Server
-Identity editing uses a restricted Tiptap WYSIWYG surface for the supported
-subset; its controls are UX constraints, while the server allowlist remains the
-security boundary. The shared editor also offers a raw-HTML source mode; moving
-back to rendered mode reapplies the restricted Tiptap schema, and persistence
-still passes through the server sanitizer. No Markdown interpretation exists.
+Product UI editing for these fields uses the shared restricted Tiptap WYSIWYG
+surface for the supported subset; its controls are UX constraints, while the
+server allowlist remains the security boundary. The shared editor also offers
+a raw-HTML source mode; moving back to rendered mode reapplies the restricted
+Tiptap schema, and persistence still passes through the server sanitizer. No
+Markdown interpretation exists.
 
 Downloads and other attachments use the shared SDK attachment client. The SDK
 owns credentials, safe filenames, content types, JSON error detection, and

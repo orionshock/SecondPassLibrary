@@ -54,7 +54,6 @@
 .book-edit-content > .tab-list-component { margin-top: 0.9rem; }
 .book-edit-panel { display: grid; gap: 0.8rem; padding: 1rem 0 0.4rem; }
 .book-edit-panel .form-field { grid-template-columns: minmax(7.5rem, 8.5rem) minmax(0, 1fr); }
-.book-edit-panel textarea { min-height: 8rem; resize: vertical; }
 .book-edit-catalog-panel { gap: 1rem; }
 .book-edit-catalog-section { display: grid; gap: 0.8rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border); }
 .book-edit-catalog-section h2 { margin: 0 0 0.1rem; font-size: 1rem; }

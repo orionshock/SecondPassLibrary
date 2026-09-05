@@ -26,7 +26,7 @@ export function SelectedLibraryContextPageRegion({ kind, entityId, name, blurb, 
         <h2>{title}</h2>
         {bookCount !== undefined ? <span className="muted">({bookCount} {bookCount === 1 ? "Book" : "Books"})</span> : null}
       </div>
-      {blurb && !unavailable ? <ClampedLibraryText text={blurb} /> : null}
+      {blurb && !unavailable ? <ClampedLibraryText html={blurb} /> : null}
       {loading ? <p className="muted" aria-live="polite">Loading details...</p> : null}
       {unavailable ? <p className="muted">Selected context not found or unavailable.</p> : null}
       {error ? <div className="selected-library-context-region__error"><ErrorPanel>{error.message}</ErrorPanel>{onRetry ? <Button type="button" onClick={onRetry}>Retry</Button> : null}</div> : null}

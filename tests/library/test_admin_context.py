@@ -199,6 +199,24 @@ class LibraryContextAdminTests(TestCase):
         self.assertTrue(BookAuthor.objects.filter(pk=relationships[1].pk).exists())
         self.assertEqual(Book.objects.filter(pk__in=[book.pk for book in books]).count(), 2)
 
+    def test_author_admin_sanitizes_biography(self):
+        author = Author.objects.create(name="Admin Author")
+        form_class = AuthorAdmin(Author, admin.site).get_form(self.request, author)
+        form = form_class(
+            data={
+                "name": author.name,
+                "sort_name": "",
+                "normalized_name": "",
+                "biography": '<p class="lead">Safe <em>bio</em></p><script>bad()</script>',
+            },
+            instance=author,
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        form.save()
+        author.refresh_from_db()
+        self.assertEqual(author.biography, "<p>Safe <em>bio</em></p>")
+
     def test_series_context_links_books_and_removes_only_selected_relationship(self):
         series = Series.objects.create(name="Context Series")
         books = [Book.objects.create(title=f"Series Book {index}") for index in range(2)]
@@ -226,3 +244,21 @@ class LibraryContextAdminTests(TestCase):
         self.assertFalse(BookSeries.objects.filter(pk=relationships[0].pk).exists())
         self.assertTrue(BookSeries.objects.filter(pk=relationships[1].pk).exists())
         self.assertEqual(Book.objects.filter(pk__in=[book.pk for book in books]).count(), 2)
+
+    def test_series_admin_sanitizes_summary(self):
+        series = Series.objects.create(name="Admin Series")
+        form_class = SeriesAdmin(Series, admin.site).get_form(self.request, series)
+        form = form_class(
+            data={
+                "name": series.name,
+                "sort_name": "",
+                "normalized_name": "",
+                "summary": '<ul><li onclick="bad()">Safe</li></ul><img src="bad">',
+            },
+            instance=series,
+        )
+
+        self.assertTrue(form.is_valid(), form.errors)
+        form.save()
+        series.refresh_from_db()
+        self.assertEqual(series.summary, "<ul><li>Safe</li></ul>")

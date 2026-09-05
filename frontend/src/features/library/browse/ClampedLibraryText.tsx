@@ -1,17 +1,26 @@
 import { useState } from "react";
 
+import { SanitizedRichText } from "../../../components/SanitizedRichText";
+
 const collapsedCharacterLimit = 240;
 
-export function ClampedLibraryText({ text }: { text: string }) {
+export function ClampedLibraryText({ html }: { html: string }) {
   const [expanded, setExpanded] = useState(false);
-  const lines = text.split(/\r?\n/);
-  const collapsible = text.length > collapsedCharacterLimit || lines.length > 3;
-  const collapsedText = lines.slice(0, 3).join("\n").slice(0, collapsedCharacterLimit).trimEnd();
+  const structuralBreaks = html.match(/<(?:br|li|p)\b/gi)?.length ?? 0;
+  const collapsible = html.length > collapsedCharacterLimit || structuralBreaks > 3;
 
   return <div className="clamped-library-text-component">
-    <p className="clamped-library-text-component__text">
-      {collapsible && !expanded ? `${collapsedText}…` : text}
-      {collapsible ? <>{" "}<button type="button" className="clamped-library-text-component__toggle" aria-expanded={expanded} onClick={() => setExpanded((value) => !value)}>{expanded ? "Show less" : "Show more"}</button></> : null}
-    </p>
+    <SanitizedRichText
+      html={html}
+      className={collapsible && !expanded
+        ? "clamped-library-text-component__content clamped-library-text-component__content--collapsed"
+        : "clamped-library-text-component__content"}
+    />
+    {collapsible ? <button
+      type="button"
+      className="clamped-library-text-component__toggle"
+      aria-expanded={expanded}
+      onClick={() => setExpanded((value) => !value)}
+    >{expanded ? "Show less" : "Show more"}</button> : null}
   </div>;
 }

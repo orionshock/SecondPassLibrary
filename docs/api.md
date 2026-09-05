@@ -77,13 +77,13 @@ operation-specific rather than a universal API mechanism.
 
 ## Sanitized limited HTML
 
-Book descriptions, the Server Description, and the Server Banner Message use
-one server-sanitized limited-HTML contract. The authoritative tag allowlist is
-exactly `p`, `br`, `b`, `strong`, `i`, `em`, `ul`, `ol`, and `li`. No
-attributes are allowed. Unsupported markup is stripped; `script` and `style`
-elements and their contents are discarded. Links, images, headings, tables,
-layout elements, classes, inline styles, event handlers, and arbitrary HTML are
-not supported.
+Book descriptions, Author biographies, Series summaries, the Server
+Description, and the Server Banner Message use one server-sanitized
+limited-HTML contract. The authoritative tag allowlist is exactly `p`, `br`,
+`b`, `strong`, `i`, `em`, `ul`, `ol`, and `li`. No attributes are allowed.
+Unsupported markup is stripped; `script` and `style` elements and their
+contents are discarded. Links, images, headings, tables, layout elements,
+classes, inline styles, event handlers, and arbitrary HTML are not supported.
 
 The server applies this `nh3` policy before persistence and returns the stored
 sanitized fragment unchanged. Clients must treat these strings as sanitized
@@ -212,7 +212,8 @@ are omitted; an empty population returns `catalog_tags: []`. The single active
 self-excluding or multi-Tag facet behavior. The standalone `/tags/` routes keep
 their existing scope-total meaning and response envelope.
 
-Book detail `description` follows the shared [sanitized limited HTML](#sanitized-limited-html)
+Book detail `description`, Author detail `biography`, and Series detail
+`summary` follow the shared [sanitized limited HTML](#sanitized-limited-html)
 contract. Clients should render paragraphs and line breaks, bold/strong text,
 italic/emphasized text, and ordered/unordered lists. If a client cannot safely
 present the complete supported subset, it should show a safe plain-text

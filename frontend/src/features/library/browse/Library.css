@@ -168,13 +168,20 @@
   max-width: 52rem;
 }
 
-.clamped-library-text-component__text {
+.clamped-library-text-component__content {
   overflow-wrap: anywhere;
-  white-space: pre-line;
+}
+
+.clamped-library-text-component__content--collapsed {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
 .clamped-library-text-component__toggle {
-  display: inline;
+  display: block;
+  margin-top: 0.25rem;
   padding: 0;
   border: 0;
   color: var(--link);

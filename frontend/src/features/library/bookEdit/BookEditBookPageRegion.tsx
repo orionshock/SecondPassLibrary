@@ -1,4 +1,5 @@
 import { FormField } from "../../../components/UiPrimitives";
+import { LimitedRichTextEditor } from "../../../components/LimitedRichTextEditor";
 import { fieldError } from "../../../shared/feedback/mutationState";
 import type { BookEditDraft } from "./bookEditDraft";
 
@@ -18,7 +19,7 @@ export function BookEditBookPageRegion({ draft, error, onChange }: {
       <input id="book-edit-subtitle" maxLength={512} value={draft.subtitle} onChange={(event) => onChange("subtitle", event.target.value)} />
     </FormField>
     <FormField label="Description" htmlFor="book-edit-description" error={fieldError(error, "description")}>
-      <textarea id="book-edit-description" rows={9} value={draft.description} onChange={(event) => onChange("description", event.target.value)} />
+      <LimitedRichTextEditor id="book-edit-description" value={draft.description} onChange={(value) => onChange("description", value)} />
     </FormField>
   </section>;
 }

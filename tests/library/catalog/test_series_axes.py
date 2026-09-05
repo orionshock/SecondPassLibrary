@@ -28,7 +28,11 @@ class LibrarySeriesAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertTrue(self.client.login(username="manager", password="pw"))
         created = self.client.post(
             "/api/v1/library/series/",
-            data={"name": "New Series", "sort_name": "Series, New", "summary": "Summary"},
+            data={
+                "name": "New Series",
+                "sort_name": "Series, New",
+                "summary": '<p class="lead">A <i>summary</i></p><style>bad</style>',
+            },
             content_type="application/json",
         )
 
@@ -38,6 +42,8 @@ class LibrarySeriesAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         )
         series = Series.objects.get(pk=created.json()["id"])
         self.assertEqual(series.normalized_name, "new series")
+        self.assertEqual(series.summary, "<p>A <i>summary</i></p>")
+        self.assertEqual(created.json()["summary"], series.summary)
         detail = self.client.get(f"/api/v1/library/series/{series.id}/")
         self.assertEqual(detail.status_code, 200)
         self.assertEqual(detail.json()["book_count"], 0)
@@ -438,7 +444,10 @@ class LibrarySeriesAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
 
         response = self.client.patch(
             f"/api/v1/library/series/{self.first_series.id}/",
-            data={"name": "Updated Series Name", "summary": "Updated series summary."},
+            data={
+                "name": "Updated Series Name",
+                "summary": '<ol><li data-value="1"><strong>Updated</strong></li></ol>',
+            },
             content_type="application/json",
         )
 
@@ -454,10 +463,13 @@ class LibrarySeriesAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
             related_books,
         )
         self.assertEqual(self.first_series.name, "Updated Series Name")
-        self.assertEqual(self.first_series.summary, "Updated series summary.")
+        self.assertEqual(
+            self.first_series.summary,
+            "<ol><li><strong>Updated</strong></li></ol>",
+        )
         self.assertEqual(self.first_series.normalized_name, "updated series name")
         self.assertEqual(response.json()["name"], "Updated Series Name")
-        self.assertEqual(response.json()["summary"], "Updated series summary.")
+        self.assertEqual(response.json()["summary"], self.first_series.summary)
 
     def test_reader_cannot_patch_summary(self):
         response = self.client.patch(

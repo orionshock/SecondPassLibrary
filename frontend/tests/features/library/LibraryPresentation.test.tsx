@@ -284,12 +284,13 @@ describe("Library Author and Series components", () => {
     expect(seriesMarkup).not.toContain("Delete");
   });
 
-  it("renders escaped selected context detail without redundant back actions", () => {
-    const biography = `<p>${"Visible biography ".repeat(20)}</p>`;
+  it("renders rich selected context detail without redundant back actions", () => {
+    const biography = `<p>${"Visible biography ".repeat(20)}<strong>formatted</strong></p>`;
     const named = renderToStaticMarkup(<SelectedLibraryContextPageRegion kind="author" name="Visible Author" blurb={biography} bookCount={1} />);
     expect(named).toContain("Visible Author");
     expect(named).toContain("1 Book");
-    expect(named).toContain("&lt;p&gt;");
+    expect(named).toContain("<strong>formatted</strong>");
+    expect(named).not.toContain("&lt;p&gt;");
     expect(named).toContain("Show more");
     expect(named).not.toContain("Books by");
     expect(named).not.toContain("Back to Authors");
@@ -300,6 +301,9 @@ describe("Library Author and Series components", () => {
     const editable = renderToStaticMarkup(<MemoryRouter><SelectedLibraryContextPageRegion kind="author" entityId="author-1" name="Visible Author" canEdit returnTo="/library?view=authors&author=author-1" /></MemoryRouter>);
     expect(editable).toContain('href="/library/authors/author-1/edit"');
     expect(named).not.toContain('href="/library/authors/author-1/edit"');
+
+    const seriesDetail = renderToStaticMarkup(<SelectedLibraryContextPageRegion kind="series" name="Visible Series" blurb="<ul><li>First volume</li></ul>" bookCount={3} />);
+    expect(seriesDetail).toContain("<ul><li>First volume</li></ul>");
   });
 
   it("uses Book controls and selected-context sort choices", () => {

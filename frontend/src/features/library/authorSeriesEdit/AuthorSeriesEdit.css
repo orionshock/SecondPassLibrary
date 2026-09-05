@@ -15,11 +15,6 @@
   grid-template-columns: minmax(7.5rem, 9.5rem) minmax(0, 1fr);
 }
 
-.author-series-edit-form textarea {
-  min-height: 12rem;
-  resize: vertical;
-}
-
 .author-series-name-combobox {
   position: relative;
   min-width: 0;

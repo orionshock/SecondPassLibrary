@@ -686,8 +686,18 @@ class AuthorBookContextInline(admin.TabularInline):
         return book_series.series.name if book_series else "-"
 
 
+class AuthorAdminForm(forms.ModelForm):
+    class Meta:
+        model = Author
+        fields = "__all__"
+
+    def clean_biography(self):
+        return sanitize_limited_html(self.cleaned_data.get("biography"))
+
+
 @admin.register(Author)
 class AuthorAdmin(admin.ModelAdmin):
+    form = AuthorAdminForm
     search_fields = ["name", "sort_name", "normalized_name"]
     inlines = [AuthorBookContextInline]
 
@@ -728,8 +738,18 @@ class SeriesBookContextInline(admin.TabularInline):
         return primary.author.name if primary else "-"
 
 
+class SeriesAdminForm(forms.ModelForm):
+    class Meta:
+        model = Series
+        fields = "__all__"
+
+    def clean_summary(self):
+        return sanitize_limited_html(self.cleaned_data.get("summary"))
+
+
 @admin.register(Series)
 class SeriesAdmin(admin.ModelAdmin):
+    form = SeriesAdminForm
     search_fields = ["name", "sort_name", "normalized_name"]
     inlines = [SeriesBookContextInline]
 

@@ -62,6 +62,29 @@ class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertEqual(author.sort_name, "Writer, New")
         self.assertFalse(BookAuthor.objects.filter(author=author).exists())
 
+    def test_create_author_sanitizes_biography_and_returns_stored_html(self):
+        self.client.logout()
+        self.assertTrue(self.client.login(username="manager", password="pw"))
+
+        response = self.client.post(
+            "/api/v1/library/authors/",
+            data={
+                "name": "Rich Writer",
+                "biography": (
+                    '<p class="lead">Writes <strong>books</strong></p>'
+                    '<img src="bad"><script>alert("no")</script>'
+                ),
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["biography"], "<p>Writes <strong>books</strong></p>")
+        self.assertEqual(
+            Author.objects.get(pk=response.json()["id"]).biography,
+            response.json()["biography"],
+        )
+
     def test_duplicate_author_names_are_allowed(self):
         self.client.logout()
         self.assertTrue(self.client.login(username="manager", password="pw"))
@@ -527,7 +550,10 @@ class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
 
         response = self.client.patch(
             f"/api/v1/library/authors/{self.alpha.id}/",
-            data={"name": "Updated Author Name", "biography": "Updated biography."},
+            data={
+                "name": "Updated Author Name",
+                "biography": '<ul><li onclick="bad()"><em>Updated</em></li></ul>',
+            },
             content_type="application/json",
         )
 
@@ -543,10 +569,10 @@ class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
             related_book_ids,
         )
         self.assertEqual(self.alpha.name, "Updated Author Name")
-        self.assertEqual(self.alpha.biography, "Updated biography.")
+        self.assertEqual(self.alpha.biography, "<ul><li><em>Updated</em></li></ul>")
         self.assertEqual(self.alpha.normalized_name, "updated author name")
         self.assertEqual(response.json()["name"], "Updated Author Name")
-        self.assertEqual(response.json()["biography"], "Updated biography.")
+        self.assertEqual(response.json()["biography"], self.alpha.biography)
 
     def test_reader_cannot_patch_biography(self):
         response = self.client.patch(
