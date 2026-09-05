@@ -28,9 +28,8 @@ complete, mutually consistent database and userdata backup.
 
 ## Docker Compose
 
-The example web service is `secondpasslibrary`;
-`secondpasslibrary-maintenance-worker` is its separate background-maintenance
-consumer. Both mount the named volume
+The Compose project is `secondpasslibrary`. Its web service is `server`;
+`worker` is its separate background-maintenance consumer. Both mount the named volume
 `secondpass_userdata` at `/app/userdata`, while only the web service publishes
 `127.0.0.1:8000:8000`. Do not scale the service or increase its worker count
 while it uses SQLite.
@@ -71,7 +70,7 @@ Web startup performs:
 2. `python manage.py migrate --noinput`
 3. `python -m uvicorn secondpass.asgi:application --host 0.0.0.0 --port 8000 --workers 1 --no-proxy-headers --no-access-log`
 
-After web health succeeds, `secondpasslibrary-maintenance-worker` runs
+After web health succeeds, `worker` runs
 `python manage.py run_huey`. Huey's queue uses the separate persistent SQLite
 file `/app/userdata/db/huey.sqlite3`, not Django's application database, and
 the worker exposes no network port. Keep exactly one maintenance worker for

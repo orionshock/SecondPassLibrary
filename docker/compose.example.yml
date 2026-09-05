@@ -1,5 +1,7 @@
+name: secondpasslibrary
+
 services:
-  secondpasslibrary:
+  server:
     build:
       context: ..
       dockerfile: docker/Dockerfile
@@ -20,7 +22,7 @@ services:
       start_period: 30s
     restart: unless-stopped
 
-  secondpasslibrary-maintenance-worker:
+  worker:
     build:
       context: ..
       dockerfile: docker/Dockerfile
@@ -34,7 +36,7 @@ services:
     network_mode: "none"
     command: ["worker"]
     depends_on:
-      secondpasslibrary:
+      server:
         condition: service_healthy
     restart: unless-stopped
 

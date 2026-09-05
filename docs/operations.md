@@ -34,7 +34,7 @@ For the default named volume, the existing quiesced backup procedure is:
 ```powershell
 New-Item -ItemType Directory -Force backups
 docker compose -f docker/compose.yml stop
-docker compose -f docker/compose.yml run --rm --no-deps -v ./backups:/backup --entrypoint python secondpasslibrary -c "import tarfile; archive=tarfile.open('/backup/secondpass-userdata.tar.gz','w:gz'); archive.add('/app/userdata', arcname='userdata'); archive.close()"
+docker compose -f docker/compose.yml run --rm --no-deps -v ./backups:/backup --entrypoint python server -c "import tarfile; archive=tarfile.open('/backup/secondpass-userdata.tar.gz','w:gz'); archive.add('/app/userdata', arcname='userdata'); archive.close()"
 docker compose -f docker/compose.yml start
 ```
 
@@ -59,9 +59,9 @@ pairing and stage cleanup. Review Shelf cleanup before applying it.
 ### Client pairing requests
 
 ```bash
-docker compose -f docker/compose.yml exec -T secondpasslibrary python manage.py cleanup_client_pairing_requests --dry-run
-docker compose -f docker/compose.yml exec -T secondpasslibrary python manage.py cleanup_client_pairing_requests
-docker compose -f docker/compose.yml exec -T secondpasslibrary python manage.py cleanup_client_pairing_requests --limit 1000
+docker compose -f docker/compose.yml exec -T server python manage.py cleanup_client_pairing_requests --dry-run
+docker compose -f docker/compose.yml exec -T server python manage.py cleanup_client_pairing_requests
+docker compose -f docker/compose.yml exec -T server python manage.py cleanup_client_pairing_requests --limit 1000
 ```
 
 The command preserves active, unexpired requests. Expired pending or approved
@@ -72,8 +72,8 @@ bounds one run from 1 through 10,000 rows and defaults to 1,000.
 ### Marginalia import stages
 
 ```bash
-docker compose -f docker/compose.yml exec -T secondpasslibrary python manage.py cleanup_marginalia_import_stages --dry-run
-docker compose -f docker/compose.yml exec -T secondpasslibrary python manage.py cleanup_marginalia_import_stages
+docker compose -f docker/compose.yml exec -T server python manage.py cleanup_marginalia_import_stages --dry-run
+docker compose -f docker/compose.yml exec -T server python manage.py cleanup_marginalia_import_stages
 ```
 
 The command removes expired stage records and their protected staged files, and
@@ -85,8 +85,8 @@ expired records without deleting them. This command has no batch-limit option.
 ### Unavailable personal Shelf items
 
 ```bash
-docker compose -f docker/compose.yml exec -T secondpasslibrary python manage.py cleanup_shelves
-docker compose -f docker/compose.yml exec -T secondpasslibrary python manage.py cleanup_shelves --apply
+docker compose -f docker/compose.yml exec -T server python manage.py cleanup_shelves
+docker compose -f docker/compose.yml exec -T server python manage.py cleanup_shelves --apply
 ```
 
 The default invocation is the dry run. `--apply` permanently removes currently
@@ -120,7 +120,7 @@ No arbitrary command, callable, argument, or schedule expression can be
 submitted. Library/Book import and development fixture commands are excluded.
 The cleanup management commands and Huey adapters call the same runtime
 operations. CLI commands execute synchronously without the worker; scheduled
-and Admin runs require `secondpasslibrary-maintenance-worker`.
+and Admin runs require `worker`.
 
 Important repair flows are superuser-only:
 
@@ -186,7 +186,7 @@ error logging.
 Inspect bounded container logs with:
 
 ```powershell
-docker compose -f docker/compose.yml logs --tail 200 secondpasslibrary
+docker compose -f docker/compose.yml logs --tail 200 server
 ```
 
 ## Troubleshooting
