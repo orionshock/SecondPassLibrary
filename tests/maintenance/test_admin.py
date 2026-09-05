@@ -6,8 +6,21 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
+from core.models import ServerSetting
+from core.server_settings import (
+    MARGINALIA_ACTIVE_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING,
+    MARGINALIA_CLOSED_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING,
+    clear_server_settings_cache,
+    get_marginalia_active_session_tombstone_retention_days,
+    get_marginalia_closed_session_tombstone_retention_days,
+)
 from maintenance.admin import MaintenanceTaskConfigAdmin
-from maintenance.models import MaintenanceTaskConfig, MaintenanceTaskRun
+from maintenance.models import (
+    MaintenanceFrequency,
+    MaintenanceTaskConfig,
+    MaintenanceTaskRun,
+)
+from marginalia.annotations.maintenance import execute_deleted_annotation_cleanup
 
 
 @override_settings(
@@ -16,6 +29,7 @@ from maintenance.models import MaintenanceTaskConfig, MaintenanceTaskRun
 )
 class MaintenanceAdminTests(TestCase):
     def setUp(self):
+        clear_server_settings_cache()
         self.superuser = get_user_model().objects.create_superuser(
             username="maintenance-owner",
             password="testpass",
@@ -24,6 +38,9 @@ class MaintenanceAdminTests(TestCase):
         self.configuration = MaintenanceTaskConfig.objects.get(
             task_key="cleanup_client_pairing_requests"
         )
+
+    def tearDown(self):
+        clear_server_settings_cache()
 
     def test_surface_is_superuser_only_and_identity_is_read_only(self):
         staff = get_user_model().objects.create_user(
@@ -97,6 +114,110 @@ class MaintenanceAdminTests(TestCase):
             reverse("admin:maintenance_maintenancetaskrun_change", args=(run.pk,)),
         )
         enqueue.assert_called_once_with(run.pk)
+
+    def test_deleted_annotation_task_page_owns_retention_configuration(self):
+        configuration = MaintenanceTaskConfig.objects.get(
+            task_key="cleanup_deleted_annotations"
+        )
+        self.client.force_login(self.superuser)
+        url = reverse(
+            "admin:maintenance_maintenancetaskconfig_change",
+            args=(configuration.pk,),
+        )
+
+        page = self.client.get(url)
+
+        self.assertEqual(page.status_code, 200)
+        self.assertIn("active_retention_days", page.context["adminform"].form.fields)
+        self.assertIn("closed_retention_days", page.context["adminform"].form.fields)
+        list_page = self.client.get(
+            reverse("admin:maintenance_maintenancetaskconfig_changelist")
+        )
+        cleanup_list_form = next(
+            form
+            for form in list_page.context["cl"].formset.forms
+            if form.instance.task_key == configuration.task_key
+        )
+        self.assertNotIn("active_retention_days", cleanup_list_form.fields)
+        self.assertNotIn("closed_retention_days", cleanup_list_form.fields)
+
+        response = self.client.post(
+            url,
+            {
+                "enabled": "on",
+                "frequency": MaintenanceFrequency.MONTHLY,
+                "active_retention_days": "35",
+                "closed_retention_days": "9",
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("admin:maintenance_maintenancetaskconfig_changelist"),
+        )
+        self.assertEqual(
+            get_marginalia_active_session_tombstone_retention_days(), 35
+        )
+        self.assertEqual(
+            get_marginalia_closed_session_tombstone_retention_days(), 9
+        )
+        result = execute_deleted_annotation_cleanup(dry_run=True)
+        self.assertEqual(result.counts["active_retention_days"], 35)
+        self.assertEqual(result.counts["closed_retention_days"], 9)
+
+    def test_deleted_annotation_task_page_rejects_invalid_retention(self):
+        configuration = MaintenanceTaskConfig.objects.get(
+            task_key="cleanup_deleted_annotations"
+        )
+        self.client.force_login(self.superuser)
+        url = reverse(
+            "admin:maintenance_maintenancetaskconfig_change",
+            args=(configuration.pk,),
+        )
+
+        response = self.client.post(
+            url,
+            {
+                "enabled": "on",
+                "frequency": MaintenanceFrequency.MONTHLY,
+                "active_retention_days": "-1",
+                "closed_retention_days": "7",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            "active_retention_days", response.context["adminform"].form.errors
+        )
+        self.assertEqual(
+            get_marginalia_active_session_tombstone_retention_days(), 28
+        )
+        self.assertEqual(
+            get_marginalia_closed_session_tombstone_retention_days(), 7
+        )
+
+    def test_server_settings_admin_excludes_task_owned_retention_rows(self):
+        self.client.force_login(self.superuser)
+
+        response = self.client.get(reverse("admin:core_serversetting_changelist"))
+
+        self.assertEqual(response.status_code, 200)
+        visible_keys = set(
+            response.context["cl"].queryset.values_list("key", flat=True)
+        )
+        self.assertNotIn(
+            MARGINALIA_ACTIVE_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING,
+            visible_keys,
+        )
+        self.assertNotIn(
+            MARGINALIA_CLOSED_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING,
+            visible_keys,
+        )
+        self.assertTrue(
+            ServerSetting.objects.filter(
+                key=MARGINALIA_ACTIVE_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING
+            ).exists()
+        )
 
     def test_run_now_rejects_duplicate_active_run(self):
         self.client.force_login(self.superuser)

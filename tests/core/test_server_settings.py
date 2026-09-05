@@ -5,7 +5,6 @@ import uuid
 from django.core.cache import cache
 from django.test import TestCase, override_settings
 
-from core.admin import ServerSettingAdminForm
 from core.checks import reading_client_base_url_check
 from core.models import ServerSetting
 from core.server_settings import (
@@ -139,16 +138,6 @@ class ServerSettingsServiceTests(TestCase):
             )
             with self.subTest(invalid=invalid), self.assertRaises(ValueError):
                 get_marginalia_active_session_tombstone_retention_days()
-
-    def test_annotation_tombstone_retention_admin_rejects_negative_days(self):
-        ensure_editable_server_settings()
-        setting = ServerSetting.objects.get(
-            key=MARGINALIA_ACTIVE_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING
-        )
-
-        form = ServerSettingAdminForm(data={"value": -1}, instance=setting)
-
-        self.assertFalse(form.is_valid())
 
     def test_advanced_library_groups_are_disabled_by_default(self):
         self.assertFalse(advanced_library_groups_enabled())

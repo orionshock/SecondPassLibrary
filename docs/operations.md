@@ -94,11 +94,10 @@ docker compose -f docker/compose.yml exec -T server python manage.py cleanup_del
 Soft-deleted Annotation tombstones are permanently deleted according to their
 deletion timestamp. Tombstones in closed Reading Sessions are retained for 7
 days by default; tombstones in active Sessions are retained for 28 days. The
-limits are stored as Server Settings named **Closed Session Annotation
-Tombstone Retention** and **Active Session Annotation Tombstone Retention**.
-Both must be non-negative whole-day values. `--dry-run` reports eligibility
-without deleting rows. `--limit` bounds one run from 1 through 10,000 rows and
-defaults to 1,000.
+limits use the existing server-settings storage but are edited on the **Cleanup
+Deleted Marginalia Annotations** Maintenance Task page. Both must be
+non-negative whole-day values. `--dry-run` reports eligibility without deleting
+rows. `--limit` bounds one run from 1 through 10,000 rows and defaults to 1,000.
 
 The registered Maintenance task defaults to Monthly and may also be run
 manually with **Run now** in Django Admin. Permanent cleanup deletes only

@@ -1,9 +1,17 @@
+from django import forms
 from django.contrib import admin, messages
 from django.http import Http404
 from django.shortcuts import redirect
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
 from django.utils.html import format_html
+
+from core.server_settings import (
+    get_marginalia_active_session_tombstone_retention_days,
+    get_marginalia_closed_session_tombstone_retention_days,
+    set_marginalia_active_session_tombstone_retention_days,
+    set_marginalia_closed_session_tombstone_retention_days,
+)
 
 from .models import MaintenanceTaskConfig, MaintenanceTaskRun
 from .registry import get_task_definition
@@ -34,8 +42,52 @@ class SuperuserMaintenanceAdminMixin:
         return False
 
 
+DELETED_ANNOTATION_CLEANUP_TASK_KEY = "cleanup_deleted_annotations"
+
+
+class MaintenanceTaskConfigAdminForm(forms.ModelForm):
+    active_retention_days = forms.IntegerField(
+        required=False,
+        min_value=0,
+        label="Active Session Annotation Tombstone Retention",
+        help_text=(
+            "Days to retain tombstoned Annotations while their Reading Session "
+            "remains active before permanent deletion."
+        ),
+    )
+    closed_retention_days = forms.IntegerField(
+        required=False,
+        min_value=0,
+        label="Closed Session Annotation Tombstone Retention",
+        help_text=(
+            "Days to retain tombstoned Annotations once their Reading Session "
+            "is closed before permanent deletion."
+        ),
+    )
+
+    class Meta:
+        model = MaintenanceTaskConfig
+        fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if self.instance.task_key != DELETED_ANNOTATION_CLEANUP_TASK_KEY:
+            self.fields.pop("active_retention_days", None)
+            self.fields.pop("closed_retention_days", None)
+            return
+        self.fields["active_retention_days"].required = True
+        self.fields["closed_retention_days"].required = True
+        self.initial["active_retention_days"] = (
+            get_marginalia_active_session_tombstone_retention_days()
+        )
+        self.initial["closed_retention_days"] = (
+            get_marginalia_closed_session_tombstone_retention_days()
+        )
+
+
 @admin.register(MaintenanceTaskConfig)
 class MaintenanceTaskConfigAdmin(SuperuserMaintenanceAdminMixin, admin.ModelAdmin):
+    form = MaintenanceTaskConfigAdminForm
     actions = None
     fields = (
         "task_key",
@@ -67,6 +119,50 @@ class MaintenanceTaskConfigAdmin(SuperuserMaintenanceAdminMixin, admin.ModelAdmi
         "run_now_link",
     )
     list_editable = ("enabled", "frequency")
+
+    def get_changelist_form(self, request, **kwargs):
+        return super().get_changelist_form(
+            request,
+            form=forms.ModelForm,
+            **kwargs,
+        )
+
+    def get_fieldsets(self, request, obj=None):
+        if obj is None or obj.task_key != DELETED_ANNOTATION_CLEANUP_TASK_KEY:
+            return super().get_fieldsets(request, obj)
+        return (
+            (
+                "Task",
+                {"fields": ("task_key", "task_name", "task_description")},
+            ),
+            ("Schedule", {"fields": ("enabled", "frequency")}),
+            (
+                "Annotation tombstone retention",
+                {"fields": ("active_retention_days", "closed_retention_days")},
+            ),
+            (
+                "Execution",
+                {
+                    "fields": (
+                        "next_due_at",
+                        "last_dispatched_at",
+                        "latest_run",
+                        "latest_status",
+                    )
+                },
+            ),
+        )
+
+    def save_model(self, request, obj, form, change):
+        super().save_model(request, obj, form, change)
+        if obj.task_key != DELETED_ANNOTATION_CLEANUP_TASK_KEY:
+            return
+        set_marginalia_active_session_tombstone_retention_days(
+            form.cleaned_data["active_retention_days"]
+        )
+        set_marginalia_closed_session_tombstone_retention_days(
+            form.cleaned_data["closed_retention_days"]
+        )
 
     @admin.display(description="Name", ordering="task_key")
     def task_name(self, obj):

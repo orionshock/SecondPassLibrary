@@ -190,11 +190,35 @@ def get_marginalia_active_session_tombstone_retention_days() -> int:
     )
 
 
+def set_marginalia_closed_session_tombstone_retention_days(value: int) -> None:
+    _set_nonnegative_integer_setting(
+        MARGINALIA_CLOSED_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING,
+        value,
+    )
+
+
+def set_marginalia_active_session_tombstone_retention_days(value: int) -> None:
+    _set_nonnegative_integer_setting(
+        MARGINALIA_ACTIVE_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING,
+        value,
+    )
+
+
 def _nonnegative_integer_setting(key: str, default: int) -> int:
     value = get_server_setting(key, default=default)
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         raise ValueError(f"{key} must be a non-negative integer.")
     return value
+
+
+def _set_nonnegative_integer_setting(key: str, value: int) -> None:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ValueError(f"{key} must be a non-negative integer.")
+    set_server_setting(
+        key=key,
+        value=value,
+        description=EDITABLE_SERVER_SETTING_DEFAULTS[key]["description"],
+    )
 
 
 def get_server_name() -> str:
