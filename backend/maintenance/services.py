@@ -106,9 +106,9 @@ def dispatch_due_tasks(*, now=None) -> int:
                 or configuration.next_due_at > now
             ):
                 continue
-            interval = MaintenanceFrequency(configuration.frequency).interval
+            frequency = MaintenanceFrequency(configuration.frequency)
             configuration.last_dispatched_at = now
-            configuration.next_due_at = now + interval
+            configuration.next_due_at = frequency.next_after(now)
             configuration.save(
                 update_fields=("last_dispatched_at", "next_due_at", "updated_at")
             )

@@ -8,6 +8,7 @@ from django.db.models import Count
 from django.forms.formsets import DELETION_FIELD_NAME
 from django.forms.models import BaseInlineFormSet
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.html import format_html
 
 from marginalia.annotations import services as annotation_services
@@ -253,11 +254,29 @@ class AnnotationAdmin(admin.ModelAdmin):
                 ]
             },
         ),
-        ("Deletion", {"fields": ["is_deleted"]}),
+        ("Deletion", {"fields": ["is_deleted", "deleted_at"]}),
         ("Record timestamps", {"fields": ["created_at", "updated_at"]}),
     ]
     date_hierarchy = "updated_at"
     list_per_page = 50
+
+    def get_readonly_fields(self, request, obj=None):
+        return [*self.readonly_fields, "deleted_at"]
+
+    def save_model(self, request, obj, form, change):
+        previous = (
+            Annotation.objects.filter(pk=obj.pk)
+            .values("is_deleted", "deleted_at")
+            .first()
+            if change
+            else None
+        )
+        was_deleted = bool(previous and previous["is_deleted"])
+        if obj.is_deleted and not was_deleted:
+            obj.deleted_at = timezone.now()
+        elif not obj.is_deleted:
+            obj.deleted_at = None
+        super().save_model(request, obj, form, change)
 
     def get_model_perms(self, request):
         return {}

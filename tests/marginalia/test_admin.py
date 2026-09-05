@@ -194,9 +194,36 @@ class MarginaliaAdminTests(IsolatedUserdataMixin, TestCase):
         keep.refresh_from_db()
         other.refresh_from_db()
         self.assertTrue(soft.is_deleted)
+        self.assertIsNotNone(soft.deleted_at)
         self.assertFalse(Annotation.objects.filter(pk=hard.pk).exists())
         self.assertFalse(keep.is_deleted)
         self.assertFalse(other.is_deleted)
+
+    def test_annotation_admin_preserves_and_clears_the_deletion_clock(self):
+        session = self.create_session()
+        annotation = self.create_annotation(session)
+
+        annotation.is_deleted = True
+        self.annotation_admin.save_model(
+            self.request, annotation, form=None, change=True
+        )
+        annotation.refresh_from_db()
+        deleted_at = annotation.deleted_at
+        self.assertIsNotNone(deleted_at)
+
+        annotation.location_label = "Chapter 2"
+        self.annotation_admin.save_model(
+            self.request, annotation, form=None, change=True
+        )
+        annotation.refresh_from_db()
+        self.assertEqual(annotation.deleted_at, deleted_at)
+
+        annotation.is_deleted = False
+        self.annotation_admin.save_model(
+            self.request, annotation, form=None, change=True
+        )
+        annotation.refresh_from_db()
+        self.assertIsNone(annotation.deleted_at)
 
     def test_detail_pages_expose_persisted_fields_without_fake_raw_token(self):
         session_fields = _fieldset_names(self.session_admin.fieldsets)

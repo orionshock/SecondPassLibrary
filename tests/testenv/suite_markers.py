@@ -129,6 +129,7 @@ _PATH_MARKERS: dict[str, tuple[str, ...]] = {
         "tests/library/test_admin_catalog_tag.py",
         "tests/library/test_admin_file_repair.py",
         "tests/marginalia/test_admin.py",
+        "tests/marginalia/test_deleted_annotation_cleanup.py",
         "tests/marginalia/test_export_api.py",
         "tests/marginalia/test_import_apply_api.py",
         "tests/marginalia/test_import_preview_api.py",

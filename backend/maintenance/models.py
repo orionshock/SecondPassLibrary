@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import uuid
-from datetime import timedelta
+from calendar import monthrange
+from datetime import datetime, timedelta
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -17,6 +18,7 @@ class MaintenanceFrequency(models.TextChoices):
     TWELVE_HOURS = "12_hours", "Every 12 hours"
     DAILY = "daily", "Daily"
     WEEKLY = "weekly", "Weekly"
+    MONTHLY = "monthly", "Monthly"
 
     @property
     def interval(self) -> timedelta | None:
@@ -27,7 +29,22 @@ class MaintenanceFrequency(models.TextChoices):
             "12_hours": timedelta(hours=12),
             "daily": timedelta(days=1),
             "weekly": timedelta(days=7),
+            "monthly": None,
         }[self.value]
+
+    def next_after(self, value: datetime) -> datetime | None:
+        if self == self.MANUAL:
+            return None
+        if self == self.MONTHLY:
+            next_month = value.month + 1
+            year = value.year + (next_month - 1) // 12
+            month = (next_month - 1) % 12 + 1
+            day = min(value.day, monthrange(year, month)[1])
+            return value.replace(year=year, month=month, day=day)
+        interval = self.interval
+        if interval is None:
+            raise ValueError(f"{self.value} has no automatic schedule.")
+        return value + interval
 
 
 class MaintenanceTaskConfig(models.Model):
@@ -74,11 +91,7 @@ class MaintenanceTaskConfig(models.Model):
         }
         if schedule_changed:
             frequency = MaintenanceFrequency(self.frequency)
-            self.next_due_at = (
-                timezone.now() + frequency.interval
-                if self.enabled and frequency.interval is not None
-                else None
-            )
+            self.next_due_at = frequency.next_after(timezone.now()) if self.enabled else None
         super().save(*args, **kwargs)
 
 

@@ -23,6 +23,16 @@ RESULT_COUNT_LABELS = MappingProxyType(
         "affected_shelves": "User-owned Shelves affected",
         "removed_items": "Unavailable Shelf items removed",
         "unavailable_items": "Unavailable Shelf items",
+        "active_candidates": "Eligible active-Session tombstones",
+        "active_selected": "Active-Session tombstones processed",
+        "active_deleted": "Active-Session tombstones permanently deleted",
+        "closed_candidates": "Eligible closed-Session tombstones",
+        "closed_selected": "Closed-Session tombstones processed",
+        "closed_deleted": "Closed-Session tombstones permanently deleted",
+        "total_deleted": "Annotation tombstones permanently deleted",
+        "deferred_by_limit": "Eligible tombstones deferred by limit",
+        "active_retention_days": "Active-Session retention days",
+        "closed_retention_days": "Closed-Session retention days",
     }
 )
 

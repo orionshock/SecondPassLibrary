@@ -77,6 +77,27 @@ class MaintenanceAdminTests(TestCase):
         self.assertNotContains(result_page, "History")
         self.assertNotContains(result_page, "Task key")
 
+    def test_deleted_annotation_run_now_queues_registered_task(self):
+        configuration = MaintenanceTaskConfig.objects.get(
+            task_key="cleanup_deleted_annotations"
+        )
+        self.client.force_login(self.superuser)
+
+        with (
+            patch("maintenance.services.enqueue_run") as enqueue,
+            self.captureOnCommitCallbacks(execute=True),
+        ):
+            response = self.client.post(
+                reverse("admin:maintenance_task_run_now", args=(configuration.pk,))
+            )
+
+        run = MaintenanceTaskRun.objects.get(task_key=configuration.task_key)
+        self.assertRedirects(
+            response,
+            reverse("admin:maintenance_maintenancetaskrun_change", args=(run.pk,)),
+        )
+        enqueue.assert_called_once_with(run.pk)
+
     def test_run_now_rejects_duplicate_active_run(self):
         self.client.force_login(self.superuser)
         run_url = reverse(

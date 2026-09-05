@@ -4,6 +4,8 @@ from django.test import TestCase
 from accounts.client_sessions import maintenance as pairing_maintenance
 from accounts.management.commands import cleanup_client_pairing_requests
 from marginalia.imports import maintenance as import_stage_maintenance
+from marginalia.annotations import maintenance as annotation_maintenance
+from marginalia.management.commands import cleanup_deleted_annotations
 from marginalia.management.commands import cleanup_marginalia_import_stages
 from maintenance.models import MaintenanceFrequency, MaintenanceTaskConfig
 from maintenance.registry import TASK_DEFINITIONS, get_task_definition
@@ -73,6 +75,11 @@ class MaintenanceRegistryTests(TestCase):
     def test_cli_and_huey_registry_share_the_same_executors(self):
         cases = (
             (
+                "cleanup_deleted_annotations",
+                annotation_maintenance.execute_deleted_annotation_cleanup,
+                cleanup_deleted_annotations.execute_deleted_annotation_cleanup,
+            ),
+            (
                 "cleanup_client_pairing_requests",
                 pairing_maintenance.execute_pairing_request_cleanup,
                 cleanup_client_pairing_requests.execute_pairing_request_cleanup,
@@ -92,3 +99,15 @@ class MaintenanceRegistryTests(TestCase):
             with self.subTest(key=key):
                 self.assertIs(get_task_definition(key).execute, shared_executor)
                 self.assertIs(command_executor, shared_executor)
+
+    def test_deleted_annotation_cleanup_defaults_to_monthly(self):
+        definition = get_task_definition("cleanup_deleted_annotations")
+
+        self.assertIsNotNone(definition)
+        self.assertEqual(definition.default_frequency, MaintenanceFrequency.MONTHLY)
+        self.assertEqual(
+            MaintenanceTaskConfig.objects.get(
+                task_key="cleanup_deleted_annotations"
+            ).frequency,
+            MaintenanceFrequency.MONTHLY,
+        )

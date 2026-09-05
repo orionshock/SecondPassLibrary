@@ -87,6 +87,14 @@ excluded from ordinary reads, activity, counts, import/export empty-Session
 policy, and archive serialization. A later upsert of the same Session-scoped
 client identity restores the row.
 
+The first soft deletion records an explicit deletion timestamp; retrying the
+same deletion does not renew that clock, and restoration clears it. Registered
+maintenance permanently removes expired tombstones. Closed-Session tombstones
+use a 7-day default retention, while active-Session tombstones use a more
+conservative 28-day default. Both values are configurable Server Settings, and
+the task defaults to a Monthly schedule. Operational execution and configuration
+are documented in [Operations](operations.md#deleted-marginalia-annotations).
+
 For a highlight body, `text` is the actual selected quotation and is the only
 quote text clients should normally display. `prefix` and `suffix` are immediate
 surrounding selector context retained for anchoring, matching, repair, and

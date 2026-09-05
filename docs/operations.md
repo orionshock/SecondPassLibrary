@@ -51,10 +51,11 @@ instance. Never combine an old database with unrelated media files.
 
 ## Cleanup and retention commands
 
-These commands are repeat-safe for the current database state. Django does not
-schedule them; run them manually or with host cron, systemd timers, or Windows
-Task Scheduler. A weekly run is a reasonable home-lab starting point for
-pairing and stage cleanup. Review Shelf cleanup before applying it.
+These commands are repeat-safe for the current database state and execute
+synchronously without Huey. Registered tasks can also run through the built-in
+Maintenance scheduler or Admin **Run now** workflow. Host cron or systemd may
+invoke the direct commands when an instance does not run the maintenance
+worker. Review Shelf cleanup before applying it.
 
 ### Client pairing requests
 
@@ -81,6 +82,27 @@ safe digest-named orphan files left after best-effort post-commit cleanup. It
 preserves unexpired stages and imported Marginalia. Runtime access already
 expires stages after two hours; cleanup reclaims storage. `--dry-run` reports
 expired records without deleting them. This command has no batch-limit option.
+
+### Deleted Marginalia Annotations
+
+```bash
+docker compose -f docker/compose.yml exec -T server python manage.py cleanup_deleted_annotations --dry-run
+docker compose -f docker/compose.yml exec -T server python manage.py cleanup_deleted_annotations
+docker compose -f docker/compose.yml exec -T server python manage.py cleanup_deleted_annotations --limit 1000
+```
+
+Soft-deleted Annotation tombstones are permanently deleted according to their
+deletion timestamp. Tombstones in closed Reading Sessions are retained for 7
+days by default; tombstones in active Sessions are retained for 28 days. The
+limits are stored as Server Settings named **Closed Session Annotation
+Tombstone Retention** and **Active Session Annotation Tombstone Retention**.
+Both must be non-negative whole-day values. `--dry-run` reports eligibility
+without deleting rows. `--limit` bounds one run from 1 through 10,000 rows and
+defaults to 1,000.
+
+The registered Maintenance task defaults to Monthly and may also be run
+manually with **Run now** in Django Admin. Permanent cleanup deletes only
+eligible Annotation rows; it does not delete Reading Sessions or Books.
 
 ### Unavailable personal Shelf items
 
@@ -111,8 +133,8 @@ workflows; normal authority is documented in [Permissions](permissions.md).
 The Admin **Maintenance Tasks** area is superuser-only. Approved task identity,
 name, description, and executable are fixed in code. Admin controls only
 enabled state and one bounded frequency: Manual only, Hourly, Every 6 hours,
-Every 12 hours, Daily, or Weekly. Definitions initially synchronize as disabled;
-a superuser may still use **Run now** as an explicit override. The run page shows
+Every 12 hours, Daily, Weekly, or Monthly. Definitions initially synchronize as
+enabled; a superuser may still use **Run now** as an explicit override. The run page shows
 queued, running, succeeded, or failed state and a bounded result; application
 logs remain the diagnostic record.
 

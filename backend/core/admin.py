@@ -97,6 +97,18 @@ class ServerSettingAdminForm(forms.ModelForm):
             )
             return
 
+        if key in {
+            server_settings.MARGINALIA_ACTIVE_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING,
+            server_settings.MARGINALIA_CLOSED_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING,
+        }:
+            self.fields["value"] = forms.IntegerField(
+                label=self.instance.display_key,
+                help_text=self.instance.description,
+                min_value=0,
+                initial=value,
+            )
+            return
+
         if key == PUBLIC_GROUP_ID_SETTING:
             group_field = BookGroupAssignment._meta.get_field("group")
             self.fields["value"] = forms.ModelChoiceField(

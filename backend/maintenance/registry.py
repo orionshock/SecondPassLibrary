@@ -5,6 +5,7 @@ from typing import Callable
 
 from accounts.client_sessions.maintenance import execute_pairing_request_cleanup
 from marginalia.imports.maintenance import execute_import_stage_cleanup
+from marginalia.annotations.maintenance import execute_deleted_annotation_cleanup
 from shelves.maintenance import execute_unavailable_shelf_item_cleanup
 
 from .models import MaintenanceFrequency
@@ -28,6 +29,16 @@ TASK_DEFINITIONS = (
         description="Remove expired and retained terminal Reader pairing requests.",
         default_frequency=MaintenanceFrequency.DAILY,
         execute=execute_pairing_request_cleanup,
+    ),
+    MaintenanceTaskDefinition(
+        key="cleanup_deleted_annotations",
+        name="Cleanup Deleted Marginalia Annotations",
+        description=(
+            "Permanently delete expired Annotation tombstones using active and "
+            "closed Reading Session retention policies."
+        ),
+        default_frequency=MaintenanceFrequency.MONTHLY,
+        execute=execute_deleted_annotation_cleanup,
     ),
     MaintenanceTaskDefinition(
         key="cleanup_marginalia_import_stages",

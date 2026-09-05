@@ -29,6 +29,14 @@ READING_CLIENT_BASE_URL_MAX_LEN = 2048
 DEFAULT_SERVER_NAME = "Second Pass Library"
 ADVANCED_LIBRARY_GROUPS_SETTING = "advanced_library_groups_enabled"
 APPLICATION_LOG_LEVEL_SETTING = "application_log_level"
+MARGINALIA_CLOSED_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING = (
+    "marginalia_closed_session_tombstone_retention_days"
+)
+MARGINALIA_ACTIVE_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING = (
+    "marginalia_active_session_tombstone_retention_days"
+)
+DEFAULT_MARGINALIA_CLOSED_SESSION_TOMBSTONE_RETENTION_DAYS = 7
+DEFAULT_MARGINALIA_ACTIVE_SESSION_TOMBSTONE_RETENTION_DAYS = 28
 APPLICATION_LOG_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR")
 DEFAULT_APPLICATION_LOG_LEVEL = "INFO"
 APPLICATION_LOGGER_NAMES = (
@@ -69,6 +77,18 @@ EDITABLE_SERVER_SETTING_DEFAULTS = {
         "value": DEFAULT_APPLICATION_LOG_LEVEL,
         "description": (
             "Controls diagnostic output from Second Pass Library application code."
+        ),
+    },
+    MARGINALIA_CLOSED_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING: {
+        "value": DEFAULT_MARGINALIA_CLOSED_SESSION_TOMBSTONE_RETENTION_DAYS,
+        "description": (
+            "Days to retain soft-deleted Annotations from closed Reading Sessions."
+        ),
+    },
+    MARGINALIA_ACTIVE_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING: {
+        "value": DEFAULT_MARGINALIA_ACTIVE_SESSION_TOMBSTONE_RETENTION_DAYS,
+        "description": (
+            "Days to retain soft-deleted Annotations from active Reading Sessions."
         ),
     },
 }
@@ -154,6 +174,27 @@ def ensure_editable_server_settings() -> None:
 
 def _normalize_str(value: Any) -> str:
     return str(value or "").strip()
+
+
+def get_marginalia_closed_session_tombstone_retention_days() -> int:
+    return _nonnegative_integer_setting(
+        MARGINALIA_CLOSED_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING,
+        DEFAULT_MARGINALIA_CLOSED_SESSION_TOMBSTONE_RETENTION_DAYS,
+    )
+
+
+def get_marginalia_active_session_tombstone_retention_days() -> int:
+    return _nonnegative_integer_setting(
+        MARGINALIA_ACTIVE_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING,
+        DEFAULT_MARGINALIA_ACTIVE_SESSION_TOMBSTONE_RETENTION_DAYS,
+    )
+
+
+def _nonnegative_integer_setting(key: str, default: int) -> int:
+    value = get_server_setting(key, default=default)
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ValueError(f"{key} must be a non-negative integer.")
+    return value
 
 
 def get_server_name() -> str:

@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
 
 from django.db import IntegrityError
@@ -81,6 +81,41 @@ class MaintenanceSchedulingTests(TestCase):
         )
         self.assertEqual(MaintenanceFrequency.DAILY.interval, timedelta(days=1))
         self.assertEqual(MaintenanceFrequency.WEEKLY.interval, timedelta(days=7))
+        self.assertIsNone(MaintenanceFrequency.MONTHLY.interval)
+
+    def test_monthly_frequency_advances_by_calendar_month(self):
+        september = datetime(2026, 9, 1, 8, 30, tzinfo=UTC)
+        january_end = datetime(2026, 1, 31, 8, 30, tzinfo=UTC)
+
+        self.assertEqual(
+            MaintenanceFrequency.MONTHLY.next_after(september),
+            datetime(2026, 10, 1, 8, 30, tzinfo=UTC),
+        )
+        self.assertEqual(
+            MaintenanceFrequency.MONTHLY.next_after(january_end),
+            datetime(2026, 2, 28, 8, 30, tzinfo=UTC),
+        )
+
+    def test_monthly_dispatch_advances_from_current_run_without_catchup(self):
+        now = datetime(2026, 10, 31, 8, 30, tzinfo=UTC)
+        MaintenanceTaskConfig.objects.exclude(pk=self.configuration.pk).update(
+            enabled=False,
+            next_due_at=None,
+        )
+        MaintenanceTaskConfig.objects.filter(pk=self.configuration.pk).update(
+            enabled=True,
+            frequency=MaintenanceFrequency.MONTHLY,
+            next_due_at=datetime(2026, 8, 31, 8, 30, tzinfo=UTC),
+        )
+
+        with patch("maintenance.services.enqueue_run"):
+            self.assertEqual(dispatch_due_tasks(now=now), 1)
+
+        self.configuration.refresh_from_db()
+        self.assertEqual(
+            self.configuration.next_due_at,
+            datetime(2026, 11, 30, 8, 30, tzinfo=UTC),
+        )
 
     def test_dispatcher_automatic_retention_keeps_90_days_and_active_runs(self):
         now = timezone.now()

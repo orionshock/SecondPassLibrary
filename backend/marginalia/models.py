@@ -240,6 +240,7 @@ class Annotation(TimeStampedModel):
         default="",
     )
     is_deleted = models.BooleanField(default=False)
+    deleted_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         ordering = ["-created_at", "-id"]
@@ -249,8 +250,8 @@ class Annotation(TimeStampedModel):
                 name="marg_sess_del_created_idx",
             ),
             models.Index(
-                fields=["session", "is_deleted", "updated_at"],
-                name="marg_sess_del_updated_idx",
+                fields=["is_deleted", "deleted_at"],
+                name="marg_ann_del_at_idx",
             ),
         ]
         constraints = [

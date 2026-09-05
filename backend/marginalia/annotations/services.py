@@ -54,7 +54,10 @@ def synchronize_annotations(*, user, session_id, operations: Sequence[dict]) -> 
         if operation["action"] == "delete":
             if annotation is not None and not annotation.is_deleted:
                 annotation.is_deleted = True
-                annotation.save(update_fields=["is_deleted", "updated_at"])
+                annotation.deleted_at = timezone.now()
+                annotation.save(
+                    update_fields=["is_deleted", "deleted_at", "updated_at"]
+                )
             continue
 
         values = _annotation_values(operation["annotation"])
@@ -72,7 +75,8 @@ def synchronize_annotations(*, user, session_id, operations: Sequence[dict]) -> 
         ]
         if annotation.is_deleted:
             annotation.is_deleted = False
-            changed_fields.append("is_deleted")
+            annotation.deleted_at = None
+            changed_fields.extend(["is_deleted", "deleted_at"])
         if not changed_fields:
             continue
         for field, value in values.items():
@@ -85,11 +89,12 @@ def synchronize_annotations(*, user, session_id, operations: Sequence[dict]) -> 
 @transaction.atomic
 def soft_delete_annotations(*, session, annotation_ids, actor=None) -> int:
     """Tombstone selected annotations belonging to one Reading Session."""
+    deleted_at = timezone.now()
     updated = Annotation.objects.filter(
         session=session,
         pk__in=annotation_ids,
         is_deleted=False,
-    ).update(is_deleted=True, updated_at=timezone.now())
+    ).update(is_deleted=True, deleted_at=deleted_at, updated_at=deleted_at)
     if updated:
         info_on_commit(
             logger,
@@ -116,6 +121,21 @@ def hard_delete_annotations(*, session, annotation_ids, actor=None) -> int:
             user_log_label(actor),
         )
     return deleted
+
+
+@transaction.atomic
+def hard_delete_annotation_tombstones(
+    *, annotation_ids, session_status: str, deleted_before
+) -> int:
+    """Permanently delete a bounded set of tombstones that remain eligible."""
+    _deleted_total, deleted_by_model = Annotation.objects.filter(
+        pk__in=annotation_ids,
+        is_deleted=True,
+        deleted_at__isnull=False,
+        deleted_at__lt=deleted_before,
+        session__status=session_status,
+    ).delete()
+    return deleted_by_model.get(Annotation._meta.label, 0)
 
 
 def _operation_client_id(operation: dict) -> str:

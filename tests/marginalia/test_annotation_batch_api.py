@@ -103,13 +103,21 @@ class MarginaliaAnnotationBatchAPITests(APITestCase):
         self.post([highlight("same")])
         updated = self.post([highlight("same", text="Replacement")])
         deleted = self.post([{"action": "delete", "client_id": "same"}])
+        tombstone = Annotation.objects.get(session=self.session, client_id="same")
+        deleted_at = tombstone.deleted_at
+        repeated = self.post([{"action": "delete", "client_id": "same"}])
+        tombstone.refresh_from_db()
         restored = self.post([highlight("same", text="Restored")])
 
         annotation = Annotation.objects.get(session=self.session, client_id="same")
         self.assertEqual(updated.json()["annotations"][0]["body"]["text"], "Replacement")
         self.assertEqual(deleted.json()["annotations"], [])
+        self.assertEqual(repeated.json()["annotations"], [])
+        self.assertIsNotNone(deleted_at)
+        self.assertEqual(tombstone.deleted_at, deleted_at)
         self.assertEqual(restored.json()["annotations"][0]["body"]["text"], "Restored")
         self.assertFalse(annotation.is_deleted)
+        self.assertIsNone(annotation.deleted_at)
         self.assertEqual(Annotation.objects.filter(session=self.session).count(), 1)
 
     def test_mixed_create_update_delete_returns_complete_authoritative_collection(self):
@@ -128,6 +136,11 @@ class MarginaliaAnnotationBatchAPITests(APITestCase):
         self.assertEqual(rows["update-me"]["body"]["text"], "Updated")
         self.assertTrue(
             Annotation.objects.get(session=self.session, client_id="delete-me").is_deleted
+        )
+        self.assertIsNotNone(
+            Annotation.objects.get(
+                session=self.session, client_id="delete-me"
+            ).deleted_at
         )
 
     def test_invalid_operation_rejects_the_complete_batch(self):
