@@ -1,16 +1,17 @@
 import { apiClient, type ApiClient } from "../client";
 import { mapCompactBook, type CompactBookResponse } from "../library/compactBooks";
-import type { CompactBook } from "../library";
-import { bookBrowseParameters, bookSearchParameters, withQuery } from "../library/requests";
-import { collectPaginatedResults, toPage, type ApiPage, type Page } from "../pagination";
+import type { CatalogResultPage, CompactBook } from "../library";
+import { bookBrowseParameters, bookSearchParameters, toCatalogResultPage, withQuery } from "../library/requests";
+import type { CatalogResultPageResponse } from "../library/wire";
+import { collectPaginatedResults, type ApiPage } from "../pagination";
 import { mapBookAssignmentError, mapBookGroupAssignment, mapLibraryGroup } from "./mappers";
 import type { BookGroupAssignment, GroupBooksQuery, GroupBookSearchQuery, LibraryGroup } from "./types";
 import type { BookGroupAssignmentResponse, LibraryGroupResponse } from "./wire";
 
-export async function listGroupBooks(groupId: string, query: GroupBooksQuery = {}, client: ApiClient = apiClient): Promise<Page<CompactBook>> {
+export async function listGroupBooks(groupId: string, query: GroupBooksQuery = {}, client: ApiClient = apiClient): Promise<CatalogResultPage<CompactBook>> {
   const parameters = bookBrowseParameters(query);
-  return toPage(
-    await client.request<ApiPage<CompactBookResponse>>(withQuery(`/api/v1/library/groups/${encodeURIComponent(groupId)}/books/`, parameters)),
+  return toCatalogResultPage(
+    await client.request<CatalogResultPageResponse<CompactBookResponse>>(withQuery(`/api/v1/library/groups/${encodeURIComponent(groupId)}/books/`, parameters)),
     mapCompactBook,
   );
 }
@@ -19,9 +20,9 @@ export async function searchGroupBooks(
   groupId: string,
   query: GroupBookSearchQuery,
   client: ApiClient = apiClient,
-): Promise<Page<CompactBook>> {
-  return toPage(
-    await client.request<ApiPage<CompactBookResponse>>(withQuery(
+): Promise<CatalogResultPage<CompactBook>> {
+  return toCatalogResultPage(
+    await client.request<CatalogResultPageResponse<CompactBookResponse>>(withQuery(
       `/api/v1/library/groups/${encodeURIComponent(groupId)}/search`,
       bookSearchParameters(query),
     )),

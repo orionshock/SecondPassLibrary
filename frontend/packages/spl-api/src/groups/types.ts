@@ -37,6 +37,7 @@ export interface GroupBooksQuery {
 
 export interface GroupBookSearchQuery {
   q: string;
+  tag?: string;
   excludeShelfId?: string;
   ordering?: LibrarySearchOrdering;
   page?: number;

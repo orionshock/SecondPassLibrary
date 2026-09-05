@@ -17,6 +17,8 @@ from library.catalog.serializers.books import (
     BookListSerializer,
     BookUpdateSerializer,
 )
+from library.catalog.serializers.axes import CatalogTagAxisSerializer
+from library.catalog.tag_aggregates import catalog_tag_aggregates
 from library.groups.book_filters import exclude_books_assigned_to_group
 from library.models import BookAuthor, BookCatalogTag
 from library.queries import visible_books_for_user, visible_groups_for_user
@@ -60,7 +62,28 @@ def attach_visible_groups_to_book(*, book, user):
     return book
 
 
-class BookListView(LibraryBearerReadMixin, ListAPIView):
+class CatalogTagAggregateBookListMixin:
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        catalog_tags = CatalogTagAxisSerializer(
+            catalog_tag_aggregates(queryset), many=True
+        ).data
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            response = self.get_paginated_response(
+                self.get_serializer(page, many=True).data
+            )
+            response.data["catalog_tags"] = catalog_tags
+            return response
+        return Response(
+            {
+                "catalog_tags": catalog_tags,
+                "results": self.get_serializer(queryset, many=True).data,
+            }
+        )
+
+
+class BookListView(CatalogTagAggregateBookListMixin, LibraryBearerReadMixin, ListAPIView):
     serializer_class = BookListSerializer
 
     def get_queryset(self):

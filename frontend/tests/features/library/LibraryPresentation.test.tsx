@@ -171,6 +171,23 @@ describe("Library Books components", () => {
     expect(catalogTagSelection("mystery", "fantasy")).toBe("fantasy");
   });
 
+  it("keeps an active Catalog Tag visible when the contextual result set is empty", () => {
+    const active = { id: "tag-1", name: "Fantasy", slug: "fantasy", bookCount: 12 };
+    const markup = renderToStaticMarkup(<CatalogTagRailPageRegion
+      tags={[]}
+      activeTag="fantasy"
+      activeTagDetails={active}
+      loading={false}
+      onTagChange={vi.fn()}
+      onRetry={vi.fn()}
+    />);
+
+    expect(markup).toContain("Fantasy");
+    expect(markup).toContain('aria-pressed="true"');
+    expect(markup).not.toContain("(0)");
+    expect(markup).not.toContain("(12)");
+  });
+
   it("keeps only the tag-list body scrollable and exposes the 15-row responsive minimum", () => {
     const tags: CatalogTag[] = Array.from({ length: 18 }, (_, index) => ({
       id: `tag-${index}`,
@@ -371,4 +388,3 @@ describe("Library Author and Series components", () => {
     expect(authorLoading).toContain("Loading authors");
   });
 });
-

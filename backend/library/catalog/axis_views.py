@@ -30,6 +30,7 @@ from library.catalog.serializers.axes import (
     SeriesCreateSerializer,
     SeriesAxisUpdateSerializer,
 )
+from library.catalog.tag_aggregates import catalog_tag_aggregates
 from library.catalog.axis_services import (
     CatalogEntityInUseError,
     create_author,
@@ -92,6 +93,7 @@ class _BaseAxisMixin(LibraryBearerReadMixin):
 
 class _BaseAxisListView(_BaseAxisMixin, ListAPIView):
     use_cached_visibility = True
+    includes_catalog_tag_aggregates = True
 
     def get_queryset(self):
         queryset = self.axis_queryset()
@@ -105,18 +107,35 @@ class _BaseAxisListView(_BaseAxisMixin, ListAPIView):
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
+        if not self.includes_catalog_tag_aggregates:
+            return self._list_without_catalog_tag_aggregates(queryset)
+        catalog_tags = CatalogTagAxisSerializer(
+            catalog_tag_aggregates(self.catalog_tag_books(queryset)), many=True
+        ).data
         page = self.paginate_queryset(queryset)
         if page is not None:
             if self.preview_book_limit is not None:
                 self.attach_preview_books(page, limit=self.preview_book_limit)
             serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
+            response = self.get_paginated_response(serializer.data)
+            response.data["catalog_tags"] = catalog_tags
+            return response
 
         rows = list(queryset)
         if self.preview_book_limit is not None:
             self.attach_preview_books(rows, limit=self.preview_book_limit)
         serializer = self.get_serializer(rows, many=True)
-        return Response(serializer.data)
+        return Response({"catalog_tags": catalog_tags, "results": serializer.data})
+
+    def _list_without_catalog_tag_aggregates(self, queryset):
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        return Response(self.get_serializer(queryset, many=True).data)
+
+    def catalog_tag_books(self, filtered_axes):
+        raise NotImplementedError
 
 
 class _BaseAxisDetailView(_BaseAxisMixin, RetrieveAPIView):
@@ -173,6 +192,11 @@ class AuthorAxisMixin(_BaseAxisMixin):
             visible_books=self.preview_books_queryset(),
             limit=limit,
         )
+
+    def catalog_tag_books(self, filtered_axes):
+        return self.preview_books_queryset().filter(
+            book_authors__author__in=filtered_axes
+        ).distinct()
 
 
 class AuthorListView(AuthorAxisMixin, _BaseAxisListView):
@@ -250,6 +274,11 @@ class SeriesAxisMixin(_BaseAxisMixin):
             limit=limit,
         )
 
+    def catalog_tag_books(self, filtered_axes):
+        return self.preview_books_queryset().filter(
+            book_series__series__in=filtered_axes
+        ).distinct()
+
 
 class SeriesListView(SeriesAxisMixin, _BaseAxisListView):
     def post(self, request, *args, **kwargs):
@@ -305,7 +334,7 @@ class CatalogTagAxisMixin(_BaseAxisMixin):
 
 
 class CatalogTagListView(CatalogTagAxisMixin, _BaseAxisListView):
-    pass
+    includes_catalog_tag_aggregates = False
 
 
 class CatalogTagDetailView(CatalogTagAxisMixin, _BaseAxisDetailView):

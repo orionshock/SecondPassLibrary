@@ -36,7 +36,13 @@ class UserBookVerseSearchApiTests(LibraryCatalogApiFixtureMixin, TestCase):
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(
                     response.json(),
-                    {"count": 0, "next": None, "previous": None, "results": []},
+                    {
+                        "count": 0,
+                        "next": None,
+                        "previous": None,
+                        "catalog_tags": [],
+                        "results": [],
+                    },
                 )
 
     def test_search_matches_each_supported_visible_book_field(self):

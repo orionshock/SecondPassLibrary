@@ -30,8 +30,9 @@ from library.catalog.serializers.axes import (
     SeriesAxisSerializer,
 )
 from library.catalog.serializers.books import BookListSerializer
+from library.catalog.tag_aggregates import catalog_tag_aggregates
 from library.catalog.search_views import book_search_queryset
-from library.catalog.views import book_browse_queryset
+from library.catalog.views import CatalogTagAggregateBookListMixin, book_browse_queryset
 from library.models import LibraryGroup
 from library.queries import group_is_visible_to_user, visible_books_for_group
 from shelves.models import Shelf
@@ -54,7 +55,9 @@ class GroupBrowseMixin(LibraryBearerReadMixin):
         return visible_books_for_group(self.request.user, self.get_group(), cached=True)
 
 
-class GroupBookListView(GroupBrowseMixin, ListAPIView):
+class GroupBookListView(
+    CatalogTagAggregateBookListMixin, GroupBrowseMixin, ListAPIView
+):
     serializer_class = BookListSerializer
 
     def get_queryset(self):
@@ -69,7 +72,9 @@ class GroupBookListView(GroupBrowseMixin, ListAPIView):
         return book_browse_queryset(queryset, self.request)
 
 
-class GroupBookSearchView(GroupBrowseMixin, ListAPIView):
+class GroupBookSearchView(
+    CatalogTagAggregateBookListMixin, GroupBrowseMixin, ListAPIView
+):
     serializer_class = BookListSerializer
 
     def get_queryset(self):
@@ -109,6 +114,7 @@ class GroupAxisListMixin(GroupBrowseMixin, ListAPIView):
     search_normalized_name = False
     supports_exclude_id = False
     supports_preview_books = False
+    includes_catalog_tag_aggregates = True
 
     def axis_queryset(self):
         raise NotImplementedError
@@ -127,6 +133,9 @@ class GroupAxisListMixin(GroupBrowseMixin, ListAPIView):
     def attach_preview_books(self, parents, *, limit):
         return None
 
+    def catalog_tag_books(self, filtered_axes):
+        raise NotImplementedError
+
     def get_queryset(self):
         queryset = self.axis_queryset()
         queryset = apply_axis_filters(
@@ -139,18 +148,33 @@ class GroupAxisListMixin(GroupBrowseMixin, ListAPIView):
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
+        if not self.includes_catalog_tag_aggregates:
+            return self._list_without_catalog_tag_aggregates(queryset)
+        catalog_tags = CatalogTagAxisSerializer(
+            catalog_tag_aggregates(self.catalog_tag_books(queryset)), many=True
+        ).data
         page = self.paginate_queryset(queryset)
         if page is not None:
             if self.preview_book_limit is not None:
                 self.attach_preview_books(page, limit=self.preview_book_limit)
             serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
+            response = self.get_paginated_response(serializer.data)
+            response.data["catalog_tags"] = catalog_tags
+            return response
 
         rows = list(queryset)
         if self.preview_book_limit is not None:
             self.attach_preview_books(rows, limit=self.preview_book_limit)
         serializer = self.get_serializer(rows, many=True)
-        return Response(serializer.data)
+        return Response({"catalog_tags": catalog_tags, "results": serializer.data})
+
+    def _list_without_catalog_tag_aggregates(self, queryset):
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            return self.get_paginated_response(
+                self.get_serializer(page, many=True).data
+            )
+        return Response(self.get_serializer(queryset, many=True).data)
 
 
 class GroupAuthorListView(GroupAxisListMixin):
@@ -174,6 +198,11 @@ class GroupAuthorListView(GroupAxisListMixin):
             limit=limit,
         )
 
+    def catalog_tag_books(self, filtered_axes):
+        return apply_catalog_tag_filter(
+            self.visible_group_books(), self.request.query_params
+        ).filter(book_authors__author__in=filtered_axes).distinct()
+
 
 class GroupSeriesListView(GroupAxisListMixin):
     serializer_class = SeriesAxisSerializer
@@ -196,10 +225,16 @@ class GroupSeriesListView(GroupAxisListMixin):
             limit=limit,
         )
 
+    def catalog_tag_books(self, filtered_axes):
+        return apply_catalog_tag_filter(
+            self.visible_group_books(), self.request.query_params
+        ).filter(book_series__series__in=filtered_axes).distinct()
+
 
 class GroupCatalogTagListView(GroupAxisListMixin):
     serializer_class = CatalogTagAxisSerializer
     search_normalized_name = True
+    includes_catalog_tag_aggregates = False
 
     def axis_queryset(self):
         return visible_tags_from_books(self.visible_group_books())

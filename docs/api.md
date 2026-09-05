@@ -179,6 +179,16 @@ names, publisher, and description. Search accepts only `title`, `-title`,
 `author`, `-author`, `series`, and `-series` ordering. Missing or blank search
 text returns an empty normal page.
 
+Paginated Book, broad-search, Author, and Series responses also include a
+top-level `catalog_tags` array beside `results`. Each row uses the existing
+Catalog Tag identity (`id`, `name`, `slug`) plus `book_count`. These counts are
+derived from the complete distinct-Book population represented by the current
+scope, context, search, and filters before result pagination. Zero-count Tags
+are omitted; an empty population returns `catalog_tags: []`. The single active
+`tag` filter participates normally, including on broad search; this is not
+self-excluding or multi-Tag facet behavior. The standalone `/tags/` routes keep
+their existing scope-total meaning and response envelope.
+
 Book detail `description` is server-sanitized limited HTML, not arbitrary HTML
 and not guaranteed plain text. Clients should render paragraphs and line
 breaks, bold/strong text, italic/emphasized text, and ordered/unordered lists;

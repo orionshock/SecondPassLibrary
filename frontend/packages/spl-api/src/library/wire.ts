@@ -26,6 +26,14 @@ export interface CatalogTagResponse {
   book_count: number;
 }
 
+export interface CatalogResultPageResponse<T> {
+  count: number;
+  next: string | null;
+  previous: string | null;
+  catalog_tags: CatalogTagResponse[];
+  results: T[];
+}
+
 export interface BookPreviewResponse {
   id: string;
   title: string;
@@ -49,4 +57,3 @@ export interface LibrarySeriesResponse {
   book_count: number;
   preview_books?: BookPreviewResponse[];
 }
-

@@ -8,10 +8,10 @@ import {
   listBooks,
   listSeries,
   type CatalogTag,
+  type CatalogResultPage,
   type CompactBook,
   type LibraryAuthor,
   type LibrarySeries,
-  type Page,
 } from "@second-pass/spl-api";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useOutletContext, useSearchParams } from "react-router";
@@ -46,7 +46,7 @@ import { SelectedLibraryContextPageRegion } from "./SelectedLibraryContextPageRe
 import { SeriesListPageRegion } from "./SeriesListPageRegion";
 
 interface LoadState<Item> {
-  page?: Page<Item>;
+  page?: CatalogResultPage<Item>;
   loading: boolean;
   error?: Error;
 }
@@ -146,7 +146,7 @@ export function LibraryOrchestrator() {
     let active = true;
     const locationState = location.state;
 
-    const recoverPage = <Item,>(request: (page: number) => Promise<Page<Item>>) => loadPageWithRecovery({
+    const recoverPage = <Item,>(request: (page: number) => Promise<CatalogResultPage<Item>>) => loadPageWithRecovery({
       requestedPage: queryState.page,
       pageSize: queryState.pageSize,
       recoveryKey: `${requestView}:${canonicalQuery}`,
@@ -213,6 +213,11 @@ export function LibraryOrchestrator() {
     onRetry: () => setListRetry((value) => value + 1),
   };
   const catalogLayoutKey = catalogLayoutStabilityKey(requestView, queryState);
+  const displayedTags = resultCatalogTags(requestView, {
+    books,
+    authors,
+    series,
+  }, tags.tags);
 
   return <ProductPageShell className="library-page">
     <LibraryAxesPageRegion
@@ -232,8 +237,9 @@ export function LibraryOrchestrator() {
     <CatalogBrowserPageRegion
       key={catalogLayoutKey}
       tagRail={<CatalogTagRailPageRegion
-        tags={tags.tags}
+        tags={displayedTags}
         activeTag={queryState.tag}
+        activeTagDetails={tags.tags?.find(({ slug }) => slug === queryState.tag)}
         loading={tags.loading}
         error={tags.error}
         onTagChange={(tag) => changeQuery({ tag })}
@@ -290,6 +296,15 @@ export function LibraryOrchestrator() {
 
 export function unknownCatalogTag(activeTag: string | undefined, tags: readonly CatalogTag[] | undefined): boolean {
   return Boolean(activeTag && tags && !tags.some(({ slug }) => slug === activeTag));
+}
+
+export function resultCatalogTags(
+  view: LibraryView,
+  loads: Record<LibraryView, { page?: { catalogTags: CatalogTag[] }; loading: boolean }>,
+  scopeTags: CatalogTag[] | undefined,
+): CatalogTag[] | undefined {
+  const load = loads[view];
+  return load.loading ? scopeTags : load.page?.catalogTags ?? scopeTags;
 }
 
 export function catalogLayoutStabilityKey(

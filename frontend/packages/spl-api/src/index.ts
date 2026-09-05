@@ -185,6 +185,7 @@ export {
   type BookPreview,
   type BookSeriesSummary,
   type CatalogTag,
+  type CatalogResultPage,
   type CatalogTagSummary,
   type CompactBook,
   type LibraryAuthor,

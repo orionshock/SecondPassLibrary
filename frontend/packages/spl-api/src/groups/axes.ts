@@ -1,7 +1,7 @@
 import { apiClient, type ApiClient } from "../client";
 import { mapCatalogTag, mapLibraryAuthor, mapLibrarySeries } from "../library/mappers";
 import { listLibraryAxis } from "../library/requests";
-import type { CatalogTag, LibraryAuthor, LibraryAxisQuery, LibrarySeries, LibraryTagQuery } from "../library/types";
+import type { CatalogResultPage, CatalogTag, LibraryAuthor, LibraryAxisQuery, LibrarySeries, LibraryTagQuery } from "../library/types";
 import type { CatalogTagResponse, LibraryAuthorResponse, LibrarySeriesResponse } from "../library/wire";
 import type { Page } from "../pagination";
 
@@ -13,7 +13,7 @@ export function listGroupAuthors(
   groupId: string,
   query: LibraryAxisQuery = {},
   client: ApiClient = apiClient,
-): Promise<Page<LibraryAuthor>> {
+): Promise<CatalogResultPage<LibraryAuthor>> {
   return listLibraryAxis(groupAxisPath(groupId, "authors"), query, mapLibraryAuthor, client);
 }
 
@@ -21,7 +21,7 @@ export function listGroupSeries(
   groupId: string,
   query: LibraryAxisQuery = {},
   client: ApiClient = apiClient,
-): Promise<Page<LibrarySeries>> {
+): Promise<CatalogResultPage<LibrarySeries>> {
   return listLibraryAxis(groupAxisPath(groupId, "series"), query, mapLibrarySeries, client);
 }
 

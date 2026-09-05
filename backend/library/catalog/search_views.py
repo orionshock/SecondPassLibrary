@@ -5,10 +5,10 @@ from django.http import Http404
 from rest_framework.generics import ListAPIView
 
 from library.api_access import LibraryBearerReadMixin
-from library.catalog.filters import apply_broad_book_search
+from library.catalog.filters import apply_broad_book_search, apply_catalog_tag_filter
 from library.catalog.ordering import apply_book_ordering, parse_ordering_param
 from library.catalog.serializers.books import BookListSerializer
-from library.catalog.views import book_row_queryset
+from library.catalog.views import CatalogTagAggregateBookListMixin, book_row_queryset
 from library.models import LibraryGroup
 from library.queries import group_is_visible_to_user, visible_books_for_user
 from library.roles import is_curator
@@ -26,6 +26,7 @@ def book_search_queryset(queryset, request):
         queryset = queryset.none()
     else:
         queryset = apply_broad_book_search(queryset, term)
+        queryset = apply_catalog_tag_filter(queryset, request.query_params)
     queryset = book_row_queryset(queryset)
     ordering = parse_ordering_param(
         request,
@@ -35,7 +36,9 @@ def book_search_queryset(queryset, request):
     return apply_book_ordering(queryset, ordering)
 
 
-class UserBookVerseSearchView(LibraryBearerReadMixin, ListAPIView):
+class UserBookVerseSearchView(
+    CatalogTagAggregateBookListMixin, LibraryBearerReadMixin, ListAPIView
+):
     serializer_class = BookListSerializer
 
     def get_queryset(self):

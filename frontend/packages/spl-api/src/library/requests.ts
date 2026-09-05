@@ -1,7 +1,9 @@
 import type { ApiClient } from "../client";
 import { ApiError } from "../errors";
-import { collectPaginatedResults, toPage, type ApiPage, type Page } from "../pagination";
-import type { BookOrdering, LibraryAxisQuery, LibrarySearchOrdering } from "./types";
+import { collectPaginatedResults, toPage, type ApiPage } from "../pagination";
+import { mapCatalogTag } from "./mappers";
+import type { BookOrdering, CatalogResultPage, LibraryAxisQuery, LibrarySearchOrdering } from "./types";
+import type { CatalogResultPageResponse } from "./wire";
 
 interface BookBrowseQueryParameters {
   q?: string;
@@ -18,6 +20,7 @@ interface BookBrowseQueryParameters {
 
 interface BookSearchQueryParameters {
   q: string;
+  tag?: string;
   excludeShelfId?: string;
   excludeGroupId?: string;
   ordering?: LibrarySearchOrdering;
@@ -48,6 +51,7 @@ export function bookBrowseParameters(query: BookBrowseQueryParameters): URLSearc
 
 export function bookSearchParameters(query: BookSearchQueryParameters): URLSearchParams {
   const parameters = new URLSearchParams({ q: query.q.trim() });
+  if (query.tag) parameters.set("tag", query.tag);
   if (query.excludeShelfId) parameters.set("exclude_shelf", query.excludeShelfId);
   if (query.excludeGroupId) parameters.set("exclude_group", query.excludeGroupId);
   if (query.ordering) parameters.set("ordering", query.ordering);
@@ -61,7 +65,7 @@ export async function listLibraryAxis<Response, Item>(
   query: LibraryAxisQuery,
   mapper: (response: Response) => Item,
   client: ApiClient,
-): Promise<Page<Item>> {
+): Promise<CatalogResultPage<Item>> {
   const parameters = new URLSearchParams();
   const search = query.q?.trim();
   if (search) parameters.set("q", search);
@@ -73,7 +77,10 @@ export async function listLibraryAxis<Response, Item>(
   if (query.page) parameters.set("page", String(query.page));
   if (query.pageSize) parameters.set("page_size", String(query.pageSize));
   try {
-    return toPage(await client.request<ApiPage<Response>>(withQuery(path, parameters)), mapper);
+    return toCatalogResultPage(
+      await client.request<CatalogResultPageResponse<Response>>(withQuery(path, parameters)),
+      mapper,
+    );
   } catch (error: unknown) {
     if (!(error instanceof ApiError) || (!error.fields?.preview_limit && !error.fields?.exclude_id)) throw error;
     const { preview_limit: previewLimit, exclude_id: excludeId, ...fields } = error.fields;
@@ -86,6 +93,16 @@ export async function listLibraryAxis<Response, Item>(
       },
     });
   }
+}
+
+export function toCatalogResultPage<Response, Item>(
+  page: CatalogResultPageResponse<Response>,
+  mapper: (response: Response) => Item,
+): CatalogResultPage<Item> {
+  return {
+    ...toPage(page, mapper),
+    catalogTags: (page.catalog_tags ?? []).map(mapCatalogTag),
+  };
 }
 
 export async function listAllLibraryAxis<Response, Item>(

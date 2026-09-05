@@ -1,16 +1,15 @@
 import { apiClient, type ApiClient } from "../client";
 import { ApiError } from "../errors";
-import { toPage, type ApiPage, type Page } from "../pagination";
 import { mapCompactBook, type CompactBookResponse } from "./compactBooks";
 import { mapBookDetail } from "./mappers";
-import { bookBrowseParameters, bookSearchParameters, withQuery } from "./requests";
-import type { BookDetail, CompactBook, LibraryBookSearchQuery, LibraryBooksQuery, UpdateBookInput } from "./types";
-import type { BookDetailResponse } from "./wire";
+import { bookBrowseParameters, bookSearchParameters, toCatalogResultPage, withQuery } from "./requests";
+import type { BookDetail, CatalogResultPage, CompactBook, LibraryBookSearchQuery, LibraryBooksQuery, UpdateBookInput } from "./types";
+import type { BookDetailResponse, CatalogResultPageResponse } from "./wire";
 
-export async function listBooks(query: LibraryBooksQuery = {}, client: ApiClient = apiClient): Promise<Page<CompactBook>> {
+export async function listBooks(query: LibraryBooksQuery = {}, client: ApiClient = apiClient): Promise<CatalogResultPage<CompactBook>> {
   const parameters = bookBrowseParameters(query);
-  return toPage(
-    await client.request<ApiPage<CompactBookResponse>>(withQuery("/api/v1/library/books/", parameters)),
+  return toCatalogResultPage(
+    await client.request<CatalogResultPageResponse<CompactBookResponse>>(withQuery("/api/v1/library/books/", parameters)),
     mapCompactBook,
   );
 }
@@ -18,10 +17,10 @@ export async function listBooks(query: LibraryBooksQuery = {}, client: ApiClient
 export async function searchLibraryBooks(
   query: LibraryBookSearchQuery,
   client: ApiClient = apiClient,
-): Promise<Page<CompactBook>> {
+): Promise<CatalogResultPage<CompactBook>> {
   const parameters = bookSearchParameters(query);
-  return toPage(
-    await client.request<ApiPage<CompactBookResponse>>(
+  return toCatalogResultPage(
+    await client.request<CatalogResultPageResponse<CompactBookResponse>>(
       withQuery("/api/v1/library/search", parameters),
     ),
     mapCompactBook,

@@ -1,15 +1,14 @@
 import { apiClient, type ApiClient } from "../client";
-import type { Page } from "../pagination";
 import { mapLibraryAuthor, mapLibrarySeries } from "./mappers";
 import { listAllLibraryAxis, listLibraryAxis, mutateLibraryAxis } from "./requests";
-import type { AuthorMutationInput, LibraryAuthor, LibraryAxisQuery, LibrarySeries, SeriesMutationInput } from "./types";
+import type { AuthorMutationInput, CatalogResultPage, LibraryAuthor, LibraryAxisQuery, LibrarySeries, SeriesMutationInput } from "./types";
 import type { LibraryAuthorResponse, LibrarySeriesResponse } from "./wire";
 
-export async function listAuthors(query: LibraryAxisQuery = {}, client: ApiClient = apiClient): Promise<Page<LibraryAuthor>> {
+export async function listAuthors(query: LibraryAxisQuery = {}, client: ApiClient = apiClient): Promise<CatalogResultPage<LibraryAuthor>> {
   return listLibraryAxis("/api/v1/library/authors/", query, mapLibraryAuthor, client);
 }
 
-export async function listSeries(query: LibraryAxisQuery = {}, client: ApiClient = apiClient): Promise<Page<LibrarySeries>> {
+export async function listSeries(query: LibraryAxisQuery = {}, client: ApiClient = apiClient): Promise<CatalogResultPage<LibrarySeries>> {
   return listLibraryAxis("/api/v1/library/series/", query, mapLibrarySeries, client);
 }
 
@@ -84,4 +83,3 @@ export function listAllAuthors(client: ApiClient = apiClient): Promise<LibraryAu
 export function listAllSeries(client: ApiClient = apiClient): Promise<LibrarySeries[]> {
   return listAllLibraryAxis("/api/v1/library/series/", mapLibrarySeries, client);
 }
-

@@ -1,3 +1,5 @@
+import type { Page } from "../pagination";
+
 export type BookOrdering =
   | "title" | "-title"
   | "author" | "-author"
@@ -24,6 +26,7 @@ export interface LibraryBooksQuery {
 
 export interface LibraryBookSearchQuery {
   q: string;
+  tag?: string;
   excludeShelfId?: string;
   excludeGroupId?: string;
   ordering?: LibrarySearchOrdering;
@@ -137,6 +140,10 @@ export interface CatalogTagSummary {
 
 export interface CatalogTag extends CatalogTagSummary {
   bookCount: number;
+}
+
+export interface CatalogResultPage<T> extends Page<T> {
+  catalogTags: CatalogTag[];
 }
 
 export interface CompactBook {

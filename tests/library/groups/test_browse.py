@@ -260,7 +260,13 @@ class LibraryGroupBrowseTests(TestCase):
                 response = self.client.get(endpoint, query)
                 self.assertEqual(
                     response.json(),
-                    {"count": 0, "next": None, "previous": None, "results": []},
+                    {
+                        "count": 0,
+                        "next": None,
+                        "previous": None,
+                        "catalog_tags": [],
+                        "results": [],
+                    },
                 )
 
         orderings = {

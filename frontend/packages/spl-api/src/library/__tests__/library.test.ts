@@ -244,12 +244,19 @@ describe("Library SDK", () => {
     const calls: string[] = [];
     const client: ApiClient = { request: async <T>(path: string) => {
       calls.push(path);
-      return { count: 1, next: null, previous: null, results: [compactWireBook] } as T;
+      return {
+        count: 1, next: null, previous: null,
+        catalog_tags: [{ id: "tag-1", name: "Fantasy", slug: "fantasy", book_count: 12 }],
+        results: [compactWireBook],
+      } as T;
     } };
 
     const page = await listBooks({ q: " Book ", tag: "fantasy", publisher: "A Press", excludeGroupId: "group/id", ordering: "-author", page: 2, pageSize: 30 }, client);
 
     expect(calls).toEqual(["/api/v1/library/books/?q=Book&tag=fantasy&publisher=A+Press&exclude_group=group%2Fid&ordering=-author&page=2&page_size=30"]);
+    expect(page.catalogTags).toEqual([
+      { id: "tag-1", name: "Fantasy", slug: "fantasy", bookCount: 12 },
+    ]);
     expect(page.items[0]).toEqual({
       id: "book-1", title: "The Book", sortTitle: "Book, The", subtitle: "Hidden subtitle",
       authors: [{ id: "author-1", name: "Ada Author" }],
@@ -267,16 +274,16 @@ describe("Library SDK", () => {
     const calls: string[] = [];
     const client: ApiClient = { request: async <T>(path: string) => {
       calls.push(path);
-      return { count: 1, next: null, previous: null, results: [compactWireBook] } as T;
+      return { count: 1, next: null, previous: null, catalog_tags: [], results: [compactWireBook] } as T;
     } };
 
     await expect(searchLibraryBooks({
-      q: " Book ", excludeShelfId: "shelf/id", excludeGroupId: "group/id",
+      q: " Book ", tag: "fantasy", excludeShelfId: "shelf/id", excludeGroupId: "group/id",
       ordering: "title", page: 2, pageSize: 30,
     }, client)).resolves.toMatchObject({ items: [{ id: "book-1", title: "The Book" }] });
     await searchLibraryBooks({ q: " Book ", excludeShelfId: "shelf/id" }, client);
     expect(calls).toEqual([
-      "/api/v1/library/search?q=Book&exclude_shelf=shelf%2Fid&exclude_group=group%2Fid&ordering=title&page=2&page_size=30",
+      "/api/v1/library/search?q=Book&tag=fantasy&exclude_shelf=shelf%2Fid&exclude_group=group%2Fid&ordering=title&page=2&page_size=30",
       "/api/v1/library/search?q=Book&exclude_shelf=shelf%2Fid",
     ]);
   });

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import { ApiError, type CompactBook, type LibraryAxisQuery, type LibraryBooksQuery, type Page } from "@second-pass/spl-api";
 import { appRoutes, sectionRoutes } from "../../../../src/app/router";
 import { loadPageWithRecovery } from "../../../../src/app/routing/pageRecovery";
-import { catalogLayoutStabilityKey, libraryBreadcrumbFallback, loadSelectedLibraryContextDetails, unknownCatalogTag } from "../../../../src/features/library/browse/LibraryOrchestrator";
+import { catalogLayoutStabilityKey, libraryBreadcrumbFallback, loadSelectedLibraryContextDetails, resultCatalogTags, unknownCatalogTag } from "../../../../src/features/library/browse/LibraryOrchestrator";
 import type { LibraryUrlState } from "../../../../src/features/library/libraryQuery";
 
 const page = (count: number): Page<CompactBook> => ({ items: [], count, next: null, previous: null });
@@ -64,6 +64,23 @@ describe("Library Orchestrator contracts", () => {
     expect(unknownCatalogTag("fantasy", [{ id: "tag", name: "Fantasy", slug: "fantasy", bookCount: 2 }])).toBe(false);
   });
 
+  it("uses contextual Catalog Tag counts for every result context and scope totals while loading", () => {
+    const scope = [{ id: "scope", name: "Scope", slug: "scope", bookCount: 9 }];
+    const books = [{ id: "book", name: "Book", slug: "book", bookCount: 3 }];
+    const authors = [{ id: "author", name: "Author", slug: "author", bookCount: 2 }];
+    const series = [{ id: "series", name: "Series", slug: "series", bookCount: 1 }];
+    const loads = {
+      books: { loading: false, page: { catalogTags: books } },
+      authors: { loading: false, page: { catalogTags: authors } },
+      series: { loading: false, page: { catalogTags: series } },
+    };
+
+    expect(resultCatalogTags("books", loads, scope)).toBe(books);
+    expect(resultCatalogTags("authors", loads, scope)).toBe(authors);
+    expect(resultCatalogTags("series", loads, scope)).toBe(series);
+    expect(resultCatalogTags("books", { ...loads, books: { ...loads.books, loading: true } }, scope)).toBe(scope);
+  });
+
   it("retains Catalog height between Book pages but resets it for a changed result set", () => {
     const state: LibraryUrlState = { view: "books", page: 1, pageSize: 20, q: "", ordering: "title" };
     const laterPage: LibraryUrlState = { ...state, page: 3 };
@@ -87,4 +104,3 @@ describe("Library Orchestrator contracts", () => {
     expect(series).toHaveBeenCalledWith("series-id");
   });
 });
-

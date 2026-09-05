@@ -136,6 +136,12 @@ serialization and response mapping internally while retaining resource-specific
 public names; callers do not select scope through a generic SDK abstraction or
 deep-import domain internals.
 
+Book, broad-search, Author, and Series result pages expose server-computed
+`catalogTags` metadata for the full filtered result population. The Product UI
+Catalog Tag rail uses those contextual counts after a result loads and uses the
+scope-level Tag list only as loading/fallback identity data. React must not
+recount Tags from the current page.
+
 ## Routing and shell behavior
 
 React Router owns Product UI navigation. Django's retained shell routes serve
