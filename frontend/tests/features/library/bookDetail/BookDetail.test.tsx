@@ -165,7 +165,7 @@ describe("Book Detail presentation", () => {
   });
 
   it("shows a configured Reader launcher only for an available EPUB", () => {
-    const configured = render(<BookDetailHeroPageRegion book={book} readingClientBookUrl={`https://reader.example.com/#/reader/${book.id}`} />);
+    const configured = render(<BookDetailHeroPageRegion book={book} secondPassReaderBookUrl={`https://reader.example.com/#/reader/${book.id}`} />);
     expect(configured).toContain("Open in Reader");
     expect(configured).toContain(`href="https://reader.example.com/#/reader/${book.id}"`);
     expect(configured).toContain('target="_blank"');

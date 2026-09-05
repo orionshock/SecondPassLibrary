@@ -103,6 +103,21 @@ class ServerSettingAdminForm(forms.ModelForm):
             )
             return
 
+        if key == server_settings.SECOND_PASS_READER_WEB_CLIENT_URL_SETTING:
+            self.fields["value"] = forms.CharField(
+                label="Second Pass Reader Web Client URL",
+                help_text=(
+                    "Enter an absolute http or https URL. Only its scheme, host, "
+                    "and optional port are stored; path, query, and fragment are removed."
+                ),
+                required=False,
+                max_length=server_settings.SECOND_PASS_READER_WEB_CLIENT_URL_MAX_LEN,
+                disabled=server_settings.second_pass_reader_web_client_url_locked(),
+                widget=forms.URLInput(attrs={"size": 80}),
+                initial=value,
+            )
+            return
+
         if key == PUBLIC_GROUP_ID_SETTING:
             group_field = BookGroupAssignment._meta.get_field("group")
             self.fields["value"] = forms.ModelChoiceField(
@@ -156,6 +171,14 @@ class ServerSettingAdminForm(forms.ModelForm):
         value = self.cleaned_data["value"]
         if self.instance.key == PUBLIC_GROUP_ID_SETTING:
             return str(value.pk)
+        if (
+            self.instance.key
+            == server_settings.SECOND_PASS_READER_WEB_CLIENT_URL_SETTING
+        ):
+            try:
+                return server_settings.normalize_second_pass_reader_web_client_url(value)
+            except ValueError as exc:
+                raise forms.ValidationError(str(exc)) from exc
         return value
 
 class AdvancedGroupsDisableAdminForm(forms.Form):
@@ -412,6 +435,10 @@ class ServerSettingAdmin(admin.ModelAdmin):
                     form.cleaned_data["server_banner_message"]
                 )
             return
+        if obj.key == server_settings.SECOND_PASS_READER_WEB_CLIENT_URL_SETTING:
+            if not server_settings.second_pass_reader_web_client_url_locked():
+                server_settings.set_second_pass_reader_web_client_url(obj.value)
+            return
         if self._is_public_group_setting(obj):
             try:
                 group = LibraryGroup.objects.get(pk=obj.value)
@@ -598,6 +625,9 @@ def _setting_operator_copy(key):
         ),
         server_settings.SERVER_BANNER_MESSAGE_SETTING: (
             "Banner message shown in Product UI."
+        ),
+        server_settings.SECOND_PASS_READER_WEB_CLIENT_URL_SETTING: (
+            "Canonical base URL used to open Books in the Second Pass Reader web client."
         ),
         server_settings.APPLICATION_LOG_LEVEL_SETTING: (
             "Controls Second Pass Library application diagnostics. INFO is recommended "

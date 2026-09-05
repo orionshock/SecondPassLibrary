@@ -10,8 +10,8 @@ const response = {
   public_group_name: "Common Room",
   public_group_description: "Shared books",
   advanced_library_groups_enabled: false,
-  reading_client_base_url: "https://reader.example.com",
-  reading_client_base_url_locked: false,
+  second_pass_reader_web_client_url: "https://reader.example.com",
+  second_pass_reader_web_client_url_locked: false,
 };
 
 describe("server settings SDK", () => {
@@ -19,7 +19,7 @@ describe("server settings SDK", () => {
     const calls: string[] = [];
     const client: ApiClient = { request: async <T>(path: string) => { calls.push(path); return response as T; } };
     await expect(getServerSettings(client)).resolves.toEqual({
-      general: { name: "Virgo SPL", description: "Private library", bannerText: "Maintenance tonight", readingClientBaseUrl: "https://reader.example.com", readingClientBaseUrlLocked: false },
+      general: { name: "Virgo SPL", description: "Private library", bannerText: "Maintenance tonight", secondPassReaderWebClientUrl: "https://reader.example.com", secondPassReaderWebClientUrlLocked: false },
       publicLibrary: { name: "Common Room", description: "Shared books" },
       libraryGroups: { advancedGroupsEnabled: false },
     });
@@ -29,9 +29,9 @@ describe("server settings SDK", () => {
   it("sends section-specific PATCH bodies", async () => {
     const calls: Array<{ path: string; init?: RequestInit }> = [];
     const client: ApiClient = { request: async <T>(path: string, init?: RequestInit) => { calls.push({ path, init }); return response as T; } };
-    await updateGeneralSettings({ name: " New name ", description: " Desc ", bannerText: " Banner ", readingClientBaseUrl: " https://reader.example.com/ " }, client);
+    await updateGeneralSettings({ name: " New name ", description: " Desc ", bannerText: " Banner ", secondPassReaderWebClientUrl: " https://reader.example.com/ " }, client);
     await updatePublicLibrarySettings({ name: " Public ", description: " Shared " }, client);
-    expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({ server_name: "New name", server_description: "Desc", server_banner_message: "Banner", reading_client_base_url: "https://reader.example.com/" });
+    expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({ server_name: "New name", server_description: "Desc", server_banner_message: "Banner", second_pass_reader_web_client_url: "https://reader.example.com/" });
     expect(JSON.parse(String(calls[1]?.init?.body))).toEqual({ public_group_name: "Public", public_group_description: "Shared" });
     expect(calls.every(({ init }) => init?.method === "PATCH")).toBe(true);
   });

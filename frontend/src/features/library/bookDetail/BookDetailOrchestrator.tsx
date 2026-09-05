@@ -1,6 +1,6 @@
 import {
   ApiError,
-  buildReadingClientBookUrl,
+  buildSecondPassReaderBookUrl,
   getBook,
   isAtLeastLibrarian,
   listAllGroupsForBook,
@@ -163,8 +163,8 @@ export function BookDetailOrchestrator() {
   return <ProductPageShell><article className="page-stack book-detail-page">
     <BookDetailHeroPageRegion
       book={load.book}
-      readingClientBookUrl={serverInfo.readingClientBaseUrl && load.book.file
-        ? buildReadingClientBookUrl(serverInfo.readingClientBaseUrl, load.book.id)
+      secondPassReaderBookUrl={serverInfo.secondPassReaderWebClientUrl && load.book.file
+        ? buildSecondPassReaderBookUrl(serverInfo.secondPassReaderWebClientUrl, load.book.id)
         : undefined}
       canEdit={isAtLeastLibrarian(currentUser)}
       editNavigationState={breadcrumbNavigationState(bookEditBreadcrumbTrail(resolveBreadcrumbTrail(location.state, breadcrumbFallback), load.book.id, load.book.title))}

@@ -18,8 +18,8 @@ def server_info_payload() -> dict[str, Any]:
         "advanced_library_groups_enabled": (
             server_settings.get_advanced_library_groups_enabled()
         ),
-        "reading_client_base_url": (
-            server_settings.get_reading_client_base_url() or None
+        "second_pass_reader_web_client_url": (
+            server_settings.get_second_pass_reader_web_client_url() or None
         ),
         "marginalia_profile_uri": MARGINALIA_PROFILE_URI,
         "public_group": {

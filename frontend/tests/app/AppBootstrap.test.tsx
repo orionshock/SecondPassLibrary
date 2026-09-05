@@ -6,7 +6,7 @@ import type { CurrentUser, ServerInfo } from "@second-pass/spl-api";
 import { AppBootstrapView, forcedPasswordChangeDestination, type BootstrapState } from "../../src/app/App";
 
 const user: CurrentUser = { username: "owner", email: "owner@example.test", firstName: "Ada", lastName: "Reader", profileId: "profile-id", role: "manager", mustChangePassword: false, isOwner: true, isManager: false, isLibrarian: false, isReader: false, canAccessDjangoAdmin: false, groups: [] };
-const server: ServerInfo = { name: "Family Library", description: "Books for everyone.", bannerText: "Maintenance tonight", advancedLibraryGroupsEnabled: false, readingClientBaseUrl: null, marginaliaProfileUri: "profile", publicGroup: { id: "public", name: "Common Room", description: "" }, version: "0.1.0-dev", releaseDate: "2026-07-20" };
+const server: ServerInfo = { name: "Family Library", description: "Books for everyone.", bannerText: "Maintenance tonight", advancedLibraryGroupsEnabled: false, secondPassReaderWebClientUrl: null, marginaliaProfileUri: "profile", publicGroup: { id: "public", name: "Common Room", description: "" }, version: "0.1.0-dev", releaseDate: "2026-07-20" };
 
 function renderBootstrap(state: BootstrapState): string {
   return renderToStaticMarkup(<MemoryRouter><AppBootstrapView state={state} loginPath="/login/?next=%2Flibrary" onRetry={vi.fn()} onCurrentUserChange={vi.fn()} /></MemoryRouter>);

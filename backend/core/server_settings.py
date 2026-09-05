@@ -21,11 +21,11 @@ APPLICATION_LOG_LEVEL_CACHE_KEY = "core:application_log_level:v1"
 SERVER_NAME_SETTING = "server_name"
 SERVER_DESCRIPTION_SETTING = "server_description"
 SERVER_BANNER_MESSAGE_SETTING = "server_banner_message"
-READING_CLIENT_BASE_URL_SETTING = "reading_client_base_url"
+SECOND_PASS_READER_WEB_CLIENT_URL_SETTING = "second_pass_reader_web_client_url"
 SERVER_NAME_MAX_LEN = 120
 SERVER_DESCRIPTION_MAX_LEN = 1000
 SERVER_BANNER_MESSAGE_MAX_LEN = 500
-READING_CLIENT_BASE_URL_MAX_LEN = 2048
+SECOND_PASS_READER_WEB_CLIENT_URL_MAX_LEN = 2048
 DEFAULT_SERVER_NAME = "Second Pass Library"
 ADVANCED_LIBRARY_GROUPS_SETTING = "advanced_library_groups_enabled"
 APPLICATION_LOG_LEVEL_SETTING = "application_log_level"
@@ -62,9 +62,9 @@ EDITABLE_SERVER_SETTING_DEFAULTS = {
         "value": "",
         "description": "Optional banner message shown at the top of the dashboard.",
     },
-    READING_CLIENT_BASE_URL_SETTING: {
+    SECOND_PASS_READER_WEB_CLIENT_URL_SETTING: {
         "value": "",
-        "description": "Optional root URL of the external Reading Client.",
+        "description": "Canonical base URL of the Second Pass Reader web client.",
     },
     ADVANCED_LIBRARY_GROUPS_SETTING: {
         "value": False,
@@ -289,64 +289,79 @@ def set_server_banner_message(value: str) -> None:
     )
 
 
-def normalize_reading_client_base_url(value: Any) -> str:
+def normalize_second_pass_reader_web_client_url(value: Any) -> str:
     normalized = _normalize_str(value)
     if not normalized:
         return ""
-    if len(normalized) > READING_CLIENT_BASE_URL_MAX_LEN:
+    if len(normalized) > SECOND_PASS_READER_WEB_CLIENT_URL_MAX_LEN:
         raise ValueError(
-            "Reading Client URL must be at most "
-            f"{READING_CLIENT_BASE_URL_MAX_LEN} characters."
+            "Second Pass Reader Web Client URL must be at most "
+            f"{SECOND_PASS_READER_WEB_CLIENT_URL_MAX_LEN} characters."
         )
     if "{" in normalized or "}" in normalized:
-        raise ValueError("Reading Client URL cannot contain placeholders.")
+        raise ValueError(
+            "Second Pass Reader Web Client URL cannot contain placeholders."
+        )
 
     try:
         parsed = urlsplit(normalized)
         port = parsed.port
     except ValueError as exc:
-        raise ValueError("Reading Client URL is invalid.") from exc
+        raise ValueError("Second Pass Reader Web Client URL is invalid.") from exc
     if parsed.scheme not in {"http", "https"}:
-        raise ValueError("Reading Client URL must use http or https.")
+        raise ValueError("Second Pass Reader Web Client URL must use http or https.")
     if not parsed.hostname:
-        raise ValueError("Reading Client URL must include a hostname.")
+        raise ValueError("Second Pass Reader Web Client URL must include a hostname.")
     if parsed.username is not None or parsed.password is not None:
-        raise ValueError("Reading Client URL cannot include user information.")
-    if parsed.path not in {"", "/"}:
-        raise ValueError("Reading Client URL must not include a path.")
-    if parsed.query or parsed.fragment:
-        raise ValueError("Reading Client URL must not include a query or fragment.")
+        raise ValueError(
+            "Second Pass Reader Web Client URL cannot include user information."
+        )
     if port is not None and not 0 < port <= 65535:
-        raise ValueError("Reading Client URL has an invalid port.")
+        raise ValueError("Second Pass Reader Web Client URL has an invalid port.")
     try:
         URLValidator(schemes=["http", "https"])(normalized)
     except ValidationError as exc:
-        raise ValueError("Reading Client URL is invalid.") from exc
-    return f"{parsed.scheme}://{parsed.netloc}"
+        raise ValueError("Second Pass Reader Web Client URL is invalid.") from exc
+
+    hostname = parsed.hostname
+    if ":" in hostname:
+        hostname = f"[{hostname}]"
+    netloc = hostname if port is None else f"{hostname}:{port}"
+    return f"{parsed.scheme}://{netloc}"
 
 
-def reading_client_base_url_locked() -> bool:
-    return bool(str(settings.SECOND_PASS_READING_CLIENT_BASE_URL or "").strip())
+def second_pass_reader_web_client_url_locked() -> bool:
+    return bool(str(settings.SECOND_PASS_READER_WEB_CLIENT_URL or "").strip())
 
 
-def get_reading_client_base_url() -> str:
-    if reading_client_base_url_locked():
-        return normalize_reading_client_base_url(
-            settings.SECOND_PASS_READING_CLIENT_BASE_URL
-        )
-    return normalize_reading_client_base_url(
-        get_server_setting(READING_CLIENT_BASE_URL_SETTING, default="")
+def get_second_pass_reader_web_client_url() -> str:
+    return normalize_second_pass_reader_web_client_url(
+        get_server_setting(SECOND_PASS_READER_WEB_CLIENT_URL_SETTING, default="")
     )
 
 
-def set_reading_client_base_url(value: str) -> None:
-    if reading_client_base_url_locked():
-        raise ValueError("Reading Client URL is configured by the server environment.")
-    normalized = normalize_reading_client_base_url(value)
+def set_second_pass_reader_web_client_url(value: str) -> None:
+    if second_pass_reader_web_client_url_locked():
+        raise ValueError(
+            "Second Pass Reader Web Client URL is configured by the server environment."
+        )
+    _store_second_pass_reader_web_client_url(value)
+
+
+def synchronize_deployment_server_settings() -> bool:
+    configured = str(settings.SECOND_PASS_READER_WEB_CLIENT_URL or "").strip()
+    if not configured:
+        return False
+    _store_second_pass_reader_web_client_url(configured)
+    return True
+
+
+def _store_second_pass_reader_web_client_url(value: str) -> None:
+    normalized = normalize_second_pass_reader_web_client_url(value)
     set_server_setting(
-        key=READING_CLIENT_BASE_URL_SETTING,
+        key=SECOND_PASS_READER_WEB_CLIENT_URL_SETTING,
         value=normalized,
-        description="Optional root URL of the external Reading Client.",
+        description="Canonical base URL of the Second Pass Reader web client.",
     )
 
 
@@ -444,7 +459,7 @@ def _log_server_setting_changed(
         SERVER_NAME_SETTING,
         SERVER_DESCRIPTION_SETTING,
         SERVER_BANNER_MESSAGE_SETTING,
-        READING_CLIENT_BASE_URL_SETTING,
+        SECOND_PASS_READER_WEB_CLIENT_URL_SETTING,
     }:
         logger.info(
             "Server setting changed: setting_key=%s changed_fields=%s created=%s",

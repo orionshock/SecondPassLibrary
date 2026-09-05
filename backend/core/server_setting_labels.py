@@ -13,7 +13,7 @@ SERVER_SETTING_DISPLAY_NAMES = {
         "Closed Session Annotation Tombstone Retention"
     ),
     "public_group_id": _("Public/Common Room Group"),
-    "reading_client_base_url": _("Reading Client URL"),
+    "second_pass_reader_web_client_url": _("Second Pass Reader Web Client URL"),
     "server_banner_message": _("Server Banner Message"),
     "server_description": _("Server Description"),
     "server_name": _("Server Identity & Banner"),

@@ -29,9 +29,11 @@ def _server_settings_payload() -> dict[str, Any]:
         "advanced_library_groups_enabled": (
             server_settings.get_advanced_library_groups_enabled()
         ),
-        "reading_client_base_url": server_settings.get_reading_client_base_url(),
-        "reading_client_base_url_locked": (
-            server_settings.reading_client_base_url_locked()
+        "second_pass_reader_web_client_url": (
+            server_settings.get_second_pass_reader_web_client_url()
+        ),
+        "second_pass_reader_web_client_url_locked": (
+            server_settings.second_pass_reader_web_client_url_locked()
         ),
     }
 
@@ -63,7 +65,7 @@ class ServerSettingsView(APIView):
             "server_name",
             "server_description",
             "server_banner_message",
-            "reading_client_base_url",
+            "second_pass_reader_web_client_url",
             "public_group_name",
             "public_group_description",
         }
@@ -95,13 +97,15 @@ class ServerSettingsView(APIView):
             except ValueError as exc:
                 errors.setdefault("server_banner_message", []).append(str(exc))
 
-        if "reading_client_base_url" in data:
+        if "second_pass_reader_web_client_url" in data:
             try:
-                server_settings.set_reading_client_base_url(
-                    str(data.get("reading_client_base_url") or "")
+                server_settings.set_second_pass_reader_web_client_url(
+                    str(data.get("second_pass_reader_web_client_url") or "")
                 )
             except ValueError as exc:
-                errors.setdefault("reading_client_base_url", []).append(str(exc))
+                errors.setdefault("second_pass_reader_web_client_url", []).append(
+                    str(exc)
+                )
 
         public_name = data.get("public_group_name", None)
         public_description = data.get("public_group_description", None)

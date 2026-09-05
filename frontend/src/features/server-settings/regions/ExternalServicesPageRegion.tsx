@@ -13,25 +13,25 @@ export function ExternalServicesPageRegion({ settings, draft, editing, state, on
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   return <form id="server-settings-external-services-form" className="server-settings-form" onSubmit={onSubmit}>
-    <section className="server-settings-region" aria-labelledby="reading-client-heading">
-      <h2 id="reading-client-heading">Reading Client</h2>
+    <section className="server-settings-region" aria-labelledby="second-pass-reader-heading">
+      <h2 id="second-pass-reader-heading">Second Pass Reader Web Client</h2>
       {editing ? <div className="form-grid">
-        <FormField label="Reading Client URL" htmlFor="server-settings-reading-client" error={fieldError(state.error, "readingClientBaseUrl")}>
+        <FormField label="Second Pass Reader Web Client URL" htmlFor="server-settings-reader-web-client" error={fieldError(state.error, "secondPassReaderWebClientUrl")}>
           <input
-            id="server-settings-reading-client"
+            id="server-settings-reader-web-client"
             type="url"
             maxLength={2048}
             placeholder="https://reader.example.com"
-            disabled={draft.readingClientBaseUrlLocked}
-            value={draft.readingClientBaseUrl}
+            disabled={draft.secondPassReaderWebClientUrlLocked}
+            value={draft.secondPassReaderWebClientUrl}
             onChange={(event) => onChange(event.target.value)}
           />
         </FormField>
-        <p className="server-settings-help">Root URL of the Reading Client. Leave blank to hide Open in Reader.</p>
-        {draft.readingClientBaseUrlLocked ? <p className="server-settings-help">Configured by server environment.</p> : null}
+        <p className="server-settings-help">Canonical base URL of the Second Pass Reader web client. Paths, queries, and fragments are removed. Leave blank to hide Open in Reader.</p>
+        {draft.secondPassReaderWebClientUrlLocked ? <p className="server-settings-help">Configured by server environment.</p> : null}
       </div> : <KeyValueList items={[
-        { label: "Reading Client URL", value: settings.readingClientBaseUrl || "Disabled" },
-        ...(settings.readingClientBaseUrlLocked ? [{ label: "Configuration", value: "Configured by server environment." }] : []),
+        { label: "Second Pass Reader Web Client URL", value: settings.secondPassReaderWebClientUrl || "Disabled" },
+        ...(settings.secondPassReaderWebClientUrlLocked ? [{ label: "Configuration", value: "Configured by server environment." }] : []),
       ]} />}
     </section>
   </form>;

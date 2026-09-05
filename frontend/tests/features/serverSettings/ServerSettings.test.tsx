@@ -14,7 +14,7 @@ import { DjangoAdminAction } from "../../../src/features/server-settings/DjangoA
 import { serverSettingsFormId, serverSettingsSearchParams, serverSettingsTabFromSearchParams, serverSettingsTabs } from "../../../src/features/server-settings/serverSettingsTabs";
 
 const settings: ServerSettings = {
-  general: { name: "Virgo SPL", description: "Private library", bannerText: "Maintenance", readingClientBaseUrl: "https://reader.example.com", readingClientBaseUrlLocked: false },
+  general: { name: "Virgo SPL", description: "Private library", bannerText: "Maintenance", secondPassReaderWebClientUrl: "https://reader.example.com", secondPassReaderWebClientUrlLocked: false },
   publicLibrary: { name: "Common Room", description: "Shared books" },
   libraryGroups: { advancedGroupsEnabled: false },
 };
@@ -47,32 +47,32 @@ describe("Server Settings", () => {
     expect(read).not.toContain("server-settings-name");
     expect(edit).toContain('class="form-field"');
     expect(edit).toContain('id="server-settings-name"');
-    expect(edit).not.toContain('id="server-settings-reading-client"');
+    expect(edit).not.toContain('id="server-settings-reader-web-client"');
     expect(edit).not.toContain("disabled");
     expect(serverSettingsFormId("general")).toBe("server-settings-general-form");
   });
 
-  it("owns Reading Client state only in External Services and preserves locking", () => {
+  it("owns Reader web client state only in External Services and preserves locking", () => {
     const general = renderToStaticMarkup(<GeneralSettingsPageRegion settings={settings.general} draft={settings.general} editing state={{ pending: false }} onChange={vi.fn()} onSubmit={vi.fn()} />);
     const read = renderToStaticMarkup(<ExternalServicesPageRegion settings={settings.general} draft={settings.general} editing={false} state={{ pending: false }} onChange={vi.fn()} onSubmit={vi.fn()} />);
     const edit = renderToStaticMarkup(<ExternalServicesPageRegion settings={settings.general} draft={settings.general} editing state={{ pending: false }} onChange={vi.fn()} onSubmit={vi.fn()} />);
-    const locked = { ...settings.general, readingClientBaseUrlLocked: true };
+    const locked = { ...settings.general, secondPassReaderWebClientUrlLocked: true };
     const lockedEdit = renderToStaticMarkup(<ExternalServicesPageRegion settings={locked} draft={locked} editing state={{ pending: false }} onChange={vi.fn()} onSubmit={vi.fn()} />);
     const invalid = renderToStaticMarkup(<ExternalServicesPageRegion
       settings={settings.general}
       draft={settings.general}
       editing
-      state={{ pending: false, error: new ApiError("Invalid settings.", 400, { fields: { readingClientBaseUrl: ["Invalid URL."] } }) }}
+      state={{ pending: false, error: new ApiError("Invalid settings.", 400, { fields: { secondPassReaderWebClientUrl: ["Invalid URL."] } }) }}
       onChange={vi.fn()}
       onSubmit={vi.fn()}
     />);
-    expect(general).not.toContain("server-settings-reading-client");
+    expect(general).not.toContain("server-settings-reader-web-client");
     expect(read).toContain("https://reader.example.com");
-    expect(read).not.toContain("server-settings-reading-client");
-    expect(edit).toContain('id="server-settings-reading-client"');
+    expect(read).not.toContain("server-settings-reader-web-client");
+    expect(edit).toContain('id="server-settings-reader-web-client"');
     expect(edit).toContain('value="https://reader.example.com"');
     expect(edit).not.toContain("disabled");
-    expect(lockedEdit).toMatch(/id="server-settings-reading-client"[^>]*disabled/);
+    expect(lockedEdit).toMatch(/id="server-settings-reader-web-client"[^>]*disabled/);
     expect(invalid).toContain('class="field-error"');
     expect(serverSettingsFormId("external-services")).toBe("server-settings-external-services-form");
   });
@@ -113,4 +113,3 @@ describe("Server Settings", () => {
     expect(renderToStaticMarkup(<DjangoAdminAction enabled={false} />)).toBe("");
   });
 });
-

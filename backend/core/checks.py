@@ -3,7 +3,7 @@ from __future__ import annotations
 from django.conf import settings
 from django.core.checks import Error, Tags, Warning, register
 
-from core.server_settings import normalize_reading_client_base_url
+from core.server_settings import normalize_second_pass_reader_web_client_url
 
 
 @register(Tags.security, deploy=True)
@@ -45,16 +45,16 @@ def production_security_settings_check(_app_configs=None, **_kwargs):
 
 
 @register()
-def reading_client_base_url_check(_app_configs=None, **_kwargs):
-    value = str(settings.SECOND_PASS_READING_CLIENT_BASE_URL or "").strip()
+def second_pass_reader_web_client_url_check(_app_configs=None, **_kwargs):
+    value = str(settings.SECOND_PASS_READER_WEB_CLIENT_URL or "").strip()
     if not value:
         return []
     try:
-        normalize_reading_client_base_url(value)
+        normalize_second_pass_reader_web_client_url(value)
     except ValueError as exc:
         return [
             Error(
-                f"SECOND_PASS_READING_CLIENT_BASE_URL is invalid: {exc}",
+                f"SECOND_PASS_READER_WEB_CLIENT_URL is invalid: {exc}",
                 id="secondpass.E001",
             )
         ]

@@ -6,7 +6,7 @@ import { canSeeImports, canSeeServerSettings, canSeeUsers, type CurrentUser, typ
 import { AppOrchestrator } from "../../src/app/layout/AppOrchestrator";
 import { RoleRouteGuard, unauthorizedRouteFallback } from "../../src/app/navigation/RoleRouteGuard";
 
-const server: ServerInfo = { name: "SPL", description: "", bannerText: "", advancedLibraryGroupsEnabled: false, readingClientBaseUrl: null, marginaliaProfileUri: "profile", publicGroup: { id: "public", name: "Common Room", description: "" }, version: "dev", releaseDate: "" };
+const server: ServerInfo = { name: "SPL", description: "", bannerText: "", advancedLibraryGroupsEnabled: false, secondPassReaderWebClientUrl: null, marginaliaProfileUri: "profile", publicGroup: { id: "public", name: "Common Room", description: "" }, version: "dev", releaseDate: "" };
 const reader: CurrentUser = {
   username: "reader", email: "", firstName: "", lastName: "", profileId: "reader", role: "reader",
   mustChangePassword: false, isOwner: false, isManager: false, isLibrarian: false, isReader: true,

@@ -15,7 +15,7 @@ const user: CurrentUser = {
     { id: "editors", name: "Editors", isPublicGroup: false, isCurator: true },
   ],
 };
-const server: ServerInfo = { name: "Analytical Library", description: "", bannerText: "", advancedLibraryGroupsEnabled: true, readingClientBaseUrl: null, marginaliaProfileUri: "profile", publicGroup: { id: "public", name: "Common Room", description: "" }, version: "0.1.0-dev", releaseDate: "2026-07-20" };
+const server: ServerInfo = { name: "Analytical Library", description: "", bannerText: "", advancedLibraryGroupsEnabled: true, secondPassReaderWebClientUrl: null, marginaliaProfileUri: "profile", publicGroup: { id: "public", name: "Common Room", description: "" }, version: "0.1.0-dev", releaseDate: "2026-07-20" };
 
 describe("ProfileOrchestrator", () => {
   it("composes profile regions from app-owned current-user data", () => {

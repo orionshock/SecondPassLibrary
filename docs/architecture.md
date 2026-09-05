@@ -31,11 +31,12 @@ Notes:
   Groups Mode](advanced-library-groups.md) policy owns its UI, API, retained
   state, and transition contract.
 - The special Public LibraryGroup is identified by `ServerSetting(public_group_id)` (not by a `LibraryGroup.slug` field).
-- The optional Reading Client root URL uses
-  `ServerSetting(reading_client_base_url)` unless the nonblank
-  `SECOND_PASS_READING_CLIENT_BASE_URL` environment hard override is present.
-  The effective non-secret value is authenticated server context; it is not
-  current-user identity or anonymous discovery data.
+- The optional Second Pass Reader web client origin uses
+  `ServerSetting(second_pass_reader_web_client_url)`. A nonblank
+  `SECOND_PASS_READER_WEB_CLIENT_URL` deployment value is normalized and
+  synchronized into that row at container startup; runtime consumers read the
+  stored value. The effective non-secret value is authenticated server context;
+  it is not current-user identity or anonymous discovery data.
 
 ## Shelves
 

@@ -68,7 +68,8 @@ Web startup performs:
 
 1. `python manage.py check --deploy`
 2. `python manage.py migrate --noinput`
-3. `python -m uvicorn secondpass.asgi:application --host 0.0.0.0 --port 8000 --workers 1 --no-proxy-headers --no-access-log`
+3. `python manage.py sync_deployment_server_settings`
+4. `python -m uvicorn secondpass.asgi:application --host 0.0.0.0 --port 8000 --workers 1 --no-proxy-headers --no-access-log`
 
 After web health succeeds, `worker` runs
 `python manage.py run_huey`. Huey's queue uses the separate persistent SQLite
@@ -84,6 +85,22 @@ Complete first-owner setup through a local or otherwise trusted connection
 before enabling remote proxy exposure. The setup wizard configures application
 state after migrations; it does not create database tables during a request.
 Once an active Owner exists, `/setup/` is disabled.
+
+## Second Pass Reader web client URL
+
+The optional `second_pass_reader_web_client_url` Server Setting is the canonical
+base URL used to open Books in the Second Pass Reader web client. It can be
+edited in Django Admin as a single-line URL field, or fixed by deployment with:
+
+```text
+SECOND_PASS_READER_WEB_CLIENT_URL=https://reader.example.com
+```
+
+The value must be an absolute `http` or `https` URL. Localhost, private-network
+hosts, and explicit ports are supported. Startup preserves the scheme, host,
+and explicit port while removing any path, query string, fragment, and trailing
+slash, then synchronizes the normalized value into the Server Setting row.
+Runtime code reads that stored row rather than reading the environment directly.
 
 ## Reverse-proxy contract
 

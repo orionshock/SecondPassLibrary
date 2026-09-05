@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from rest_framework import status
@@ -29,7 +30,7 @@ class ServerInfoApiTests(APITestCase):
         server_settings.set_server_description("Household books.")
         server_settings.set_server_banner_message("Maintenance tonight.")
         server_settings.set_advanced_library_groups_enabled(True)
-        server_settings.set_reading_client_base_url("https://reader.example.com/")
+        server_settings.set_second_pass_reader_web_client_url("https://reader.example.com/")
         public_group = configure_public_group(
             name="Common Room",
             description="Shared books.",
@@ -46,7 +47,7 @@ class ServerInfoApiTests(APITestCase):
                 "server_description": "Household books.",
                 "server_banner_message": "Maintenance tonight.",
                 "advanced_library_groups_enabled": True,
-                "reading_client_base_url": "https://reader.example.com",
+                "second_pass_reader_web_client_url": "https://reader.example.com",
                 "marginalia_profile_uri": (
                     "https://secondpasslibrary.local/specs/marginalia/0.1.0"
                 ),
@@ -55,8 +56,8 @@ class ServerInfoApiTests(APITestCase):
                     "name": "Common Room",
                     "description": "Shared books.",
                 },
-                "server_version": "0.1.0-dev",
-                "server_release_date": "2026-07-19",
+                "server_version": settings.SECOND_PASS_SERVER_VERSION,
+                "server_release_date": settings.SECOND_PASS_SERVER_RELEASE_DATE,
             },
         )
         for excluded in (
@@ -99,10 +100,10 @@ class ServerInfoApiTests(APITestCase):
             )
             self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
-    def test_blank_reading_client_url_projects_as_null(self):
+    def test_blank_reader_web_client_url_projects_as_null(self):
         self.client.force_login(self.user)
 
         response = self.client.get("/api/v1/server/info/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsNone(response.json()["reading_client_base_url"])
+        self.assertIsNone(response.json()["second_pass_reader_web_client_url"])

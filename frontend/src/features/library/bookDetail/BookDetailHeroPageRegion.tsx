@@ -6,7 +6,7 @@ import { selectedLibraryContextNavigationState } from "../libraryPresentation";
 import { bookSeriesDisplay, formatBookPublishedDate } from "../bookDetailPresentation";
 import { BookDescription } from "./BookDescription";
 
-export function BookDetailHeroPageRegion({ book, canEdit = false, editNavigationState, readingClientBookUrl }: { book: BookDetail; canEdit?: boolean; editNavigationState?: unknown; readingClientBookUrl?: string }) {
+export function BookDetailHeroPageRegion({ book, canEdit = false, editNavigationState, secondPassReaderBookUrl }: { book: BookDetail; canEdit?: boolean; editNavigationState?: unknown; secondPassReaderBookUrl?: string }) {
   const publishedDate = formatBookPublishedDate(book);
   const facts = [book.publisher, book.language, publishedDate].filter(Boolean);
 
@@ -39,10 +39,10 @@ export function BookDetailHeroPageRegion({ book, canEdit = false, editNavigation
         {book.catalogTags.map((tag) => <span key={tag.id}>{tag.name}</span>)}
       </div> : null}
       {book.description ? <div className="book-detail-hero-region__description"><BookDescription sanitizedHtml={book.description} /></div> : null}
-      {book.file?.downloadUrl || !book.file || canEdit || readingClientBookUrl ? <div className="book-detail-hero-region__actions">
-        {readingClientBookUrl && book.file ? <a
+      {book.file?.downloadUrl || !book.file || canEdit || secondPassReaderBookUrl ? <div className="book-detail-hero-region__actions">
+        {secondPassReaderBookUrl && book.file ? <a
           className="button button--medium button--primary"
-          href={readingClientBookUrl}
+          href={secondPassReaderBookUrl}
           target="_blank"
           rel="noopener noreferrer"
         >Open in Reader</a> : null}

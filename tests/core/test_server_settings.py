@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import uuid
+from io import StringIO
 
 from django.core.cache import cache
+from django.core.management import call_command
 from django.test import TestCase, override_settings
 
-from core.checks import reading_client_base_url_check
+from core.checks import second_pass_reader_web_client_url_check
 from core.models import ServerSetting
 from core.server_settings import (
     MARGINALIA_ACTIVE_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING,
@@ -14,7 +16,7 @@ from core.server_settings import (
     clear_server_settings_cache,
     enable_advanced_library_groups,
     get_server_banner_message,
-    get_reading_client_base_url,
+    get_second_pass_reader_web_client_url,
     get_marginalia_active_session_tombstone_retention_days,
     get_marginalia_closed_session_tombstone_retention_days,
     get_server_setting,
@@ -22,8 +24,9 @@ from core.server_settings import (
     ensure_editable_server_settings,
     set_advanced_library_groups_enabled,
     set_server_banner_message,
-    set_reading_client_base_url,
+    set_second_pass_reader_web_client_url,
     set_server_setting,
+    synchronize_deployment_server_settings,
 )
 from library.models import LibraryGroup
 from library.groups.public_group import (
@@ -58,19 +61,30 @@ class ServerSettingsServiceTests(TestCase):
         with self.assertRaises(ValueError):
             set_server_banner_message("x" * 501)
 
-    def test_reading_client_url_is_optional_and_normalized(self):
-        self.assertEqual(get_reading_client_base_url(), "")
+    def test_second_pass_reader_web_client_url_is_optional_and_canonical(self):
+        self.assertEqual(get_second_pass_reader_web_client_url(), "")
 
-        set_reading_client_base_url("  http://localhost:5173/  ")
+        cases = {
+            "https://reader.example.com": "https://reader.example.com",
+            "https://reader.example.com/": "https://reader.example.com",
+            "https://reader.example.com/some/path?foo=bar#section": (
+                "https://reader.example.com"
+            ),
+            "https://reader.example.com:8443/path": (
+                "https://reader.example.com:8443"
+            ),
+            "  http://localhost:5173/something  ": "http://localhost:5173",
+        }
+        for supplied, expected in cases.items():
+            with self.subTest(supplied=supplied):
+                set_second_pass_reader_web_client_url(supplied)
+                self.assertEqual(get_second_pass_reader_web_client_url(), expected)
 
-        self.assertEqual(get_reading_client_base_url(), "http://localhost:5173")
-
-    def test_reading_client_url_rejects_non_root_or_unsafe_values(self):
+    def test_second_pass_reader_web_client_url_rejects_invalid_values(self):
         invalid_values = (
             "ftp://reader.example.com",
-            "https://reader.example.com/app",
-            "https://reader.example.com?theme=dark",
-            "https://reader.example.com/#/reader",
+            "reader.example.com",
+            "/reader",
             "https://user:password@reader.example.com",
             "https://reader.example.com/{book_id}",
             "https://reader example.com",
@@ -80,32 +94,54 @@ class ServerSettingsServiceTests(TestCase):
         )
         for value in invalid_values:
             with self.subTest(value=value), self.assertRaises(ValueError):
-                set_reading_client_base_url(value)
+                set_second_pass_reader_web_client_url(value)
 
     @override_settings(
-        SECOND_PASS_READING_CLIENT_BASE_URL=" https://reader.example.com/ "
+        SECOND_PASS_READER_WEB_CLIENT_URL=(
+            " https://reader.example.com:8443/application?theme=dark#home "
+        )
     )
-    def test_reading_client_environment_override_wins_and_locks_writes(self):
+    def test_deployment_sync_persists_canonical_url_and_locks_writes(self):
         ServerSetting.objects.create(
-            key="reading_client_base_url",
+            key="second_pass_reader_web_client_url",
             value="https://stored.example.com",
             description="",
         )
         clear_server_settings_cache()
 
         self.assertEqual(
-            get_reading_client_base_url(), "https://reader.example.com"
+            get_second_pass_reader_web_client_url(), "https://stored.example.com"
+        )
+        call_command("sync_deployment_server_settings", stdout=StringIO())
+
+        self.assertEqual(
+            get_second_pass_reader_web_client_url(), "https://reader.example.com:8443"
+        )
+        self.assertEqual(
+            ServerSetting.objects.get(
+                key="second_pass_reader_web_client_url"
+            ).value,
+            "https://reader.example.com:8443",
         )
         with self.assertRaisesRegex(ValueError, "server environment"):
-            set_reading_client_base_url("https://other.example.com")
+            set_second_pass_reader_web_client_url("https://other.example.com")
 
     @override_settings(
-        SECOND_PASS_READING_CLIENT_BASE_URL="https://reader.example.com/app"
+        SECOND_PASS_READER_WEB_CLIENT_URL="ftp://reader.example.com/app"
     )
-    def test_invalid_reading_client_environment_override_fails_system_check(self):
-        messages = reading_client_base_url_check()
+    def test_invalid_reader_web_client_environment_value_fails_system_check(self):
+        messages = second_pass_reader_web_client_url_check()
 
         self.assertEqual([message.id for message in messages], ["secondpass.E001"])
+
+    @override_settings(SECOND_PASS_READER_WEB_CLIENT_URL="")
+    def test_deployment_sync_without_environment_value_leaves_storage_unchanged(self):
+        set_second_pass_reader_web_client_url("https://stored.example.com")
+
+        self.assertFalse(synchronize_deployment_server_settings())
+        self.assertEqual(
+            get_second_pass_reader_web_client_url(), "https://stored.example.com"
+        )
 
     def test_ensure_editable_server_settings_creates_optional_banner_row(self):
         ensure_editable_server_settings()

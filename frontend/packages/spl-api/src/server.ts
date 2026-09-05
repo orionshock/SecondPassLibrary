@@ -5,7 +5,7 @@ interface ServerInfoResponse {
   server_description: string;
   server_banner_message: string;
   advanced_library_groups_enabled: boolean;
-  reading_client_base_url: string | null;
+  second_pass_reader_web_client_url: string | null;
   marginalia_profile_uri: string;
   public_group: {
     id: string;
@@ -29,7 +29,7 @@ export interface ServerInfo {
   description: string;
   bannerText: string;
   advancedLibraryGroupsEnabled: boolean;
-  readingClientBaseUrl: string | null;
+  secondPassReaderWebClientUrl: string | null;
   marginaliaProfileUri: string;
   publicGroup: {
     id: string;
@@ -55,7 +55,7 @@ export async function getServerInfo(client: ApiClient = apiClient): Promise<Serv
     description: response.server_description,
     bannerText: response.server_banner_message,
     advancedLibraryGroupsEnabled: response.advanced_library_groups_enabled,
-    readingClientBaseUrl: response.reading_client_base_url,
+    secondPassReaderWebClientUrl: response.second_pass_reader_web_client_url,
     marginaliaProfileUri: response.marginalia_profile_uri,
     publicGroup: {
       id: response.public_group.id,

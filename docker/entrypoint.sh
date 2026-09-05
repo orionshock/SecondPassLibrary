@@ -32,6 +32,7 @@ case "${1:-web}" in
     web)
         gosu secondpass python manage.py check --deploy
         gosu secondpass python manage.py migrate --noinput
+        gosu secondpass python manage.py sync_deployment_server_settings
         exec gosu secondpass python -m uvicorn secondpass.asgi:application \
             --host 0.0.0.0 \
             --port 8000 \

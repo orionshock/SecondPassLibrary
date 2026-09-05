@@ -4,8 +4,8 @@ export interface GeneralServerSettings {
   name: string;
   description: string;
   bannerText: string;
-  readingClientBaseUrl: string;
-  readingClientBaseUrlLocked: boolean;
+  secondPassReaderWebClientUrl: string;
+  secondPassReaderWebClientUrlLocked: boolean;
 }
 
 export interface PublicLibrarySettings {
@@ -27,7 +27,7 @@ export interface UpdateGeneralSettingsInput {
   name: string;
   description: string;
   bannerText: string;
-  readingClientBaseUrl?: string;
+  secondPassReaderWebClientUrl?: string;
 }
 
 export interface UpdatePublicLibrarySettingsInput {
@@ -42,8 +42,8 @@ interface ServerSettingsResponse {
   public_group_name: string;
   public_group_description: string;
   advanced_library_groups_enabled: boolean;
-  reading_client_base_url: string;
-  reading_client_base_url_locked: boolean;
+  second_pass_reader_web_client_url: string;
+  second_pass_reader_web_client_url_locked: boolean;
 }
 
 const settingsPath = "/api/v1/server/settings/";
@@ -61,8 +61,8 @@ export async function updateGeneralSettings(
     server_description: input.description.trim(),
     server_banner_message: input.bannerText.trim(),
   };
-  if (input.readingClientBaseUrl !== undefined) {
-    body.reading_client_base_url = input.readingClientBaseUrl.trim();
+  if (input.secondPassReaderWebClientUrl !== undefined) {
+    body.second_pass_reader_web_client_url = input.secondPassReaderWebClientUrl.trim();
   }
   return patchServerSettings(body, client);
 }
@@ -100,8 +100,8 @@ function mapServerSettings(response: ServerSettingsResponse): ServerSettings {
       name: response.server_name,
       description: response.server_description,
       bannerText: response.server_banner_message,
-      readingClientBaseUrl: response.reading_client_base_url,
-      readingClientBaseUrlLocked: response.reading_client_base_url_locked,
+      secondPassReaderWebClientUrl: response.second_pass_reader_web_client_url,
+      secondPassReaderWebClientUrlLocked: response.second_pass_reader_web_client_url_locked,
     },
     publicLibrary: {
       name: response.public_group_name,

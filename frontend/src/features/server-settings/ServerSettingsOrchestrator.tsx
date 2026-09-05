@@ -49,7 +49,7 @@ export function ServerSettingsOrchestrator() {
   const [editing, setEditing] = useState(false);
   const [state, setState] = useState<MutationState>(idleMutationState);
   useAutoDismissMutationMessage(state, setState);
-  const [generalDraft, setGeneralDraft] = useState<GeneralServerSettings>({ name: "", description: "", bannerText: "", readingClientBaseUrl: "", readingClientBaseUrlLocked: false });
+  const [generalDraft, setGeneralDraft] = useState<GeneralServerSettings>({ name: "", description: "", bannerText: "", secondPassReaderWebClientUrl: "", secondPassReaderWebClientUrlLocked: false });
   const [publicDraft, setPublicDraft] = useState<PublicLibrarySettings>({ name: "", description: "" });
 
   useEffect(() => {
@@ -103,9 +103,9 @@ export function ServerSettingsOrchestrator() {
     try {
       const settings = await updateGeneralSettings({
         ...generalDraft,
-        readingClientBaseUrl: generalDraft.readingClientBaseUrlLocked
+        secondPassReaderWebClientUrl: generalDraft.secondPassReaderWebClientUrlLocked
           ? undefined
-          : generalDraft.readingClientBaseUrl,
+          : generalDraft.secondPassReaderWebClientUrl,
       });
       setLoad({ loading: false, settings });
       setGeneralDraft(settings.general);
@@ -180,7 +180,7 @@ export function ServerSettingsOrchestrator() {
       draft={generalDraft}
       editing={editing}
       state={state}
-      onChange={(value) => setGeneralDraft((draft) => ({ ...draft, readingClientBaseUrl: value }))}
+      onChange={(value) => setGeneralDraft((draft) => ({ ...draft, secondPassReaderWebClientUrl: value }))}
       onSubmit={(event) => void saveGeneral(event)}
     /> : null}
     {tab === "library-groups" ? <LibraryGroupsPageRegion settings={settings.libraryGroups} editing={editing} state={state} onEnable={() => void enableGroups()} /> : null}
