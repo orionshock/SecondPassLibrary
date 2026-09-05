@@ -4,7 +4,7 @@ from django.test import RequestFactory, TestCase, override_settings
 from django.urls import include, path, resolve, reverse
 
 from core import server_settings
-from core.admin import ServerSettingAdmin, ServerSettingAdminForm
+from core.admin import ServerSettingAdmin
 from core.models import ServerSetting
 from core.server_settings import set_server_setting
 from library.groups.consolidation import build_advanced_groups_disable_plan
@@ -186,30 +186,26 @@ class AdvancedGroupsRecoveryAdminTests(IsolatedMediaRootMixin, TestCase):
             "core_serversetting_advanced_groups_disable",
         )
 
-    def test_semantic_labels_and_copy_replace_generic_value_presentation(self):
+    def test_setting_edit_layouts_hide_internal_keys(self):
         server_settings.ensure_editable_server_settings()
-        expected = {
-            server_settings.SERVER_NAME_SETTING: (
-                "Server Name",
-                "Display name used in Product UI and discovery.",
-            ),
-            server_settings.SERVER_DESCRIPTION_SETTING: (
-                "Server Description",
-                "Description used in discovery and server identity.",
-            ),
-            server_settings.SERVER_BANNER_MESSAGE_SETTING: (
-                "Server Banner Message",
-                "Banner message shown in Product UI.",
-            ),
-        }
+        model_admin = ServerSettingAdmin(ServerSetting, admin.site)
+        request = RequestFactory().get("/admin/core/serversetting/")
+        request.user = self.owner
 
-        for key, (label, help_text) in expected.items():
-            with self.subTest(key=key):
-                form = ServerSettingAdminForm(
-                    instance=ServerSetting.objects.get(key=key)
-                )
-                self.assertEqual(form.fields["value"].label, label)
-                self.assertEqual(form.fields["value"].help_text, help_text)
+        for setting in (
+            ServerSetting.objects.get(key=server_settings.SERVER_NAME_SETTING),
+            ServerSetting.objects.get(
+                key=server_settings.ADVANCED_LIBRARY_GROUPS_SETTING
+            ),
+            ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING),
+        ):
+            with self.subTest(setting=setting.key):
+                fields = {
+                    field
+                    for _heading, options in model_admin.get_fieldsets(request, setting)
+                    for field in options["fields"]
+                }
+                self.assertNotIn("key", fields)
 
     def test_structural_settings_cannot_be_deleted_or_bulk_deleted(self):
         model_admin = ServerSettingAdmin(ServerSetting, admin.site)
@@ -237,7 +233,7 @@ class AdvancedGroupsRecoveryAdminTests(IsolatedMediaRootMixin, TestCase):
         self.assertContains(response, "configured protected Public/Common Room identity")
         self.assertContains(response, "Confirm Public/Common Room reassignment")
         self.assertContains(response, "Repair Public/Common Room identity")
-        self.assertContains(response, "public_group_id")
+        self.assertNotContains(response, "public_group_id")
         self.assertNotContains(response, "rewrite")
         self.assertNotContains(response, "branch")
 

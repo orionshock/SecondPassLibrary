@@ -16,7 +16,7 @@ SERVER_SETTING_DISPLAY_NAMES = {
     "reading_client_base_url": _("Reading Client URL"),
     "server_banner_message": _("Server Banner Message"),
     "server_description": _("Server Description"),
-    "server_name": _("Server Name"),
+    "server_name": _("Server Identity & Banner"),
 }
 
 

@@ -3,6 +3,7 @@ from django.contrib import admin, messages
 from django.contrib.admin.widgets import AutocompleteSelect
 from django.core.exceptions import ValidationError
 from django.core.exceptions import PermissionDenied
+from django.db import transaction
 from django.http import HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
@@ -25,6 +26,43 @@ from library.groups.consolidation import (
 from . import server_settings
 from .admin_menu import install_admin_menu
 from .models import ServerSetting
+
+
+class ServerIdentityAdminForm(forms.ModelForm):
+    server_name = forms.CharField(
+        label="Server Name",
+        help_text="Display name used in Product UI and discovery.",
+        max_length=server_settings.SERVER_NAME_MAX_LEN,
+        widget=forms.TextInput(attrs={"size": 80}),
+    )
+    server_description = forms.CharField(
+        label="Server Description",
+        help_text="Description used in discovery and server identity.",
+        required=False,
+        max_length=server_settings.SERVER_DESCRIPTION_MAX_LEN,
+        widget=forms.Textarea(attrs={"rows": 4, "cols": 100}),
+    )
+    server_banner_message = forms.CharField(
+        label="Server Banner Message",
+        help_text="Banner message shown in Product UI.",
+        required=False,
+        max_length=server_settings.SERVER_BANNER_MESSAGE_MAX_LEN,
+        widget=forms.Textarea(attrs={"rows": 3, "cols": 100}),
+    )
+
+    class Meta:
+        model = ServerSetting
+        fields = []
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.initial.update(
+            {
+                "server_name": server_settings.get_server_name(),
+                "server_description": server_settings.get_server_description(),
+                "server_banner_message": server_settings.get_server_banner_message(),
+            }
+        )
 
 
 class ServerSettingAdminForm(forms.ModelForm):
@@ -51,38 +89,6 @@ class ServerSettingAdminForm(forms.ModelForm):
         key = self.instance.key if self.instance and self.instance.pk else ""
         if key != PUBLIC_GROUP_ID_SETTING:
             self.fields.pop("confirm_public_reassignment", None)
-
-        if key == server_settings.SERVER_NAME_SETTING:
-            self.fields["value"] = forms.CharField(
-                label="Server Name",
-                help_text="Display name used in Product UI and discovery.",
-                max_length=server_settings.SERVER_NAME_MAX_LEN,
-                widget=forms.TextInput,
-                initial=value,
-            )
-            return
-
-        if key == server_settings.SERVER_DESCRIPTION_SETTING:
-            self.fields["value"] = forms.CharField(
-                label="Server Description",
-                help_text="Description used in discovery and server identity.",
-                required=False,
-                max_length=server_settings.SERVER_DESCRIPTION_MAX_LEN,
-                widget=forms.Textarea,
-                initial=value,
-            )
-            return
-
-        if key == server_settings.SERVER_BANNER_MESSAGE_SETTING:
-            self.fields["value"] = forms.CharField(
-                label="Server Banner Message",
-                help_text="Banner message shown in Product UI.",
-                required=False,
-                max_length=server_settings.SERVER_BANNER_MESSAGE_MAX_LEN,
-                widget=forms.Textarea,
-                initial=value,
-            )
-            return
 
         if key == server_settings.APPLICATION_LOG_LEVEL_SETTING:
             self.fields["value"] = forms.ChoiceField(
@@ -202,6 +208,10 @@ class ServerSettingAdmin(admin.ModelAdmin):
         )
 
     @staticmethod
+    def _is_server_identity_setting(obj) -> bool:
+        return obj is not None and obj.key == server_settings.SERVER_NAME_SETTING
+
+    @staticmethod
     def _is_public_group_setting(obj) -> bool:
         return obj is not None and obj.key == PUBLIC_GROUP_ID_SETTING
 
@@ -236,6 +246,8 @@ class ServerSettingAdmin(admin.ModelAdmin):
         server_settings.ensure_editable_server_settings()
         return super().get_queryset(request).exclude(
             key__in={
+                server_settings.SERVER_DESCRIPTION_SETTING,
+                server_settings.SERVER_BANNER_MESSAGE_SETTING,
                 server_settings.MARGINALIA_ACTIVE_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING,
                 server_settings.MARGINALIA_CLOSED_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING,
             }
@@ -258,6 +270,26 @@ class ServerSettingAdmin(admin.ModelAdmin):
         return custom_urls + urls
 
     def get_fieldsets(self, request, obj=None):
+        if self._is_server_identity_setting(obj):
+            return (
+                (
+                    "Server identity and banner",
+                    {
+                        "fields": (
+                            "server_name",
+                            "server_description",
+                            "server_banner_message",
+                        )
+                    },
+                ),
+                (
+                    "Database metadata",
+                    {
+                        "classes": ("collapse",),
+                        "fields": ("created_at", "updated_at"),
+                    },
+                ),
+            )
         if self._is_advanced_groups_setting(obj):
             status_fields = ["advanced_groups_status"]
             if obj is not None and obj.value is True:
@@ -276,7 +308,7 @@ class ServerSettingAdmin(admin.ModelAdmin):
                     "Database metadata",
                     {
                         "classes": ("collapse",),
-                        "fields": ("key", "created_at", "updated_at"),
+                        "fields": ("created_at", "updated_at"),
                     },
                 ),
             )
@@ -297,7 +329,7 @@ class ServerSettingAdmin(admin.ModelAdmin):
                     "Database metadata",
                     {
                         "classes": ("collapse",),
-                        "fields": ("key", "created_at", "updated_at"),
+                        "fields": ("created_at", "updated_at"),
                     },
                 ),
             )
@@ -306,7 +338,6 @@ class ServerSettingAdmin(admin.ModelAdmin):
                 None,
                 {
                     "fields": (
-                        "key",
                         "value",
                         "created_at",
                         "updated_at",
@@ -338,6 +369,8 @@ class ServerSettingAdmin(admin.ModelAdmin):
         return list(dict.fromkeys(fields))
 
     def get_form(self, request, obj=None, change=False, **kwargs):
+        if self._is_server_identity_setting(obj):
+            return ServerIdentityAdminForm
         form = super().get_form(request, obj=obj, change=change, **kwargs)
         form.admin_site = self.admin_site
         return form
@@ -369,6 +402,16 @@ class ServerSettingAdmin(admin.ModelAdmin):
         )
 
     def save_model(self, request, obj, form, change):
+        if self._is_server_identity_setting(obj):
+            with transaction.atomic():
+                server_settings.set_server_name(form.cleaned_data["server_name"])
+                server_settings.set_server_description(
+                    form.cleaned_data["server_description"]
+                )
+                server_settings.set_server_banner_message(
+                    form.cleaned_data["server_banner_message"]
+                )
+            return
         if self._is_public_group_setting(obj):
             try:
                 group = LibraryGroup.objects.get(pk=obj.value)
