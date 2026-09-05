@@ -32,7 +32,13 @@ export async function collectPaginatedResults<T, U>(
   while (path) {
     const page = await readPage(path);
     items.push(...page.results.map(mapItem));
-    path = page.next;
+    path = page.next ? paginationPath(page.next) : null;
   }
   return items;
+}
+
+function paginationPath(value: string): string {
+  if (value.startsWith("/") && !value.startsWith("//")) return value;
+  const url = new URL(value, "http://pagination.invalid");
+  return `${url.pathname}${url.search}`;
 }

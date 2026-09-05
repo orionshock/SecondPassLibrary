@@ -30,4 +30,29 @@ describe("toPage", () => {
     )).resolves.toEqual(["FIRST", "SECOND"]);
     expect(calls).toEqual(["/items?page_size=200", "/items?page=2&page_size=200"]);
   });
+
+  it("follows absolute server pagination links through the same-origin API path", async () => {
+    const calls: string[] = [];
+    const pages: Record<string, ApiPage<{ id: string }>> = {
+      "/api/v1/library/authors/?page_size=200": {
+        results: [{ id: "first" }],
+        count: 2,
+        next: "http://127.0.0.1:8000/api/v1/library/authors/?page=2&page_size=200",
+        previous: null,
+      },
+      "/api/v1/library/authors/?page=2&page_size=200": {
+        results: [{ id: "second" }], count: 2, next: null, previous: null,
+      },
+    };
+
+    await expect(collectPaginatedResults(
+      "/api/v1/library/authors/?page_size=200",
+      async (path) => { calls.push(path); return pages[path]!; },
+      ({ id }) => id,
+    )).resolves.toEqual(["first", "second"]);
+    expect(calls).toEqual([
+      "/api/v1/library/authors/?page_size=200",
+      "/api/v1/library/authors/?page=2&page_size=200",
+    ]);
+  });
 });
