@@ -68,24 +68,19 @@ export function MarginaliaSessionsPageRegion({
         />
         <Button type="submit">Search</Button>
       </form>
-      <label className="marginalia-status-filter" htmlFor="marginalia-status">Status
-        <select id="marginalia-status" value={status} onChange={(event) => onStatusChange(event.target.value as MarginaliaStatusFilter)}>
-          <option value="all">All</option>
-          <option value="active">Active</option>
-          <option value="closed">Closed</option>
-        </select>
-      </label>
     </section>
     <ReadingSessionResults
       page={page}
       pageNumber={pageNumber}
       pageSize={pageSize}
+      status={status}
       bookContext={bookContext}
       hasFilters={Boolean(search || status !== "all")}
       loading={loading}
       error={error}
       onPageChange={onPageChange}
       onPageSizeChange={onPageSizeChange}
+      onStatusChange={onStatusChange}
       onRetry={onRetry}
     />
   </div>;
@@ -104,28 +99,36 @@ function SelectedBookContextComponent({ book, onBack }: { book: MarginaliaBookSu
   </section>;
 }
 
-function ReadingSessionResults({ page, pageNumber, pageSize, bookContext, hasFilters, loading, error, onPageChange, onPageSizeChange, onRetry }: {
+function ReadingSessionResults({ page, pageNumber, pageSize, status, bookContext, hasFilters, loading, error, onPageChange, onPageSizeChange, onStatusChange, onRetry }: {
   page?: Page<SessionRow>;
   pageNumber: number;
   pageSize: number;
+  status: MarginaliaStatusFilter;
   bookContext?: MarginaliaBookSummary;
   hasFilters: boolean;
   loading: boolean;
   error?: Error;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
+  onStatusChange: (value: MarginaliaStatusFilter) => void;
   onRetry: () => void;
 }) {
   if (!page && loading) return <section className="marginalia-state" aria-live="polite" aria-busy="true">Loading reading sessions...</section>;
   if (!page && error) return <section className="marginalia-state"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></section>;
   if (!page) return null;
 
-  return <section className={`marginalia-results${loading ? " marginalia-results--loading" : ""}`} aria-busy={loading}>
+  return <section className={`marginalia-results marginalia-results--browse${page.items.length ? " marginalia-results--populated" : ""}${loading ? " marginalia-results--loading" : ""}`} aria-busy={loading}>
     {error ? <div className="marginalia-inline-error"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></div> : null}
-    <PaginatedListFrame page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Reading sessions" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange}>
+    <PaginatedListFrame page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Reading sessions" topPagerAction={<label className="marginalia-status-filter marginalia-status-filter--pager" htmlFor="marginalia-status">Status
+      <select className="form-control form-control--small form-control--select" id="marginalia-status" value={status} onChange={(event) => onStatusChange(event.target.value as MarginaliaStatusFilter)}>
+        <option value="all">All</option>
+        <option value="active">Active</option>
+        <option value="closed">Closed</option>
+      </select>
+    </label>} onPageChange={onPageChange} onPageSizeChange={onPageSizeChange}>
       {page.items.length === 0
         ? <div className="marginalia-empty"><p>{bookContext ? "No reading sessions match for this Book." : "No reading sessions found."}</p>{hasFilters ? <p className="muted">Try clearing the search or status filter.</p> : <p className="muted">{bookContext ? "This Book has no Sessions in the selected status." : "Your reading history will appear here."}</p>}</div>
-        : <div className="marginalia-session-rows">{page.items.map((session) => <SessionSummaryRow key={session.id} session={session} book={bookReference(session, bookContext)} />)}</div>}
+        : <div className="marginalia-browse-rows marginalia-session-rows">{page.items.map((session) => <SessionSummaryRow key={session.id} session={session} book={bookReference(session, bookContext)} />)}</div>}
     </PaginatedListFrame>
   </section>;
 }

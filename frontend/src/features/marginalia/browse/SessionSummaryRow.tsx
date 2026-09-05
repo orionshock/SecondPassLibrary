@@ -30,9 +30,9 @@ export function SessionSummaryRow({ session, book }: { session: MarginaliaSessio
           </div>
         </div>
         {noteExcerpt ? <blockquote className="marginalia-session-row__note">{noteExcerpt}</blockquote> : null}
-        {book.canOpen ? <Link className="button button--small button--secondary marginalia-session-row__book-link" to={`/library/books/${encodeURIComponent(book.id)}`}>View Book</Link> : null}
       </div>
     </div>
+    {book.canOpen ? <Link className="button button--small button--secondary marginalia-session-row__book-link" to={`/library/books/${encodeURIComponent(book.id)}`}>View Book</Link> : null}
   </article>;
 }
 

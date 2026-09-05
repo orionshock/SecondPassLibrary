@@ -53,12 +53,12 @@ function BookResults({ page, pageNumber, pageSize, searching, loading, error, bo
   if (!page && error) return <section className="marginalia-state"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></section>;
   if (!page) return null;
 
-  return <section className={`marginalia-results${loading ? " marginalia-results--loading" : ""}`} aria-label="Marginalia Books" aria-busy={loading}>
+  return <section className={`marginalia-results marginalia-results--browse${page.items.length ? " marginalia-results--populated" : ""}${loading ? " marginalia-results--loading" : ""}`} aria-label="Marginalia Books" aria-busy={loading}>
     {error ? <div className="marginalia-inline-error"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></div> : null}
     <PaginatedListFrame page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Books" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange}>
       {page.items.length === 0
         ? <div className="marginalia-empty"><p>{searching ? "No Books with Marginalia match this search." : "No Books with Marginalia found."}</p></div>
-        : <div className="marginalia-book-rows">{page.items.map((book) => <CompactBookRow
+        : <div className="marginalia-browse-rows marginalia-book-rows">{page.items.map((book) => <CompactBookRow
           key={book.id}
           book={book}
           detailPath={bookPath(book.id)}

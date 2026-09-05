@@ -1,5 +1,7 @@
 import "./Pager.css";
 
+import type { ReactNode } from "react";
+
 import { Button } from "../../components/UiPrimitives";
 
 export type PagerDensity = "compact" | "full";
@@ -16,11 +18,12 @@ export interface PagerProps {
   pageSizes?: readonly number[];
   density?: PagerDensity;
   ariaLabel?: string;
+  actionPrefix?: ReactNode;
 }
 
 const defaultPageSizes = [20, 30, 40, 50] as const;
 
-export function Pager({ page, pageSize, count, hasPrevious, hasNext, itemLabel, onPageChange, onPageSizeChange, pageSizes = defaultPageSizes, density = "full", ariaLabel }: PagerProps) {
+export function Pager({ page, pageSize, count, hasPrevious, hasNext, itemLabel, onPageChange, onPageSizeChange, pageSizes = defaultPageSizes, density = "full", ariaLabel, actionPrefix }: PagerProps) {
   const start = count === 0 ? 0 : ((page - 1) * pageSize) + 1;
   const end = Math.min(count, start + pageSize - 1);
 
@@ -32,6 +35,7 @@ export function Pager({ page, pageSize, count, hasPrevious, hasNext, itemLabel, 
       </select>
     </label> : null}
     <div className="pager-component__actions">
+      {actionPrefix}
       <Button type="button" size="small" tone="secondary" disabled={!hasPrevious} onClick={() => onPageChange(Math.max(1, page - 1))}>Previous</Button>
       <Button type="button" size="small" disabled={!hasNext} onClick={() => onPageChange(page + 1)}>Next</Button>
     </div>

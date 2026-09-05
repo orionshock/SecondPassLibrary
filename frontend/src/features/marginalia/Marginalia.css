@@ -100,6 +100,7 @@
   display: flex;
   align-items: end;
   gap: 0.9rem;
+  min-height: 2.65rem;
   margin-bottom: 0.8rem;
 }
 
@@ -121,14 +122,65 @@
 
 .marginalia-status-filter select { min-width: 8.5rem; }
 
-.marginalia-session-rows {
+.marginalia-status-filter--pager {
+  color: var(--text);
+  font-size: 0.8rem;
+}
+
+.marginalia-status-filter--pager select { min-width: 7rem; }
+
+.marginalia-browse-rows {
+  --marginalia-row-cover-width: 3.25rem;
+
   display: grid;
   gap: 0.5rem;
 }
 
-.marginalia-book-rows {
+.marginalia-results--populated .paginated-list-frame__body {
+  min-height: clamp(24rem, 48vh, 32rem);
+}
+
+.marginalia-browse-rows > * {
+  min-height: 6rem;
+}
+
+.marginalia-book-rows .book-row-component,
+.marginalia-session-row {
   display: grid;
-  gap: 0.5rem;
+  grid-template-columns: var(--marginalia-row-cover-width) minmax(0, 1fr) max-content;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.7rem 0.8rem;
+  border-radius: 0.6rem;
+  background: var(--surface);
+}
+
+.marginalia-book-rows .book-cover-component,
+.marginalia-session-row__cover .book-cover-component { width: var(--marginalia-row-cover-width); }
+
+.marginalia-book-rows .book-row-component h2 { font-size: 1rem; }
+
+.marginalia-book-rows .book-row-component__body {
+  gap: 0.35rem;
+}
+
+.marginalia-book-rows .book-metadata-component {
+  color: var(--text);
+  font-size: 0.925rem;
+  line-height: 1.5;
+}
+
+.marginalia-book-rows .book-metadata-component__item .material-icon { font-size: 0.95rem; }
+
+.marginalia-book-rows .marginalia-book-facts {
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.marginalia-book-rows .book-row-component__actions,
+.marginalia-session-row__book-link {
+  align-self: center;
+  justify-self: end;
 }
 
 .marginalia-book-facts {
@@ -153,26 +205,16 @@
 }
 
 .marginalia-session-row {
-  display: grid;
-  grid-template-columns: 3.25rem minmax(0, 1fr);
-  align-items: center;
-  gap: 0.8rem;
-  padding: 0.7rem 0.8rem;
   border: 1px solid var(--border);
-  border-radius: 0.6rem;
-  background: var(--surface);
 }
 
 .marginalia-session-row__body {
   display: grid;
   min-width: 0;
-  gap: 0.45rem;
+  gap: 0.35rem;
 }
 
-.marginalia-session-row__cover .book-cover-component {
-  width: 3.25rem;
-  aspect-ratio: 2 / 3;
-}
+.marginalia-session-row__cover .book-cover-component { aspect-ratio: 2 / 3; }
 
 .marginalia-session-row__heading,
 .marginalia-session-row__facts {
@@ -184,7 +226,7 @@
 
 .marginalia-session-row__content {
   display: grid;
-  grid-template-columns: fit-content(28rem) minmax(0, 1fr) max-content;
+  grid-template-columns: fit-content(28rem) minmax(0, 1fr);
   align-items: center;
   gap: 1rem;
   min-width: 0;
@@ -201,6 +243,7 @@
 .marginalia-session-row__heading h2 {
   margin: 0;
   font-size: 1rem;
+  line-height: 1.25;
 }
 
 .marginalia-session-row__book {
@@ -215,8 +258,10 @@
 .marginalia-session-row__facts { font-size: 0.85rem; }
 
 .marginalia-session-row__note {
+  min-width: 0;
   margin: 0;
-  padding: 0.55rem 0.7rem;
+  padding: 0.3rem 0.6rem;
+  overflow: hidden;
   border: 0;
   border-left: 3px solid rgb(148 163 184 / 55%);
   border-radius: 0.45rem;
@@ -225,6 +270,8 @@
   font-size: 0.85rem;
   font-style: italic;
   line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .marginalia-state,
@@ -245,18 +292,18 @@
 .marginalia-results--loading { opacity: 0.65; }
 
 @media (max-width: 900px) {
-  .marginalia-session-row__content { grid-template-columns: minmax(0, 1fr) max-content; }
-  .marginalia-session-row__note { grid-column: 1 / 3; }
-  .marginalia-session-row__book-link { grid-column: 2; grid-row: 1; }
+  .marginalia-session-row__content { grid-template-columns: minmax(0, 1fr); }
+  .marginalia-session-row__note { grid-column: 1; }
 }
 
 @media (max-width: 700px) {
-  .marginalia-controls { align-items: stretch; flex-direction: column; }
+  .marginalia-controls { align-items: stretch; flex-direction: column; min-height: 0; }
   .marginalia-controls form { flex: none; grid-template-columns: 1fr auto; }
   .marginalia-controls form label { grid-column: 1 / -1; }
   .marginalia-status-filter { justify-content: space-between; }
-  .marginalia-session-row { grid-template-columns: 2.75rem minmax(0, 1fr); }
-  .marginalia-session-row__cover .book-cover-component { width: 2.75rem; }
+  .marginalia-results--populated .paginated-list-frame__body { min-height: 0; }
+  .marginalia-browse-rows { --marginalia-row-cover-width: 2.75rem; }
+  .marginalia-browse-rows > * { min-height: 0; }
 }
 
 .marginalia-import-page,

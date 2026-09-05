@@ -6,12 +6,13 @@ import "./PaginatedListFrame.css";
 export interface PaginatedListFrameProps extends Omit<PagerProps, "ariaLabel" | "density"> {
   children: ReactNode;
   topControls?: ReactNode;
+  topPagerAction?: ReactNode;
 }
 
-export function PaginatedListFrame({ children, topControls, ...pagerProps }: PaginatedListFrameProps) {
+export function PaginatedListFrame({ children, topControls, topPagerAction, ...pagerProps }: PaginatedListFrameProps) {
   return <div className="paginated-list-frame">
     <div className="paginated-list-frame__pager paginated-list-frame__pager--top">
-      <Pager {...pagerProps} density="compact" ariaLabel={`${pagerProps.itemLabel} pagination, top`} />
+      <Pager {...pagerProps} density="compact" ariaLabel={`${pagerProps.itemLabel} pagination, top`} actionPrefix={topPagerAction} />
       {topControls ? <div className="paginated-list-frame__top-controls">{topControls}</div> : null}
     </div>
     <div className="paginated-list-frame__body">{children}</div>
