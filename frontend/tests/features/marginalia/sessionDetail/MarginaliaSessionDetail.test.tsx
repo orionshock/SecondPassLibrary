@@ -231,6 +231,8 @@ describe("My Marginalia Session Detail", () => {
     expect(markup).not.toContain(" after.");
     expect(markup).toContain("Reader note");
     expect(markup).toContain("Chapter 10 · 51%");
+    expect(markup).toContain('href="/library/books/book%2Fid"');
+    expect(markup).toContain('href="/marginalia?view=books&amp;book=book%2Fid"');
     expect(markup.match(/Quoted passage/g)).toHaveLength(1);
     expect(markup.indexOf("Quoted passage")).toBeLessThan(markup.indexOf("Chapter 10 · 51%"));
     for (const internal of ["epubcfi", "reader-highlight-1", "reader-bookmark-1", "annotation-1", "annotation-2"]) {
@@ -256,7 +258,7 @@ describe("My Marginalia Session Detail", () => {
     expect(markup).toContain("Reader note");
   });
 
-  it("shows null progress safely and gates View Book only through canOpen", () => {
+  it("shows null progress safely and gates only Library Book navigation through canOpen", () => {
     const unavailableDetail = {
       book: { ...detail.book, title: "Owned historical Book", coverUrl: "/media/history.jpg", canOpen: false },
       session: { ...detail.session, progress: null },
@@ -265,7 +267,8 @@ describe("My Marginalia Session Detail", () => {
     expect(markup).toContain("Owned historical Book");
     expect(markup).toContain("/media/history.jpg");
     expect(markup).toContain("No saved progress");
-    expect(markup).not.toContain("View Book");
+    expect(markup).not.toContain('/library/books/');
+    expect(markup).toContain('/marginalia?view=books&amp;book=book%2Fid');
   });
 
   it("closes only active Sessions and replaces the page with the authoritative closed detail", async () => {

@@ -57,7 +57,6 @@ describe("My Marginalia Session list", () => {
     expect(markup).toContain("2 annotations");
     expect(markup).toContain('href="/library/books/visible-book"');
     expect(markup).toContain(`href="/marginalia/sessions/${visibleSession.id}"`);
-    expect(markup).toContain("View Book");
     expect(markup).not.toContain("Continue reading");
   });
 
@@ -68,7 +67,6 @@ describe("My Marginalia Session list", () => {
     expect(markup).toContain('/media/remembered.jpg');
     expect(markup).not.toContain(">79dc1581");
     expect(markup).toContain(`href="/marginalia/sessions/${hiddenSession.id}"`);
-    expect(markup).not.toContain("View Book");
     expect(markup).not.toContain('href="/library/books/hidden-book"');
   });
 
@@ -83,7 +81,7 @@ describe("My Marginalia Session list", () => {
     const excerpt = "First line Second line with spacing";
     expect(markup).toContain(excerpt);
     expect(markup.indexOf("2 annotations")).toBeLessThan(markup.indexOf(excerpt));
-    expect(markup.indexOf(excerpt)).toBeLessThan(markup.indexOf("View Book"));
+    expect(markup.indexOf(excerpt)).toBeLessThan(markup.indexOf('href="/library/books/visible-book"'));
     expect(rawNote).toBe("  First line\n\tSecond line   with spacing  ");
   });
 

@@ -63,7 +63,7 @@ function BookResults({ page, pageNumber, pageSize, searching, loading, error, bo
           book={book}
           detailPath={bookPath(book.id)}
           details={<BookMarginaliaFacts book={book} />}
-          actions={book.canOpen ? <Link className="button button--small button--secondary" to={`/library/books/${encodeURIComponent(book.id)}`}>View Book</Link> : null}
+          actions={book.canOpen ? <Link className="button button--small button--secondary" to={`/library/books/${encodeURIComponent(book.id)}`}>Go To Book Detail</Link> : null}
         />)}</div>}
     </PaginatedListFrame>
   </section>;

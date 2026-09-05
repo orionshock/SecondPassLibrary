@@ -7,6 +7,7 @@ import { Badge, Button, ErrorPanel, Surface } from "../../../components/UiPrimit
 import type { MutationState } from "../../../shared/feedback/mutationState";
 import { BookCover } from "../../../shared/books/BookCover";
 import { OrderMenu, type OrderMenuOption } from "../../../shared/forms/OrderMenu";
+import { marginaliaBookSessionsPath } from "../browse/marginaliaQuery";
 
 export type MarginaliaAnnotationOrdering = "reading" | "newest" | "oldest";
 
@@ -113,7 +114,10 @@ function SessionSummaryRegion({ detail, sessionNote, closeState, deleteState, ex
             {book.authors.length ? <p className="marginalia-session-summary__book-meta">{book.authors.map((author) => author.name).join(", ")}</p> : null}
             {book.series ? <p className="marginalia-session-summary__book-meta">{book.series.name}{book.series.seriesIndex ? ` ${book.series.seriesIndex}` : ""}</p> : null}
           </div>
-          {book.canOpen ? <Link className="button button--small button--secondary" to={`/library/books/${encodeURIComponent(book.id)}`}>View Book</Link> : null}
+          <div className="marginalia-session-summary__book-actions">
+            {book.canOpen ? <Link className="button button--small button--secondary" to={`/library/books/${encodeURIComponent(book.id)}`}>Go To Book Detail</Link> : null}
+            <Link className="button button--small button--secondary" to={marginaliaBookSessionsPath(book.id)}>View Sessions for This Book</Link>
+          </div>
         </header>
         <div className="marginalia-session-summary__session">
           <div className="marginalia-session-summary__status-actions">

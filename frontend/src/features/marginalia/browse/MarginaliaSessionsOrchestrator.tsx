@@ -19,12 +19,12 @@ import { MarginaliaSectionActions } from "../components/MarginaliaSectionActions
 import { MarginaliaViewSelector } from "./MarginaliaViewSelector";
 import {
   marginaliaBooksSdkQuery,
+  marginaliaBookSessionsPath,
   marginaliaBookSessionsSdkQuery,
   marginaliaBrowseStage,
   marginaliaListSdkQuery,
   marginaliaListSearchParams,
   marginaliaListStateFromSearchParams,
-  marginaliaPath,
   withMarginaliaBookSessionChange,
   withMarginaliaListChange,
   withMarginaliaSearch,
@@ -192,7 +192,7 @@ export function MarginaliaSessionsOrchestrator() {
         search={searchDraft}
         loading={books.loading}
         error={books.error}
-        bookPath={(bookId) => marginaliaPath(withSelectedMarginaliaBook(queryState, bookId))}
+        bookPath={(bookId) => marginaliaBookSessionsPath(bookId, queryState)}
         onSearchChange={setSearchDraft}
         onSearch={submitSearch}
         onPageChange={(page) => setQuery(withMarginaliaListChange(queryState, { page }, false))}

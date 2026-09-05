@@ -92,7 +92,7 @@ function SelectedBookContextComponent({ book, onBack }: { book: MarginaliaBookSu
       book={book}
       details={<p className="marginalia-book-facts"><span>{formatCount(book.sessionCount, "Session")}</span><span>{book.activeSessionCount} active</span></p>}
       actions={<div className="marginalia-selected-book__actions">
-        {book.canOpen ? <Link className="button button--small button--secondary" to={`/library/books/${encodeURIComponent(book.id)}`}>View Book</Link> : null}
+        {book.canOpen ? <Link className="button button--small button--secondary" to={`/library/books/${encodeURIComponent(book.id)}`}>Go To Book Detail</Link> : null}
         {onBack ? <Button type="button" size="small" tone="secondary" onClick={onBack}>Back to Books</Button> : null}
       </div>}
     />

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   marginaliaBooksSdkQuery,
+  marginaliaBookSessionsPath,
   marginaliaBookSessionsSdkQuery,
   marginaliaBrowseStage,
   marginaliaListSdkQuery,
@@ -91,6 +92,8 @@ describe("My Marginalia list query", () => {
     const books = marginaliaListStateFromSearchParams(new URLSearchParams("view=books&q=dune&page=2&page_size=30"));
     const selected = withSelectedMarginaliaBook(books, bookId);
     expect(marginaliaPath(selected)).toBe(`/marginalia?view=books&book=${bookId}&page=2&page_size=30&q=dune`);
+    expect(marginaliaBookSessionsPath(bookId, books)).toBe(`/marginalia?view=books&book=${bookId}&page=2&page_size=30&q=dune`);
+    expect(marginaliaBookSessionsPath(bookId)).toBe(`/marginalia?view=books&book=${bookId}`);
     expect(marginaliaPath(withSelectedMarginaliaBook(selected))).toBe("/marginalia?view=books&page=2&page_size=30&q=dune");
   });
 });
@@ -115,4 +118,3 @@ describe("Marginalia Export query", () => {
     });
   });
 });
-

@@ -681,6 +681,13 @@
   border-bottom: 1px solid var(--border);
 }
 
+.marginalia-session-summary__book-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.45rem;
+}
+
 .marginalia-session-summary__book-header .eyebrow {
   margin: 0 0 0.25rem;
 }
@@ -969,5 +976,7 @@
   .marginalia-export-session-row__cover .book-cover-component { width: 2.75rem; }
   .marginalia-session-summary { grid-template-columns: 5rem minmax(0, 1fr); gap: 0.85rem; }
   .marginalia-session-summary__cover .book-cover-component { width: 5rem; }
+  .marginalia-session-summary__book-header { flex-direction: column; }
+  .marginalia-session-summary__book-actions { justify-content: flex-start; }
   .marginalia-session-detail__annotations > header { align-items: flex-start; flex-direction: column; }
 }

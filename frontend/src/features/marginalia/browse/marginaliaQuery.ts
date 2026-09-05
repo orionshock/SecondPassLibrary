@@ -132,6 +132,11 @@ export function withSelectedMarginaliaBook(current: MarginaliaListUrlState, book
   };
 }
 
+export function marginaliaBookSessionsPath(bookId: string, current?: MarginaliaListUrlState): string {
+  const booksState = current ?? marginaliaListStateFromSearchParams(new URLSearchParams("view=books"));
+  return marginaliaPath(withSelectedMarginaliaBook(booksState, bookId));
+}
+
 export function withMarginaliaSearch(current: MarginaliaListUrlState, q: string): MarginaliaListUrlState {
   return current.bookId
     ? withMarginaliaBookSessionChange(current, { bookSessionQ: q, bookSessionStatus: "all" })
