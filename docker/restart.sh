@@ -24,6 +24,7 @@ docker compose -f "$COMPOSE_FILE" down
 ESCAPED_VERSION=$(printf '%s' "$VERSION" | sed 's/[\\"]/\\&/g')
 printf 'SERVER_VERSION = "%s"\nSERVER_RELEASE_DATE = "%s"\n' \
     "$ESCAPED_VERSION" "$RELEASE_DATE" > "$TEMP_VERSION_FILE"
+chmod 0644 "$TEMP_VERSION_FILE"
 mv "$TEMP_VERSION_FILE" "$VERSION_FILE"
 trap - EXIT HUP INT TERM
 
