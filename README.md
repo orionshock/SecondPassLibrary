@@ -46,3 +46,8 @@ reading history independent of a vendor cloud.
 - [Development setup](docs/development.md)
 - [Production startup](docs/deployment.md)
 - [Operations and maintenance](docs/operations.md)
+
+## License and project identity
+
+Code is licensed under [Apache-2.0](LICENSE). Project names and branding are
+governed separately by [TRADEMARKS.md](TRADEMARKS.md).
