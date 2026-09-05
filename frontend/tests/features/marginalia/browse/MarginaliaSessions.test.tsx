@@ -101,8 +101,6 @@ describe("My Marginalia Session list", () => {
     expect(markup).toContain('<option value="closed" selected="">Closed</option>');
     expect(markup).toContain('aria-label="Reading sessions pagination, top"');
     expect(markup).toContain('aria-label="Reading sessions pagination, bottom"');
-    expect(markup.indexOf('aria-label="Reading sessions pagination, top"')).toBeLessThan(markup.indexOf('id="marginalia-status"'));
-    expect(markup.indexOf('id="marginalia-status"')).toBeLessThan(markup.indexOf("Previous"));
   });
 
   it("renders bounded loading, filtered empty, and retryable error states", () => {

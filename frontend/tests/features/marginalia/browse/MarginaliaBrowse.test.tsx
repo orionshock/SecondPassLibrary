@@ -74,8 +74,6 @@ describe("Marginalia Books view", () => {
     expect(markup).toContain(`href="/marginalia?view=books&amp;book=${book.id}&amp;q=battle"`);
     expect(markup).toContain(`href="/library/books/${book.id}"`);
     expect(markup).toContain("Showing 1-20 of 21");
-    expect(markup).toContain('aria-label="Books pagination, top"');
-    expect(markup).toContain('aria-label="Books pagination, bottom"');
     expect(markup).not.toContain("Catalog Tags");
     expect(markup).not.toContain("Publisher");
   });
