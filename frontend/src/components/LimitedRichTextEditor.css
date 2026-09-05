@@ -71,6 +71,31 @@
   background: var(--border);
 }
 
+.limited-rich-text-editor__raw-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+}
+
+.limited-rich-text-editor__raw-controls button {
+  min-height: 2rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid transparent;
+  border-radius: 0.4rem;
+  color: var(--muted);
+  background: transparent;
+  font: 600 0.78rem ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+}
+
+.limited-rich-text-editor__raw-controls button:hover:not(:disabled),
+.limited-rich-text-editor__raw-controls button:focus-visible {
+  border-color: rgb(255 255 255 / 24%);
+  color: var(--text);
+  background: rgb(125 211 252 / 10%);
+}
+
+.limited-rich-text-editor__raw-controls button:disabled { opacity: 0.4; }
+
 .limited-rich-text-editor__body {
   min-height: 8rem;
   overflow: auto;
