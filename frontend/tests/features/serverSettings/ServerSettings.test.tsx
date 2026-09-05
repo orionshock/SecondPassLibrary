@@ -52,6 +52,8 @@ describe("Server Settings", () => {
     expect(edit).toContain('class="form-field"');
     expect(edit).toContain('id="server-settings-name"');
     expect(edit).toContain("limited-rich-text-editor");
+    expect(edit).toContain(`${settings.general.description.length} / 1000`);
+    expect(edit).toContain(`${settings.general.bannerText.length} / 500`);
     expect(edit).not.toContain('id="server-settings-reader-web-client"');
     expect(serverSettingsFormId("general")).toBe("server-settings-general-form");
   });

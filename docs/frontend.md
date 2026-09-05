@@ -110,7 +110,9 @@ renders them through one shared boundary and must not scatter additional
 unsafe-HTML sites or add an independently configured React sanitizer. Server
 Identity editing uses a restricted Tiptap WYSIWYG surface for the supported
 subset; its controls are UX constraints, while the server allowlist remains the
-security boundary. No Markdown interpretation exists.
+security boundary. The shared editor also offers a raw-HTML source mode; moving
+back to rendered mode reapplies the restricted Tiptap schema, and persistence
+still passes through the server sanitizer. No Markdown interpretation exists.
 
 Downloads and other attachments use the shared SDK attachment client. The SDK
 owns credentials, safe filenames, content types, JSON error detection, and
