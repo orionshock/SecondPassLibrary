@@ -14,7 +14,7 @@ import { DjangoAdminAction } from "../../../src/features/server-settings/DjangoA
 import { serverSettingsFormId, serverSettingsSearchParams, serverSettingsTabFromSearchParams, serverSettingsTabs } from "../../../src/features/server-settings/serverSettingsTabs";
 
 const settings: ServerSettings = {
-  general: { name: "Virgo SPL", description: "Private library", bannerText: "Maintenance", secondPassReaderWebClientUrl: "https://reader.example.com", secondPassReaderWebClientUrlLocked: false },
+  general: { name: "Virgo SPL", description: "<p>Private <strong>library</strong></p>", bannerText: "<p><em>Maintenance</em></p>", secondPassReaderWebClientUrl: "https://reader.example.com", secondPassReaderWebClientUrlLocked: false },
   publicLibrary: { name: "Common Room", description: "Shared books" },
   libraryGroups: { advancedGroupsEnabled: false },
 };
@@ -40,15 +40,19 @@ describe("Server Settings", () => {
     ]);
   });
 
-  it("renders General read and bounded label/control edit states", () => {
+  it("renders one Server Identity surface with rich description and banner fields", () => {
     const read = renderToStaticMarkup(<GeneralSettingsPageRegion settings={settings.general} draft={settings.general} editing={false} state={{ pending: false }} onChange={vi.fn()} onSubmit={vi.fn()} />);
     const edit = renderToStaticMarkup(<GeneralSettingsPageRegion settings={settings.general} draft={settings.general} editing state={{ pending: false }} onChange={vi.fn()} onSubmit={vi.fn()} />);
     expect(read).toContain("Virgo SPL");
+    expect(read).toContain("<strong>library</strong>");
+    expect(read).toContain("<em>Maintenance</em>");
+    expect(read).not.toContain("&lt;p&gt;");
+    expect(read.match(/server-settings-region/g)).toHaveLength(1);
     expect(read).not.toContain("server-settings-name");
     expect(edit).toContain('class="form-field"');
     expect(edit).toContain('id="server-settings-name"');
+    expect(edit).toContain("limited-rich-text-editor");
     expect(edit).not.toContain('id="server-settings-reader-web-client"');
-    expect(edit).not.toContain("disabled");
     expect(serverSettingsFormId("general")).toBe("server-settings-general-form");
   });
 

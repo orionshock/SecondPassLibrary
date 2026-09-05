@@ -64,6 +64,11 @@ body.login-page .login-description {
   color: var(--muted);
   overflow-wrap: anywhere;
 }
+body.login-page .login-description > :first-child { margin-top: 0; }
+body.login-page .login-description > :last-child { margin-bottom: 0; }
+body.login-page .login-description p,
+body.login-page .login-description ul,
+body.login-page .login-description ol { margin-block: 6px; }
 body.login-page .login-form {
   margin-top: 20px;
   display: grid;

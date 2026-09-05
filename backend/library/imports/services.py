@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 from django.core.files.base import File
 from django.db import transaction
 
-from library.catalog.description_html import sanitize_book_description
+from core.rich_text import sanitize_limited_html
 from library.catalog.names import (
     AmbiguousCatalogEntityName,
     find_single_normalized_name_match,
@@ -99,7 +99,7 @@ def persist_imported_book(
             subtitle=metadata.subtitle,
             language=metadata.language,
             publisher=metadata.publisher,
-            description=sanitize_book_description(metadata.description),
+            description=sanitize_limited_html(metadata.description),
             published_year=metadata.published_year,
             published_month=metadata.published_month,
             published_day=metadata.published_day,

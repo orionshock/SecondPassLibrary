@@ -1,9 +1,9 @@
 from django.test import SimpleTestCase
 
-from library.catalog.description_html import sanitize_book_description
+from core.rich_text import sanitize_limited_html
 
 
-class BookDescriptionSanitizerTests(SimpleTestCase):
+class LimitedRichTextSanitizerTests(SimpleTestCase):
     def test_preserves_exact_supported_markup_without_attributes(self):
         source = (
             '<p class="lead">A <b>bold</b> and <strong>strong</strong> '
@@ -11,7 +11,7 @@ class BookDescriptionSanitizerTests(SimpleTestCase):
             '<ul><li>First</li></ul><ol><li>Second</li></ol>'
         )
 
-        sanitized = sanitize_book_description(source)
+        sanitized = sanitize_limited_html(source)
 
         self.assertEqual(
             sanitized,
@@ -29,7 +29,7 @@ class BookDescriptionSanitizerTests(SimpleTestCase):
             '<script>alert("script")</script><style>body{display:none}</style>'
         )
 
-        sanitized = sanitize_book_description(source)
+        sanitized = sanitize_limited_html(source)
 
         self.assertEqual(sanitized, "linkedtextcell<p>safe</p>")
         for forbidden in ("href", "src", "onerror", "onclick", "style", "class", "script"):
@@ -37,16 +37,16 @@ class BookDescriptionSanitizerTests(SimpleTestCase):
 
     def test_preserves_plain_text_and_html_entity_semantics(self):
         self.assertEqual(
-            sanitize_book_description("Plain text\nwith a raw newline"),
+            sanitize_limited_html("Plain text\nwith a raw newline"),
             "Plain text\nwith a raw newline",
         )
         self.assertEqual(
-            sanitize_book_description("Space&#x20;&amp; value"),
+            sanitize_limited_html("Space&#x20;&amp; value"),
             "Space &amp; value",
         )
 
     def test_keeps_nested_supported_markup_structurally_valid(self):
         self.assertEqual(
-            sanitize_book_description("<ul><li><p>Nested <em>value</em></p></li></ul>"),
+            sanitize_limited_html("<ul><li><p>Nested <em>value</em></p></li></ul>"),
             "<ul><li><p>Nested <em>value</em></p></li></ul>",
         )

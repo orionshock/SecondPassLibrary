@@ -3,7 +3,6 @@ from django.contrib import admin, messages
 from django.contrib.admin.widgets import AutocompleteSelect
 from django.core.exceptions import ValidationError
 from django.core.exceptions import PermissionDenied
-from django.db import transaction
 from django.http import HttpResponseRedirect
 from django.template.response import TemplateResponse
 from django.urls import path, reverse
@@ -37,14 +36,20 @@ class ServerIdentityAdminForm(forms.ModelForm):
     )
     server_description = forms.CharField(
         label="Server Description",
-        help_text="Description used in discovery and server identity.",
+        help_text=(
+            "Sanitized limited HTML used in discovery and server identity. "
+            "Links, images, attributes, and arbitrary HTML are removed."
+        ),
         required=False,
         max_length=server_settings.SERVER_DESCRIPTION_MAX_LEN,
         widget=forms.Textarea(attrs={"rows": 4, "cols": 100}),
     )
     server_banner_message = forms.CharField(
         label="Server Banner Message",
-        help_text="Banner message shown in Product UI.",
+        help_text=(
+            "Sanitized limited HTML shown in Product UI. Links, images, "
+            "attributes, and arbitrary HTML are removed."
+        ),
         required=False,
         max_length=server_settings.SERVER_BANNER_MESSAGE_MAX_LEN,
         widget=forms.Textarea(attrs={"rows": 3, "cols": 100}),
@@ -426,14 +431,11 @@ class ServerSettingAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         if self._is_server_identity_setting(obj):
-            with transaction.atomic():
-                server_settings.set_server_name(form.cleaned_data["server_name"])
-                server_settings.set_server_description(
-                    form.cleaned_data["server_description"]
-                )
-                server_settings.set_server_banner_message(
-                    form.cleaned_data["server_banner_message"]
-                )
+            server_settings.set_server_identity(
+                name=form.cleaned_data["server_name"],
+                description=form.cleaned_data["server_description"],
+                banner_message=form.cleaned_data["server_banner_message"],
+            )
             return
         if obj.key == server_settings.SECOND_PASS_READER_WEB_CLIENT_URL_SETTING:
             if not server_settings.second_pass_reader_web_client_url_locked():

@@ -103,12 +103,14 @@ domain results and failures into plain loading, pending, validation, success,
 empty, or error states. Regions render those states and call supplied actions;
 they do not catch `ApiError`, examine HTTP status codes, or translate server
 field names. API-provided text is normally rendered through React's escaped
-text handling. The narrow exception is `Book.description`, whose contract is
-server-sanitized limited HTML. Product UI renders it through the dedicated
-Book-description boundary and must not scatter additional unsafe-HTML rendering
-sites or add an independently configured React sanitizer. The server allowlist
-remains the single source of truth; React must not reinterpret Calibre markup.
-See [Book description HTML contract](imports.md#book-description-html-contract).
+text handling. Book descriptions, Server Description, and Server Banner
+Message are the narrow exceptions: they follow the server-owned
+[sanitized limited HTML](api.md#sanitized-limited-html) contract. Product UI
+renders them through one shared boundary and must not scatter additional
+unsafe-HTML sites or add an independently configured React sanitizer. Server
+Identity editing uses a restricted Tiptap WYSIWYG surface for the supported
+subset; its controls are UX constraints, while the server allowlist remains the
+security boundary. No Markdown interpretation exists.
 
 Downloads and other attachments use the shared SDK attachment client. The SDK
 owns credentials, safe filenames, content types, JSON error detection, and

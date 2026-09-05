@@ -215,13 +215,14 @@ export {
 export {
   enableAdvancedGroups,
   getServerSettings,
-  updateGeneralSettings,
+  updateExternalServicesSettings,
   updatePublicLibrarySettings,
+  updateServerIdentity,
   type GeneralServerSettings,
   type LibraryGroupsSettings,
   type PublicLibrarySettings,
   type ServerSettings,
-  type UpdateGeneralSettingsInput,
+  type UpdateServerIdentityInput,
   type UpdatePublicLibrarySettingsInput,
 } from "./serverSettings";
 export {

@@ -55,40 +55,19 @@ rather than inventing missing components.
 
 ### Book description HTML contract
 
-`Book.description` is server-sanitized limited HTML. It is not guaranteed to
-be plain text and must never be treated as arbitrary trusted HTML. Second Pass
-Library's authoritative allowlist is exactly:
-
-- `p`
-- `br`
-- `b`
-- `strong`
-- `i`
-- `em`
-- `ul`
-- `ol`
-- `li`
-
-No attributes are allowed. Unsupported markup is stripped. `script` and
-`style` elements and their contents are discarded. Unsupported tags include
-`a`, `img`, `span`, `div`, and `table`; inline styles, classes, event handlers,
-and arbitrary attributes are likewise unsupported. Do not add URL handling or
-infer additional supported markup from Calibre output; Calibre-style comments
-are a source-compatibility motivation, not the authority for this contract.
+`Book.description` follows the shared [sanitized limited HTML](api.md#sanitized-limited-html)
+contract. Do not infer additional supported markup from Calibre output;
+Calibre-style comments are a source-compatibility motivation, not the authority
+for this contract.
 
 The server owns this security boundary through the `nh3` policy in
-`backend/library/catalog/description_html.py`. Every normal description write
+`backend/core/rich_text.py`. Every normal description write
 sanitizes before persistence, including EPUB/library import, Book metadata
 edits through the API/Product UI, and Django Admin edits. The database stores
 only the sanitized representation. API serializers return that stored value
 unchanged: there is no read-time sanitizer, plain-text conversion, or markup
 reinterpretation at projection time. Imported and operator-edited metadata is
 untrusted regardless of its source.
-
-Plain text remains valid and is stored without invented paragraph or line-break
-markup. Raw newlines do not implicitly become `p` or `br` elements. HTML
-entities retain normal HTML meaning: for example, `&#x20;` represents a space and
-`&amp;` represents an ampersand when rendered.
 
 When this contract was introduced, a temporary pre-release data migration
 normalized existing stored Book descriptions with the same effective policy.

@@ -75,6 +75,24 @@ limits before expensive queries or serialization; those limits belong in the
 relevant domain contract. Idempotency keys and replay fingerprints are likewise
 operation-specific rather than a universal API mechanism.
 
+## Sanitized limited HTML
+
+Book descriptions, the Server Description, and the Server Banner Message use
+one server-sanitized limited-HTML contract. The authoritative tag allowlist is
+exactly `p`, `br`, `b`, `strong`, `i`, `em`, `ul`, `ol`, and `li`. No
+attributes are allowed. Unsupported markup is stripped; `script` and `style`
+elements and their contents are discarded. Links, images, headings, tables,
+layout elements, classes, inline styles, event handlers, and arbitrary HTML are
+not supported.
+
+The server applies this `nh3` policy before persistence and returns the stored
+sanitized fragment unchanged. Clients must treat these strings as sanitized
+limited HTML rather than arbitrary trusted HTML or guaranteed plain text.
+Plain text remains valid, raw newlines do not acquire invented paragraph or
+line-break markup, and HTML entities retain their normal HTML meaning. The
+Product UI uses one narrow rendering boundary and a restricted WYSIWYG editor;
+it does not establish a second sanitizer or a Markdown contract.
+
 Marginalia Session deletion is deliberately not a bulk or selected-ID
 operation. Its intended shape is the single-resource request
 `DELETE /api/v1/marginalia/sessions/{session_id}/`. One authenticated request
@@ -194,15 +212,12 @@ are omitted; an empty population returns `catalog_tags: []`. The single active
 self-excluding or multi-Tag facet behavior. The standalone `/tags/` routes keep
 their existing scope-total meaning and response envelope.
 
-Book detail `description` is server-sanitized limited HTML, not arbitrary HTML
-and not guaranteed plain text. Clients should render paragraphs and line
-breaks, bold/strong text, italic/emphasized text, and ordered/unordered lists;
-HTML entities have normal HTML semantics. Plain text remains a valid value. If
-a client cannot safely present the complete supported subset, it should show a
-safe plain-text fallback rather than raw HTML source. Clients must not reproduce
-Calibre sanitization rules or establish a separate interpretation policy. The
-exact tag allowlist, no-attribute rule, persistence boundary, and security
-rationale are owned by [Book description HTML contract](imports.md#book-description-html-contract).
+Book detail `description` follows the shared [sanitized limited HTML](#sanitized-limited-html)
+contract. Clients should render paragraphs and line breaks, bold/strong text,
+italic/emphasized text, and ordered/unordered lists. If a client cannot safely
+present the complete supported subset, it should show a safe plain-text
+fallback rather than raw HTML source. Clients must not reproduce Calibre
+sanitization rules or establish a separate interpretation policy.
 
 Author and Series collections share normalized-name matching, `exclude_id`,
 Catalog Tag filtering, previews, and axis ordering. Their counts and previews

@@ -1,0 +1,12 @@
+.sanitized-rich-text {
+  overflow-wrap: anywhere;
+}
+
+.sanitized-rich-text > :first-child { margin-top: 0; }
+.sanitized-rich-text > :last-child { margin-bottom: 0; }
+
+.sanitized-rich-text p,
+.sanitized-rich-text ul,
+.sanitized-rich-text ol {
+  margin-block: 0.7rem;
+}

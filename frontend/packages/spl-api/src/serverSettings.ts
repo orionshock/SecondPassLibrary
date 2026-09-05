@@ -23,11 +23,10 @@ export interface ServerSettings {
   libraryGroups: LibraryGroupsSettings;
 }
 
-export interface UpdateGeneralSettingsInput {
+export interface UpdateServerIdentityInput {
   name: string;
   description: string;
   bannerText: string;
-  secondPassReaderWebClientUrl?: string;
 }
 
 export interface UpdatePublicLibrarySettingsInput {
@@ -52,19 +51,24 @@ export async function getServerSettings(client: ApiClient = apiClient): Promise<
   return mapServerSettings(await client.request<ServerSettingsResponse>(settingsPath));
 }
 
-export async function updateGeneralSettings(
-  input: UpdateGeneralSettingsInput,
+export async function updateServerIdentity(
+  input: UpdateServerIdentityInput,
   client: ApiClient = apiClient,
 ): Promise<ServerSettings> {
-  const body: Record<string, string> = {
+  return patchServerSettings({
     server_name: input.name.trim(),
     server_description: input.description.trim(),
     server_banner_message: input.bannerText.trim(),
-  };
-  if (input.secondPassReaderWebClientUrl !== undefined) {
-    body.second_pass_reader_web_client_url = input.secondPassReaderWebClientUrl.trim();
-  }
-  return patchServerSettings(body, client);
+  }, client);
+}
+
+export async function updateExternalServicesSettings(
+  secondPassReaderWebClientUrl: string,
+  client: ApiClient = apiClient,
+): Promise<ServerSettings> {
+  return patchServerSettings({
+    second_pass_reader_web_client_url: secondPassReaderWebClientUrl.trim(),
+  }, client);
 }
 
 export async function updatePublicLibrarySettings(

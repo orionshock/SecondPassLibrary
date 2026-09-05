@@ -11,6 +11,7 @@ from django.core.cache import cache
 from django.db import DatabaseError, transaction
 
 from core.operational_logging import info_on_commit, state_change_logging_suppressed
+from core.rich_text import sanitize_limited_html
 
 from .models import ServerSetting
 
@@ -230,7 +231,7 @@ def get_server_name() -> str:
     return DEFAULT_SERVER_NAME
 
 
-def set_server_name(value: str) -> None:
+def _normalized_server_name(value: str) -> str:
     normalized = _normalize_str(value)
     if not normalized:
         raise ValueError("Server name is required.")
@@ -238,6 +239,11 @@ def set_server_name(value: str) -> None:
         raise ValueError(
             f"Server name must be at most {SERVER_NAME_MAX_LEN} characters."
         )
+    return normalized
+
+
+def set_server_name(value: str) -> None:
+    normalized = _normalized_server_name(value)
     set_server_setting(
         key=SERVER_NAME_SETTING,
         value=normalized,
@@ -255,16 +261,21 @@ def get_server_description() -> str:
 
 
 def set_server_description(value: str) -> None:
-    normalized = _normalize_str(value)
-    if len(normalized) > SERVER_DESCRIPTION_MAX_LEN:
-        raise ValueError(
-            f"Server description must be at most {SERVER_DESCRIPTION_MAX_LEN} characters."
-        )
+    normalized = _normalized_server_description(value)
     set_server_setting(
         key=SERVER_DESCRIPTION_SETTING,
         value=normalized,
         description="Optional server description used in discovery.",
     )
+
+
+def _normalized_server_description(value: str) -> str:
+    normalized = sanitize_limited_html(value).strip()
+    if len(normalized) > SERVER_DESCRIPTION_MAX_LEN:
+        raise ValueError(
+            f"Server description must be at most {SERVER_DESCRIPTION_MAX_LEN} characters."
+        )
+    return normalized
 
 
 def get_server_banner_message() -> str:
@@ -277,16 +288,46 @@ def get_server_banner_message() -> str:
 
 
 def set_server_banner_message(value: str) -> None:
-    normalized = _normalize_str(value)
-    if len(normalized) > SERVER_BANNER_MESSAGE_MAX_LEN:
-        raise ValueError(
-            f"Server banner message must be at most {SERVER_BANNER_MESSAGE_MAX_LEN} characters."
-        )
+    normalized = _normalized_server_banner_message(value)
     set_server_setting(
         key=SERVER_BANNER_MESSAGE_SETTING,
         value=normalized,
         description="Optional banner message shown at the top of the dashboard.",
     )
+
+
+def _normalized_server_banner_message(value: str) -> str:
+    normalized = sanitize_limited_html(value).strip()
+    if len(normalized) > SERVER_BANNER_MESSAGE_MAX_LEN:
+        raise ValueError(
+            f"Server banner message must be at most {SERVER_BANNER_MESSAGE_MAX_LEN} characters."
+        )
+    return normalized
+
+
+def set_server_identity(*, name: str, description: str, banner_message: str) -> None:
+    values: dict[str, str] = {}
+    errors: dict[str, list[str]] = {}
+    normalizers = {
+        SERVER_NAME_SETTING: (_normalized_server_name, name),
+        SERVER_DESCRIPTION_SETTING: (_normalized_server_description, description),
+        SERVER_BANNER_MESSAGE_SETTING: (
+            _normalized_server_banner_message,
+            banner_message,
+        ),
+    }
+    for field, (normalize, value) in normalizers.items():
+        try:
+            values[field] = normalize(value)
+        except ValueError as exc:
+            errors[field] = [str(exc)]
+    if errors:
+        raise ValidationError(errors)
+
+    with transaction.atomic():
+        set_server_name(values[SERVER_NAME_SETTING])
+        set_server_description(values[SERVER_DESCRIPTION_SETTING])
+        set_server_banner_message(values[SERVER_BANNER_MESSAGE_SETTING])
 
 
 def normalize_second_pass_reader_web_client_url(value: Any) -> str:

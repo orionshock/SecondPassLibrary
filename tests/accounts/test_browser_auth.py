@@ -12,6 +12,7 @@ from accounts.login_throttle import (
     LOGIN_USERNAME_ATTEMPT_LIMIT,
 )
 from accounts.models import BrowserLoginThrottleSlot
+from core import server_settings
 from tests.testenv.database_connections import orm_worker_connection_scope
 
 
@@ -178,6 +179,19 @@ class BrowserLoginThrottleTests(TestCase):
         self.assertNotIn("SensitiveReader", joined)
         self.assertNotIn("wrong-password", joined)
         self.assertNotIn("192.0.2", joined)
+
+
+class BrowserLoginPresentationTests(TestCase):
+    def test_renders_the_server_sanitized_description_as_limited_html(self):
+        User.objects.create_superuser(username="owner", password="OwnerPassw0rd!")
+        server_settings.set_server_description(
+            '<p>Private <strong>library</strong></p><script>alert("no")</script>'
+        )
+
+        response = self.client.get("/login/")
+
+        self.assertContains(response, "<p>Private <strong>library</strong></p>", html=True)
+        self.assertNotContains(response, "alert")
 
 
 class ConcurrentBrowserLoginThrottleTests(TransactionTestCase):

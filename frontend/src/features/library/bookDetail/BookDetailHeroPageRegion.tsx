@@ -4,7 +4,7 @@ import { Link } from "react-router";
 import { BookCover } from "../../../shared/books/BookCover";
 import { selectedLibraryContextNavigationState } from "../libraryPresentation";
 import { bookSeriesDisplay, formatBookPublishedDate } from "../bookDetailPresentation";
-import { BookDescription } from "./BookDescription";
+import { SanitizedRichText } from "../../../components/SanitizedRichText";
 
 export function BookDetailHeroPageRegion({ book, canEdit = false, editNavigationState, secondPassReaderBookUrl }: { book: BookDetail; canEdit?: boolean; editNavigationState?: unknown; secondPassReaderBookUrl?: string }) {
   const publishedDate = formatBookPublishedDate(book);
@@ -38,7 +38,7 @@ export function BookDetailHeroPageRegion({ book, canEdit = false, editNavigation
       {book.catalogTags.length > 0 ? <div className="book-detail-hero-region__tags" aria-label="Catalog Tags">
         {book.catalogTags.map((tag) => <span key={tag.id}>{tag.name}</span>)}
       </div> : null}
-      {book.description ? <div className="book-detail-hero-region__description"><BookDescription sanitizedHtml={book.description} /></div> : null}
+      {book.description ? <div className="book-detail-hero-region__description"><SanitizedRichText html={book.description} /></div> : null}
       {book.file?.downloadUrl || !book.file || canEdit || secondPassReaderBookUrl ? <div className="book-detail-hero-region__actions">
         {secondPassReaderBookUrl && book.file ? <a
           className="button button--medium button--primary"

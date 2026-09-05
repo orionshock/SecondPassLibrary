@@ -25,7 +25,13 @@ Notes:
 
 - Settings are cached as a single dict under one Django cache key and invalidated on update.
 - `ServerSetting` is **not** intended for secrets.
-- Server identity is stored as `ServerSetting(server_name)` and `ServerSetting(server_description)` and is editable via an Owner-only UI page (`/server/`) and API endpoint (`/api/v1/server/settings/`).
+- Server identity is stored as `ServerSetting(server_name)`,
+  `ServerSetting(server_description)`, and
+  `ServerSetting(server_banner_message)`. It is edited as one Owner-only
+  Product UI surface at `/server/` through `/api/v1/server/settings/`.
+  Description and banner values follow the shared
+  [sanitized limited HTML](api.md#sanitized-limited-html) contract; the name is
+  plain text.
 - `ServerSetting(advanced_library_groups_enabled)` selects Advanced or Simple
   Mode. It never defines Book visibility. The immutable [Advanced Library
   Groups Mode](advanced-library-groups.md) policy owns its UI, API, retained

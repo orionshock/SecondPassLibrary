@@ -199,14 +199,22 @@ class ServerIdentitySettingsTests(TestCase):
             is_staff=True,
         )
         self.client.force_login(owner)
+        server_settings.set_server_description("Original description")
         resp = self.client.patch(
             "/api/v1/server/settings/",
-            data={"server_name": "   "},
+            data={
+                "server_name": "   ",
+                "server_description": "Must not persist",
+            },
             content_type="application/json",
         )
         self.assertEqual(resp.status_code, 400)
         payload = resp.json()
         self.assertIn("server_name", payload)
+        self.assertEqual(
+            server_settings.get_server_description(),
+            "Original description",
+        )
 
     def test_patch_rejects_overlong_server_banner_message(self):
         owner = User.objects.create_user(
@@ -224,6 +232,39 @@ class ServerIdentitySettingsTests(TestCase):
         self.assertEqual(resp.status_code, 400)
         payload = resp.json()
         self.assertIn("server_banner_message", payload)
+
+    def test_patch_sanitizes_server_identity_html_before_returning_it(self):
+        owner = User.objects.create_user(
+            username="owner-rich-text",
+            password="pw",
+            is_superuser=True,
+            is_staff=True,
+        )
+        self.client.force_login(owner)
+
+        response = self.client.patch(
+            "/api/v1/server/settings/",
+            data={
+                "server_description": (
+                    '<p class="lead">Private <b>library</b></p>'
+                    '<script>alert("no")</script>'
+                ),
+                "server_banner_message": (
+                    '<ol><li onclick="alert(1)">Maintenance</li></ol>'
+                ),
+            },
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["server_description"],
+            "<p>Private <b>library</b></p>",
+        )
+        self.assertEqual(
+            response.json()["server_banner_message"],
+            "<ol><li>Maintenance</li></ol>",
+        )
 
     def test_well_known_secondpass_returns_compact_server_discovery(self):
         response = self.client.get("/.well-known/secondpass")

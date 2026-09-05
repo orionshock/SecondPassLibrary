@@ -79,6 +79,32 @@ class ServerIdentityAdminTests(TestCase):
             server_settings.get_server_banner_message(), "Maintenance tonight."
         )
 
+    def test_combined_form_sanitizes_rich_identity_fields(self):
+        response = self.client.post(
+            reverse("admin:core_serversetting_change", args=(self.setting.pk,)),
+            {
+                "server_name": "House Library",
+                "server_description": (
+                    '<p class="lead">A <strong>private</strong> library.</p>'
+                    '<script>alert("no")</script>'
+                ),
+                "server_banner_message": (
+                    '<ul><li style="color:red">Maintenance</li></ul>'
+                ),
+                "_save": "Save",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            server_settings.get_server_description(),
+            "<p>A <strong>private</strong> library.</p>",
+        )
+        self.assertEqual(
+            server_settings.get_server_banner_message(),
+            "<ul><li>Maintenance</li></ul>",
+        )
+
     def test_invalid_combined_form_does_not_update_any_setting(self):
         original_name = server_settings.get_server_name()
         original_description = server_settings.get_server_description()

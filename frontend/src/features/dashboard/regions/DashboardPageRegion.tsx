@@ -2,6 +2,7 @@ import type { RecentMarginaliaSession } from "@second-pass/spl-api";
 import { Link } from "react-router";
 
 import { Button, ErrorPanel } from "../../../components/UiPrimitives";
+import { SanitizedRichText } from "../../../components/SanitizedRichText";
 import { MaterialIcon } from "../../../components/icons/MaterialIcon";
 import { ProductPageShell } from "../../../shared/layout/ProductPageShell";
 import { DashboardActionTile, type DashboardAction } from "../components/DashboardActionTile";
@@ -33,7 +34,7 @@ export function DashboardPageRegion({
     className="dashboard-page"
     title="Library Home"
   >
-    {bannerText.trim() ? <aside className="dashboard-banner" aria-label="Server message">{bannerText}</aside> : null}
+    {bannerText.trim() ? <aside className="dashboard-banner" aria-label="Server message"><SanitizedRichText html={bannerText} /></aside> : null}
     <RecentReadingPageRegion state={recentReading} onRetry={onRetryRecentReading} />
     <DashboardLaunchPadsPageRegion showAdvancedGroups={showAdvancedGroups} />
     <DashboardUtilitiesComponent showImports={showImports} showUsers={showUsers} showServerSettings={showServerSettings} />

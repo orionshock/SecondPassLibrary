@@ -55,6 +55,37 @@
   width: min(100%, 46rem);
 }
 
+.server-settings-identity .form-grid,
+.server-settings-identity .key-value-list {
+  width: min(100%, 54rem);
+}
+
+.server-settings-identity .key-value-list {
+  row-gap: 1.15rem;
+}
+
+.server-settings-identity__form {
+  gap: 1.35rem;
+}
+
+.server-settings-identity__form .form-field {
+  align-items: start;
+}
+
+.server-settings-identity__form .form-field > label {
+  padding-top: 0.65rem;
+}
+
+.server-settings-identity__form input {
+  max-width: 36rem;
+}
+
+.server-settings-identity__banner p,
+.server-settings-identity__banner ul,
+.server-settings-identity__banner ol {
+  margin-block: 0.35rem;
+}
+
 .server-settings-region--centered {
   width: min(100%, 56rem);
   margin-inline: auto;

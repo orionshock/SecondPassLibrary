@@ -30,7 +30,7 @@ function renderDashboard(
   overrides: Partial<Parameters<typeof DashboardPageRegion>[0]> = {},
 ): string {
   return renderToStaticMarkup(<MemoryRouter><DashboardPageRegion
-    bannerText="Maintenance tonight."
+    bannerText="<p>Maintenance <strong>tonight</strong>.</p>"
     recentReading={recentReading}
     showAdvancedGroups
     showImports
@@ -67,7 +67,9 @@ describe("Dashboard", () => {
     const failed = renderDashboard({ status: "error", error: new Error("Recent reading failed.") });
     expect(failed).toContain("Recent reading failed.");
     expect(failed).toContain("Retry");
-    expect(failed).toContain("Maintenance tonight.");
+    expect(failed).toContain("Maintenance ");
+    expect(failed).toContain("<strong>tonight</strong>");
+    expect(failed).not.toContain("&lt;p&gt;");
     expect(failed).toContain("My Shelves");
     expect(failed).not.toContain(">View all</a>");
     expect(renderDashboard({ status: "loading" })).not.toContain(">View all</a>");

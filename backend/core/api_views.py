@@ -75,27 +75,33 @@ class ServerSettingsView(APIView):
 
         errors: dict[str, list[str]] = {}
 
-        if "server_name" in data:
+        identity_keys = {
+            "server_name",
+            "server_description",
+            "server_banner_message",
+        }
+        if identity_keys.intersection(data):
             try:
-                server_settings.set_server_name(str(data.get("server_name") or ""))
-            except ValueError as exc:
-                errors.setdefault("server_name", []).append(str(exc))
-
-        if "server_description" in data:
-            try:
-                server_settings.set_server_description(
-                    str(data.get("server_description") or "")
+                server_settings.set_server_identity(
+                    name=(
+                        str(data.get("server_name") or "")
+                        if "server_name" in data
+                        else server_settings.get_server_name()
+                    ),
+                    description=(
+                        str(data.get("server_description") or "")
+                        if "server_description" in data
+                        else server_settings.get_server_description()
+                    ),
+                    banner_message=(
+                        str(data.get("server_banner_message") or "")
+                        if "server_banner_message" in data
+                        else server_settings.get_server_banner_message()
+                    ),
                 )
-            except ValueError as exc:
-                errors.setdefault("server_description", []).append(str(exc))
-
-        if "server_banner_message" in data:
-            try:
-                server_settings.set_server_banner_message(
-                    str(data.get("server_banner_message") or "")
-                )
-            except ValueError as exc:
-                errors.setdefault("server_banner_message", []).append(str(exc))
+            except DjangoValidationError as exc:
+                for field, messages in exc.message_dict.items():
+                    errors.setdefault(field, []).extend(messages)
 
         if "second_pass_reader_web_client_url" in data:
             try:

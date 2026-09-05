@@ -12,7 +12,7 @@ from django.template.response import TemplateResponse
 from django.urls import path, reverse
 
 from core import server_settings
-from library.catalog.description_html import sanitize_book_description
+from core.rich_text import sanitize_limited_html
 from library.file_repair import (
     ChecksumChangeConfirmationRequired,
     ChecksumCollisionError,
@@ -164,7 +164,7 @@ class BookAdminForm(forms.ModelForm):
         return upload
 
     def clean_description(self):
-        return sanitize_book_description(self.cleaned_data.get("description"))
+        return sanitize_limited_html(self.cleaned_data.get("description"))
 
     def save(self, commit=True):
         book = super().save(commit=commit)

@@ -87,7 +87,9 @@ describe("Book Detail presentation", () => {
 
   it("renders the server-sanitized rich description and builds contextual entity and download links", () => {
     const markup = render(<BookDetailHeroPageRegion book={book} />);
-    expect(markup).toContain('<div class="book-description"><p>Rich&#x20;<strong>description</strong> with <b>bold</b><br>and <i>italic</i> &amp; entity</p><ul><li><em>First</em></li></ul><ol><li>Second</li></ol></div>');
+    expect(markup).toContain('<p>Rich&#x20;<strong>description</strong> with <b>bold</b><br>and <i>italic</i> &amp; entity</p>');
+    expect(markup).toContain("<ul><li><em>First</em></li></ul>");
+    expect(markup).toContain("<ol><li>Second</li></ol>");
     expect(markup).not.toContain("&lt;p&gt;");
     expect(markup).toContain('href="/library?view=authors&amp;author=22222222-2222-4222-8222-222222222222"');
     expect(markup).toContain('href="/library?view=series&amp;series=33333333-3333-4333-8333-333333333333"');
@@ -96,7 +98,8 @@ describe("Book Detail presentation", () => {
 
   it("renders plain-text descriptions without inventing markup", () => {
     const markup = render(<BookDetailHeroPageRegion book={{ ...book, description: "Plain text" }} />);
-    expect(markup).toContain('<div class="book-description">Plain text</div>');
+    expect(markup).toContain(">Plain text</div>");
+    expect(markup).not.toContain("<p>Plain text</p>");
   });
 
   it("uses mapped file and identifier data in the Metadata section", () => {

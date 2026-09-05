@@ -2,7 +2,8 @@ import {
   ApiError,
   enableAdvancedGroups,
   getServerSettings,
-  updateGeneralSettings,
+  updateExternalServicesSettings,
+  updateServerIdentity,
   updatePublicLibrarySettings,
   type GeneralServerSettings,
   type PublicLibrarySettings,
@@ -97,21 +98,30 @@ export function ServerSettingsOrchestrator() {
     setEditing(false);
   }
 
-  async function saveGeneral(event: FormEvent<HTMLFormElement>) {
+  async function saveServerIdentity(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setState({ pending: true });
     try {
-      const settings = await updateGeneralSettings({
-        ...generalDraft,
-        secondPassReaderWebClientUrl: generalDraft.secondPassReaderWebClientUrlLocked
-          ? undefined
-          : generalDraft.secondPassReaderWebClientUrl,
-      });
+      const settings = await updateServerIdentity(generalDraft);
       setLoad({ loading: false, settings });
       setGeneralDraft(settings.general);
       void refreshServerInfo().catch(() => undefined);
       setEditing(false);
-      setState({ pending: false, message: "General settings saved." });
+      setState({ pending: false, message: "Server identity saved." });
+    } catch (error: unknown) { setState({ pending: false, error: normalizeMutationError(error) }); }
+  }
+
+  async function saveExternalServices(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (generalDraft.secondPassReaderWebClientUrlLocked) return;
+    setState({ pending: true });
+    try {
+      const settings = await updateExternalServicesSettings(generalDraft.secondPassReaderWebClientUrl);
+      setLoad({ loading: false, settings });
+      setGeneralDraft(settings.general);
+      void refreshServerInfo().catch(() => undefined);
+      setEditing(false);
+      setState({ pending: false, message: "External services saved." });
     } catch (error: unknown) { setState({ pending: false, error: normalizeMutationError(error) }); }
   }
 
@@ -165,7 +175,7 @@ export function ServerSettingsOrchestrator() {
       editing={editing}
       state={state}
       onChange={(field, value) => setGeneralDraft((draft) => ({ ...draft, [field]: value }))}
-      onSubmit={(event) => void saveGeneral(event)}
+      onSubmit={(event) => void saveServerIdentity(event)}
     /> : null}
     {tab === "public-library" ? <PublicLibraryPageRegion
       settings={settings.publicLibrary}
@@ -181,7 +191,7 @@ export function ServerSettingsOrchestrator() {
       editing={editing}
       state={state}
       onChange={(value) => setGeneralDraft((draft) => ({ ...draft, secondPassReaderWebClientUrl: value }))}
-      onSubmit={(event) => void saveGeneral(event)}
+      onSubmit={(event) => void saveExternalServices(event)}
     /> : null}
     {tab === "library-groups" ? <LibraryGroupsPageRegion settings={settings.libraryGroups} editing={editing} state={state} onEnable={() => void enableGroups()} /> : null}
     </div>

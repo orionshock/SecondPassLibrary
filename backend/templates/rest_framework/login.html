@@ -20,7 +20,7 @@
             <h1 class="page-title">Log in</h1>
             <p class="muted login-subtitle">A SecondPass Library</p>
             {% if server_description %}
-              <p class="login-description">{{ server_description }}</p>
+              <div class="login-description">{{ server_description|safe }}</div>
             {% endif %}
           </div>
 

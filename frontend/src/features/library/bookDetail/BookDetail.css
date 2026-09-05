@@ -90,20 +90,6 @@
   overflow-wrap: anywhere;
 }
 
-.book-description > :first-child {
-  margin-top: 0;
-}
-
-.book-description > :last-child {
-  margin-bottom: 0;
-}
-
-.book-description p,
-.book-description ul,
-.book-description ol {
-  margin-block: 0.7rem;
-}
-
 .book-detail-hero-region__actions {
   display: flex;
   align-items: center;

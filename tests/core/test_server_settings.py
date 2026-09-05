@@ -16,6 +16,7 @@ from core.server_settings import (
     clear_server_settings_cache,
     enable_advanced_library_groups,
     get_server_banner_message,
+    get_server_description,
     get_second_pass_reader_web_client_url,
     get_marginalia_active_session_tombstone_retention_days,
     get_marginalia_closed_session_tombstone_retention_days,
@@ -24,6 +25,7 @@ from core.server_settings import (
     ensure_editable_server_settings,
     set_advanced_library_groups_enabled,
     set_server_banner_message,
+    set_server_description,
     set_second_pass_reader_web_client_url,
     set_server_setting,
     synchronize_deployment_server_settings,
@@ -60,6 +62,25 @@ class ServerSettingsServiceTests(TestCase):
     def test_server_banner_message_rejects_overlong_value(self):
         with self.assertRaises(ValueError):
             set_server_banner_message("x" * 501)
+
+    def test_server_identity_rich_text_uses_the_shared_limited_html_policy(self):
+        set_server_description(
+            '<p class="lead">About <strong>this server</strong></p>'
+            '<script>alert("no")</script><a href="https://example.test">origin</a>'
+        )
+        set_server_banner_message(
+            '<ul data-list="yes"><li><em>Maintenance</em></li></ul>'
+            '<img src="x" onerror="alert(1)">'
+        )
+
+        self.assertEqual(
+            get_server_description(),
+            "<p>About <strong>this server</strong></p>origin",
+        )
+        self.assertEqual(
+            get_server_banner_message(),
+            "<ul><li><em>Maintenance</em></li></ul>",
+        )
 
     def test_second_pass_reader_web_client_url_is_optional_and_canonical(self):
         self.assertEqual(get_second_pass_reader_web_client_url(), "")
