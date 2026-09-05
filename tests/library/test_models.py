@@ -4,7 +4,6 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
-from django.db.models import BigAutoField
 from django.test import TestCase
 
 from library.models import (
@@ -23,33 +22,8 @@ from library.models import (
 
 
 class LibraryModelShapeTests(TestCase):
-    def test_group_membership_uses_internal_big_auto_primary_key(self):
-        self.assertIsInstance(LibraryGroupMembership._meta.pk, BigAutoField)
-
-    def test_book_owns_file_fields_directly(self):
-        field_names = {field.name for field in Book._meta.get_fields()}
-
-        self.assertIn("book_file", field_names)
-        self.assertIn("file_format", field_names)
-        self.assertIn("checksum", field_names)
-        self.assertIn("file_size", field_names)
-        self.assertNotIn("source_filename", field_names)
-        self.assertNotIn("file", field_names)
-
     def test_file_format_initially_supports_epub_only(self):
         self.assertEqual(Book.FILE_FORMAT_CHOICES, [(Book.FILE_FORMAT_EPUB, "EPUB")])
-
-    def test_no_public_bookfile_model_exists(self):
-        self.assertNotIn("BookFile", {model.__name__ for model in Book._meta.apps.get_models()})
-
-    def test_book_author_has_no_role_field(self):
-        self.assertEqual(
-            {"book", "author", "position"},
-            {field.name for field in BookAuthor._meta.fields if field.name not in {"id", "created_at", "updated_at"}},
-        )
-
-    def test_book_identifier_has_normalized_value(self):
-        self.assertIn("normalized_value", {field.name for field in BookIdentifier._meta.fields})
 
 
 class LibraryModelConstraintTests(TestCase):

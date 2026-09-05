@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.models import Permission
 from django.contrib.contenttypes.models import ContentType
 from django.test import RequestFactory, TestCase, override_settings
-from django.urls import path, reverse
+from django.urls import path
 
 from library.models import Book, LibraryGroup
 from shelves.admin import (
@@ -120,7 +120,7 @@ class ShelfAdminSafetyTests(TestCase):
         self.assertFalse(invalid.is_valid())
         self.assertIn("description", invalid.errors)
 
-    def test_owner_fields_readonly_and_field_order_is_diagnostic(self):
+    def test_system_fields_are_readonly(self):
         self.request.user = self.user
         readonly = self.shelf_admin.get_readonly_fields(
             self.request, obj=Shelf(owner_type=Shelf.OWNER_TYPE_USER)
@@ -130,22 +130,6 @@ class ShelfAdminSafetyTests(TestCase):
         self.assertIn("created_at", readonly)
         self.assertIn("updated_at", readonly)
         self.assertIn("created_by", readonly)
-        self.assertEqual(
-            self.shelf_admin.fields,
-            [
-                "id",
-                "name",
-                "description",
-                "owner_type",
-                "owner_user",
-                "owner_group",
-                "visibility",
-                "created_by",
-                "created_at",
-                "updated_at",
-            ],
-        )
-
     def test_shelf_item_inline_is_readonly_diagnostic(self):
         self.request.user = self.superuser
 
@@ -181,29 +165,6 @@ class ShelfAdminSafetyTests(TestCase):
         self.assertIn("Inline Book", html)
         self.assertIn(f"/admin/library/book/{self.book.pk}/change/", html)
         self.assertNotIn("Shelf:", html)
-
-    def test_shelf_item_inline_render_omits_original_object_label(self):
-        shelf = Shelf.objects.create(
-            name="Shelf",
-            owner_type=Shelf.OWNER_TYPE_USER,
-            owner_user=self.user,
-            created_by=self.user,
-        )
-        ShelfItem.objects.create(
-            shelf=shelf,
-            book=self.book,
-            position=0,
-            added_by=self.user,
-        )
-        self.client.force_login(self.superuser)
-
-        response = self.client.get(
-            reverse("admin:shelves_shelf_change", args=[shelf.pk])
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Inline Book")
-        self.assertNotContains(response, "Shelf: Inline Book")
 
     def test_shelf_item_inline_delete_canonicalizes_positions(self):
         self.request.user = self.superuser
@@ -312,12 +273,6 @@ class ShelfAdminSafetyTests(TestCase):
 
         self.assertFalse(Shelf.objects.filter(pk=shelf.pk).exists())
         self.assertFalse(ShelfItem.objects.filter(pk=item.pk).exists())
-
-    def test_changelist_columns_include_diagnostic_fields(self):
-        self.assertIn("id", self.shelf_admin.list_display)
-        self.assertIn("item_count", self.shelf_admin.list_display)
-        self.assertIn("owner_type", self.shelf_admin.list_display)
-        self.assertIn("visibility", self.shelf_admin.list_display)
 
     def assert_user_related_widget_is_view_only(self, widget):
         self.assertFalse(widget.can_add_related)

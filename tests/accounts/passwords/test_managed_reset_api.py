@@ -42,49 +42,25 @@ class ManagedResetPasswordApiTests(APITestCase):
         ok = self.client.login(username="reader", password=temp_pw)
         self.assertTrue(ok)
 
-    def test_manager_can_reset_reader_and_librarian(self):
-        self.client.login(username="manager", password="pw")
-        r1 = assert_response(
-            self.client.post(
-                f"/api/v1/accounts/users/{self.reader.profile.id}/reset-password/"
-            )
+    def test_reset_authority_matrix(self):
+        cases = (
+            ("manager", self.reader, status.HTTP_200_OK),
+            ("manager", self.librarian, status.HTTP_200_OK),
+            ("manager", self.manager2, status.HTTP_403_FORBIDDEN),
+            ("manager", self.owner, status.HTTP_403_FORBIDDEN),
+            ("owner", self.manager, status.HTTP_200_OK),
         )
-        self.assertEqual(r1.status_code, status.HTTP_200_OK)
-        self.client.logout()
-        self.client.login(username="manager", password="pw")
-        r2 = assert_response(
-            self.client.post(
-                f"/api/v1/accounts/users/{self.librarian.profile.id}/reset-password/"
-            )
-        )
-        self.assertEqual(r2.status_code, status.HTTP_200_OK)
 
-    def test_manager_cannot_reset_manager(self):
-        self.client.login(username="manager", password="pw")
-        denied = assert_response(
-            self.client.post(
-                f"/api/v1/accounts/users/{self.manager2.profile.id}/reset-password/"
-            ),
-        )
-        self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
-
-    def test_manager_cannot_reset_owner(self):
-        self.client.login(username="manager", password="pw")
-        denied = assert_response(
-            self.client.post(
-                f"/api/v1/accounts/users/{self.owner.profile.id}/reset-password/"
-            ),
-        )
-        self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
-
-    def test_owner_can_reset_manager(self):
-        self.client.login(username="owner", password="pw")
-        ok = assert_response(
-            self.client.post(
-                f"/api/v1/accounts/users/{self.manager.profile.id}/reset-password/"
-            ),
-        )
-        self.assertEqual(ok.status_code, status.HTTP_200_OK)
+        for actor, target, expected_status in cases:
+            with self.subTest(actor=actor, target=target.username):
+                self.client.logout()
+                self.client.login(username=actor, password="pw")
+                response = assert_response(
+                    self.client.post(
+                        f"/api/v1/accounts/users/{target.profile.id}/reset-password/"
+                    ),
+                )
+                self.assertEqual(response.status_code, expected_status)
 
     def test_managed_reset_cannot_reset_self(self):
         self.client.login(username="manager", password="pw")

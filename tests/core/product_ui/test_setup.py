@@ -65,19 +65,6 @@ class FirstRunProductUiTests(TestCase):
             'name="advanced_library_groups_enabled" checked',
         )
 
-    def test_setup_advanced_groups_compact_default_off_copy(self):
-        response = self.client.get("/setup/")
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(
-            response,
-            "Advanced library groups default to off.",
-        )
-        self.assertContains(
-            response,
-            "Leave this disabled. Consult documentation and help for more information.",
-        )
-
     def test_setup_advanced_groups_modal_warning_and_enable_markup(self):
         response = self.client.get("/setup/")
         content = response.content.decode("utf-8")

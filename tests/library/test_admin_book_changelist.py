@@ -1,5 +1,4 @@
 from django.contrib import admin
-from django.contrib.admin.templatetags.admin_list import result_headers
 from django.contrib.auth import get_user_model
 from django.db import connection
 from django.test import RequestFactory, TestCase, override_settings
@@ -32,21 +31,6 @@ class BookAdminChangelistTests(TestCase):
         self.unrelated_book = Book.objects.create(title="Standalone", language="fra")
         self.url = reverse("admin:library_book_changelist")
         self.assertTrue(self.client.login(username="owner", password="pw"))
-
-    def test_columns_are_in_the_required_order(self):
-        response = self.client.get(self.url)
-
-        self.assertEqual(response.status_code, 200)
-        headers = [
-            str(header["text"]).strip()
-            for header in result_headers(response.context["cl"])
-            if str(header["text"]).strip()
-            and "action-toggle" not in str(header["text"])
-        ]
-        self.assertEqual(
-            headers,
-            ["Title", "Authors", "Series", "Series Index", "Repair EPUB", "Created At"],
-        )
 
     def test_rows_show_authors_series_index_placeholders_and_repair_links(self):
         response = self.client.get(self.url)

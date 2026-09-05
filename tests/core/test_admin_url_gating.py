@@ -19,18 +19,16 @@ class DjangoAdminUrlGatingTests(SimpleTestCase):
         _reload_project_urls()
         super().tearDown()
 
-    def test_admin_route_is_not_registered_by_default(self):
+    def test_admin_route_is_absent_by_default_and_when_explicitly_disabled(self):
         _reload_project_urls()
 
         with self.assertRaises(Resolver404):
             resolve("/admin/")
 
-    @override_settings(SECOND_PASS_ENABLE_DJANGO_ADMIN=False)
-    def test_admin_route_is_not_registered_when_disabled(self):
-        _reload_project_urls()
-
-        with self.assertRaises(Resolver404):
-            resolve("/admin/")
+        with override_settings(SECOND_PASS_ENABLE_DJANGO_ADMIN=False):
+            _reload_project_urls()
+            with self.assertRaises(Resolver404):
+                resolve("/admin/")
 
     @override_settings(SECOND_PASS_ENABLE_DJANGO_ADMIN=True)
     def test_admin_route_is_registered_when_explicitly_enabled(self):

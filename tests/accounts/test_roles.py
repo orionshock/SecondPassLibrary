@@ -32,14 +32,12 @@ class AccountRoleRankTests(TestCase):
         self.no_profile.profile.delete()
         self.no_profile.refresh_from_db()
 
-    def test_effective_role_rank_maps_none_anonymous_inactive_and_missing_profile_to_reader(self):
-        self.assertEqual(effective_role_rank(None), RoleRank.READER)
-        self.assertEqual(effective_role_rank(AnonymousUser()), RoleRank.READER)
-        self.assertEqual(effective_role_rank(self.inactive), RoleRank.READER)
-        self.assertEqual(effective_role_rank(self.no_profile), RoleRank.READER)
-
-    def test_effective_role_rank_maps_existing_account_roles(self):
+    def test_effective_role_rank_maps_account_and_fallback_states(self):
         cases = [
+            (None, RoleRank.READER),
+            (AnonymousUser(), RoleRank.READER),
+            (self.inactive, RoleRank.READER),
+            (self.no_profile, RoleRank.READER),
             (self.reader, RoleRank.READER),
             (self.librarian, RoleRank.LIBRARIAN),
             (self.manager, RoleRank.MANAGER),
@@ -47,7 +45,7 @@ class AccountRoleRankTests(TestCase):
         ]
 
         for user, rank in cases:
-            with self.subTest(user=user.username):
+            with self.subTest(user=getattr(user, "username", None)):
                 self.assertEqual(effective_role_rank(user), rank)
 
     def test_role_inheritance_uses_rank_comparisons(self):

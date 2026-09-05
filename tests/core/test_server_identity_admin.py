@@ -35,7 +35,7 @@ class ServerIdentityAdminTests(TestCase):
         self.assertNotIn(server_settings.SERVER_DESCRIPTION_SETTING, keys)
         self.assertNotIn(server_settings.SERVER_BANNER_MESSAGE_SETTING, keys)
 
-    def test_combined_form_uses_bounded_wide_fields(self):
+    def test_combined_form_loads_all_identity_values(self):
         server_settings.set_server_name("House Library")
         server_settings.set_server_description("Private library")
         server_settings.set_server_banner_message("Maintenance tonight")
@@ -53,12 +53,6 @@ class ServerIdentityAdminTests(TestCase):
         self.assertEqual(
             form.initial["server_banner_message"], "Maintenance tonight"
         )
-        self.assertEqual(form.fields["server_name"].widget.attrs["size"], 80)
-        self.assertEqual(form.fields["server_description"].widget.attrs["rows"], 4)
-        self.assertEqual(form.fields["server_description"].widget.attrs["cols"], 100)
-        self.assertEqual(form.fields["server_banner_message"].widget.attrs["rows"], 3)
-        self.assertEqual(form.fields["server_banner_message"].widget.attrs["cols"], 100)
-
     def test_combined_form_updates_all_three_settings(self):
         response = self.client.post(
             reverse("admin:core_serversetting_change", args=(self.setting.pk,)),

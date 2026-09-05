@@ -464,25 +464,20 @@ class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
                 self.assertEqual(response.status_code, 400)
                 self.assertEqual(set(response.json()), {"preview_limit"})
 
-    def test_q_searches_name_and_sort_name(self):
+    def test_q_searches_name_sort_name_and_normalized_name(self):
         self.beta.sort_name = "Storm Writer"
-        self.beta.save(update_fields=["sort_name", "updated_at"])
+        self.beta.normalized_name = "normalized author"
+        self.beta.save(update_fields=["sort_name", "normalized_name", "updated_at"])
 
         by_name = self.client.get("/api/v1/library/authors/", {"q": "alpha"})
         by_sort_name = self.client.get("/api/v1/library/authors/", {"q": "storm"})
-
-        self.assertEqual(response_names(by_name), ["Alpha Author"])
-        self.assertEqual(response_names(by_sort_name), ["Beta Author"])
-
-    def test_q_normalizes_the_normalized_name_search_term(self):
-        self.beta.normalized_name = "normalized author"
-        self.beta.save(update_fields=["normalized_name", "updated_at"])
-
-        response = self.client.get(
+        by_normalized_name = self.client.get(
             "/api/v1/library/authors/", {"q": "  ＮORMALIZED   AUTHOR "}
         )
 
-        self.assertEqual(response_names(response), ["Beta Author"])
+        self.assertEqual(response_names(by_name), ["Alpha Author"])
+        self.assertEqual(response_names(by_sort_name), ["Beta Author"])
+        self.assertEqual(response_names(by_normalized_name), ["Beta Author"])
 
     def test_search_can_exclude_one_author_id(self):
         response = self.client.get(

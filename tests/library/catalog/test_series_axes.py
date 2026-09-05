@@ -359,25 +359,22 @@ class LibrarySeriesAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
                 self.assertEqual(response.status_code, 400)
                 self.assertEqual(set(response.json()), {"preview_limit"})
 
-    def test_q_searches_name_and_sort_name(self):
+    def test_q_searches_name_sort_name_and_normalized_name(self):
         self.second_series.sort_name = "Storm Sequence"
-        self.second_series.save(update_fields=["sort_name", "updated_at"])
+        self.second_series.normalized_name = "normalized series"
+        self.second_series.save(
+            update_fields=["sort_name", "normalized_name", "updated_at"]
+        )
 
         by_name = self.client.get("/api/v1/library/series/", {"q": "first"})
         by_sort_name = self.client.get("/api/v1/library/series/", {"q": "storm"})
-
-        self.assertEqual(response_names(by_name), ["First Series"])
-        self.assertEqual(response_names(by_sort_name), ["Second Series"])
-
-    def test_q_normalizes_the_normalized_name_search_term(self):
-        self.second_series.normalized_name = "normalized series"
-        self.second_series.save(update_fields=["normalized_name", "updated_at"])
-
-        response = self.client.get(
+        by_normalized_name = self.client.get(
             "/api/v1/library/series/", {"q": "  ＮORMALIZED   SERIES "}
         )
 
-        self.assertEqual(response_names(response), ["Second Series"])
+        self.assertEqual(response_names(by_name), ["First Series"])
+        self.assertEqual(response_names(by_sort_name), ["Second Series"])
+        self.assertEqual(response_names(by_normalized_name), ["Second Series"])
 
     def test_search_can_exclude_one_series_id(self):
         response = self.client.get(

@@ -16,33 +16,24 @@ from tests.library.imports.helpers import zip_bytes
 
 
 class ZipMemberSafetyTests(TestCase):
-    def test_safe_zip_member_name_accepts_normal_nested_path(self):
-        self.assertEqual(safe_zip_member_name("Authors/Book/book.epub"), "Authors/Book/book.epub")
-
-    def test_safe_zip_member_name_normalizes_dot_segment(self):
-        self.assertEqual(safe_zip_member_name("Authors/./Book.epub"), "Authors/Book.epub")
-
-    def test_safe_zip_member_name_normalizes_backslashes(self):
-        self.assertEqual(safe_zip_member_name(r"dir\book.epub"), "dir/book.epub")
-
-    def test_safe_zip_member_name_rejects_empty_path(self):
-        self.assertIsNone(safe_zip_member_name(""))
-
-    def test_safe_zip_member_name_rejects_traversal(self):
-        self.assertIsNone(safe_zip_member_name("../book.epub"))
-        self.assertIsNone(safe_zip_member_name("dir/../book.epub"))
-
-    def test_safe_zip_member_name_rejects_absolute_path(self):
-        self.assertIsNone(safe_zip_member_name("/book.epub"))
-        self.assertIsNone(safe_zip_member_name("\\book.epub"))
-
-    def test_safe_zip_member_name_rejects_drive_or_colon_path(self):
-        self.assertIsNone(safe_zip_member_name("C:/books/book.epub"))
-        self.assertIsNone(safe_zip_member_name("dir/book:bad.epub"))
-
-    def test_safe_zip_member_name_rejects_url_like_path(self):
-        self.assertIsNone(safe_zip_member_name("https://example.test/book.epub"))
-        self.assertIsNone(safe_zip_member_name("data:text/plain,book"))
+    def test_safe_zip_member_name_normalizes_safe_paths_and_rejects_unsafe_paths(self):
+        cases = (
+            ("Authors/Book/book.epub", "Authors/Book/book.epub"),
+            ("Authors/./Book.epub", "Authors/Book.epub"),
+            (r"dir\book.epub", "dir/book.epub"),
+            ("", None),
+            ("../book.epub", None),
+            ("dir/../book.epub", None),
+            ("/book.epub", None),
+            ("\\book.epub", None),
+            ("C:/books/book.epub", None),
+            ("dir/book:bad.epub", None),
+            ("https://example.test/book.epub", None),
+            ("data:text/plain,book", None),
+        )
+        for candidate, expected in cases:
+            with self.subTest(candidate=candidate):
+                self.assertEqual(safe_zip_member_name(candidate), expected)
 
 
 class ZipIndexTests(TestCase):

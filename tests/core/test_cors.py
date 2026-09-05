@@ -2,48 +2,38 @@ from django.test import TestCase
 
 
 class CorsPolicyTests(TestCase):
-    def test_api_discovery_has_open_cors(self):
-        response = self.client.get(
-            "/api/v1/client-api/discovery/",
-            HTTP_ORIGIN="http://evil.example",
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers.get("Access-Control-Allow-Origin"), "*")
-        self.assertNotEqual(response.headers.get("Access-Control-Allow-Credentials"), "true")
+    def test_public_client_discovery_surfaces_have_open_credentialless_cors(self):
+        for path in ("/api/v1/client-api/discovery/", "/.well-known/secondpass"):
+            with self.subTest(path=path):
+                response = self.client.get(
+                    path,
+                    HTTP_ORIGIN="http://evil.example",
+                )
+                self.assertEqual(response.status_code, 200)
+                self.assertEqual(
+                    response.headers.get("Access-Control-Allow-Origin"),
+                    "*",
+                )
+                self.assertNotEqual(
+                    response.headers.get("Access-Control-Allow-Credentials"),
+                    "true",
+                )
 
-    def test_well_known_has_open_cors(self):
-        response = self.client.get(
-            "/.well-known/secondpass",
-            HTTP_ORIGIN="http://evil.example",
-        )
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers.get("Access-Control-Allow-Origin"), "*")
-        self.assertNotEqual(response.headers.get("Access-Control-Allow-Credentials"), "true")
-
-    def test_user_login_is_not_cors_open(self):
-        response = self.client.get(
-            "/login/",
-            HTTP_ORIGIN="http://evil.example",
-        )
-        # Redirect to login is fine; but it must not be CORS-open.
-        self.assertIn(response.status_code, (200, 302))
-        self.assertIsNone(response.headers.get("Access-Control-Allow-Origin"))
-
-    def test_admin_is_not_cors_open(self):
-        response = self.client.get(
-            "/admin/",
-            HTTP_ORIGIN="http://evil.example",
-        )
-        self.assertIn(response.status_code, (200, 302, 404))
-        self.assertIsNone(response.headers.get("Access-Control-Allow-Origin"))
-
-    def test_react_shell_is_not_cors_open(self):
-        response = self.client.get(
-            "/",
-            HTTP_ORIGIN="http://evil.example",
-        )
-        self.assertIn(response.status_code, (200, 302))
-        self.assertIsNone(response.headers.get("Access-Control-Allow-Origin"))
+    def test_browser_surfaces_are_not_cors_open(self):
+        for path, statuses in (
+            ("/login/", (200, 302)),
+            ("/admin/", (200, 302, 404)),
+            ("/", (200, 302)),
+        ):
+            with self.subTest(path=path):
+                response = self.client.get(
+                    path,
+                    HTTP_ORIGIN="http://evil.example",
+                )
+                self.assertIn(response.status_code, statuses)
+                self.assertIsNone(
+                    response.headers.get("Access-Control-Allow-Origin")
+                )
 
     def test_api_allows_idempotency_key_header_in_preflight(self):
         response = self.client.options(

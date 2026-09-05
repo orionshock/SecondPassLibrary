@@ -75,54 +75,50 @@ class CurrentUserMePatchAPITest(APITestCase):
         self.assertEqual(self.user.first_name, "R")
         self.assertEqual(self.user.last_name, "Eader")
 
-    def test_cannot_patch_role(self):
-        self.client.login(username="reader", password="pw")
-        response = assert_response(
-            self.client.patch(
-                "/api/v1/accounts/me/",
-                data={"role": UserProfile.ROLE_MANAGER},
-                format="json",
-            ),
-        )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        data = response_data_dict(response)
-        self.assertEqual(payload_dict(data, "error")["code"], "UNSAFE_FIELD")
 
-    def test_cannot_patch_is_active(self):
+    def test_cannot_patch_protected_fields(self):
         self.client.login(username="reader", password="pw")
-        response = assert_response(
-            self.client.patch(
-                "/api/v1/accounts/me/",
-                data={"is_active": False},
-                format="json",
-            ),
-        )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        data = response_data_dict(response)
-        self.assertEqual(payload_dict(data, "error")["code"], "UNSAFE_FIELD")
+        for field, value in (
+            ("role", UserProfile.ROLE_MANAGER),
+            ("is_active", False),
+            ("username", "newname"),
+            ("password", "nope"),
+        ):
+            with self.subTest(field=field):
+                response = assert_response(
+                    self.client.patch(
+                        "/api/v1/accounts/me/",
+                        data={field: value},
+                        format="json",
+                    ),
+                )
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                data = response_data_dict(response)
+                self.assertEqual(
+                    payload_dict(data, "error")["code"],
+                    "UNSAFE_FIELD",
+                )
 
-    def test_cannot_patch_username(self):
-        self.client.login(username="reader", password="pw")
-        response = assert_response(
-            self.client.patch(
-                "/api/v1/accounts/me/",
-                data={"username": "newname"},
-                format="json",
-            ),
-        )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        data = response_data_dict(response)
-        self.assertEqual(payload_dict(data, "error")["code"], "UNSAFE_FIELD")
 
-    def test_cannot_patch_password(self):
-        self.client.login(username="reader", password="pw")
-        response = assert_response(
-            self.client.patch(
-                "/api/v1/accounts/me/",
-                data={"password": "nope"},
-                format="json",
-            ),
+class CurrentUserMeReadApiTest(APITestCase):
+    def setUp(self):
+        self.user = User.objects.create_user(
+            username="testuser", password="testpass", email="test@example.com"
         )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_authenticated_access_me(self):
+        self.client.login(username="testuser", password="testpass")
+        response = assert_response(self.client.get("/api/v1/accounts/me/"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response_data_dict(response)
-        self.assertEqual(payload_dict(data, "error")["code"], "UNSAFE_FIELD")
+        self.assertEqual(data["username"], "testuser")
+        self.assertEqual(data["email"], "test@example.com")
+        self.assertEqual(data["first_name"], "")
+        self.assertEqual(data["last_name"], "")
+        self.assertEqual(data["role"], UserProfile.ROLE_READER)
+        self.assertNotIn("must_change_password", data)
+        self.assertIn("profile_id", data)
+
+    def test_anonymous_cannot_access_me(self):
+        response = self.client.get("/api/v1/accounts/me/")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
