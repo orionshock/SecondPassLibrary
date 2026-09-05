@@ -219,16 +219,16 @@ describe("My Marginalia Session Detail", () => {
     expect(onCancel).toHaveBeenCalledOnce();
   });
 
-  it("renders canonical Book context, progress, and the complete annotation union without locator internals", () => {
+  it("renders only selected quote text while keeping notes separate and locator internals hidden", () => {
     const markup = renderDetail();
     expect(markup).toContain("Visible Book");
     expect(markup).toContain("Visible Author");
     expect(markup).toContain("Visible Series 2.0");
     expect(markup).toContain("Chapter 08 · 42%");
     expect(markup).toContain("Chapter 09 · 47%");
-    expect(markup).toContain("Before ");
     expect(markup).toContain("Quoted passage");
-    expect(markup).toContain(" after.");
+    expect(markup).not.toContain("Before ");
+    expect(markup).not.toContain(" after.");
     expect(markup).toContain("Reader note");
     expect(markup).toContain("Chapter 10 · 51%");
     expect(markup.match(/Quoted passage/g)).toHaveLength(1);
@@ -236,6 +236,24 @@ describe("My Marginalia Session Detail", () => {
     for (const internal of ["epubcfi", "reader-highlight-1", "reader-bookmark-1", "annotation-1", "annotation-2"]) {
       expect(markup).not.toContain(internal);
     }
+  });
+
+  it("keeps quote whitespace confined to selected text for closed historical Sessions", () => {
+    const selectedText = "  Quoted\npassage  ";
+    const highlight = {
+      ...annotations[0]!,
+      kind: "highlight" as const,
+      body: { text: selectedText, prefix: "ANCHOR BEFORE", suffix: "ANCHOR AFTER", color: "yellow" as const, note: "Reader note" },
+    };
+    const markup = renderDetail({
+      detail: { ...detail, session: { ...detail.session, status: "closed", closedAt: "2026-01-04T00:00:00Z" } },
+      annotations: { loading: false, items: [highlight] },
+    });
+
+    expect(markup).toContain(selectedText);
+    expect(markup).not.toContain("ANCHOR BEFORE");
+    expect(markup).not.toContain("ANCHOR AFTER");
+    expect(markup).toContain("Reader note");
   });
 
   it("shows null progress safely and gates View Book only through canOpen", () => {

@@ -87,6 +87,16 @@ excluded from ordinary reads, activity, counts, import/export empty-Session
 policy, and archive serialization. A later upsert of the same Session-scoped
 client identity restores the row.
 
+For a highlight body, `text` is the actual selected quotation and is the only
+quote text clients should normally display. `prefix` and `suffix` are immediate
+surrounding selector context retained for anchoring, matching, repair, and
+interchange; clients must not prepend or append them to the visible quotation.
+`note` remains separate user-authored annotation text. The server preserves
+these fields as supplied and does not normalize their whitespace for display.
+Any display-only whitespace treatment belongs to the client and must apply to
+`text` alone. The Product UI follows this boundary for both active and closed
+Session detail.
+
 The authoritative collection uses stable reading order. Nonblank location
 labels sort first and lexically; blank labels fall back to CFI, creation time,
 and server identity. Marginalia does not attempt to interpret that ordering as

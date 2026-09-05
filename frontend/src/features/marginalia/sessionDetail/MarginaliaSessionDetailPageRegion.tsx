@@ -241,9 +241,7 @@ function AnnotationRowComponent({ annotation }: { annotation: MarginaliaAnnotati
         ? !locationLabel ? <strong>Saved location</strong> : null
         : <>
           <blockquote className={`marginalia-annotation-row__quote marginalia-annotation-row__quote--${annotation.body.color}`}>
-            {annotation.body.prefix ? <span className="marginalia-annotation-row__quote-context">{annotation.body.prefix}</span> : null}
             <strong className="marginalia-annotation-row__quote-text">{annotation.body.text}</strong>
-            {annotation.body.suffix ? <span className="marginalia-annotation-row__quote-context">{annotation.body.suffix}</span> : null}
           </blockquote>
           {annotation.body.note.trim() ? <p className="marginalia-annotation-row__comment">{annotation.body.note}</p> : null}
         </>}

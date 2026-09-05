@@ -100,6 +100,11 @@ enforcement, and missing API routes must not redirect to the login page or
 Product UI shell. Browser navigation outside the API namespace retains its
 separate redirect and HTML error behavior.
 
+Marginalia highlight bodies preserve selected `text` separately from anchoring
+`prefix` and `suffix`. Only `text` is the visible quotation; clients must not
+concatenate selector context into it. See [Marginalia](marginalia.md#annotation-lifecycle)
+for the authoritative presentation and preservation contract.
+
 ## Error conventions
 
 Error responses are bounded JSON, but the project intentionally has more than

@@ -61,7 +61,8 @@ context.
 A highlight has a body. Selected `text` and `color` are required. Optional
 prefix and suffix contain immediate quote context for Reader-side anchor
 verification or repair; an optional note is user-authored prose attached to the
-highlight. Supported color tokens are `yellow`, `green`, `blue`, `pink`,
+highlight. They are not selected text and must not be concatenated into the
+visible quotation. Supported color tokens are `yellow`, `green`, `blue`, `pink`,
 `purple`, and `orange`. There is no standalone note annotation kind and no
 second selector/body representation.
 

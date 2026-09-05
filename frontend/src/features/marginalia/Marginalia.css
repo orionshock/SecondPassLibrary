@@ -952,7 +952,6 @@
 .marginalia-annotation-row__quote--pink { border-left-color: rgb(244 114 182 / 60%); background: rgb(244 114 182 / 8%); }
 .marginalia-annotation-row__quote--purple { border-left-color: rgb(167 139 250 / 60%); background: rgb(167 139 250 / 8%); }
 .marginalia-annotation-row__quote--orange { border-left-color: rgb(251 146 60 / 60%); background: rgb(251 146 60 / 8%); }
-.marginalia-annotation-row__quote-context { color: var(--muted); }
 .marginalia-annotation-row__quote-text { color: var(--text); }
 .marginalia-annotation-row__comment { color: var(--muted); font-style: italic; white-space: pre-wrap; }
 
