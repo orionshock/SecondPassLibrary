@@ -1,11 +1,11 @@
 # Permissions and visibility
 
-This document owns general role, Group-mutation, and Shelf authority. The
-immutable [Library Book Visibility](book-visibility.md) and [Advanced Library
-Groups Mode](advanced-library-groups.md) policies own those detailed
-boundaries; [Marginalia-Linked Books](marginalia-book-visibility.md) owns the
-distinct historical-reading boundary. Shared HTTP conventions belong in
-[API](api.md), and Product UI layering belongs in [Frontend](frontend.md).
+This guide describes application roles, Group changes, and Shelf permissions.
+The immutable [Library Book Visibility](book-visibility.md), [Advanced Library
+Groups Mode](advanced-library-groups.md), and [Marginalia-Linked
+Books](marginalia-book-visibility.md) policies define their more specific
+rules. See [API](api.md) for HTTP conventions and [Frontend](frontend.md) for
+Product UI architecture.
 
 ## Identity concepts
 
@@ -81,11 +81,11 @@ Reader has no global library, group, or user-management authority.
 
 ## Book visibility
 
-The immutable [Library Book Visibility](book-visibility.md) policy defines the
-current Library-visible Book set, strict uncached boundaries, cache behavior,
-and anti-enumeration rules. Shelves never grant Book access. Historical
-Marginalia has a separate ownership and mutation policy; do not infer it from
-general Library visibility. See [Marginalia-Linked Books](marginalia-book-visibility.md).
+The immutable [Library Book Visibility](book-visibility.md) policy defines
+which Books a user can see, where uncached checks are required, how visibility
+is cached, and how hidden records avoid disclosure. Shelves never grant Book
+access. Historical Marginalia follows a separate ownership and mutation policy
+in [Marginalia-Linked Books](marginalia-book-visibility.md).
 
 ## Designated Public group
 
@@ -149,7 +149,7 @@ Authorized custom-group deletion is a supported API/Product UI workflow.
 User Edit and Group Edit are both valid Product UI membership-management
 surfaces for authorized Manager/Owner users.
 
-## Shelf ownership and visibility authority
+## Shelf ownership and visibility
 
 Shelves organize Books; they never grant Book access. Every Shelf has exactly
 one immutable owner: either one user or one Library Group. Its UUID, not its
@@ -175,7 +175,7 @@ display name, is identity; different owners may use the same name.
 Normal Shelf reads include only currently visible Books. Counts and previews
 must not disclose hidden Books or their metadata.
 
-### Mutation authority
+### Who can change a Shelf
 
 The user owner alone may create, rename, change visibility, populate, reorder,
 remove from, or delete a personal Shelf. Owner, Manager, and Librarian may do
@@ -228,7 +228,7 @@ Client bearer tokens are reader-client credentials, not management tokens.
 Pairing and the full bearer route surface are documented in
 `docs/client-api-auth.md`.
 
-## Implementation guardrails
+## Implementation rules
 
 - Group assignment and Public fallback behavior remain centralized in the
   owning Group services.

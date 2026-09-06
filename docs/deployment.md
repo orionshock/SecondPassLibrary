@@ -6,10 +6,9 @@ collects static assets, applies migrations at web-container startup, and runs
 one Uvicorn web process plus one Huey maintenance worker as the non-root
 `secondpass` user.
 
-The supported network boundary is a loopback/private application bind behind an
-operator-managed reverse proxy. Direct public exposure of the Uvicorn port is
-unsupported. HTTPS termination, HTTP-to-HTTPS redirect, HSTS, and public
-exposure policy belong to the operator.
+Run the application on a loopback or private address behind a reverse proxy.
+Do not expose the Uvicorn port directly to the internet. The operator's proxy
+handles HTTPS, HTTP-to-HTTPS redirects, HSTS, and public access.
 
 See [Operations](operations.md) for backups, cleanup, Admin repair, maintenance,
 and troubleshooting.
@@ -30,7 +29,7 @@ complete, mutually consistent database and userdata backup.
 
 The Compose project is `secondpasslibrary`. Its web service is `server`;
 `worker` is its separate background-maintenance consumer. Both mount the named volume
-`secondpass_userdata` at `/app/userdata`, while only the web service publishes
+`secondpass_userdata` at `/app/userdata`. Only the web service publishes
 `127.0.0.1:8000:8000`. Do not scale the service or increase its worker count
 while it uses SQLite.
 
@@ -88,8 +87,8 @@ Once an active Owner exists, `/setup/` is disabled.
 
 ## Second Pass Reader web client URL
 
-The optional `second_pass_reader_web_client_url` Server Setting is the canonical
-base URL used to open Books in the Second Pass Reader web client. It can be
+The optional `second_pass_reader_web_client_url` Server Setting is the base URL
+used to open Books in the Second Pass Reader web client. It can be
 edited in Django Admin as a single-line URL field, or fixed by deployment with:
 
 ```text
@@ -117,8 +116,8 @@ DJANGO_SECURE_COOKIES=1
 DJANGO_USE_X_FORWARDED_HOST=0
 ```
 
-Uvicorn proxy-header rewriting is disabled in every supported startup path.
-Django owns forwarded-header interpretation. The proxy must discard untrusted
+Uvicorn proxy-header rewriting is disabled in every supported startup path, so
+Django interprets forwarded headers. The proxy must discard untrusted
 incoming forwarded headers and set its own values; merely passing client values
 through is unsafe. Forwarded host trust is normally unnecessary, so
 `DJANGO_USE_X_FORWARDED_HOST` should remain disabled.
@@ -160,9 +159,8 @@ checks. Second Pass Library raises a deploy-check error when forwarded HTTPS
 trust is enabled without secure session and CSRF cookies. Local direct HTTP
 remains supported because that check applies only to forwarded HTTPS trust.
 
-A VPN such as Tailscale may provide a private path to the proxy, but it is
-optional infrastructure and not a Second Pass Library authentication or trust
-boundary.
+A VPN such as Tailscale can provide a private route to the proxy, but it does
+not replace Second Pass Library authentication.
 
 ## Storage and served files
 
@@ -192,7 +190,7 @@ Marginalia remain protected application responses.
 
 ## Optional Admin boundary
 
-Django Admin is an intentional repair service hatch. Its route is registered
+Django Admin is an optional repair tool. Its route is registered
 only when `SECOND_PASS_ENABLE_DJANGO_ADMIN=1`; keep it disabled normally. When
 enabled, restrict it to trusted operator networks or a proxy allowlist. See
 [Admin and repair workflows](operations.md#admin-and-repair-workflows).
@@ -212,7 +210,7 @@ migration requirements before starting the replacement container. The
 entrypoint completes deploy checks and migrations before Uvicorn accepts
 requests.
 
-For a deliberately clean image rebuild:
+For a clean image rebuild:
 
 ```powershell
 docker compose -f docker/compose.yml build --no-cache --pull

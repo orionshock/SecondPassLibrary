@@ -1,18 +1,18 @@
 # Operations
 
-This document owns recurring operation, maintenance, recovery, and repair for a
-self-hosted Second Pass Library instance. The supported shape is one Docker
-Compose application instance with SQLite. The operator owns filesystem
-permissions, backups, reverse-proxy operation, and any external scheduler.
+This guide covers maintenance, recovery, and repair for a self-hosted Second
+Pass Library instance. The supported deployment is one Docker Compose
+application instance backed by SQLite. The operator is responsible for
+filesystem permissions, backups, the reverse proxy, and any external scheduler.
 
 See [Deployment](deployment.md) for installation, first setup, environment
 configuration, upgrades, and the reverse-proxy trust contract. Tailscale or
 another VPN may carry trusted access, but it is outside the product trust
-boundary. Direct public exposure of the Uvicorn port is unsupported.
+model. Do not expose the Uvicorn port directly to the internet.
 
 ## Backup and restore
 
-The canonical runtime backup unit is the complete `/app/userdata` tree:
+Back up the complete `/app/userdata` tree as one unit:
 
 - `db/` contains SQLite state;
 - `media/` contains EPUBs and covers referenced by that database;
@@ -123,7 +123,7 @@ the original item available for normal Shelf operations.
 
 ## Admin and repair workflows
 
-Django Admin is an optional operator service hatch, disabled by default. Set
+Django Admin is an optional repair tool, disabled by default. Set
 `SECOND_PASS_ENABLE_DJANGO_ADMIN=1` and restart the service only when it is
 needed. Restrict `/admin/` to trusted LAN/VPN clients or a reverse-proxy
 allowlist. Admin is for exceptional repair and inspection, not normal product

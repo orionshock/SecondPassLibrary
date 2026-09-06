@@ -1,6 +1,7 @@
 # Development
 
-Practical local development workflow (Windows/PowerShell).
+This guide uses Windows and PowerShell for local development. Equivalent Linux
+commands are noted where they differ.
 
 ## Setup
 
@@ -14,7 +15,7 @@ python -m venv .venv
 pip install -r requirements-dev.txt
 ```
 
-Note: `requirements.txt` contains runtime dependencies. `requirements-dev.txt`
+`requirements.txt` contains runtime dependencies. `requirements-dev.txt`
 adds local test/type tooling such as Django/DRF typing packages.
 Pillow is included for cover image validation. Current EPUB, ZIP/OPF metadata,
 cover precedence, normalization, and safety rules are in [Imports](imports.md).
@@ -37,16 +38,16 @@ Create normal schema changes with migrations from the current initial state.
 Do not add compatibility migrations, fake initial state, or application-level
 shims to make databases from the deleted migration history appear compatible.
 
-## Code and fixture boundaries
+## Code and fixture locations
 
-`Book` owns its EPUB and cover fields directly.
+`Book` stores its EPUB and cover fields directly.
 Do not add compatibility re-export modules or wrapper imports for deleted or
 renamed modules. Update callers to the current module boundary instead.
 
 Runtime files belong under `userdata/` or a test-isolated temporary root.
-Development and other non-Docker deployments may set
+Development and other non-Docker installations may set
 `SECOND_PASS_USERDATA_DIR` to a different runtime root. The standard Docker
-image deliberately fixes its internal runtime root at `/app/userdata`.
+image always uses `/app/userdata` as its internal runtime root.
 Committed files under `TestFiles/` or `tests/fixtures/` are fixtures only, not
 runtime storage or a destination for generated artifacts.
 
@@ -248,9 +249,9 @@ Useful focused checks:
 .\.venv\Scripts\python.exe -m ruff check .
 ```
 
-## Authentication (current)
+## Authentication
 
-Second Pass Library currently uses Django/DRF built-in authentication for local development and early API testing:
+Second Pass Library uses Django/DRF authentication:
 
 - **Django session authentication** for the React Product UI
 - **Client API bearer token authentication** on selected reader-client endpoints
@@ -340,7 +341,7 @@ Marker meanings:
 
 - `security`: owning authentication, authorization, anti-enumeration,
   credential, archive-safety, destructive-operation, and immutable-policy
-  boundaries. It is deliberately narrower than every permission assertion.
+  boundaries. It is narrower than the complete set of permission assertions.
 - `concurrency`: real threads, executors, barriers, or competing transactions.
 - `subprocess`: a real server, subprocess, or separate interpreter.
 - `filesystem`: behavior whose contract depends on files, media, archive bytes,
@@ -382,8 +383,7 @@ Coherent backend domain suites:
 .\.venv\Scripts\python.exe -m pytest tests/testenv -q
 ```
 
-Frontend selections remain path-based rather than inventing a second marker
-system:
+Frontend selections use paths instead of a second marker system:
 
 ```powershell
 # Focused file, SDK tests, Product UI, then complete Vitest.
@@ -461,7 +461,7 @@ The command:
   assigned when a normalized profile keyword occurs anywhere in one of its
   normalized tag names, with deterministic fallback Books for small catalogs
 
-The command is non-destructive by default. Existing users with matching
+The command preserves existing data by default. Existing users with matching
 usernames retain their names, email addresses, passwords, flags, and profile
 roles. Existing shelves are reused without overwriting their
 descriptions or other fields. Re-running with the same seed does not duplicate

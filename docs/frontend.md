@@ -14,23 +14,23 @@ backend tree, and makes its hashed assets available to `collectstatic`.
 Everything under the generated Product UI directory is build output: never edit
 it by hand or treat it as the source of frontend behavior.
 
-This document owns frontend architecture and contributor rules. The router,
-SDK types, and tests own current routes and features; this is deliberately not
-a screen inventory.
+This guide explains the frontend architecture and contributor rules. The
+router, SDK types, and tests are the current source for routes and features, so
+this guide does not duplicate a screen inventory.
 
 ## Layering and authority
 
 The Product UI has three practical layers:
 
-1. `@second-pass/spl-api` owns communication with Django. It provides the HTTP
+1. `@second-pass/spl-api` handles communication with Django. It provides the HTTP
    client, same-origin credentials, CSRF handling for unsafe methods, attachment
    handling, JSON/media-type validation, wire-to-application mapping, and
    bounded API error normalization. Snake-case wire fields stop here; exported
    application models and errors use stable frontend naming.
-2. App and feature Orchestrators own SDK calls, route/query state, workflow
+2. App and feature Orchestrators handle SDK calls, route/query state, workflow
    state, server-aware error interpretation, and assembly of page sections.
    Runtime SDK operations and SDK error classes belong at this boundary.
-3. Page Regions and other presentational roles render plain application or
+3. Page Regions and other presentational components render plain application or
    presentation models and emit user intent through callbacks. They do not know
    endpoints, perform requests, inspect wire fields, or interpret runtime SDK error classes.
    Type-only imports of stable application-facing SDK models are acceptable;
@@ -42,12 +42,11 @@ branches do not import one another; promote genuinely reusable behavior to an
 appropriate app, shared, component, or domain module. The SDK itself remains
 framework-light and must not depend on React.
 
-These boundaries keep transport churn out of rendering code and make UI states
-testable without a server client. They are also security boundaries of
-responsibility, not security enforcement: React route guards and capability
-hints improve navigation, but object authorization and visibility always
-belong to backend queries and services. Components must not recreate server
-policy by filtering objects or inferring privileges.
+This split keeps transport changes out of rendering code and makes UI states
+testable without a server client. It does not enforce security. React route
+guards and capability hints improve navigation, but backend queries and
+services always enforce object authorization and visibility. Components must
+not recreate server policy by filtering objects or inferring privileges.
 
 ## Frontend workspace ownership
 
@@ -80,8 +79,9 @@ share the dedicated `frontend/tests/` root while retaining separate ownership
 folders.
 
 Keep feature-specific drafts, messages, and policy presentation with their
-feature. Promote code only when it has a real cross-feature owner. Frontend
-source, not emitted JavaScript/CSS or the backend artifact, is authoritative.
+feature. Promote code only when it serves more than one feature. Frontend
+source is authoritative; emitted JavaScript, CSS, and the backend artifact are
+generated output.
 
 ## Data and error flow
 
@@ -110,7 +110,7 @@ renders them through one shared boundary and must not scatter additional
 unsafe-HTML sites or add an independently configured React sanitizer. Server
 Product UI editing for these fields uses the shared restricted Tiptap WYSIWYG
 surface for the supported subset; its controls are UX constraints, while the
-server allowlist remains the security boundary. The shared editor also offers
+server allowlist remains the security control. The shared editor also offers
 a raw-HTML source mode; moving back to rendered mode reapplies the restricted
 Tiptap schema, and persistence still passes through the server sanitizer. No
 Markdown interpretation exists.
@@ -155,7 +155,7 @@ recount Tags from the current page.
 
 ## Routing and shell behavior
 
-React Router owns Product UI navigation. Django's retained shell routes serve
+React Router handles Product UI navigation. Django's retained shell routes serve
 the same built `index.html` for supported Product UI deep links, so refresh and
 direct navigation resolve through the same application. Route definitions and
 role guards live in the app router; do not duplicate a route catalog in prose
@@ -166,7 +166,7 @@ session authentication through same-origin-style URLs. Proxy declarations are
 development transport configuration, not an alternate communication layer or
 authorization boundary.
 
-Feature route modules use lazy loading where it materially separates branches.
+Feature route modules use lazy loading when it meaningfully separates branches.
 The global frame supplies a route-level loading fallback and error boundary;
 feature Orchestrators own retryable data errors within an otherwise loaded
 route. Unknown Product UI paths render an in-shell not-found state.
@@ -192,14 +192,12 @@ must be visually distinguishable and receive confirmation where the current
 product policy requires it. Shared controls remain server-blind and require
 caller-supplied accessible labels and operation callbacks.
 
-A future Marginalia Session delete control is only an intent and confirmation
-surface. The Product UI may ask the owner to confirm, send the one
-single-Session delete request, display pending/error/success state, and navigate
-away after success. It must not delete annotations individually, infer whether
-the server-side cascade completed, issue multiple destructive requests for one
-Session, implement bulk Session deletion, or reproduce server ownership and
-visibility rules. Authorization and the complete destructive lifecycle remain
-server-owned.
+The Marginalia Session delete control only gathers confirmation and submits the
+request. It may show pending, error, and success states and navigate away after
+success. It must not delete annotations individually, infer whether the server
+cascade completed, issue several destructive requests for one Session, provide
+bulk deletion, or reproduce server ownership and visibility rules. The server
+authorizes and performs the complete deletion.
 
 Prefer native form and control semantics. Labels, validation messages, live
 status, and disabled state must remain available to assistive technology. Do

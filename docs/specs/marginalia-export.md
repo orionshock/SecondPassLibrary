@@ -1,6 +1,6 @@
 # Marginalia Export Archive
 
-## Scope and authority
+## Scope
 
 This specification defines the portable archive envelope around the reusable
 Marginalia objects in the
@@ -14,7 +14,7 @@ The runtime keeps an offline bundled schema beside the archive codec; the
 focused contract test composes these two documentation schemas and checks their
 semantic parity with that runtime bundle.
 
-The canonical valid end-to-end fixture is
+The complete valid end-to-end fixture is
 [complete-export.json](reading-session-annotation-profile/examples/complete-export.json).
 It is validated offline against both documentation schemas and accepted by the
 runtime codec during the focused specification check.

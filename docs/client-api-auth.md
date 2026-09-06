@@ -1,15 +1,14 @@
 # Client API authorization
 
-This document owns the external Reader pairing and bearer-client lifecycle. It
-does not define browser sessions, general API conventions, or domain policy;
-those belong to [Architecture](architecture.md), [API](api.md), and the linked
-domain authorities.
+This guide covers Reader pairing and bearer-token sessions. Browser sessions,
+shared API conventions, and domain permissions are documented in
+[Architecture](architecture.md), [API](api.md), and the linked domain guides.
 
 ## Pairing contract
 
-A Reader client requests a short-lived pairing capability, a signed-in human
-approves or denies it in the Product UI, and the client consumes an approval
-once. This is deliberately not OAuth or OIDC.
+A Reader asks to pair with the server. A signed-in user approves or denies the
+request in the Product UI, and the Reader can claim an approval once. This is a
+small pairing protocol, not an OAuth or OIDC implementation.
 
 1. The client posts bounded client name/type metadata to
    `/api/v1/client-api/login-requests/`.
@@ -25,8 +24,8 @@ once. This is deliberately not OAuth or OIDC.
    raw bearer token exactly once. Repeated or concurrent consumption cannot
    mint or return another token.
 
-The browser never receives the bearer token. The unguessable request capability
-authorizes polling and consumption; browser approval still requires an
+The browser never receives the bearer token. The unguessable request URL allows
+the Reader to poll and claim the result, while approval still requires an
 authenticated Django session. All pairing responses, including errors, use
 `Cache-Control: no-store, private` and `Pragma: no-cache`.
 
@@ -34,7 +33,7 @@ Public `/.well-known/secondpass` supplies compact server discovery and the API
 root. Client API discovery advertises the active pairing URLs. Authenticated
 `/api/v1/server/info/` refreshes server display context; `/api/v1/accounts/me/`
 supplies current-user identity, memberships, and sparse user capability flags.
-Exact fields remain serializer-owned.
+The serializers define the exact response fields.
 
 ## Stored state and abuse bounds
 
@@ -48,7 +47,7 @@ bucket and three per bounded client fingerprint. Missing or malformed source
 addresses share one bounded bucket; IPv4-mapped IPv6 normalizes to IPv4. The
 source bucket is primary abuse resistance. The fingerprint is secondary
 duplicate suppression and may change when punctuation or client metadata
-changes. Proxy interpretation reuses the Django-owned trust boundary in
+changes. Proxy interpretation follows the Django trust settings in
 [Deployment](deployment.md#reverse-proxy-contract).
 
 If the approving account is inactive or gone at consumption time, the request
@@ -69,15 +68,15 @@ password changes, managed password resets, and managed user disablement revoke
 the affected user's bearer sessions as part of the coordinated credential
 lifecycle in [Architecture](architecture.md#browser-sessions-and-forced-password-changes).
 
-The browser-only `must_change_password` middleware does not apply the flag to a
-bearer-only request. Bearer access remains controlled by the explicit Client
-API allow-list and its normal object permissions. A password change or reset
-still revokes credentials that already exist.
+The browser-only `must_change_password` middleware does not apply to a request
+authenticated only by bearer token. The Client API allow-list and normal object
+permissions still control bearer access. A password change or reset revokes
+existing bearer credentials.
 
 ## Bearer authority
 
 Bearer tokens are Reader-client credentials, not browser or management
-credentials. The stable authority boundary is:
+credentials. Bearer tokens can access the following:
 
 | Domain | Bearer authority |
 | --- | --- |
@@ -87,7 +86,7 @@ credentials. The stable authority boundary is:
 | Shelves | Read visible Shelves; mutate only the token user's personal Shelves |
 | Library/Group/user management, imports, exports, passwords, browser sessions, Product UI, Admin | Denied; Django session required |
 
-Bearer capabilities are an explicit allow-list. Permanent Reading Session
+Bearer access uses an explicit allow-list. Permanent Reading Session
 deletion is not an allowed client operation and requires browser-session
 authentication.
 
@@ -98,10 +97,9 @@ versus Simple Mode does not alter that Book set or suppress authorized custom
 Group reads. See the immutable [Library Book Visibility](book-visibility.md)
 and [Advanced Library Groups Mode](advanced-library-groups.md) policies.
 
-Shelf access follows [Permissions](permissions.md). Group Shelves and other
-users' listed Shelves are read-only through bearer authentication, even if the
-same person could manage a Group Shelf through a browser session. A Shelf never
-grants Book visibility.
+Shelf access follows [Permissions](permissions.md). Bearer clients can only read
+Group Shelves and other users' listed Shelves, even when the same user could
+manage a Group Shelf from the browser. A Shelf never grants Book visibility.
 
 Marginalia remains user-owned. The exact distinction between current Library
 visibility, historical Marginalia, openability, and allowed writes is immutable
@@ -126,7 +124,7 @@ rules belong in [Marginalia](marginalia.md).
 
 ## Non-goals
 
-There is no OAuth/OIDC provider, redirect-URI/custom-scheme protocol, client
-secret, bearer access to Product UI/Admin, or server-hosted Reader application.
-Do not generalize this bounded pairing flow into an identity platform without a
-new explicit product decision.
+Second Pass Library does not provide OAuth/OIDC, redirect-URI or custom-scheme
+flows, client secrets, bearer access to the Product UI or Admin, or a
+server-hosted Reader. Expanding this pairing flow into a general identity
+platform would require a separate product decision.

@@ -9,8 +9,8 @@ Profile: `https://secondpasslibrary.local/specs/marginalia/0.1.0`
 This profile defines portable Reading Sessions, progress, locations, highlights,
 and bookmarks. Exact fields, types, bounds, required properties, lifecycle
 conditions, and annotation variants are normative in [schema.json](schema.json).
-This document owns semantic meaning that is awkward or impossible to express in
-JSON Schema.
+This document explains semantic rules that are awkward or impossible to express
+in JSON Schema.
 
 Second Pass Library's general lifecycle, import, and export behavior belongs in
 [Marginalia](../../marginalia.md). Visibility and preservation are immutable
@@ -23,7 +23,7 @@ archive envelope and Book identity belong in
 A Reading Session is `active` or `closed`. An active Session has a null
 `closedAt`; a closed Session has a date-time `closedAt`. The schema enforces
 those conditions. These values describe the source archive lifecycle;
-destination import policy may deliberately create historical closed Sessions
+destination import policy may create historical closed Sessions
 as documented in [Marginalia](../../marginalia.md#import-workflow).
 
 `sourceReadingSessionId` is stable and unique across one source archive. It is
@@ -31,7 +31,7 @@ used for selection, diagnostics, deterministic packaging, and replay-safe
 correlation. It is not a destination database primary key, and the archive does
 not expose a local Session UUID through a generic `id` field.
 
-The canonical complete archive demonstrates an active Session. The separate
+The complete archive demonstrates an active Session. The separate
 [closed Session fixture](examples/closed-session.json) exists because its
 non-null close time and null progress are materially different conditions.
 
@@ -77,7 +77,7 @@ not the server's Annotation primary key. Reusing the same identity targets the
 same logical annotation, including restoration after a prior soft deletion.
 
 Soft deletion is server state rather than an interchange variant. Deleted
-annotations are omitted from archives and authoritative current collections.
+annotations are omitted from archives and current collections.
 Consumers must not invent a portable tombstone shape outside a separately
 defined synchronization contract.
 

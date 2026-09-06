@@ -2,14 +2,14 @@
 
 ## Apps
 
-Current apps:
+The backend is split into these Django apps:
 
-- `core`: shared base models, server settings, utilities
+- `core`: shared base models, server settings, and cross-domain services
 - `accounts`: user profile, roles, current-user API
 - `library`: books/authors/series, stored EPUB files, imports, LibraryGroups
 - `marginalia`: Reading Sessions, Session progress, located annotations,
   archive Import/Export, and owned-Marginalia Book projections
-- `shelves`: shelves and shelf items (presentation/organization; not access control)
+- `shelves`: shelves and shelf items for organization, not access control
 
 React/TypeScript layering and Product UI contributor boundaries are documented
 in [Frontend](frontend.md).
@@ -34,8 +34,8 @@ Notes:
   plain text.
 - `ServerSetting(advanced_library_groups_enabled)` selects Advanced or Simple
   Mode. It never defines Book visibility. The immutable [Advanced Library
-  Groups Mode](advanced-library-groups.md) policy owns its UI, API, retained
-  state, and transition contract.
+  Groups Mode](advanced-library-groups.md) policy defines its UI, API, retained
+  state, and transitions.
 - The special Public LibraryGroup is identified by `ServerSetting(public_group_id)` (not by a `LibraryGroup.slug` field).
 - The optional Second Pass Reader web client origin uses
   `ServerSetting(second_pass_reader_web_client_url)`. A nonblank
@@ -46,7 +46,8 @@ Notes:
 
 ## Shelves
 
-Shelves live in the `shelves` app and are strictly for presentation/organization, not access control. See `docs/permissions.md`.
+Shelves live in the `shelves` app. They organize Books but never grant access.
+See [Permissions](permissions.md).
 
 ## Service-layer rule
 
@@ -71,11 +72,12 @@ Second Pass Library currently uses Django/DRF built-in authentication for local 
 - Optional Django admin at `/admin/` when `SECOND_PASS_ENABLE_DJANGO_ADMIN=1`
   (service hatch; not the product UI)
 
-Position:
+Current model:
 
 - Django `User` is the canonical local user record.
 - `accounts.UserProfile` stores the app-level global role (`manager|librarian|reader`).
-- `accounts.UserWebSession` tracks active Django web sessions to support revocation (companion tracking only; does not replace Django sessions).
+- `accounts.UserWebSession` tracks active Django web sessions for revocation. It
+  supplements Django sessions rather than replacing them.
 - Client API bearer sessions are represented by `accounts.UserClientSession` (bearer tokens are enabled for `/api/v1/accounts/me/`, `/api/v1/server/info/`, selected library read/download endpoints, shelves with conservative write rules, and selected Marginalia endpoints).
 - Product UI uses session auth + CSRF and the REST API under `/api/v1/`.
 - Authenticated server-wide display context belongs to `/api/v1/server/info/`;
@@ -102,7 +104,7 @@ normal authentication and session rotation behavior; logout is POST-only and
 CSRF-protected. `accounts.UserWebSession` tracks underlying Django sessions for
 targeted revocation; it is not an authentication mechanism.
 
-Password and credential revocation form one lifecycle:
+Password changes and credential revocation are handled together:
 
 - A self-service password change verifies the current password and applies
   Django's validators. Updating the password, clearing `must_change_password`,
@@ -156,14 +158,12 @@ the web server; the setup view itself never creates or migrates schema.
 
 API endpoints under `/api/v1/` require authentication unless an endpoint explicitly documents otherwise.
 
-### Account and security posture
+### Account model and security scope
 
-Second Pass Library is a self-hosted library and reading server. Its security
-target is standard account and session hygiene appropriate for protecting
-private library, shelf, group, and reading data. SPL should prevent obvious
-privilege escalation, cross-user access, sensitive metadata leaks, and unsafe
-session or bearer-token handling. It is not intended to become a general
-enterprise IAM platform without a concrete product need.
+Second Pass Library is a self-hosted library and reading server. Its account
+model protects private library, Shelf, Group, and reading data from privilege
+escalation, cross-user access, metadata leaks, and unsafe credential handling.
+It is not an enterprise identity platform.
 
 The primary account lifecycle paths are Owner/Manager-managed local users and
 local username/password login. Django `User` remains the canonical local
@@ -209,7 +209,7 @@ EPUB files are stored content-addressed by checksum (SHA-256). Imported filename
 are transient import diagnostics only and are not stored as Book provenance;
 human-readable filenames are derived from metadata when downloading/exporting.
 
-Product policy: Books are import-only and file-backed. `Book` owns the stored
+Books are import-only and file-backed. `Book` stores the
 file fields directly: `book_file`, `file_format`, `checksum`, `file_size`,
 and optional `cover_file`.
 
@@ -229,12 +229,12 @@ not turn a successful cover replacement or clear into an API failure.
 ## Library import boundary
 
 Library imports validate untrusted files and metadata before persistence, then
-apply changes through cohesive import services rather than views, serializers,
-or model hooks. [Imports](imports.md) owns metadata precedence, normalization,
-duplicate advisories, and archive safety; module layout remains discoverable
-from `backend/library/imports/`.
+apply changes through import services rather than views, serializers, or model
+hooks. [Imports](imports.md) describes metadata precedence, normalization,
+duplicate handling, and archive safety. The implementation lives under
+`backend/library/imports/`.
 
-The EPUB checksum is authoritative file identity. Book identifiers are
+The EPUB checksum identifies the exact file. Book identifiers are
 repeatable metadata. Author and Series UUIDs are entity identity, while their
 normalized names support only 0/1/multiple-match lookup; an ambiguous lookup
 stops the candidate rather than guessing or merging relationships.

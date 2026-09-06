@@ -5,9 +5,9 @@ session-authenticated workflows for Owner, Manager, and Librarian users.
 Operator-only management commands provide the same import behavior for local
 host or container paths.
 
-This document owns import metadata precedence, normalization, duplicate
-advisories, and file/archive safety. [API](api.md) owns shared HTTP conventions;
-active serializers own exact upload and result fields.
+This guide explains metadata precedence, normalization, duplicate handling, and
+file/archive safety. See [API](api.md) for shared HTTP behavior. The serializers
+define the exact upload and result fields.
 
 ## Book import workflow
 
@@ -23,7 +23,7 @@ does not create import jobs or retain import history.
 
 ## Metadata identity and normalization
 
-Author and Series UUIDs are canonical identity; their names are deliberately
+Author and Series UUIDs identify records; their names are intentionally
 non-unique. Name matching is only an import/editing convenience: Unicode NFKC,
 trimmed and collapsed whitespace, and case-folding produce an advisory
 `normalized_name` while preserving punctuation. Zero normalized matches may
@@ -41,11 +41,10 @@ Authors and Series:
 - two or more normalized matches produce an import `conflict` without creating
   the Book or choosing, merging, or creating another matching entity.
 
-An ambiguity conflict identifies the incoming name and matching entity type.
-The operator must resolve the ambiguous catalog records or adjust the source
-metadata, then retry the import. Distinct Authors and Series may legitimately
-retain the same normalized name; the importer does not impose global name
-uniqueness as a shortcut around that ambiguity.
+An ambiguity conflict names the incoming Author or Series. To retry, the
+operator must resolve the ambiguous catalog records or correct the source
+metadata. Distinct Authors and Series may share a normalized name; the importer
+does not impose global name uniqueness to avoid that ambiguity.
 
 Imported titles, names, tags, identifier schemes, and identifier values are
 NFKC-normalized and whitespace-collapsed before persistence or comparison.
@@ -78,8 +77,8 @@ contract. Do not infer additional supported markup from Calibre output;
 Calibre-style comments are a source-compatibility motivation, not the authority
 for this contract.
 
-The server owns this security boundary through the `nh3` policy in
-`backend/core/rich_text.py`. Every normal description write
+The `nh3` policy in `backend/core/rich_text.py` enforces this rule on the
+server. Every normal description write
 sanitizes before persistence, including EPUB/library import, Book metadata
 edits through the API/Product UI, and Django Admin edits. The database stores
 only the sanitized representation. API serializers return that stored value
@@ -91,10 +90,9 @@ After sanitization, the complete serialized description must not exceed
 25,000 characters. Markup counts toward the limit. An over-limit import
 candidate fails without truncating or partially persisting the Book.
 
-When this contract was introduced, a temporary pre-release data migration
-normalized existing stored Book descriptions with the same effective policy.
-That migration is historical implementation context, not a compatibility
-promise or a second policy owner.
+The pre-release migration that introduced this format sanitized existing Book
+descriptions with the same policy. It does not define a separate compatibility
+format.
 
 ## Metadata precedence and persistence
 
@@ -121,8 +119,8 @@ preview, persistence, and result output. Blank, malformed, zero, negative, or
 over-precision values are treated as an unknown Series position; the Book and
 Series metadata remain importable, and the value is never rounded.
 
-Imports are create-only at the Book boundary. The EPUB SHA-256 checksum is the
-only authoritative duplicate-file identity. An exact checksum duplicate
+Imports only create Books. The EPUB SHA-256 checksum is the only reliable way
+to identify a duplicate file. An exact checksum duplicate
 returns the existing Book without changing metadata, identifiers, Catalog
 Tags, EPUB bytes, or cover; import does not refresh it from newer embedded or
 sidecar metadata. For a new Book, the import may reuse an unambiguous Author,
@@ -181,7 +179,7 @@ and do not return local paths, storage keys, or internal parser details.
 
 ## Book import results
 
-The API returns a transient batch summary with per-item `imported`, `duplicate`,
+The API returns a batch summary with per-item `imported`, `duplicate`,
 `conflict`, `failed`, or `skipped` status. Each item may include its safe source
 label, resulting Book ID, and a bounded message. Results cannot be retrieved
 after the request; there is no import detail endpoint.

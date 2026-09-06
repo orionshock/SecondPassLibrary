@@ -1,18 +1,18 @@
 # Marginalia
 
-## Scope and ownership
+## What Marginalia contains
 
 Marginalia is user-owned reading data: Reading Sessions, saved progress, and
 located annotations. Every Reading Session belongs to one user and one Library
 Book; every annotation belongs through its Session and does not duplicate user
 or Book ownership.
 
-Ownership of historical Marginalia and current authority over the linked Book
-are separate. The immutable [Marginalia-Linked Books](marginalia-book-visibility.md)
-policy owns that exact read, open, mutation, import, export, access-loss, and
-Book-deletion boundary. [Library Book Visibility](book-visibility.md) owns the
-current Library-visible Book set. This document owns the general lifecycle and
-must not be used to broaden either policy.
+Historical Marginalia ownership is separate from current access to the linked
+Book. The immutable [Marginalia-Linked Books](marginalia-book-visibility.md)
+policy defines what users may read, open, change, import, and export after
+access changes or a Book is deleted. [Library Book
+Visibility](book-visibility.md) defines the current visible Book set. This guide
+describes the general lifecycle without changing either policy.
 
 ## Reading Session lifecycle
 
@@ -36,9 +36,9 @@ complete saved location stored on the Session: an opaque CFI, an optional
 display label, and a server/source timestamp. Marginalia does not parse,
 normalize, derive, or assign numeric meaning to CFIs or labels.
 
-Progress replacement requires current Library access. Closing is explicit and
+Replacing progress requires current Library access. Closing is explicit and
 does not create a replacement Session. Final metadata, optional final progress,
-and closure commit atomically under the Session mutation boundary. A close
+and closure commit in one transaction. A close
 without new progress may complete after Book access is lost; supplying final
 progress still requires current access because it is a live location write.
 An identical close retry is safe, while an attempt to alter an already-closed
@@ -52,7 +52,7 @@ deletable after Book access is lost. Foreign Sessions are never deletable by
 the requester. There is no bulk Session deletion API and no delete-all-history
 operation.
 
-The server owns the entire destructive operation. It atomically deletes the
+The server performs the entire destructive operation. It atomically deletes the
 Session and all annotations owned through that Session's existing relational
 cascade. A client must not delete annotations separately or coordinate a
 multi-request deletion. The associated Book, unrelated Sessions, and their
@@ -156,9 +156,8 @@ Second Pass Library exports always include `fileHash`. An imported entry that
 omits it remains Unmatched and can be downloaded again; the importer does not
 substitute bibliographic metadata for the missing identity.
 
-`book_inaccessible` deliberately confirms that the exact archive-supplied hash
-is known. The privacy boundary is that it reveals no fresh live metadata,
-database identity, or access-scope details.
+`book_inaccessible` confirms that the exact archive-supplied hash is known, but
+reveals no current metadata, database identity, or access-scope details.
 
 Matched and visible candidates may be selected. Unmatched candidates cannot be
 applied. For an inaccessible Book, the workflow retains only the title, Authors,
@@ -185,8 +184,8 @@ failure remains structural: the transaction rolls back and the ready stage can
 be corrected or retried as allowed by its original lifetime.
 
 A successful full or partial apply consumes the stage. Its request fingerprint
-covers the effective selected candidates and overrides independent of request
-ordering. An identical replay returns the stored result without duplicating
+covers the selected candidates and overrides regardless of request ordering.
+An identical replay returns the stored result without duplicating
 Sessions or annotations; changed replay input is rejected. This protection is
 stage-specific: importing the same archive through a new preview remains an
 explicit user choice and may produce duplicate advisories.
@@ -218,8 +217,8 @@ Missing Book checksums or conflicting duplicate hashes are integrity failures,
 not an invitation to merge Books. Export is read-only, creates no persistent
 file, and emits no partial attachment after failure.
 
-Synchronous buffering is deliberately bounded for the supported single-worker
-home-lab deployment:
+The single-worker home-server deployment uses these synchronous buffering
+limits:
 
 - at most 500 selected Session IDs;
 - at most 5,000 Sessions in a complete export;
@@ -230,14 +229,14 @@ home-lab deployment:
 The estimate includes serialized Session and annotation text plus each
 represented Book's checksum, title, and Author names using conservative JSON
 escaping allowances. Count limits run before archive materialization; the final
-16 MiB byte check remains authoritative. Oversized work returns a bounded,
+16 MiB byte check makes the final decision. Oversized work returns a bounded,
 actionable error directing the user to export a smaller selection without
 revealing another user's data or archive contents.
 
 ## Replay, idempotency, and integrity
 
-Replay protection belongs at the operation boundary rather than changing the
-portable domain model:
+Replay protection is applied to each operation without changing the portable
+data model:
 
 - opening converges on the single active Session constraint;
 - start-over uses a short-lived user-scoped idempotency record;
@@ -264,13 +263,12 @@ in [AGENTS.md](../AGENTS.md#logging-and-maintenance).
 
 ## External specifications
 
-Exact archive and interchange structures are normative outside this domain
-overview:
+The archive specifications define the exact interchange structures:
 
-- [Marginalia export archive](specs/marginalia-export.md) owns the portable
+- [Marginalia export archive](specs/marginalia-export.md) defines the portable
   archive envelope and Book grouping.
 - [Reading Session and Annotation profile](specs/reading-session-annotation-profile/README.md)
-  owns exact Session, progress, location, highlight, bookmark, and portable
+  defines exact Session, progress, location, highlight, bookmark, and portable
   identity shapes.
 
 The documentation schemas are the normative external machine-readable

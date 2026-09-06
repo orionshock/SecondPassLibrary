@@ -9,7 +9,7 @@ Current profile URI:
 https://secondpasslibrary.local/specs/marginalia/0.1.0
 ```
 
-## Authorities
+## Files
 
 - [schema.json](schema.json) is the normative machine-readable schema for
   Sessions, progress, locations, highlights, and bookmarks.
@@ -25,7 +25,7 @@ UI SDK models describe live API data and are not portable archive types.
 
 ## Examples
 
-- [complete-export.json](examples/complete-export.json) is the canonical valid
+- [complete-export.json](examples/complete-export.json) is the complete valid
   end-to-end archive.
 - [closed-session.json](examples/closed-session.json) is a valid illustrative
   standalone Session showing the closed-state condition and null progress.
