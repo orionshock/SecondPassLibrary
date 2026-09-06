@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.test import override_settings
 from rest_framework import status
@@ -69,3 +71,16 @@ class UserWebSessionMiddlewareTests(APITestCase):
             (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
         )
         self.assertEqual(UserWebSession.objects.count(), 0)
+
+    def test_session_generation_lookup_failure_fails_closed_with_bounded_response(self):
+        User.objects.create_user(username="u", password="pw")
+        self.client.login(username="u", password="pw")
+
+        with patch(
+            "accounts.middleware.UserProfile.objects.values_list",
+            side_effect=RuntimeError("database detail"),
+        ):
+            response = self.client.get("/api/v1/accounts/me/")
+
+        self.assertEqual(response.status_code, status.HTTP_503_SERVICE_UNAVAILABLE)
+        self.assertNotIn("database detail", response.content.decode())

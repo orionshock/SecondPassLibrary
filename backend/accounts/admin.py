@@ -2,13 +2,17 @@ from django import forms
 from django.contrib import admin
 from django.contrib.admin.sites import NotRegistered
 from django.contrib.auth.admin import UserAdmin as DjangoUserAdmin
+from django.contrib.auth.forms import AdminPasswordChangeForm
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.urls import reverse
 from django.utils.html import format_html, format_html_join
 from urllib.parse import urlencode
 
 from library.models import LibraryGroupMembership
+
+from accounts.passwords.services import apply_managed_password_change_lifecycle
 
 from .models import (
     ClientLoginRequest,
@@ -20,6 +24,8 @@ from .models import (
 
 
 UNUSED_AUTH_USER_FIELDS = {"groups", "user_permissions"}
+
+
 def _without_unused_auth_user_fields(fields):
     return tuple(field for field in fields if field not in UNUSED_AUTH_USER_FIELDS)
 
@@ -64,6 +70,15 @@ class UserProfileAdminForm(forms.ModelForm):
     class Meta:
         model = UserProfile
         fields = "__all__"
+
+
+class SecondPassAdminPasswordChangeForm(AdminPasswordChangeForm):
+    def save(self, commit=True):
+        with transaction.atomic():
+            user = super().save(commit=commit)
+            if commit:
+                apply_managed_password_change_lifecycle(target_user=user)
+        return user
 
 
 class UserProfileInline(admin.StackedInline):
@@ -138,7 +153,9 @@ class UserGroupMembershipInline(admin.TabularInline):
     def membership_role(self, obj):
         return "Curator" if obj.is_curator else "Member"
 
+
 class SecondPassUserAdmin(DjangoUserAdmin):
+    change_password_form = SecondPassAdminPasswordChangeForm
     filter_horizontal = _without_unused_auth_user_fields(
         DjangoUserAdmin.filter_horizontal
     )

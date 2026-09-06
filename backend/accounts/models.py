@@ -26,6 +26,7 @@ class UserProfile(TimeStampedModel):
     )
     role = models.CharField(max_length=16, choices=ROLE_CHOICES, default=ROLE_READER)
     must_change_password = models.BooleanField(default=False)
+    web_session_generation = models.PositiveBigIntegerField(default=0, editable=False)
     # Legacy providerless field. Do not use for new external identity linking;
     # ExternalIdentity namespaces subjects by issuer and supports multiple links.
     external_subject_id = models.CharField(

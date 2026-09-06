@@ -3,12 +3,16 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from django.contrib.sessions.models import Session
+from django.db import transaction
 from django.utils import timezone
 
 from accounts.operational_logging import logger, user_uuid
 from core.operational_logging import info_on_commit
 
-from .models import UserClientSession, UserWebSession
+from .models import UserClientSession, UserProfile, UserWebSession
+
+
+WEB_SESSION_GENERATION_KEY = "_second_pass_web_session_generation"
 
 
 @dataclass(frozen=True)
@@ -38,18 +42,14 @@ def revoke_all_web_sessions(user) -> int:
     if not user or getattr(user, "is_anonymous", False):
         return 0
 
-    keys = list(
-        UserWebSession.objects.filter(user=user).values_list("session_key", flat=True)
-    )
-    if keys:
-        Session.objects.filter(session_key__in=keys).delete()
-    deleted, _ = UserWebSession.objects.filter(user=user).delete()
-    return deleted
+    with transaction.atomic():
+        _advance_web_session_generation(user)
+        return _delete_tracked_web_sessions(user=user)
 
 
 def revoke_other_web_sessions(
     user,
-    current_session_key: str | None,
+    current_session=None,
     *,
     actor=None,
     reason: str = "manual_revoke",
@@ -58,17 +58,20 @@ def revoke_other_web_sessions(
     """
     Revoke all tracked Django web sessions for the given user except the current session.
 
-    If `current_session_key` is missing/empty, this revokes all sessions.
+    If `current_session` is missing, this revokes all tracked sessions. The
+    generation change also invalidates any valid session that lacks tracking.
     """
     try:
-        if not current_session_key:
-            count = revoke_all_web_sessions(user)
-        else:
-            qs = UserWebSession.objects.filter(user=user).exclude(session_key=current_session_key)
-            keys = list(qs.values_list("session_key", flat=True))
-            if keys:
-                Session.objects.filter(session_key__in=keys).delete()
-            count, _ = qs.delete()
+        with transaction.atomic():
+            generation = _advance_web_session_generation(user)
+            current_session_key = getattr(current_session, "session_key", None)
+            count = _delete_tracked_web_sessions(
+                user=user,
+                preserved_session_key=current_session_key,
+            )
+            if current_session is not None and current_session_key:
+                current_session[WEB_SESSION_GENERATION_KEY] = generation
+                current_session.save()
     except Exception as exc:
         logger.error(
             "Web session revocation failed: actor=%s target=%s reason=%s exception=%s",
@@ -104,9 +107,9 @@ def revoke_all_api_sessions(
 
     now = timezone.now()
     try:
-        count = UserClientSession.objects.filter(user=user, revoked_at__isnull=True).update(
-            revoked_at=now, updated_at=now
-        )
+        count = UserClientSession.objects.filter(
+            user=user, revoked_at__isnull=True
+        ).update(revoked_at=now, updated_at=now)
     except Exception as exc:
         logger.error(
             "Client session revocation failed: actor=%s target=%s reason=%s exception=%s",
@@ -127,10 +130,10 @@ def revoke_all_api_sessions(
     return count
 
 
-def user_changed_own_password(user, current_session_key: str | None) -> SessionRevocationCounts:
+def user_changed_own_password(user, current_session=None) -> SessionRevocationCounts:
     web_count = revoke_other_web_sessions(
         user,
-        current_session_key,
+        current_session,
         actor=user,
         reason="password_change",
         log_event=False,
@@ -194,6 +197,26 @@ def disable_user(user, *, actor=None) -> SessionRevocationCounts:
         log_event=True,
     )
     return SessionRevocationCounts(web_sessions=web_count, client_sessions=client_count)
+
+
+def _advance_web_session_generation(user) -> int:
+    profile = UserProfile.objects.select_for_update().get(user=user)
+    profile.web_session_generation += 1
+    profile.save(update_fields=["web_session_generation", "updated_at"])
+    return profile.web_session_generation
+
+
+def _delete_tracked_web_sessions(
+    *, user, preserved_session_key: str | None = None
+) -> int:
+    tracked = UserWebSession.objects.filter(user=user)
+    if preserved_session_key:
+        tracked = tracked.exclude(session_key=preserved_session_key)
+    keys = list(tracked.values_list("session_key", flat=True))
+    if keys:
+        Session.objects.filter(session_key__in=keys).delete()
+    deleted, _ = tracked.delete()
+    return deleted
 
 
 def revoke_client_session(session: UserClientSession, *, actor=None) -> int:

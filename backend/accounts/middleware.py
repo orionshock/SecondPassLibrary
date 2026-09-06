@@ -2,12 +2,14 @@ from __future__ import annotations
 
 from datetime import timedelta
 
+from django.contrib.auth import logout
 from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.utils import timezone
 
 from accounts.operational_logging import logger, user_uuid
 from accounts.request_identity import get_client_ip
+from accounts.session_control import WEB_SESSION_GENERATION_KEY
 
 from .models import UserProfile, UserWebSession
 
@@ -33,6 +35,38 @@ _ALLOWED_BROWSER_PATHS = {
     "/setup/",
     "/.well-known/secondpass",
 }
+
+
+class WebSessionGenerationMiddleware:
+    """Invalidate browser sessions superseded by an account-wide revocation."""
+
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        user = getattr(request, "user", None)
+        session = getattr(request, "session", None)
+        if user and not getattr(user, "is_anonymous", True) and session is not None:
+            try:
+                generation = UserProfile.objects.values_list(
+                    "web_session_generation", flat=True
+                ).get(user=user)
+            except Exception:
+                if _is_api_path(request.path_info):
+                    return JsonResponse(
+                        {"detail": "Unable to verify browser session."}, status=503
+                    )
+                return redirect("/login/")
+
+            stored_generation = session.get(WEB_SESSION_GENERATION_KEY, 0)
+            if stored_generation != generation:
+                logout(request)
+            elif WEB_SESSION_GENERATION_KEY not in session:
+                session[WEB_SESSION_GENERATION_KEY] = generation
+
+        return self.get_response(request)
+
+
 _ALLOWED_BROWSER_PREFIXES = (
     "/dashboard",
     "/groups",

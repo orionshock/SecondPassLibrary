@@ -29,9 +29,7 @@ class CurrentUserChangePasswordView(APIView):
                 current_password=str(data.get("current_password") or ""),
                 new_password=str(data.get("new_password") or ""),
                 confirm_password=str(data.get("confirm_password") or ""),
-                current_session_key=getattr(
-                    getattr(request, "session", None), "session_key", None
-                ),
+                current_session=getattr(request, "session", None),
             )
         except DjangoValidationError as exc:
             detail = getattr(exc, "message_dict", None) or {"detail": exc.messages}
@@ -67,4 +65,3 @@ class ManagedUserResetPasswordView(APIView):
             },
             status=status.HTTP_200_OK,
         )
-

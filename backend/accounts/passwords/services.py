@@ -26,7 +26,7 @@ def change_current_user_password(
     current_password: str,
     new_password: str,
     confirm_password: str,
-    current_session_key: str | None,
+    current_session=None,
 ) -> None:
     if getattr(user, "is_anonymous", False):
         raise PermissionDenied("Not allowed.")
@@ -57,7 +57,7 @@ def change_current_user_password(
 
         from accounts import session_control
 
-        session_control.user_changed_own_password(user, current_session_key)
+        session_control.user_changed_own_password(user, current_session)
         actor = user_uuid(user)
         transaction.on_commit(
             lambda: logger.info(
@@ -90,15 +90,7 @@ def reset_managed_user_password(
         target_user.full_clean()
         target_user.save(update_fields=["password"])
 
-        profile = get_or_create_profile(user=target_user)
-        if profile.must_change_password is not True:
-            profile.must_change_password = True
-            profile.full_clean()
-            profile.save(update_fields=["must_change_password", "updated_at"])
-
-        from accounts import session_control
-
-        session_control.admin_reset_user_password(target_user, actor=actor)
+        apply_managed_password_change_lifecycle(target_user=target_user, actor=actor)
         actor_label = user_log_label(actor)
         target_label = user_log_label(target_user)
         transaction.on_commit(
@@ -112,3 +104,16 @@ def reset_managed_user_password(
         username=target_user.get_username(),
         temporary_password=temporary_password,
     )
+
+
+def apply_managed_password_change_lifecycle(*, target_user, actor=None) -> None:
+    profile = get_or_create_profile(user=target_user)
+    must_change_password = target_user.has_usable_password()
+    if profile.must_change_password is not must_change_password:
+        profile.must_change_password = must_change_password
+        profile.full_clean()
+        profile.save(update_fields=["must_change_password", "updated_at"])
+
+    from accounts import session_control
+
+    session_control.admin_reset_user_password(target_user, actor=actor)
