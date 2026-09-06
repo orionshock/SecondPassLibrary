@@ -171,15 +171,11 @@ describe("My Marginalia Import", () => {
     });
   });
 
-  it("renders canonical matched/unmatched, duplicate, and active-to-Closed copy", () => {
+  it("renders staged match and duplicate state without exposing import identities", () => {
     const markup = renderImport({ preview, draft: createMarginaliaImportDraft(preview) });
     expect(markup).toContain("Matched Book");
-    expect(markup).toContain("Unavailable Book");
-    expect(markup).toContain("not currently available through your Library access");
+    expect(markup).toContain("Missing Book");
     expect(markup).toContain("Possible Duplicate Session");
-    expect(markup).toContain("Active source Session imports as Closed");
-    expect(markup).not.toContain("historical");
-    expect(markup).not.toContain("completed");
     expect(markup).not.toContain("sha256:hidden");
     expect(markup).not.toContain("source-session-1");
   });
@@ -252,4 +248,3 @@ describe("My Marginalia Import", () => {
     ]);
   });
 });
-

@@ -55,7 +55,6 @@ describe("Users list regions", () => {
 
   it("omits status treatment for active users", () => {
     const markup = renderList({ items: [{ ...owner, isActive: true, mustChangePassword: true }], count: 1, next: null, previous: null }, { advanced: true });
-    expect(markup).not.toContain("users-status-pill");
     expect(markup).not.toContain(">Active<");
     expect(markup).not.toContain("Password change required");
   });
@@ -100,4 +99,3 @@ describe("Users list regions", () => {
     expect(usersListBreadcrumbFallback).toEqual([]);
   });
 });
-

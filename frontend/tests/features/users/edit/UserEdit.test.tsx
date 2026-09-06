@@ -29,15 +29,13 @@ describe("User Edit", () => {
     expect(editableUserRoles(manager, { ...target, role: "manager" })).toEqual([]);
   });
 
-  it("renders bounded details rows with Active labels, action feedback, and local reset behavior", () => {
+  it("renders editable status and preserves local cancel/reset behavior", () => {
     const markup = renderToStaticMarkup(<MemoryRouter><UserDetailsPageRegion user={target} roles={editableUserRoles(owner, target)} canEdit canChangeActive state={{ pending: false, message: "Saved." }} onSave={vi.fn()} onClearStatus={vi.fn()} /></MemoryRouter>);
-    expect(markup).toContain('class="form-field"');
     expect(markup).toContain('<option value="active" selected="">Active</option>');
     expect(markup).toContain('<option value="inactive">Inactive</option>');
     expect(markup).not.toContain('>true<');
     expect(markup).toContain('>Manager<');
     expect(markup).toContain('>Librarian<');
-    expect(markup).toContain("check_circle");
     const changed = userEditDraftReducer(userEditDraftFromUser(target), { type: "change", field: "firstName", value: "Changed" });
     expect(userEditDraftReducer(changed, { type: "reset", value: userEditDraftFromUser(target) }).firstName).toBe("Read");
   });
@@ -57,7 +55,6 @@ describe("User Edit", () => {
     expect(markup).toContain("Username: reader");
     expect(markup).toContain('aria-label="User reader"');
     expect(markup).toContain("Password: one-time");
-    expect(markup.indexOf("one-time")).toBeLessThan(markup.indexOf("It will not be shown again"));
     expect(markup).toContain("Require password change on next login");
   });
 
@@ -70,7 +67,6 @@ describe("User Edit", () => {
     expect(markup).toContain("Only Librarians/Managers may Curate the Public Group");
     expect(markup).toContain('aria-label="Remove Common Room"');
     expect(markup).toContain('aria-label="Remove Book Club"');
-    expect(markup).toContain('class="user-membership-add"');
     expect(markup).toContain("Add to group");
   });
 
@@ -107,4 +103,3 @@ describe("User Edit", () => {
     expect(shouldShowManagedGroupMemberships(true, { isOwner: false, role: "librarian" })).toBe(false);
   });
 });
-

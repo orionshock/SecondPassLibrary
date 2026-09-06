@@ -15,7 +15,6 @@
     "**/dist": true,
     "**/node_modules": true,
     "**/out": true,
-    "**/test-results": true,
     "**/var": true
   },
   "python.analysis.diagnosticMode": "workspace",

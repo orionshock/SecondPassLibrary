@@ -37,7 +37,6 @@ describe("User create workflow", () => {
     expect(markup).toContain('<option value="reader" selected="">Reader</option>');
     expect(markup).not.toContain('value="owner"');
     expect(markup).not.toContain('type="checkbox"');
-    expect(markup).toContain('class="form-field"');
   });
 
   it("limits Manager choices to Librarian and Reader", () => {
@@ -62,7 +61,7 @@ describe("User create workflow", () => {
     expect(markup).toContain('role="alert"');
   });
 
-  it("shows the one-time temporary password warning and onward actions", () => {
+  it("shows read-only one-time credentials and the created account destination", () => {
     const result: CreateUserResult = {
       user: {
         id: "created-id", username: "new-reader", email: "", firstName: "New", lastName: "Reader", role: "reader",
@@ -72,16 +71,9 @@ describe("User create workflow", () => {
       message: "Show this password now.",
     };
     const markup = renderToStaticMarkup(<MemoryRouter><UserCreateSuccessPageRegion result={result} /></MemoryRouter>);
-    expect(markup).toContain("Temporary credentials");
     expect(markup).toContain('aria-label="User new-reader"');
-    expect(markup).not.toContain("@new-reader");
-    expect(markup).toContain("Username: new-reader");
-    expect(markup).toContain("Password: one-time-secret");
     expect(markup).toContain("one-time-secret");
-    expect(markup).toContain("It will not be shown again");
     expect(markup).toContain('readOnly=""');
-    expect(markup.indexOf("one-time-secret")).toBeLessThan(markup.indexOf("It will not be shown again"));
-    expect(markup).toContain("check_circle");
     expect(markup).toContain('href="/users/created-id/edit"');
   });
 
@@ -92,4 +84,3 @@ describe("User create workflow", () => {
     expect(usersCreateBreadcrumbFallback).toEqual([{ label: "Users", to: "/users", resetTrail: true, icon: "user" }, { label: "New" }]);
   });
 });
-

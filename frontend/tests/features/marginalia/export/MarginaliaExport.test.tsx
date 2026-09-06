@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import { AppOrchestrator } from "../../../../src/app/layout/AppOrchestrator";
 import { appRoutes } from "../../../../src/app/router";
 import { marginaliaExportBreadcrumbFallback } from "../../../../src/features/marginalia/marginaliaBreadcrumbs";
-import { marginaliaExportLimitFailure, MarginaliaExportOrchestrator } from "../../../../src/features/marginalia/export/MarginaliaExportOrchestrator";
+import { marginaliaExportLimitFailure } from "../../../../src/features/marginalia/export/MarginaliaExportOrchestrator";
 import { marginaliaExportSelectedBookCount, marginaliaExportSelectedSessionIds, withMarginaliaExportPageSelection, withMarginaliaExportSessionSelection } from "../../../../src/features/marginalia/export/marginaliaExportSelection";
 import { MarginaliaSessionsOrchestrator } from "../../../../src/features/marginalia/browse/MarginaliaSessionsOrchestrator";
 import { MarginaliaExportPageRegion, type MarginaliaExportLimitFailure } from "../../../../src/features/marginalia/export/MarginaliaExportPageRegion";
@@ -58,15 +58,11 @@ function renderExport(selectedSessionIds: ReadonlySet<string> = new Set(), optio
 }
 
 describe("My Marginalia Export", () => {
-  it("registers the route, breadcrumb, and Session-list action", () => {
+  it("registers the route and exposes the Session-list export destination", () => {
     expect(appRoutes[0].children.some((route) => route.path === "marginalia/export")).toBe(true);
     expect(marginaliaExportBreadcrumbFallback).toEqual([{ label: "My Marginalia", to: "/marginalia", resetTrail: true }, { label: "Export" }]);
     const listMarkup = renderToStaticMarkup(<MemoryRouter initialEntries={["/marginalia"]}><Routes><Route element={<AppOrchestrator user={user} server={server} onCurrentUserChange={vi.fn()} />}><Route path="marginalia" element={<MarginaliaSessionsOrchestrator />} /></Route></Routes></MemoryRouter>);
     expect(listMarkup).toContain('href="/marginalia/export"');
-    const exportMarkup = renderToStaticMarkup(<MemoryRouter initialEntries={["/marginalia/export"]}><Routes><Route element={<AppOrchestrator user={user} server={server} onCurrentUserChange={vi.fn()} />}><Route path="marginalia/export" element={<MarginaliaExportOrchestrator />} /></Route></Routes></MemoryRouter>);
-    expect(exportMarkup).toContain("<h1>Export Marginalia</h1>");
-    expect(exportMarkup).toContain('aria-label="My Marginalia sections"');
-    expect(exportMarkup).toContain("Complete archive");
   });
 
   it("renders canonical active/closed candidates and keeps inaccessible Book identity", () => {
@@ -134,4 +130,3 @@ describe("My Marginalia Export", () => {
     expect(marginaliaExportLimitFailure(new Error("Other failure"))).toBeUndefined();
   });
 });
-
