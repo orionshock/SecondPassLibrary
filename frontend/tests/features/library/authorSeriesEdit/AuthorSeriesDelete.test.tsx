@@ -26,10 +26,12 @@ describe("Author and Series deletion presentation", () => {
       onCancel={vi.fn()}
     />);
 
-    expect(markup).toContain("Save Author");
-    expect(markup).toContain("Biography");
-    expect(markup.match(/autoComplete="off"/g)).toHaveLength(4);
-    expect(markup).not.toContain("Delete Author");
+    expect(markup).toContain('class="author-series-edit-form"');
+    expect(markup).toContain('id="library-entity-name"');
+    expect(markup).toContain('id="library-entity-sort-name"');
+    expect(markup).toContain('class="limited-rich-text-editor"');
+    expect(markup).toContain('type="submit"');
+    expect(markup).not.toContain('class="author-series-danger-zone"');
   });
 
   it("blocks attached Author deletion with an accessible reason and bounded error", () => {
