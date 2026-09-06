@@ -272,7 +272,8 @@ class ZipPlannerLimitTests(TestCase):
 
         self.assertEqual(plan.candidates, [])
         self.assertEqual(plan.item_results[0].status, IMPORT_STATUS_FAILED)
-        self.assertEqual(plan.item_results[0].safe_message, "Invalid or unsupported ZIP archive.")
+        self.assertIn("invalid or unsupported", plan.item_results[0].safe_message)
+        self.assertIn("try again", plan.item_results[0].safe_message)
 
 
 def _zip_infos(*entries: tuple[str, bytes]) -> list[zipfile.ZipInfo]:

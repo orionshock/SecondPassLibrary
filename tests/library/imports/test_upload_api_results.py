@@ -101,6 +101,9 @@ class LibraryImportUploadResultTests(
         self.assertEqual(payload["items"][0]["status"], "duplicate")
         self.assertEqual(payload["items"][0]["title"], "Sample EPUB")
         self.assertEqual(payload["items"][0]["authors"], ["Sample Author"])
+        self.assertIn("exact EPUB file", payload["items"][0]["safe_message"])
+        self.assertIn("No action is needed", payload["items"][0]["safe_message"])
+        self.assertNotIn("books/", payload["items"][0]["safe_message"])
 
     def test_zip_partial_failure_returns_item_level_failure(self):
         self.login_librarian()
@@ -128,7 +131,7 @@ class LibraryImportUploadResultTests(
         self.assertNotIn("authors", payload["items"][0])
         self.assertTrue(payload["items"][1]["book_id"])
 
-    def test_identifier_conflict_returns_conflict_item(self):
+    def test_shared_identifier_metadata_returns_imported_item(self):
         self.login_librarian()
         existing_book = Book.objects.create(title="Existing", checksum="existing")
         BookIdentifier.objects.create(
@@ -141,7 +144,7 @@ class LibraryImportUploadResultTests(
             metadata_xml="""
             <metadata xmlns:dc="http://purl.org/dc/elements/1.1/"
                       xmlns:opf="http://www.idpf.org/2007/opf">
-              <dc:title>Conflict</dc:title>
+              <dc:title>Shared Identifier</dc:title>
               <dc:identifier opf:scheme="ISBN">978-0-00-000001-1</dc:identifier>
             </metadata>
             """
@@ -149,19 +152,17 @@ class LibraryImportUploadResultTests(
 
         response = self.client.post(
             self.url,
-            {"file": upload_file("conflict.epub", epub)},
+            {"file": upload_file("shared.epub", epub)},
         )
 
         payload = response.json()
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(payload["counts"]["conflict"], 1)
-        self.assertEqual(payload["items"][0]["status"], "conflict")
-        self.assertEqual(payload["items"][0]["source_label"], "conflict.epub")
-        self.assertEqual(
-            payload["items"][0]["safe_message"],
-            "An identifier from this import already belongs to another book.",
-        )
-        self.assertEqual(payload["items"][0]["title"], "Existing")
+        self.assertEqual(payload["counts"]["imported"], 1)
+        self.assertEqual(payload["counts"]["conflict"], 0)
+        self.assertEqual(payload["items"][0]["status"], "imported")
+        self.assertEqual(payload["items"][0]["source_label"], "shared.epub")
+        self.assertEqual(payload["items"][0]["title"], "Shared Identifier")
+        self.assertNotEqual(payload["items"][0]["book_id"], str(existing_book.pk))
         self.assertNotIn("checksum", payload["items"][0])
 
     def test_ambiguous_author_identity_returns_bounded_conflict_without_a_book(self):

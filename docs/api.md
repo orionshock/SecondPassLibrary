@@ -229,6 +229,13 @@ present the complete supported subset, it should show a safe plain-text
 fallback rather than raw HTML source. Clients must not reproduce Calibre
 sanitization rules or establish a separate interpretation policy.
 
+Book identifiers are string metadata, not globally unique Book identities.
+Multiple Books may carry the same normalized ISBN, EPUB UID, Calibre ID, or
+other scheme/value. Book mutation clients may submit such shared values; only
+duplicate identical identifier entries within the same Book are rejected.
+Import duplicate-file detection uses the EPUB checksum, not identifier
+metadata.
+
 Author and Series collections share normalized-name matching, `exclude_id`,
 Catalog Tag filtering, previews, and axis ordering. Their counts and previews
 derive from the same scoped Book population. Catalog Tag counts likewise use

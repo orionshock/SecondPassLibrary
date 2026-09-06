@@ -4,6 +4,7 @@ from unittest.mock import patch
 from library.imports.archives import ZipImportCandidate, ZipImportPlan, plan_zip_import
 from library.imports.batches import import_zip_file
 from library.imports.epub import import_epub_file
+from library.models import Book, BookIdentifier
 from tests.library.imports.helpers import (
     epub_with_cover_bytes,
     image_bytes,
@@ -74,6 +75,30 @@ class ImportOperationalLoggingTests(
         self.assertEqual(result.status, "duplicate")
         error.assert_not_called()
 
+    def test_shared_identifier_metadata_emits_no_warning_or_error(self):
+        existing = Book.objects.create(title="Existing", checksum="existing")
+        BookIdentifier.objects.create(
+            book=existing,
+            scheme=BookIdentifier.SCHEME_ISBN_13,
+            value="9780000000011",
+            normalized_value="9780000000011",
+        )
+        data = minimal_epub_bytes(metadata_xml="""
+            <metadata xmlns:dc="http://purl.org/dc/elements/1.1/"
+                      xmlns:opf="http://www.idpf.org/2007/opf">
+              <dc:title>Shared Identifier</dc:title>
+              <dc:identifier opf:scheme="ISBN">978-0-00-000001-1</dc:identifier>
+            </metadata>
+        """)
+
+        with self.assertNoLogs("library.imports", level="WARNING"):
+            result = import_epub_file(
+                BytesIO(data),
+                source_filename="shared.epub",
+            )
+
+        self.assertEqual(result.status, "imported")
+
     def test_candidate_pipeline_logs_bounded_lifecycle_context(self):
         with self.assertLogs("library.imports.epub", level="INFO") as logs:
             result = import_epub_file(
@@ -106,8 +131,14 @@ class ImportOperationalLoggingTests(
 
         self.assertEqual(result.status, "failed")
         self.assertEqual(len(logs.output), 1)
+        self.assertIn("source_method=web", logs.output[0])
+        self.assertIn("source=secret.epub", logs.output[0])
+        self.assertIn("category=unexpected", logs.output[0])
+        self.assertIn("transaction=not_started_or_rolled_back", logs.output[0])
+        self.assertIn("storage_cleanup=handled_if_needed", logs.output[0])
+        self.assertIn("retryable=false", logs.output[0])
         self.assertIn("exception=RuntimeError", logs.output[0])
-        self._assert_sensitive_values_absent(logs.output[0])
+        self.assertNotIn("C:\\private", logs.output[0])
 
     def test_unexpected_zip_batch_failure_emits_one_safe_error(self):
         candidate = ZipImportCandidate(

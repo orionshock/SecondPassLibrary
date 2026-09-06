@@ -36,7 +36,10 @@ Imported titles, names, tags, identifier schemes, and identifier values are
 NFKC-normalized and whitespace-collapsed before persistence or comparison.
 Scheme-specific identifier normalization removes ISBN punctuation, folds DOI
 URL/prefix forms, and applies the stable casing rules used by the import
-service. Display values remain separate from normalized matching values.
+service. Display values remain separate from normalized matching values. Book
+identifiers are repeatable metadata, not Book identity: the same ISBN, EPUB
+UID, Calibre ID, or other scheme/value may be attached to multiple Books. An
+identical normalized identifier may appear only once within one Book.
 Catalog Tag names use the same name normalization as imports but have unique
 normalized identity; the first persisted display spelling and stable slug are
 retained when later imports reuse a Tag.
@@ -103,13 +106,14 @@ preview, persistence, and result output. Blank, malformed, zero, negative, or
 over-precision values are treated as an unknown Series position; the Book and
 Series metadata remain importable, and the value is never rounded.
 
-Imports are create-only at the Book boundary. A checksum duplicate returns the
-existing Book without changing metadata, identifiers, Catalog Tags, EPUB bytes,
-or cover; import does not refresh it from newer embedded or sidecar metadata.
-For a new Book, the import may reuse an unambiguous Author, Series, or Catalog
-Tag and creates only the new Book's relationships. An identifier collision with
-another Book is advisory conflict detection, not proof that records should be
-merged, and the candidate is not partially applied.
+Imports are create-only at the Book boundary. The EPUB SHA-256 checksum is the
+only authoritative duplicate-file identity. An exact checksum duplicate
+returns the existing Book without changing metadata, identifiers, Catalog
+Tags, EPUB bytes, or cover; import does not refresh it from newer embedded or
+sidecar metadata. For a new Book, the import may reuse an unambiguous Author,
+Series, or Catalog Tag and creates only the new Book's relationships. Identifier
+metadata already attached to another Book is attached to the new Book normally
+and does not produce a warning, error, or conflict.
 
 The selected metadata record supplies the new Book's scalar fields, ordered
 Authors, optional Series relationship, identifiers, and Catalog Tags. It is
@@ -130,7 +134,9 @@ must be valid JPEG, PNG, or WebP images no larger than 10 MiB or 20 million
 decoded pixels. Valid original bytes are stored by content hash and may be
 shared by multiple Books. Cover validation or storage failure does not
 invalidate an otherwise valid Book import. Arbitrary sidecar assets are not
-imported, and duplicate/conflicting Book candidates do not acquire a cover.
+imported, and checksum-duplicate or genuinely conflicting Book candidates do
+not acquire a cover. A new Book whose identifier metadata overlaps another
+Book imports normally and may acquire its own cover.
 
 ## Limits and archive safety
 

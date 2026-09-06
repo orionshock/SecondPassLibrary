@@ -55,10 +55,8 @@ class LibraryImportUploadBoundaryTests(
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["items"][0]["status"], "failed")
-        self.assertEqual(
-            response.json()["items"][0]["safe_message"],
-            "Invalid or unsupported EPUB file.",
-        )
+        self.assertIn("invalid or unsupported", response.json()["items"][0]["safe_message"])
+        self.assertIn("try again", response.json()["items"][0]["safe_message"])
         self.assertFalse(Book.objects.exists())
         read_epub.assert_not_called()
 

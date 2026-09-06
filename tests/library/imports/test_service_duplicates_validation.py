@@ -140,5 +140,8 @@ class ImportPersistenceDuplicateValidationTests(
             )
 
         self.assertNotIn("private/storage/path", " ".join(logs.output))
+        self.assertTrue(
+            any("storage_cleanup=failed" in message for message in logs.output)
+        )
         # Clean the deliberately orphaned test fixture without exercising product code.
         original_delete(f"books/ee/ee/{checksum}.epub")

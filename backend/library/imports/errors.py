@@ -1,11 +1,21 @@
 from __future__ import annotations
 
 
-INVALID_EPUB_MESSAGE = "Invalid or unsupported EPUB file."
-UNSUPPORTED_SOURCE_MESSAGE = "Unsupported import source."
-INVALID_ZIP_MESSAGE = "Invalid or unsupported ZIP archive."
+INVALID_EPUB_MESSAGE = (
+    "The EPUB could not be imported because it is invalid or unsupported. "
+    "Check the file and try again."
+)
+UNSUPPORTED_SOURCE_MESSAGE = (
+    "This import source is not supported. Choose an EPUB or ZIP file and try again."
+)
+INVALID_ZIP_MESSAGE = (
+    "The ZIP archive could not be imported because it is invalid or unsupported. "
+    "Check the archive and try again."
+)
 UNSAFE_ARCHIVE_MEMBER_MESSAGE = "Unsafe archive member skipped."
-UNEXPECTED_IMPORT_ERROR_MESSAGE = "Unexpected import failure."
+UNEXPECTED_IMPORT_ERROR_MESSAGE = (
+    "The import failed unexpectedly. Try again; if it continues, review the server logs."
+)
 
 
 class ImportErrorBase(ValueError):

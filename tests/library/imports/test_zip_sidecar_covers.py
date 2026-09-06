@@ -11,7 +11,6 @@ from library.imports.batches import import_zip_file
 from library.imports.covers import validate_cover_bytes
 from library.imports.opf import parse_sidecar_opf
 from library.imports.results import (
-    IMPORT_STATUS_CONFLICT,
     IMPORT_STATUS_DUPLICATE,
     IMPORT_STATUS_IMPORTED,
 )
@@ -214,7 +213,7 @@ class ZipSidecarCoverImportTests(IsolatedMediaRootMixin, TestCase):
         self.assertEqual(_stored_cover_bytes(book), original_cover)
         self.assertNotEqual(_stored_cover_bytes(book), replacement_cover)
 
-    def test_identifier_conflict_does_not_attach_sidecar_cover(self):
+    def test_shared_identifier_imports_new_book_with_sidecar_cover(self):
         existing = Book.objects.create(title="Existing", checksum="existing")
         BookIdentifier.objects.create(
             book=existing,
@@ -243,7 +242,8 @@ class ZipSidecarCoverImportTests(IsolatedMediaRootMixin, TestCase):
         )
 
         existing.refresh_from_db()
-        self.assertEqual(result.items[0].status, IMPORT_STATUS_CONFLICT)
+        self.assertEqual(result.items[0].status, IMPORT_STATUS_IMPORTED)
+        self.assertTrue(result.items[0].book.cover_file.name)
         self.assertEqual(existing.cover_file.name, "")
 
 

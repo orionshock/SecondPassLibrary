@@ -65,14 +65,10 @@ def persist_imported_book(
         return ImportPersistenceResult(
             status=IMPORT_STATUS_DUPLICATE,
             book=existing,
-            message="A book with this checksum already exists.",
-        )
-    identifier_conflict = _find_identifier_conflict(metadata)
-    if identifier_conflict is not None:
-        return ImportPersistenceResult(
-            status=IMPORT_STATUS_CONFLICT,
-            book=identifier_conflict.book,
-            message="An identifier from this import already belongs to another book.",
+            message=(
+                "This exact EPUB file is already in the library. "
+                "No action is needed unless you intended to import a different file."
+            ),
         )
 
     try:
@@ -139,11 +135,18 @@ def persist_imported_book(
             _persist_tags(book=book, metadata=metadata)
             _persist_identifiers(book=book, metadata=metadata)
             add_book_to_group(book=book, group=get_public_group(), actor=actor)
-    except Exception:
+    except Exception as exc:
+        cleanup_status = "not_needed"
         if stored_file is not None and stored_file.created:
-            _cleanup_rolled_back_book_file(
+            cleanup_status = _cleanup_rolled_back_book_file(
                 stored_file=stored_file, book=book, actor=actor
             )
+        logger.error(
+            "Book import persistence failed: exception=%s transaction=rolled_back "
+            "storage_cleanup=%s retryable=false",
+            type(exc).__name__,
+            cleanup_status,
+        )
         raise
 
     return ImportPersistenceResult(status=IMPORT_STATUS_IMPORTED, book=book)
@@ -164,12 +167,13 @@ def _attach_book_file(*, book: Book, book_file) -> _StoredBookFile:
 
 def _cleanup_rolled_back_book_file(
     *, stored_file: _StoredBookFile, book: Book | None, actor=None
-) -> None:
+) -> str:
     if Book.objects.filter(book_file=stored_file.name).exists():
-        return
+        return "preserved_reference"
     try:
         if stored_file.storage.exists(stored_file.name):
             stored_file.storage.delete(stored_file.name)
+        return "complete"
     except Exception as exc:
         log_storage_issue(
             logger,
@@ -180,6 +184,7 @@ def _cleanup_rolled_back_book_file(
             exc=exc,
             storage_name=stored_file.name,
         )
+        return "failed"
 
 
 def _validate_import_inputs(
@@ -191,21 +196,6 @@ def _validate_import_inputs(
         raise ValidationError("Title is required.")
     if book_file is not None and not isinstance(book_file, File):
         raise ValidationError("book_file must be a Django File.")
-
-
-def _find_identifier_conflict(metadata: ImportMetadata) -> BookIdentifier | None:
-    for identifier in metadata.identifiers:
-        existing = (
-            BookIdentifier.objects.filter(
-                scheme=identifier.scheme,
-                normalized_value=identifier.normalized_value,
-            )
-            .select_related("book")
-            .first()
-        )
-        if existing is not None:
-            return existing
-    return None
 
 
 def _persist_authors(
@@ -289,11 +279,10 @@ def _persist_tags(*, book: Book, metadata: ImportMetadata) -> None:
 
 
 def _persist_identifiers(*, book: Book, metadata: ImportMetadata) -> None:
+    persisted_keys: set[tuple[str, str]] = set()
     for identifier in metadata.identifiers:
-        if BookIdentifier.objects.filter(
-            scheme=identifier.scheme,
-            normalized_value=identifier.normalized_value,
-        ).exists():
+        key = (identifier.scheme, identifier.normalized_value)
+        if key in persisted_keys:
             continue
         BookIdentifier.objects.create(
             book=book,
@@ -301,3 +290,4 @@ def _persist_identifiers(*, book: Book, metadata: ImportMetadata) -> None:
             value=identifier.value,
             normalized_value=identifier.normalized_value,
         )
+        persisted_keys.add(key)

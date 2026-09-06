@@ -92,7 +92,8 @@ class ImportResultTests(TestCase):
     def test_domain_error_safe_message_is_stable(self):
         error = InvalidEpubImportError("raw parser detail")
 
-        self.assertEqual(safe_import_message(error), "Invalid or unsupported EPUB file.")
+        self.assertIn("invalid or unsupported", safe_import_message(error))
+        self.assertIn("try again", safe_import_message(error))
         self.assertEqual(
             operator_import_detail(error),
             "InvalidEpubImportError: raw parser detail",

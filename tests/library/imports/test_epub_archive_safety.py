@@ -135,7 +135,8 @@ class EpubArchivePreflightTests(
             )
 
         self.assertEqual(result.status, IMPORT_STATUS_FAILED)
-        self.assertEqual(result.safe_message, "Invalid or unsupported EPUB file.")
+        self.assertIn("invalid or unsupported", result.safe_message)
+        self.assertIn("try again", result.safe_message)
         read_epub.assert_not_called()
         self._assert_no_persistent_import_artifacts()
 

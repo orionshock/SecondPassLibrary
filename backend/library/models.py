@@ -326,8 +326,8 @@ class BookIdentifier(TimeStampedModel):
         ordering = ["scheme", "normalized_value", "id"]
         constraints = [
             models.UniqueConstraint(
-                fields=["scheme", "normalized_value"],
-                name="unique_identifier_scheme_normalized_value",
+                fields=["book", "scheme", "normalized_value"],
+                name="unique_book_identifier_value",
             )
         ]
         indexes = [

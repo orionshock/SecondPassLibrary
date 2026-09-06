@@ -9,7 +9,6 @@ from django.test import TestCase
 from library.groups.public_group import get_public_group
 from library.imports.epub import EPUB_IMPORT_ERROR_MESSAGE, import_epub_file
 from library.imports.results import (
-    IMPORT_STATUS_CONFLICT,
     IMPORT_STATUS_DUPLICATE,
     IMPORT_STATUS_FAILED,
     IMPORT_STATUS_IMPORTED,
@@ -72,6 +71,10 @@ class SingleEpubImportServiceTests(
         self.assertEqual(second.status, IMPORT_STATUS_DUPLICATE)
         self.assertEqual(second.book, first.book)
         self.assertEqual(second.operator_detail, "")
+        self.assertEqual(second.error_category, "checksum_duplicate")
+        self.assertIn("exact EPUB file", second.safe_message)
+        self.assertIn("No action is needed", second.safe_message)
+        self.assertNotIn("books/", second.safe_message)
         self.assertEqual(Book.objects.filter(checksum=first.book.checksum).count(), 1)
 
     def test_invalid_extension_fails_safely(self):
@@ -79,7 +82,8 @@ class SingleEpubImportServiceTests(
 
         self.assertEqual(result.status, IMPORT_STATUS_FAILED)
         self.assertNotEqual(result.status, "skipped")
-        self.assertEqual(result.safe_message, "Unsupported import source.")
+        self.assertIn("not supported", result.safe_message)
+        self.assertIn("try again", result.safe_message)
         self.assertIn("UnsupportedImportSourceError", result.operator_detail)
         self.assertFalse(Book.objects.exists())
 
@@ -159,7 +163,7 @@ class SingleEpubImportServiceTests(
             "<p>A <strong>rich</strong> description</p>",
         )
 
-    def test_identifier_conflict_returns_conflict_item_result(self):
+    def test_shared_epub_identifier_imports_as_metadata(self):
         existing_book = Book.objects.create(title="Existing", checksum="existing-book")
         BookIdentifier.objects.create(
             book=existing_book,
@@ -170,21 +174,24 @@ class SingleEpubImportServiceTests(
         metadata_xml = """
         <metadata xmlns:dc="http://purl.org/dc/elements/1.1/"
                   xmlns:opf="http://www.idpf.org/2007/opf">
-          <dc:title>Conflicting Identifier</dc:title>
+          <dc:title>Shared Identifier</dc:title>
           <dc:identifier opf:scheme="ISBN">978-0-00-000001-1</dc:identifier>
         </metadata>
         """
 
         result = import_epub_file(
             BytesIO(minimal_epub_bytes(metadata_xml=metadata_xml)),
-            source_filename="conflict.epub",
+            source_filename="shared.epub",
         )
 
-        self.assertEqual(result.status, IMPORT_STATUS_CONFLICT)
-        self.assertEqual(result.book, existing_book)
-        self.assertEqual(
-            result.safe_message,
-            "An identifier from this import already belongs to another book.",
+        self.assertEqual(result.status, IMPORT_STATUS_IMPORTED)
+        self.assertNotEqual(result.book, existing_book)
+        self.assertTrue(
+            BookIdentifier.objects.filter(
+                book=result.book,
+                scheme=BookIdentifier.SCHEME_ISBN_13,
+                normalized_value="9780000000011",
+            ).exists()
         )
 
     def test_source_label_uses_safe_filename_only(self):

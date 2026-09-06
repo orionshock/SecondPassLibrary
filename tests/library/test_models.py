@@ -92,7 +92,7 @@ class LibraryModelConstraintTests(TestCase):
         with self.assertRaises(IntegrityError), transaction.atomic():
             BookCatalogTag.objects.create(book=book, catalog_tag=tag)
 
-    def test_identifier_is_unique_by_scheme_and_normalized_value(self):
+    def test_identifier_value_may_be_shared_across_books_but_not_repeated_within_one(self):
         first = Book.objects.create(title="One")
         second = Book.objects.create(title="Two")
         BookIdentifier.objects.create(
@@ -101,10 +101,16 @@ class LibraryModelConstraintTests(TestCase):
             value="978-0000000001",
             normalized_value="9780000000001",
         )
+        BookIdentifier.objects.create(
+            book=second,
+            scheme=BookIdentifier.SCHEME_ISBN_13,
+            value="9780000000001",
+            normalized_value="9780000000001",
+        )
 
         with self.assertRaises(IntegrityError), transaction.atomic():
             BookIdentifier.objects.create(
-                book=second,
+                book=first,
                 scheme=BookIdentifier.SCHEME_ISBN_13,
                 value="9780000000001",
                 normalized_value="9780000000001",

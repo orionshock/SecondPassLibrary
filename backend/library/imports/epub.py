@@ -73,9 +73,24 @@ def import_epub_file(
             operator_detail=operator_import_detail(exc),
             error_category="invalid_candidate",
         )
+        logger.warning(
+            "EPUB import rejected: source_method=%s source=%s "
+            "category=invalid_candidate transaction=not_started_or_rolled_back "
+            "storage_cleanup=handled_if_needed retryable=false exception=%s",
+            source_method,
+            _bounded_log_source(source_label),
+            type(exc).__name__,
+        )
     except Exception as exc:
+        error_category = "io_error" if isinstance(exc, OSError) else "unexpected"
         logger.error(
-            "Unexpected EPUB import failure: source_type=epub exception=%s",
+            "Unexpected EPUB import failure: source_method=%s source=%s "
+            "category=%s transaction=not_started_or_rolled_back "
+            "storage_cleanup=handled_if_needed retryable=%s exception=%s",
+            source_method,
+            _bounded_log_source(source_label),
+            error_category,
+            str(isinstance(exc, OSError)).lower(),
             type(exc).__name__,
         )
         result = ImportItemResult(
@@ -83,7 +98,7 @@ def import_epub_file(
             source_label=source_label,
             safe_message=safe_import_message(exc),
             operator_detail=operator_import_detail(exc),
-            error_category=("io_error" if isinstance(exc, OSError) else "unexpected"),
+            error_category=error_category,
         )
     logger.info(
         "Import candidate completed: source_method=%s status=%s book=%s",
@@ -97,6 +112,11 @@ def import_epub_file(
 def safe_source_label(source_filename: str) -> str:
     value = (source_filename or "").replace("\\", "/").strip()
     return value.rsplit("/", 1)[-1] or "unknown.epub"
+
+
+def _bounded_log_source(source_label: str) -> str:
+    value = safe_source_label(source_label).replace("\r", " ").replace("\n", " ")
+    return value[:160]
 
 
 def _import_epub_file(
@@ -186,11 +206,17 @@ def _item_result_from_persistence_result(
         safe_message = message or "Successfully imported EPUB."
         error_category = ""
     elif status == IMPORT_STATUS_DUPLICATE:
-        safe_message = message or "A book with this checksum already exists."
+        safe_message = message or (
+            "This exact EPUB file is already in the library. "
+            "No action is needed unless you intended to import a different file."
+        )
         error_category = "checksum_duplicate"
     elif status == IMPORT_STATUS_CONFLICT:
-        safe_message = message or "An identifier from this import already belongs to another book."
-        error_category = "identifier_conflict"
+        safe_message = message or (
+            "Catalog metadata matches multiple existing records. "
+            "Review the Author and Series metadata, then retry the import."
+        )
+        error_category = "catalog_identity_conflict"
     else:
         status = IMPORT_STATUS_FAILED
         safe_message = message or INVALID_EPUB_MESSAGE

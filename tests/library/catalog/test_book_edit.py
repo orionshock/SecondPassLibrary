@@ -549,7 +549,7 @@ class LibraryBookEditApiTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertEqual(self.visible_one.title, "Visible One")
         self.assertTrue(BookIdentifier.objects.filter(pk=self.identifier.id).exists())
 
-    def test_identifier_owned_by_another_book_rolls_back_scalar_changes(self):
+    def test_identifier_metadata_owned_by_another_book_can_be_saved(self):
         self.client.logout()
         self.assertTrue(self.client.login(username="manager", password="pw"))
         normalized = normalize_identifier(scheme="doi", value="10.1000/claimed")
@@ -564,7 +564,7 @@ class LibraryBookEditApiTests(LibraryCatalogApiFixtureMixin, TestCase):
         response = self.client.patch(
             f"/api/v1/library/books/{self.visible_one.id}/",
             data={
-                "title": "Must roll back",
+                "title": "Shared metadata",
                 "identifiers": [
                     {"scheme": "doi", "value": "https://doi.org/10.1000/CLAIMED"}
                 ],
@@ -572,14 +572,20 @@ class LibraryBookEditApiTests(LibraryCatalogApiFixtureMixin, TestCase):
             content_type="application/json",
         )
 
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(
-            response.json(),
-            {"identifiers": ["An identifier already belongs to another book."]},
-        )
+        self.assertEqual(response.status_code, 200)
         self.visible_one.refresh_from_db()
-        self.assertEqual(self.visible_one.title, "Visible One")
-        self.assertTrue(BookIdentifier.objects.filter(pk=self.identifier.id).exists())
+        self.assertEqual(self.visible_one.title, "Shared metadata")
+        self.assertEqual(
+            BookIdentifier.objects.get(book=self.visible_one).normalized_value,
+            normalized.normalized_value,
+        )
+        self.assertTrue(
+            BookIdentifier.objects.filter(
+                book=self.visible_two,
+                scheme=normalized.scheme,
+                normalized_value=normalized.normalized_value,
+            ).exists()
+        )
 
     def test_patch_empty_identifiers_clears_them(self):
         self.client.logout()

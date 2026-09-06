@@ -10,7 +10,6 @@ from django.test import TestCase, TransactionTestCase
 from library.groups.public_group import get_public_group
 from library.imports.batches import import_zip_file
 from library.imports.results import (
-    IMPORT_STATUS_CONFLICT,
     IMPORT_STATUS_DUPLICATE,
     IMPORT_STATUS_FAILED,
     IMPORT_STATUS_IMPORTED,
@@ -83,7 +82,7 @@ class ZipImportServiceTests(
         self.assertEqual([item.status for item in result.items], [IMPORT_STATUS_IMPORTED, IMPORT_STATUS_DUPLICATE])
         self.assertEqual(Book.objects.count(), 1)
 
-    def test_identifier_conflict_in_zip_becomes_conflict_item(self):
+    def test_shared_identifier_in_zip_imports_new_book(self):
         existing_book = Book.objects.create(title="Existing", checksum="existing-conflict-book")
         BookIdentifier.objects.create(
             book=existing_book,
@@ -94,19 +93,19 @@ class ZipImportServiceTests(
         metadata_xml = """
         <metadata xmlns:dc="http://purl.org/dc/elements/1.1/"
                   xmlns:opf="http://www.idpf.org/2007/opf">
-          <dc:title>Conflicting Identifier</dc:title>
+          <dc:title>Shared Identifier</dc:title>
           <dc:identifier opf:scheme="ISBN">978-0-00-000001-1</dc:identifier>
         </metadata>
         """
 
         result = import_zip_file(
-            zip_bytes(("conflict.epub", minimal_epub_bytes(metadata_xml=metadata_xml))),
-            source_filename="conflict.zip",
+            zip_bytes(("shared.epub", minimal_epub_bytes(metadata_xml=metadata_xml))),
+            source_filename="shared.zip",
         )
 
-        self.assertEqual(result.items[0].status, IMPORT_STATUS_CONFLICT)
-        self.assertEqual(result.items[0].book, existing_book)
-        self.assertEqual(Book.objects.count(), 1)
+        self.assertEqual(result.items[0].status, IMPORT_STATUS_IMPORTED)
+        self.assertNotEqual(result.items[0].book, existing_book)
+        self.assertEqual(Book.objects.count(), 2)
 
     def test_invalid_epub_member_fails_and_other_members_continue(self):
         result = import_zip_file(
@@ -127,7 +126,8 @@ class ZipImportServiceTests(
         self.assertEqual(result.source_label, "bad.zip")
         self.assertEqual(result.failed_count, 1)
         self.assertEqual(result.items[0].status, IMPORT_STATUS_FAILED)
-        self.assertEqual(result.items[0].safe_message, "Invalid or unsupported ZIP archive.")
+        self.assertIn("invalid or unsupported", result.items[0].safe_message)
+        self.assertIn("try again", result.items[0].safe_message)
         self.assertFalse(Book.objects.exists())
 
     def test_zero_epub_zip_returns_empty_batch(self):

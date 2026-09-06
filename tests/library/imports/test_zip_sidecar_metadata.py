@@ -4,12 +4,7 @@ from django.test import TestCase
 
 from library.imports.archives import MAX_OPF_SIDECAR_XML_BYTES
 from library.imports.batches import import_zip_file
-from library.imports.results import (
-    IMPORT_STATUS_CONFLICT,
-    IMPORT_STATUS_DUPLICATE,
-    IMPORT_STATUS_FAILED,
-    IMPORT_STATUS_IMPORTED,
-)
+from library.imports.results import IMPORT_STATUS_DUPLICATE, IMPORT_STATUS_FAILED, IMPORT_STATUS_IMPORTED
 from library.models import Book, BookIdentifier
 from tests.library.imports.helpers import (
     metadata_xml,
@@ -167,7 +162,7 @@ class ZipSidecarMetadataTests(IsolatedMediaRootMixin, TestCase):
         self.assertEqual(second.items[0].status, IMPORT_STATUS_DUPLICATE)
         self.assertEqual(first.items[0].book.title, "Original Title")
 
-    def test_sidecar_identifier_conflict_on_new_import_returns_conflict(self):
+    def test_sidecar_identifier_shared_with_another_book_imports(self):
         existing_book = Book.objects.create(title="Existing", checksum="existing-sidecar-conflict")
         BookIdentifier.objects.create(
             book=existing_book,
@@ -190,8 +185,15 @@ class ZipSidecarMetadataTests(IsolatedMediaRootMixin, TestCase):
             source_filename="sidecar-conflict.zip",
         )
 
-        self.assertEqual(result.items[0].status, IMPORT_STATUS_CONFLICT)
-        self.assertEqual(result.items[0].book, existing_book)
+        self.assertEqual(result.items[0].status, IMPORT_STATUS_IMPORTED)
+        self.assertNotEqual(result.items[0].book, existing_book)
+        self.assertTrue(
+            BookIdentifier.objects.filter(
+                book=result.items[0].book,
+                scheme=BookIdentifier.SCHEME_ISBN_13,
+                normalized_value="9780000000011",
+            ).exists()
+        )
 
     def test_invalid_epub_still_fails_with_valid_sidecar(self):
         result = import_zip_file(

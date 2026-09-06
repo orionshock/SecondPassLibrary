@@ -93,15 +93,6 @@ def update_book_metadata(
             if key in keys:
                 raise ValidationError({"identifiers": "Duplicate identifiers are not allowed."})
             keys.add(key)
-            if (
-                BookIdentifier.objects.filter(
-                    scheme=normalized.scheme,
-                    normalized_value=normalized.normalized_value,
-                )
-                .exclude(book=book)
-                .exists()
-            ):
-                raise ValidationError({"identifiers": "An identifier already belongs to another book."})
             normalized_identifiers.append(normalized)
 
         BookIdentifier.objects.filter(book=book).delete()

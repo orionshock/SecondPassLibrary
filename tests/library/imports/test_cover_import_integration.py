@@ -8,7 +8,6 @@ from django.test import TestCase
 from library.imports.batches import import_zip_file
 from library.imports.epub import import_epub_file
 from library.imports.results import (
-    IMPORT_STATUS_CONFLICT,
     IMPORT_STATUS_DUPLICATE,
     IMPORT_STATUS_IMPORTED,
 )
@@ -45,7 +44,7 @@ class EpubCoverImportIntegrationTests(IsolatedMediaRootMixin, TestCase):
         self.assertEqual(second.status, IMPORT_STATUS_DUPLICATE)
         self.assertEqual(first.book.cover_file.name, "")
 
-    def test_identifier_conflict_does_not_save_new_cover(self):
+    def test_shared_identifier_imports_new_book_and_cover(self):
         existing_book = Book.objects.create(title="Existing", checksum="existing")
         BookIdentifier.objects.create(
             book=existing_book,
@@ -56,18 +55,19 @@ class EpubCoverImportIntegrationTests(IsolatedMediaRootMixin, TestCase):
         metadata_xml = """
         <metadata xmlns:dc="http://purl.org/dc/elements/1.1/"
                   xmlns:opf="http://www.idpf.org/2007/opf">
-          <dc:title>Conflict</dc:title>
+          <dc:title>Shared Identifier</dc:title>
           <dc:identifier opf:scheme="ISBN">978-0-00-000001-1</dc:identifier>
         </metadata>
         """
 
         result = import_epub_file(
             BytesIO(epub_with_cover_bytes(cover_bytes=image_bytes("PNG"), metadata_xml=metadata_xml)),
-            source_filename="conflict.epub",
+            source_filename="shared.epub",
         )
 
-        self.assertEqual(result.status, IMPORT_STATUS_CONFLICT)
-        self.assertEqual(Book.objects.count(), 1)
+        self.assertEqual(result.status, IMPORT_STATUS_IMPORTED)
+        self.assertEqual(Book.objects.count(), 2)
+        self.assertTrue(result.book.cover_file.name)
         self.assertEqual(existing_book.cover_file.name, "")
 
     def test_zip_import_gets_cover_through_shared_epub_path(self):

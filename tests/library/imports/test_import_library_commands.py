@@ -138,7 +138,7 @@ class ImportLibraryCommandTests(
         self.assertIn("Import summary", text)
         self.assertEqual(Book.objects.get().title, "Good")
 
-    def test_folder_of_zip_conflict_is_structured_and_nonzero(self):
+    def test_folder_import_accepts_identifier_shared_with_another_book(self):
         existing_book = Book.objects.create(title="Existing", checksum="existing")
         BookIdentifier.objects.create(
             book=existing_book,
@@ -150,20 +150,19 @@ class ImportLibraryCommandTests(
             metadata_xml="""
             <metadata xmlns:dc="http://purl.org/dc/elements/1.1/"
                       xmlns:opf="http://www.idpf.org/2007/opf">
-              <dc:title>Conflict</dc:title>
+              <dc:title>Shared Identifier</dc:title>
               <dc:identifier opf:scheme="ISBN">978-0-00-000001-1</dc:identifier>
             </metadata>
             """
         )
         with TemporaryDirectory() as tmp:
-            path = _write_file(Path(tmp) / "conflict.epub", epub)
+            path = _write_file(Path(tmp) / "shared.epub", epub)
             output = StringIO()
 
-            with self.assertRaises(CommandError):
-                call_command("import_library_folder_of_zip", str(path), stdout=output)
+            call_command("import_library_folder_of_zip", str(path), stdout=output)
 
-        self.assertIn("Conflict", output.getvalue())
-        self.assertEqual(Book.objects.count(), 1)
+        self.assertIn("Imported", output.getvalue())
+        self.assertEqual(Book.objects.count(), 2)
 
     def test_folder_of_zip_uses_canonical_public_group_persistence(self):
         with TemporaryDirectory() as tmp:
