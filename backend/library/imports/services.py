@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import logging
 
 from django.core.exceptions import ValidationError
 from django.core.files.base import File
+from django.core.files.storage import Storage
 from django.db import transaction
 
 from core.rich_text import sanitize_descriptive_prose
@@ -26,11 +28,13 @@ from library.models import (
     Series,
 )
 from library.series_indexes import normalize_series_index
+from library.storage_diagnostics import log_storage_issue
 
 
 IMPORT_STATUS_IMPORTED = "imported"
 IMPORT_STATUS_DUPLICATE = "duplicate"
 IMPORT_STATUS_CONFLICT = "conflict"
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -38,6 +42,13 @@ class ImportPersistenceResult:
     status: str
     book: Book | None
     message: str = ""
+
+
+@dataclass(frozen=True)
+class _StoredBookFile:
+    storage: Storage
+    name: str
+    created: bool
 
 
 def persist_imported_book(
@@ -92,46 +103,83 @@ def persist_imported_book(
             ),
         )
 
-    with transaction.atomic():
-        book = Book.objects.create(
-            title=metadata.title,
-            sort_title=metadata.sort_title,
-            subtitle=metadata.subtitle,
-            language=metadata.language,
-            publisher=metadata.publisher,
-            description=sanitize_descriptive_prose(
-                metadata.description, field_name="description"
-            ),
-            published_year=metadata.published_year,
-            published_month=metadata.published_month,
-            published_day=metadata.published_day,
-            published_date_precision=metadata.published_date_precision,
-            file_format=Book.FILE_FORMAT_EPUB,
-            checksum=checksum,
-            file_size=file_size,
-        )
-        if book_file is not None:
-            _attach_book_file(book=book, book_file=book_file)
-        _persist_authors(
-            book=book,
-            metadata=metadata,
-            existing_authors=existing_authors,
-        )
-        _persist_series(
-            book=book,
-            metadata=metadata,
-            existing_series=existing_series,
-        )
-        _persist_tags(book=book, metadata=metadata)
-        _persist_identifiers(book=book, metadata=metadata)
-        add_book_to_group(book=book, group=get_public_group(), actor=actor)
+    stored_file: _StoredBookFile | None = None
+    book: Book | None = None
+    try:
+        with transaction.atomic():
+            book = Book.objects.create(
+                title=metadata.title,
+                sort_title=metadata.sort_title,
+                subtitle=metadata.subtitle,
+                language=metadata.language,
+                publisher=metadata.publisher,
+                description=sanitize_descriptive_prose(
+                    metadata.description, field_name="description"
+                ),
+                published_year=metadata.published_year,
+                published_month=metadata.published_month,
+                published_day=metadata.published_day,
+                published_date_precision=metadata.published_date_precision,
+                file_format=Book.FILE_FORMAT_EPUB,
+                checksum=checksum,
+                file_size=file_size,
+            )
+            if book_file is not None:
+                stored_file = _attach_book_file(book=book, book_file=book_file)
+            _persist_authors(
+                book=book,
+                metadata=metadata,
+                existing_authors=existing_authors,
+            )
+            _persist_series(
+                book=book,
+                metadata=metadata,
+                existing_series=existing_series,
+            )
+            _persist_tags(book=book, metadata=metadata)
+            _persist_identifiers(book=book, metadata=metadata)
+            add_book_to_group(book=book, group=get_public_group(), actor=actor)
+    except Exception:
+        if stored_file is not None and stored_file.created:
+            _cleanup_rolled_back_book_file(
+                stored_file=stored_file, book=book, actor=actor
+            )
+        raise
 
     return ImportPersistenceResult(status=IMPORT_STATUS_IMPORTED, book=book)
 
 
-def _attach_book_file(*, book: Book, book_file) -> None:
+def _attach_book_file(*, book: Book, book_file) -> _StoredBookFile:
     filename = f"{book.checksum}.{book.file_format}"
-    book.book_file.save(filename, book_file, save=True)
+    field = Book._meta.get_field("book_file")
+    storage = field.storage
+    target_name = field.generate_filename(book, filename)
+    created = not storage.exists(target_name)
+    stored_name = storage.save(target_name, book_file) if created else target_name
+    stored_name = stored_name.replace("\\", "/")
+    book.book_file.name = stored_name
+    book.save(update_fields=["book_file", "updated_at"])
+    return _StoredBookFile(storage=storage, name=stored_name, created=created)
+
+
+def _cleanup_rolled_back_book_file(
+    *, stored_file: _StoredBookFile, book: Book | None, actor=None
+) -> None:
+    if Book.objects.filter(book_file=stored_file.name).exists():
+        return
+    try:
+        if stored_file.storage.exists(stored_file.name):
+            stored_file.storage.delete(stored_file.name)
+    except Exception as exc:
+        log_storage_issue(
+            logger,
+            action="new_epub_rollback_cleanup",
+            book_id=getattr(book, "pk", None),
+            actor=actor,
+            reason="delete-failed",
+            exc=exc,
+            storage_name=stored_file.name,
+        )
 
 
 def _validate_import_inputs(
