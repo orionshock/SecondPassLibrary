@@ -19,17 +19,17 @@ dist/
 *.egg-info/
 backend/secondpass/version.py
 
-# Python cache and test output
+# Python cache
 __pycache__/
 *.py[cod]
 *$py.class
-.coverage
-.coverage.*
-htmlcov/
 .pytest_cache/
 .hypothesis/
 .tox/
 .nox/
+
+# Generated test and coverage output
+test-results/
 
 # Django/local database and logs
 *.log
@@ -48,7 +48,6 @@ dmypy.json
 # Node/local JS tooling
 node_modules/
 frontend/node_modules/
-frontend/coverage/
 backend/web/product_ui/
 backend/var/
 *.tsbuildinfo

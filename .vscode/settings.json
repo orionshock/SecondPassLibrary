@@ -2,7 +2,6 @@
   "explorer.excludeGitIgnore": false,
   "files.exclude": {
     "**/.agents": true,
-    "**/.coverage*": true,
     "**/.env": true,
     "**/.git": true,
     "**/.pytest_cache": true,
@@ -13,10 +12,10 @@
     "**/*.py[cod]": true,
     "**/*.tsbuildinfo": true,
     "**/build": true,
-    "**/coverage": true,
     "**/dist": true,
     "**/node_modules": true,
     "**/out": true,
+    "**/test-results": true,
     "**/var": true
   },
   "python.analysis.diagnosticMode": "workspace",

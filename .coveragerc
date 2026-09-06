@@ -1,0 +1,14 @@
+[run]
+data_file = test-results/coverage/python/.coverage
+omit =
+    */accounts/management/commands/seed_dev_users.py
+
+[report]
+omit =
+    */accounts/management/commands/seed_dev_users.py
+
+[html]
+directory = test-results/coverage/python/html
+
+[xml]
+output = test-results/coverage/python/coverage.xml
