@@ -1,25 +1,71 @@
 {
+  "explorer.excludeGitIgnore": false,
+  "files.exclude": {
+    "**/.agents": true,
+    "**/.coverage*": true,
+    "**/.env": true,
+    "**/.git": true,
+    "**/.pytest_cache": true,
+    "**/.ruff_cache": true,
+    "**/.venv": true,
+    "**/__pycache__": true,
+    "**/*.egg-info": true,
+    "**/*.py[cod]": true,
+    "**/*.tsbuildinfo": true,
+    "**/build": true,
+    "**/coverage": true,
+    "**/dist": true,
+    "**/node_modules": true,
+    "**/out": true,
+    "**/var": true
+  },
   "python.analysis.diagnosticMode": "workspace",
-  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/Scripts/python.exe",
-  "python.envFile": "${workspaceFolder}/.env",
   "python.analysis.extraPaths": [
     "${workspaceFolder}/backend"
   ],
-  "python.linting.enabled": true,
+  "python.envFile": "${workspaceFolder}/.env",
   "python.terminal.activateEnvironment": true,
-  "python.testing.cwd": "${workspaceFolder}",
   "python.testing.autoTestDiscoverOnSaveEnabled": true,
+  "python.testing.cwd": "${workspaceFolder}",
   "python.testing.pytestArgs": [
     "tests"
   ],
-  "python.testing.unittestEnabled": false,
   "python.testing.pytestEnabled": true,
-  "vitest.rootConfig": "frontend/vite.config.ts",
+  "python.testing.unittestEnabled": false,
   "python-envs.pythonProjects": [
     {
       "path": ".",
       "envManager": "ms-python.python:venv",
       "packageManager": "ms-python.python:pip"
     }
-  ]
+  ],
+  "repoStats.excludePatterns": [
+    "**/__pycache__/**",
+    "**/__tests__/**",
+    "**/migrations/**",
+    "backend/web/product_ui/**",
+    "backend/var/**",
+    "**/*.png"
+  ],
+  "ruff.configurationPreference": "filesystemFirst",
+  "ruff.nativeServer": "on",
+  "sqltools.connections": [
+    {
+      "previewLimit": 50,
+      "driver": "SQLite",
+      "database": "${workspaceFolder}/userdata/db/db.sqlite3",
+      "name": "SPL userdata db"
+    }
+  ],
+  "sqltools.useNodeRuntime": true,
+  "terminal.integrated.cwd": "${workspaceFolder}",
+  "vitest.rootConfig": "frontend/vite.config.ts",
+  "[python]": {
+    "editor.defaultFormatter": "charliermarsh.ruff",
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll.ruff": "explicit",
+      "source.organizeImports.ruff": "explicit"
+    }
+  }
 }

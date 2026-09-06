@@ -4,8 +4,10 @@
   "version": "0.0.0",
   "license": "Apache-2.0",
   "type": "module",
+  "packageManager": "npm@11.12.1",
   "engines": {
-    "node": ">=22.22.0"
+    "node": ">=22.22.0",
+    "npm": ">=11 <12"
   },
   "workspaces": [
     "packages/*"
@@ -14,7 +16,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "test": "node scripts/check-boundaries.mjs && vitest run",
-    "test:vitest": "vitest"
+    "test:vitest": "vitest",
+    "verify": "npm run test && npm run build"
   },
   "dependencies": {
     "@second-pass/spl-api": "workspace:*",

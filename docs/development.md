@@ -4,8 +4,9 @@ Practical local development workflow (Windows/PowerShell).
 
 ## Setup
 
-Use Python 3.12 through 3.14. The React workspace requires Node.js 22.22.0
-or newer.
+Use Python 3.12 through 3.14; `.python-version` selects the deployment-aligned
+Python 3.13 development default. The React workspace uses the Node.js version
+in `.node-version` and npm version declared by `frontend/package.json`.
 
 ```powershell
 python -m venv .venv
@@ -268,6 +269,17 @@ Practical notes:
   the Client API bearer-token flow where supported.
 
 ## Run Checks And Tests
+
+Run the complete project-owned verification entry point with the active Python
+environment:
+
+```powershell
+.\.venv\Scripts\python.exe tools\verify.py
+```
+
+On Linux, use `.venv/bin/python tools/verify.py`. The VS Code `Verify: all`
+task invokes the same script. Individual checks remain available below for
+focused work.
 
 ```powershell
 python backend/manage.py check
