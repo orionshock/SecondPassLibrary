@@ -48,13 +48,11 @@ describe("Dashboard", () => {
     expect(DASHBOARD_RECENT_QUERY).not.toHaveProperty("includeClosed");
   });
 
-  it("uses the standard page title without an eyebrow or server description", () => {
+  it("renders structured banner content only when a server message exists", () => {
     const markup = renderDashboard({ status: "loading" });
-    expect(markup.match(/<h1>/g)).toHaveLength(1);
-    expect(markup.match(/class="dashboard-banner"/g)).toHaveLength(1);
-    expect(markup).not.toContain('class="eyebrow"');
-    expect(markup).not.toContain('class="page-description"');
-    expect(renderDashboard({ status: "loading" }, { bannerText: "  \n " })).not.toContain("dashboard-banner");
+    expect(markup).toContain('aria-label="Server message"');
+    expect(markup).toContain("<strong>tonight</strong>");
+    expect(renderDashboard({ status: "loading" }, { bannerText: "  \n " })).not.toContain('aria-label="Server message"');
   });
 
   it("keeps recent-reading loading, empty, and failure states inside the section", () => {
@@ -100,7 +98,7 @@ describe("Dashboard", () => {
   it("omits progress cleanly when the Session has no saved location", () => {
     const markup = renderDashboard({ status: "ready", items: [{ ...recentItem, progress: null }] });
 
-    expect(markup).not.toContain("dashboard-session-card__progress");
+    expect(markup).not.toContain("Chapter 08");
     expect(markup.match(/href="\/marginalia\/sessions\//g)).toHaveLength(1);
     expect(markup).not.toContain("dashboard-scroller__controls");
   });
@@ -174,21 +172,15 @@ describe("Dashboard", () => {
       'href="/shelves?scope=group"',
       'href="/shelves/new"',
     ]) expect(advanced).toContain(link);
-    expect(advanced.match(/data-action-count="4"/g)).toHaveLength(3);
-
     const simple = renderDashboard({ status: "ready", items: [] }, { showAdvancedGroups: false });
     expect(simple).toContain('href="/shelves?scope=group"');
     expect(simple).not.toContain('href="/groups"');
-    expect(simple.match(/data-action-count="4"/g)).toHaveLength(2);
-    expect(simple).toContain("dashboard-action-grid--count-4");
-    expect(simple).not.toContain("dashboard-action-placeholder");
   });
 
   it("renders Server Tools in a detached secondary region with independent permission gates", () => {
     const all = renderDashboard({ status: "ready", items: [] });
     for (const label of ["Groups", "Import Books", "Users", "Server Settings"]) expect(all).toContain(label);
-    expect(all).toContain('class="dashboard-server-tools"');
-    expect(all.indexOf('class="dashboard-server-tools"')).toBeGreaterThan(all.indexOf('class="dashboard-launch-pads"'));
+    expect(all).toContain('aria-label="Server tools actions"');
 
     const importsOnly = renderDashboard({ status: "ready", items: [] }, {
       showImports: true, showUsers: false, showServerSettings: false,

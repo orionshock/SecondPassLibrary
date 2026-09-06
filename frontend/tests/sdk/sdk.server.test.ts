@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { ApiClient } from "../client";
-import { getServerDiscovery, getServerInfo } from "../server";
+import type { ApiClient } from "../../packages/spl-api/src/client";
+import { getServerDiscovery, getServerInfo } from "../../packages/spl-api/src/server";
 
 describe("server context", () => {
   it("maps authenticated server info", async () => {

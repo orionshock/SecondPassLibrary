@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildSecondPassReaderBookUrl } from "../secondPassReaderWebClientUrl";
+import { buildSecondPassReaderBookUrl } from "../../packages/spl-api/src/secondPassReaderWebClientUrl";
 
 describe("Second Pass Reader web client launcher", () => {
   it("builds a hash-reader URL and defensively removes trailing slashes", () => {

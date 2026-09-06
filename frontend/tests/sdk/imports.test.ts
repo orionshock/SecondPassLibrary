@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { type ApiClient, type AttachmentApiClient, type AttachmentDownload } from "../../client";
-import { ApiError } from "../../errors";
+import { type ApiClient, type AttachmentApiClient, type AttachmentDownload } from "../../packages/spl-api/src/client";
+import { ApiError } from "../../packages/spl-api/src/errors";
 import {
   applyMarginaliaImport,
   downloadUnmatchedMarginaliaImport,
   previewMarginaliaImport,
-} from "..";
+} from "../../packages/spl-api/src/marginalia";
 
 const previewResponse = {
   import_token: "opaque-preview-token",
@@ -196,4 +196,3 @@ describe("Marginalia Import SDK", () => {
     }
   });
 });
-

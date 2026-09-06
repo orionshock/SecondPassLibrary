@@ -62,9 +62,9 @@ The durable source layout is:
 - `frontend/src/shared/`: cross-feature server-blind behavior and layout;
 - `frontend/src/domain/`: application-facing domain presentation helpers;
 - `frontend/packages/spl-api/`: the first-party transport and adaptation package;
-- `frontend/tests/`: dedicated Product UI test root, mirroring meaningful
-  production ownership while remaining physically separate from runtime source;
-- `frontend/packages/spl-api/src/__tests__/`: current SDK contract test root;
+- `frontend/tests/`: dedicated test root, with Product UI tests mirroring
+  meaningful production ownership and SDK wire-contract tests under
+  `frontend/tests/sdk/`, all physically separate from runtime source;
 
 Feature route controllers use the `*Orchestrator` suffix. Major local page
 sections use `*PageRegion`. Other React files use PascalCase names matching
@@ -75,10 +75,9 @@ this project-native vocabulary rather than introducing dotted filenames. A
 workflow folder must materially improve ownership, dependency direction,
 navigation, or future placement; route variants alone do not justify one.
 
-Tests never live inside runtime feature directories. During normalization,
-current tests will move only after Vitest and the test TypeScript project are
-prepared for `frontend/tests/`; until then the two current dedicated test roots
-remain authoritative.
+Tests never live inside runtime feature directories. Product UI and SDK tests
+share the dedicated `frontend/tests/` root while retaining separate ownership
+folders.
 
 Keep feature-specific drafts, messages, and policy presentation with their
 feature. Promote code only when it has a real cross-feature owner. Frontend

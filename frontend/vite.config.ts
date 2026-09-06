@@ -16,7 +16,6 @@ export default defineConfig(({ command }) => ({
     },
     include: [
       "tests/**/*.test.{ts,tsx}",
-      "packages/spl-api/src/**/__tests__/**/*.test.ts",
     ],
   },
   server: {

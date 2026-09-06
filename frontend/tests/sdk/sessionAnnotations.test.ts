@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { createApiClient } from "../../client";
-import { ApiError } from "../../errors";
+import { createApiClient } from "../../packages/spl-api/src/client";
+import { ApiError } from "../../packages/spl-api/src/errors";
 import {
   closeMarginaliaSession,
   deleteMarginaliaSession,
   getMarginaliaSession,
   listMarginaliaSessionAnnotations,
   updateMarginaliaSession,
-} from "..";
+} from "../../packages/spl-api/src/marginalia";
 
 const book = {
   id: "book-1", title: "Book", authors: [], series: null, cover_url: null, can_open: true,
@@ -152,4 +152,3 @@ describe("Marginalia Annotation SDK", () => {
     }
   });
 });
-

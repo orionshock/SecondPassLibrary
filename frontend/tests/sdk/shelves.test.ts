@@ -16,7 +16,7 @@ import {
   setShelfItemPosition,
   updateShelf,
 } from "@second-pass/spl-api";
-import type { ApiClient } from "../../client";
+import type { ApiClient } from "../../packages/spl-api/src/client";
 
 const personalShelf = {
   id: "personal",
@@ -420,4 +420,3 @@ describe("Shelves SDK", () => {
     expect(shelves[1].ownerGroup).toEqual({ id: "public", name: "Common Room", isPublicGroup: true });
   });
 });
-

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { ApiError, clearBookCover, createAuthor, createSeries, deleteAuthor, deleteSeries, getAuthor, getBook, getSeries, listAllAuthors, listAllCatalogTags, listAllSeries, listAuthors, listBooks, listCatalogTags, listSeries, replaceBookCover, searchLibraryBooks, updateAuthor, updateBook, updateSeries } from "@second-pass/spl-api";
-import { createApiClient, type ApiClient } from "../../client";
+import { createApiClient, type ApiClient } from "../../packages/spl-api/src/client";
 
 const compactWireBook = {
   id: "book-1", title: "The Book", sort_title: "Book, The", subtitle: "Hidden subtitle",

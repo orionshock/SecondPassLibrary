@@ -277,15 +277,26 @@ environment:
 .\.venv\Scripts\python.exe tools\verify.py
 ```
 
-On Linux, use `.venv/bin/python tools/verify.py`. The VS Code `Verify: all`
-task invokes the same script. Individual checks remain available below for
-focused work.
+On Linux, use `.venv/bin/python tools/verify.py`. The VS Code tasks invoke the
+same script. Select a narrower supported lane with `--lane`:
+
+- `fast`: lint, Django checks, non-slow backend tests, Product UI/SDK tests,
+  and static hygiene;
+- `backend`: the complete Python suite;
+- `backend-coverage`: the complete Python suite with branch coverage under
+  `test-results/coverage/python/`;
+- `frontend`: Vitest, TypeScript, the boundary checker, and production build;
+- `frontend-coverage`: separate Product UI and SDK coverage under
+  `test-results/coverage/frontend/`;
+- `all`: the release-confidence aggregate and default.
+
+Individual checks remain available below for focused work.
 
 ```powershell
 python backend/manage.py check
 python -m pytest
 npm --prefix frontend run test:vitest -- tests/app/AppBootstrap.test.tsx
-npm --prefix frontend exec -- tsc -b
+npm --prefix frontend run typecheck
 npm --prefix frontend run build
 node frontend/scripts/check-boundaries.mjs
 ```
@@ -367,21 +378,21 @@ Frontend selections remain path-based rather than inventing a second marker
 system:
 
 ```powershell
-# Focused file, SDK workspace, Product UI, then complete Vitest.
+# Focused file, SDK tests, Product UI, then complete Vitest.
 npm.cmd --prefix frontend run test:vitest -- --run tests/app/AppBootstrap.test.tsx
-npm.cmd --prefix frontend run test:vitest -- --run packages/spl-api
-npm.cmd --prefix frontend run test:vitest -- --run tests
+npm.cmd --prefix frontend run test:vitest -- --run tests/sdk
+npm.cmd --prefix frontend run test:vitest -- --run tests/app tests/components tests/domain tests/features tests/shared
 npm.cmd --prefix frontend run test:vitest -- --run
 
-npm.cmd --prefix frontend exec -- tsc -b
+npm.cmd --prefix frontend run typecheck
 node frontend/scripts/check-boundaries.mjs
 npm.cmd --prefix frontend run build
 ```
 
-These commands use the dedicated Product UI test root under `frontend/tests/`
-and the SDK contract test root under `frontend/packages/spl-api/src/__tests__/`.
-The Product UI tree mirrors meaningful production ownership without reproducing
-path layers that add no test value.
+These commands use the dedicated test root under `frontend/tests/`, with SDK
+wire-contract tests under `frontend/tests/sdk/` and Product UI tests grouped by
+their runtime owner. Production SDK source remains under
+`frontend/packages/spl-api/src/`.
 
 Use `npm` instead of `npm.cmd` on shells where the executable shim is not
 blocked by PowerShell execution policy.

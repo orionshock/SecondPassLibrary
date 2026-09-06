@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import type { ApiClient } from "../client";
-import { decideClientPairing, lookupClientPairing } from "../pairing";
+import type { ApiClient } from "../../packages/spl-api/src/client";
+import { decideClientPairing, lookupClientPairing } from "../../packages/spl-api/src/pairing";
 
 describe("client pairing", () => {
   it("maps lookup results without exposing server response naming", async () => {

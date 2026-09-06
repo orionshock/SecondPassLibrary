@@ -10,7 +10,7 @@ import {
   resetManagedUserPassword,
   updateManagedUser,
 } from "@second-pass/spl-api";
-import type { ApiClient } from "../client";
+import type { ApiClient } from "../../packages/spl-api/src/client";
 
 describe("users SDK", () => {
   it("builds supported server query parameters and maps the paginated response", async () => {

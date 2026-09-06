@@ -2,6 +2,51 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "Verify: fast",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "windows": { "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe" },
+      "args": ["tools/verify.py", "--lane", "fast"],
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Test: backend full",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "windows": { "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe" },
+      "args": ["tools/verify.py", "--lane", "backend"],
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Coverage: Python",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "windows": { "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe" },
+      "args": ["tools/verify.py", "--lane", "backend-coverage"],
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Verify: frontend",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "windows": { "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe" },
+      "args": ["tools/verify.py", "--lane", "frontend"],
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
+      "label": "Coverage: frontend",
+      "type": "process",
+      "command": "${workspaceFolder}/.venv/bin/python",
+      "windows": { "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe" },
+      "args": ["tools/verify.py", "--lane", "frontend-coverage"],
+      "group": "test",
+      "problemMatcher": []
+    },
+    {
       "label": "Verify: all",
       "type": "process",
       "command": "${workspaceFolder}/.venv/bin/python",
@@ -9,7 +54,9 @@
         "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe"
       },
       "args": [
-        "tools/verify.py"
+        "tools/verify.py",
+        "--lane",
+        "all"
       ],
       "group": {
         "kind": "test",

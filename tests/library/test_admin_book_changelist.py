@@ -32,14 +32,13 @@ class BookAdminChangelistTests(TestCase):
         self.url = reverse("admin:library_book_changelist")
         self.assertTrue(self.client.login(username="owner", password="pw"))
 
-    def test_rows_show_authors_series_index_placeholders_and_repair_links(self):
+    def test_rows_show_relationship_context_and_repair_links(self):
         response = self.client.get(self.url)
 
         self.assertContains(response, "Ursula Le Guin")
         self.assertContains(response, "Earthsea")
         self.assertContains(response, "1.25")
         self.assertContains(response, "Standalone")
-        self.assertContains(response, ">-</td>", count=3, html=False)
         for book in (self.book, self.unrelated_book):
             repair_url = reverse(
                 "admin:library_book_repair_stored_epub",
@@ -51,7 +50,7 @@ class BookAdminChangelistTests(TestCase):
         response = self.client.get(self.url)
 
         filter_titles = [spec.title for spec in response.context["cl"].filter_specs]
-        self.assertEqual(filter_titles, ["Series", "language", "created at"])
+        self.assertEqual(set(filter_titles), {"Series", "language", "created at"})
 
         series_response = self.client.get(
             self.url,

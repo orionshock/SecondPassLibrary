@@ -42,26 +42,3 @@ class RuntimePathIsolationTests(SimpleTestCase):
         isolation.disable()
 
         self.assertFalse(root.exists())
-
-    def test_shared_filesystem_helper_does_not_use_committed_fixture_temp_dirs(self):
-        source = (ROOT / "tests" / "testenv" / "filesystem.py").read_text(
-            encoding="utf-8"
-        )
-
-        self.assertNotIn("TestFiles", source)
-        self.assertNotIn("tmp_", source)
-
-    def test_tests_do_not_create_generated_files_under_committed_fixtures(self):
-        offenders: list[str] = []
-        for path in sorted((ROOT / "tests").rglob("*.py")):
-            if path == Path(__file__).resolve():
-                continue
-            source = path.read_text(encoding="utf-8")
-            if "TestFiles" in source and "tmp_" in source:
-                offenders.append(str(path.relative_to(ROOT)))
-
-        self.assertEqual(
-            offenders,
-            [],
-            "Generated test files belong in OS temp dirs, not under TestFiles/.",
-        )

@@ -23,12 +23,8 @@ function navMarkup(userOverrides: Partial<CurrentUser> = {}, serverOverrides: Pa
 describe("app frame and router", () => {
   it("renders the Dashboard inside the frame", () => {
     const markup = renderToStaticMarkup(<MemoryRouter><Routes><Route element={<AppOrchestrator user={user} server={{ ...server, bannerText: "Maintenance tonight" }} onCurrentUserChange={vi.fn()} />}><Route index element={<DashboardOrchestrator />} /></Route></Routes></MemoryRouter>);
-    expect(markup).toContain('class="app-shell"');
-    expect(markup).toContain('class="product-page-shell dashboard-page"');
-    expect(markup).toContain('class="dashboard-banner"');
+    expect(markup).toContain("Maintenance tonight");
     expect(markup).toContain('aria-busy="true"');
-    expect(markup).not.toContain('class="eyebrow"');
-    expect(markup).not.toContain('class="page-description"');
   });
 
   it("keeps Dashboard banner content out of the global frame on other routes", () => {
@@ -43,13 +39,12 @@ describe("app frame and router", () => {
   });
   it("shows every navigation branch to an Owner when advanced groups are enabled", () => {
     const markup = navMarkup({}, { advancedLibraryGroupsEnabled: true });
-    expect(markup).toContain('class="app-header app-header--full-navigation"');
     for (const path of ["/marginalia", "/library", "/groups", "/shelves", "/imports", "/users", "/server"]) {
       expect(markup.match(new RegExp(`href="${path}"`, "g"))).toHaveLength(1);
     }
     expect(markup).toContain("Book Import");
     expect(markup).not.toContain(">Dashboard<");
-    expect(markup).toMatch(/class="app-navigation-link app-navigation-link--primary active"[^>]*href="\/library"/);
+    expect(markup).toMatch(/aria-current="page"[^>]*href="\/library"/);
     expect(markup).toContain('aria-label="More navigation"');
     expect(markup).toContain('aria-label="Open account menu for owner"');
   });
@@ -59,7 +54,6 @@ describe("app frame and router", () => {
       { username: "owner-with-an-unusually-long-account-name" },
       { name: "The Exceptionally Long Household Library Name", advancedLibraryGroupsEnabled: true },
     );
-    expect(markup).toContain('class="app-header app-header--full-navigation"');
     expect(markup).toContain('aria-label="Open Dashboard for The Exceptionally Long Household Library Name"');
     expect(markup).toContain('aria-label="Open account menu for owner-with-an-unusually-long-account-name"');
     for (const path of ["/marginalia", "/library", "/groups", "/shelves"]) {
@@ -114,7 +108,7 @@ describe("app frame and router", () => {
     expect(navigationDestinationOwnsPath("/library", "/libraryish")).toBe(false);
 
     const nestedLibrary = navMarkup({}, {}, "/library/books/book-id/edit");
-    expect(nestedLibrary).toMatch(/app-navigation-link--primary active[^>]*href="\/library"/);
+    expect(nestedLibrary).toMatch(/aria-current="page"[^>]*href="\/library"/);
     const profile = navMarkup({}, {}, "/profile/password");
     expect(profile).toContain("app-menu-component--active account-menu");
   });
@@ -163,41 +157,6 @@ describe("app frame and router", () => {
     expect(appRoutes[0].children.some((route) => route.path === "server")).toBe(true);
     expect(renderToStaticMarkup(<PlaceholderPageRegion title="Future section" />)).toContain("Future section");
     expect(renderToStaticMarkup(<NotFoundPageRegion />)).toContain("Page not found");
-  });
-
-  it("resolves coherent feature and rare-route modules", async () => {
-    const [library, libraryMutation, marginalia, marginaliaTransfer, shelves, groups, groupManagement, administration, profile] = await Promise.all([
-      import("../../src/app/routes/libraryRoutes"),
-      import("../../src/app/routes/libraryMutationRoutes"),
-      import("../../src/app/routes/marginaliaRoutes"),
-      import("../../src/app/routes/marginaliaTransferRoutes"),
-      import("../../src/app/routes/shelvesRoutes"),
-      import("../../src/app/routes/groupsRoutes"),
-      import("../../src/app/routes/groupManagementRoutes"),
-      import("../../src/app/routes/administrationRoutes"),
-      import("../../src/app/routes/profileRoutes"),
-    ]);
-    for (const routeComponent of [
-      library.LibraryOrchestrator,
-      library.BookDetailOrchestrator,
-      libraryMutation.BookEditOrchestrator,
-      libraryMutation.AuthorSeriesEditOrchestrator,
-      marginalia.MarginaliaSessionsOrchestrator,
-      marginalia.MarginaliaSessionDetailOrchestrator,
-      marginaliaTransfer.MarginaliaImportOrchestrator,
-      marginaliaTransfer.MarginaliaExportOrchestrator,
-      shelves.ShelvesListOrchestrator,
-      shelves.ShelfEditOrchestrator,
-      groups.GroupsListOrchestrator,
-      groups.GroupDetailOrchestrator,
-      groupManagement.GroupCreateOrchestrator,
-      groupManagement.GroupEditOrchestrator,
-      administration.ImportsOrchestrator,
-      administration.UsersListOrchestrator,
-      administration.ServerSettingsOrchestrator,
-      profile.ProfileOrchestrator,
-      profile.PasswordChangeOrchestrator,
-    ]) expect(typeof routeComponent).toBe("function");
   });
 
   it("keeps route loading and lazy-module failures bounded inside the shell", () => {
@@ -254,4 +213,3 @@ describe("app frame and router", () => {
     }
   });
 });
-

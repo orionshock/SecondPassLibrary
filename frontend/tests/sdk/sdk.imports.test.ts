@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { ApiError, uploadLibraryImport } from "@second-pass/spl-api";
-import type { ApiClient } from "../client";
+import type { ApiClient } from "../../packages/spl-api/src/client";
 
 describe("imports SDK", () => {
   it("posts one multipart file and maps every result item", async () => {

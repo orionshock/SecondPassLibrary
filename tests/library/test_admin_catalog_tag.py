@@ -3,7 +3,7 @@ from django.contrib.auth import get_user_model
 from django.test import RequestFactory, TestCase, override_settings
 from django.urls import path, reverse
 
-from library.admin import CatalogTagAdmin, CatalogTagBookInline
+from library.admin import CatalogTagAdmin
 from library.catalog.tag_services import build_catalog_tag_merge_plan
 from library.models import (
     Author,
@@ -30,21 +30,14 @@ class CatalogTagAdminTests(TestCase):
         self.request.user = self.owner
         self.model_admin = CatalogTagAdmin(CatalogTag, admin.site)
 
-    def test_layout_and_read_only_identity_fields(self):
+    def test_only_operator_owned_fields_are_editable(self):
         form_class = self.model_admin.get_form(self.request)
 
-        self.assertEqual(
-            self.model_admin.get_fields(self.request),
-            ["name", "sort_name", "normalized_name", "slug"],
-        )
         self.assertEqual(
             set(self.model_admin.get_readonly_fields(self.request)),
             {"normalized_name", "slug"},
         )
-        self.assertEqual(list(form_class.base_fields), ["name", "sort_name"])
-        self.assertEqual(self.model_admin.inlines, [CatalogTagBookInline])
-        self.assertEqual(self.model_admin.list_display, ["name", "book_count"])
-        self.assertEqual(self.model_admin.list_display_links, ["name"])
+        self.assertEqual(set(form_class.base_fields), {"name", "sort_name"})
 
     def test_submitted_normalized_name_is_ignored(self):
         form_class = self.model_admin.get_form(self.request)

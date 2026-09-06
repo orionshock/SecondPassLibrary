@@ -14,9 +14,13 @@
   ],
   "scripts": {
     "dev": "vite",
+    "typecheck": "tsc -b",
     "build": "tsc -b && vite build",
     "test": "node scripts/check-boundaries.mjs && vitest run",
     "test:vitest": "vitest",
+    "test:coverage": "npm run test:coverage:product-ui && npm run test:coverage:sdk",
+    "test:coverage:product-ui": "vitest run tests/app tests/components tests/domain tests/features tests/shared --coverage --coverage.reportsDirectory=../test-results/coverage/frontend/product-ui --coverage.include=src/** --coverage.exclude=packages/**",
+    "test:coverage:sdk": "vitest run tests/sdk --coverage --coverage.reportsDirectory=../test-results/coverage/frontend/sdk --coverage.include=packages/spl-api/src/**",
     "verify": "npm run test && npm run build"
   },
   "dependencies": {

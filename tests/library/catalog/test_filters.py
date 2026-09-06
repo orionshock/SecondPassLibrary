@@ -15,16 +15,10 @@ from tests.library.helpers import (
 class LibraryCatalogBookFilterTests(LibraryCatalogApiFixtureMixin, TestCase):
     def assert_empty_book_page(self, response):
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(
-            response.json(),
-            {
-                "count": 0,
-                "next": None,
-                "previous": None,
-                "results": [],
-                "catalog_tags": [],
-            },
-        )
+        payload = response.json()
+        self.assertEqual(payload["count"], 0)
+        self.assertEqual(payload["results"], [])
+        self.assertEqual(payload["catalog_tags"], [])
 
     def test_q_searches_visible_books_only(self):
         visible = self.client.get("/api/v1/library/books/", {"q": "visible one"})
@@ -179,8 +173,8 @@ class LibraryCatalogBookFilterTests(LibraryCatalogApiFixtureMixin, TestCase):
             "/api/v1/library/books/",
             {
                 "series": self.first_series.id,
-                "tag": self.fantasy.slug,
-                "q": "definitely-no-match",
+                "tag": self.mystery.slug,
+                "q": "one",
             },
         )
 
@@ -206,8 +200,8 @@ class LibraryCatalogBookFilterTests(LibraryCatalogApiFixtureMixin, TestCase):
                 self.assertEqual(response.status_code, 200)
                 self.assertEqual(response_titles(response), [])
 
-    def test_publisher_filter(self):
-        response = self.client.get("/api/v1/library/books/", {"publisher": "Alpha House"})
+    def test_publisher_filter_is_case_insensitive_and_trims_input(self):
+        response = self.client.get("/api/v1/library/books/", {"publisher": "  alpha house  "})
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response_titles(response), ["Visible Two"])

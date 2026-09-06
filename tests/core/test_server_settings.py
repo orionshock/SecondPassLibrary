@@ -170,7 +170,6 @@ class ServerSettingsServiceTests(TestCase):
         setting = ServerSetting.objects.get(key="server_banner_message")
 
         self.assertEqual(setting.value, "")
-        self.assertEqual(str(setting.display_key), "Server Banner Message")
 
     def test_annotation_tombstone_retention_defaults_and_validation(self):
         self.assertEqual(

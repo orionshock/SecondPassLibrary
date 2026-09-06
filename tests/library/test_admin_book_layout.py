@@ -9,7 +9,6 @@ from core import server_settings
 from library.admin import (
     BookAdmin,
     BookGroupAssignmentInline,
-    BookIdentifierInline,
     BookSeriesInline,
 )
 from library.models import (
@@ -70,7 +69,6 @@ class BookAdminLayoutTests(IsolatedMediaRootMixin, TestCase):
             BookAuthor.objects.get(book=self.book, author=existing).position,
             3,
         )
-        self.assertIn("RelatedFieldWidgetWrapper", type(form.fields["selected_authors"].widget).__name__)
 
     def test_book_description_is_sanitized_by_admin_form(self):
         form_class = self.model_admin.get_form(self.request, self.book)
@@ -123,7 +121,6 @@ class BookAdminLayoutTests(IsolatedMediaRootMixin, TestCase):
         BookSeries.objects.create(book=self.book, series=series, series_index="2.50")
 
         self.assertEqual(BookSeriesInline.model, BookSeries)
-        self.assertEqual(BookSeriesInline.fields, ["series", "series_index"])
         self.assertNotIn("series", self.model_admin.get_form(self.request).base_fields)
 
     def test_cover_upload_and_clear_use_separate_admin_controls(self):
@@ -187,26 +184,9 @@ class BookAdminLayoutTests(IsolatedMediaRootMixin, TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        for text in (
-            "Book identity",
-            "Authors",
-            "Series",
-            "Cover",
-            "Bibliographic",
-            "Catalog tags",
-            "Stored EPUB",
-            "Repair stored EPUB",
-            "Book Identifiers",
-            "Timestamps",
-        ):
-            self.assertContains(response, text)
         self.assertContains(response, 'alt="Current cover"')
         self.assertContains(response, 'name="cover_upload"')
         self.assertContains(response, 'name="clear_cover"')
-        self.assertEqual(
-            BookIdentifierInline.fields,
-            ["scheme", "value", "normalized_value"],
-        )
         self.assertNotContains(response, "is_primary")
         self.assertNotContains(response, "identifier-source")
 

@@ -1,14 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import type { ApiClient } from "../../client";
-import { ApiError } from "../../errors";
+import type { ApiClient } from "../../packages/spl-api/src/client";
+import { ApiError } from "../../packages/spl-api/src/errors";
 import {
   getMarginaliaBook,
   listMarginaliaBooks,
   listMarginaliaBookSessions,
   listMarginaliaSessions,
   listRecentMarginaliaSessions,
-} from "..";
+} from "../../packages/spl-api/src/marginalia";
 
 const book = {
   id: "book-1",
@@ -223,4 +223,3 @@ describe("Marginalia recent Session SDK", () => {
     await expect(listRecentMarginaliaSessions({}, client)).rejects.toBe(error);
   });
 });
-
