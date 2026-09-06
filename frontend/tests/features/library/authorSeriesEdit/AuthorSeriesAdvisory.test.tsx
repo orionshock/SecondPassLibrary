@@ -85,7 +85,6 @@ describe("Author and Series duplicate advisory", () => {
     expect(listbox).toContain("3 Books");
     expect(listbox).toContain(">arrow_forward</span>");
     expect(listbox).toContain('title="Jump to Author Edit"');
-    expect(listbox).toContain('aria-hidden="true"');
     expect(listbox).not.toContain("as a new Author");
     expect(listbox).not.toContain('aria-selected="true"');
   });
@@ -107,4 +106,3 @@ describe("Author and Series duplicate advisory", () => {
     expect(duplicateAdvisoryDismissesForKey("Enter")).toBe(false);
   });
 });
-

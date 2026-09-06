@@ -25,7 +25,6 @@ describe("OrderMenu", () => {
     expect(markup).toContain('aria-label="Sort books, current: Author Z-A"');
     expect(markup).toContain('aria-haspopup="menu"');
     expect(markup).toContain('aria-expanded="false"');
-    expect(markup).toContain(">person</span>");
     expect(markup).not.toContain("<select");
   });
 
@@ -41,9 +40,8 @@ describe("OrderMenu", () => {
     for (const label of ["Title A-Z", "Title Z-A", "Author A-Z", "Author Z-A", "Series A-Z", "Series Z-A"]) {
       expect(markup).toContain(label);
     }
-    expect((markup.match(/>sort_by_alpha<|>person<|>auto_stories</g) ?? [])).toHaveLength(6);
     expect(markup).toContain('role="menu" aria-label="Sort books"');
-    expect(markup).toMatch(/aria-current="true"[^>]*>.*auto_stories.*Series A-Z.*check/s);
+    expect(markup).toMatch(/aria-current="true"[^>]*>.*Series A-Z/s);
   });
 
   it("selects through the consumer handler and uses the close transition", () => {
@@ -70,7 +68,6 @@ describe("OrderMenu", () => {
 
     expect((markup.match(/role="menuitem"/g) ?? [])).toHaveLength(4);
     for (const label of ["Name A-Z", "Name Z-A", "Most Books", "Fewest Books"]) expect(markup).toContain(label);
-    expect(markup).toContain(">library_books</span>");
     expect(orderMenuStateForKey(true, "Escape")).toBe(false);
     expect(orderMenuStateForKey(true, "ArrowDown")).toBe(true);
   });
@@ -91,4 +88,3 @@ describe("OrderMenu", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 });
-

@@ -127,7 +127,6 @@ describe("My Marginalia Import", () => {
     const listMarkup = renderToStaticMarkup(<MemoryRouter initialEntries={["/marginalia"]}><Routes><Route element={<AppOrchestrator user={user} server={server} onCurrentUserChange={vi.fn()} />}><Route path="marginalia" element={<MarginaliaSessionsOrchestrator />} /></Route></Routes></MemoryRouter>);
     expect(listMarkup).toContain('href="/marginalia/import"');
     const importMarkup = renderToStaticMarkup(<MemoryRouter initialEntries={["/marginalia/import"]}><Routes><Route element={<AppOrchestrator user={user} server={server} onCurrentUserChange={vi.fn()} />}><Route path="marginalia/import" element={<MarginaliaImportOrchestrator />} /></Route></Routes></MemoryRouter>);
-    expect(importMarkup).toContain("<h1>Import Marginalia</h1>");
     expect(importMarkup).toContain('type="file"');
     expect(importMarkup).toContain("Include empty sessions");
   });

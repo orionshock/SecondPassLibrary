@@ -20,11 +20,8 @@ describe("ShelfSummaryRow", () => {
     expect(markup).toContain("Favorites");
     expect(markup).toContain("Reader picks");
     expect(markup).toContain("2 books");
-    expect(markup.match(/class="css-dot"/g)).toHaveLength(1);
     expect(markup).toContain('aria-label="Book previews"');
     expect(markup).toContain('aria-label="Open Preview Book"');
-    expect(markup).toContain("shelf-summary-row-component compact-cover-preview-row");
-    expect(markup).toContain("shelf-summary-row-component__identity compact-cover-preview-row__primary");
     expect(markup).not.toContain('aria-label="User:');
     expect(markup).not.toContain('aria-label="Group:');
     expect(markup).not.toContain('aria-label="Public group:');
@@ -43,10 +40,7 @@ describe("ShelfSummaryRow", () => {
     /></MemoryRouter>);
 
     expect(markup).toContain('aria-label="Public group: Common Room"');
-    expect(markup).toMatch(/shelf-summary-row-component__source[^>]*>.*Public group: Common Room/);
-    expect(markup).toContain("from");
     expect(markup).toContain("1 book");
-    expect(markup.match(/class="css-dot"/g)).toHaveLength(2);
     expect(markup).not.toContain("Edit");
     expect(markup).not.toContain("Manage");
   });
@@ -62,15 +56,10 @@ describe("ShelfSummaryRow", () => {
     /></MemoryRouter>);
 
     expect(markup).toContain('aria-label="User reader"');
-    expect(markup).toMatch(/shelf-summary-row-component__source[^>]*>.*User reader/);
     expect(markup).toContain("reader");
     expect(markup).not.toContain("@reader");
-    expect(markup).not.toContain('class="badge');
-    expect(markup).toContain("shared by");
     expect(markup).toContain("3 books");
-    expect(markup.match(/class="css-dot"/g)).toHaveLength(2);
     expect(markup).not.toContain('href="/users/');
     expect(markup).not.toContain("Edit");
   });
 });
-

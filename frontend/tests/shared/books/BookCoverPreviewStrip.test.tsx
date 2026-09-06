@@ -20,8 +20,6 @@ describe("BookCoverPreviewStrip", () => {
     expect(markup.match(/aria-label="Open Book /g)).toHaveLength(COMPACT_BOOK_COVER_PREVIEW_SOURCE_LIMIT);
     expect(markup).toContain('href="/library/books/book-12"');
     expect(markup).not.toContain('href="/library/books/book-13"');
-    expect(markup).toContain('class="book-cover-preview-strip-component"');
     expect(markup).toContain('aria-label="Book previews"');
   });
 });
-

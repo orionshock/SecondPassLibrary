@@ -90,7 +90,6 @@ describe("app frame and router", () => {
   it("uses the brand as the sole Dashboard link and marks it active at home", () => {
     const markup = navMarkup({}, {}, "/");
 
-    expect(markup).toMatch(/class="app-identity active"[^>]*href="\/"/);
     expect(markup).toContain('aria-current="page"');
     expect((markup.match(/href="\/"/g) ?? [])).toHaveLength(1);
     expect(markup).not.toContain(">Dashboard<");

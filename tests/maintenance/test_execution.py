@@ -6,7 +6,7 @@ from django.test import TestCase
 from maintenance.models import MaintenanceTaskConfig, MaintenanceTaskRun
 from maintenance.registry import TASK_REGISTRY
 from maintenance.results import MaintenanceOperationError, MaintenanceResult
-from maintenance.services import execute_run
+from maintenance.services import enqueue_run, execute_run
 
 
 class MaintenanceExecutionTests(TestCase):
@@ -106,3 +106,42 @@ class MaintenanceExecutionTests(TestCase):
             run.failure_summary,
             "Cleanup completed with failures. failures=2",
         )
+
+    def test_enqueue_failure_marks_only_the_still_queued_run_failed(self):
+        queued = self.create_run()
+        running = self.create_run(task_key="other-task")
+        MaintenanceTaskRun.objects.filter(pk=running.pk).update(
+            status=MaintenanceTaskRun.Status.RUNNING
+        )
+
+        with (
+            patch(
+                "maintenance.tasks.execute_maintenance_run",
+                side_effect=RuntimeError("broker unavailable"),
+            ),
+            self.assertLogs("maintenance.services", level="ERROR"),
+        ):
+            enqueue_run(queued.pk)
+            enqueue_run(running.pk)
+
+        queued.refresh_from_db()
+        running.refresh_from_db()
+        self.assertEqual(queued.status, MaintenanceTaskRun.Status.FAILED)
+        self.assertEqual(running.status, MaintenanceTaskRun.Status.RUNNING)
+        self.assertNotIn("broker unavailable", queued.failure_summary)
+
+    def test_running_run_cannot_execute_twice(self):
+        run = self.create_run()
+        MaintenanceTaskRun.objects.filter(pk=run.pk).update(
+            status=MaintenanceTaskRun.Status.RUNNING
+        )
+        definition = TASK_REGISTRY[run.task_key]
+        executor = Mock()
+
+        with patch.dict(
+            TASK_REGISTRY,
+            {run.task_key: replace(definition, execute=executor)},
+        ):
+            execute_run(run.pk)
+
+        executor.assert_not_called()

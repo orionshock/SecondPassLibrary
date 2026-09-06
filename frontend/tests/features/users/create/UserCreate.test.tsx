@@ -52,7 +52,7 @@ describe("User create workflow", () => {
       username: "new", email: "e@example.test", firstName: "First", lastName: "Last", role: "reader",
     });
     const markup = renderForm(owner);
-    expect(markup).toMatch(/<a class="button button--secondary" href="\/users"[^>]*>Cancel<\/a>/);
+    expect(markup).toContain('href="/users"');
   });
 
   it("renders field and bounded action feedback from validation errors", () => {

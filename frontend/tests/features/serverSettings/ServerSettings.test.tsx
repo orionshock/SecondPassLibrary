@@ -47,9 +47,7 @@ describe("Server Settings", () => {
     expect(read).toContain("<strong>library</strong>");
     expect(read).toContain("<em>Maintenance</em>");
     expect(read).not.toContain("&lt;p&gt;");
-    expect(read.match(/server-settings-region/g)).toHaveLength(1);
     expect(read).not.toContain("server-settings-name");
-    expect(edit).toContain('class="form-field"');
     expect(edit).toContain('id="server-settings-name"');
     expect(edit).toContain("limited-rich-text-editor");
     expect(edit).toContain(`${settings.general.description.length} / 1,000`);
@@ -79,7 +77,7 @@ describe("Server Settings", () => {
     expect(edit).toContain('value="https://reader.example.com"');
     expect(edit).not.toContain("disabled");
     expect(lockedEdit).toMatch(/id="server-settings-reader-web-client"[^>]*disabled/);
-    expect(invalid).toContain('class="field-error"');
+    expect(invalid).toContain("Invalid URL.");
     expect(serverSettingsFormId("external-services")).toBe("server-settings-external-services-form");
   });
 

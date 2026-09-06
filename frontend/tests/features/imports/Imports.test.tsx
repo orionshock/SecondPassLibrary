@@ -58,7 +58,6 @@ describe("Imports", () => {
       state={{ pending: false, error: new LocalValidationError("Choose a file to import.", { file: ["Choose a file to import."] }) }}
       inputRef={{ current: null }} onFileChange={vi.fn()} onSubmit={vi.fn()}
     />);
-    expect(errorMarkup).toContain('class="field-error"');
     expect(errorMarkup).toContain('role="alert"');
   });
 

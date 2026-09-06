@@ -10,7 +10,7 @@ from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
 from django.test import TestCase
 
-from library.imports.cli_runner import run_cli_import
+from library.imports.cli_runner import MIN_DESTINATION_FREE_BYTES, run_cli_import
 from library.imports.cli_sources import (
     ImportSourceAdapter,
     ImportSourceEvent,
@@ -428,6 +428,56 @@ class SequentialImportRunnerTests(TestCase):
 
         self.assertIn("Interrupted after candidate 0", output.getvalue())
 
+    def test_free_space_loss_before_candidate_import_stops_without_persisting(self):
+        output = StringIO()
+        command = BaseCommand(stdout=output)
+        source = _EventsSource([_candidate_event("book.epub")])
+
+        with (
+            patch(
+                "library.imports.cli_runner._destination_free_bytes",
+                side_effect=[MIN_DESTINATION_FREE_BYTES * 2, 1],
+            ),
+            patch("library.imports.cli_runner.import_epub_file") as importer,
+            self.assertRaises(CommandError),
+        ):
+            run_cli_import(command=command, source=source)
+
+        importer.assert_not_called()
+        self.assertFalse(Book.objects.exists())
+        self.assertIn("Destination free space", output.getvalue())
+
+    def test_fatal_candidate_io_failure_stops_before_the_next_source(self):
+        output = StringIO()
+        command = BaseCommand(stdout=output)
+        source = _EventsSource(
+            [
+                ImportSourceEvent(
+                    source_label="broken.epub",
+                    result=ImportItemResult(
+                        status="failed",
+                        source_label="broken.epub",
+                        error_category="io_error",
+                    ),
+                ),
+                _candidate_event("must-not-run.epub"),
+            ]
+        )
+
+        with (
+            patch(
+                "library.imports.cli_runner._destination_free_bytes",
+                return_value=MIN_DESTINATION_FREE_BYTES * 2,
+            ),
+            patch("library.imports.cli_runner.import_epub_file") as importer,
+            self.assertRaises(CommandError),
+        ):
+            run_cli_import(command=command, source=source)
+
+        importer.assert_not_called()
+        self.assertEqual(source.yielded, ["broken.epub"])
+        self.assertIn("Candidate I/O or storage failed", output.getvalue())
+
 
 class _ObservingSource(ImportSourceAdapter):
     method = "test"
@@ -450,6 +500,34 @@ class _ObservingSource(ImportSourceAdapter):
             ),
         )
         self.observed_completed_output = "Readable Result" in self.output.getvalue()
+
+
+class _EventsSource(ImportSourceAdapter):
+    method = "test"
+    limit_description = "test limits"
+
+    def __init__(self, events):
+        super().__init__(Path("test-source"))
+        self.events = events
+        self.yielded = []
+
+    def iter_events(self):
+        for event in self.events:
+            self.yielded.append(event.source_label)
+            yield event
+
+
+def _candidate_event(source_label: str) -> ImportSourceEvent:
+    return ImportSourceEvent(
+        source_label=source_label,
+        candidate=PreparedImportCandidate(
+            source_method="test",
+            source_label=source_label,
+            epub_filename=source_label,
+            file_obj=BytesIO(b"epub"),
+            file_size=4,
+        ),
+    )
 
 
 def _write_file(path: Path, data: bytes) -> Path:

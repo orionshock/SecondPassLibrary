@@ -41,6 +41,28 @@ class MaintenanceSchedulingTests(TestCase):
         self.configuration.refresh_from_db()
         self.assertEqual(self.configuration.next_due_at, now + timedelta(hours=1))
 
+    def test_active_run_suppresses_duplicate_dispatch_and_advances_schedule(self):
+        now = timezone.now()
+        MaintenanceTaskConfig.objects.filter(pk=self.configuration.pk).update(
+            enabled=True,
+            frequency=MaintenanceFrequency.HOURLY,
+            next_due_at=now - timedelta(minutes=1),
+        )
+        MaintenanceTaskRun.objects.create(
+            configuration=self.configuration,
+            task_key=self.configuration.task_key,
+            trigger=MaintenanceTaskRun.Trigger.ADMIN,
+            status=MaintenanceTaskRun.Status.RUNNING,
+        )
+
+        with patch("maintenance.services.enqueue_run") as enqueue:
+            self.assertEqual(dispatch_due_tasks(now=now), 0)
+
+        enqueue.assert_not_called()
+        self.assertEqual(MaintenanceTaskRun.objects.count(), 1)
+        self.configuration.refresh_from_db()
+        self.assertEqual(self.configuration.next_due_at, now + timedelta(hours=1))
+
     def test_disabled_manual_and_not_yet_due_tasks_are_skipped(self):
         now = timezone.now()
         cases = (
