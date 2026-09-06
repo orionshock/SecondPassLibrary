@@ -140,9 +140,12 @@ untrusted, shared, or pass-through proxy.
 The reverse proxy should also:
 
 - own HTTPS redirect and HSTS;
+- set baseline response headers at the proxy, including a restrictive
+  `Referrer-Policy`, `X-Content-Type-Options: nosniff`, and an appropriate
+  framing policy; add CSP only after validating the built Product UI;
 - replace forwarded protocol and client-address headers;
 - enforce reasonable request-body and header-size limits; the Library import
-  request ceiling must permit the documented 256 MiB application limit without
+  request ceiling must permit the documented 128 MiB application limit without
   becoming a general multi-gigabyte upload path (see [Imports](imports.md));
 - enforce header/read/idle timeouts that still allow expected synchronous
   imports and exports;
@@ -153,8 +156,9 @@ The reverse proxy should also:
 With redirect and HSTS owned by the proxy, Django `check --deploy` may
 legitimately report `security.W004` (`SECURE_HSTS_SECONDS`) and `security.W008`
 (`SECURE_SSL_REDIRECT`). Review every warning; do not broadly silence deploy
-checks. Secure-cookie warnings are not expected for an HTTPS deployment with
-`DJANGO_SECURE_COOKIES=1`.
+checks. Second Pass Library raises a deploy-check error when forwarded HTTPS
+trust is enabled without secure session and CSRF cookies. Local direct HTTP
+remains supported because that check applies only to forwarded HTTPS trust.
 
 A VPN such as Tailscale may provide a private path to the proxy, but it is
 optional infrastructure and not a Second Pass Library authentication or trust
