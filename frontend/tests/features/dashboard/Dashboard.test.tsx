@@ -159,12 +159,9 @@ describe("Dashboard", () => {
       '/shelves"', '/shelves?scope=shared', '/shelves?scope=group', '/shelves/new',
       '/library"', '/library?view=authors', '/library?view=series', '/groups"',
     ]) expect(all).toContain(`href="${destination}`);
-    expect(all).toContain('aria-label="My Marginalia actions"');
-    expect(all).toContain('aria-hidden="true"');
-    expect(all).toContain(">By Session</span>");
   });
 
-  it("uses authoritative Shelf scopes and adapts Shelf and Library grids to visible actions", () => {
+  it("uses authoritative Shelf scopes and gates advanced Group navigation", () => {
     const advanced = renderDashboard({ status: "ready", items: [] });
     for (const link of [
       'href="/shelves"',

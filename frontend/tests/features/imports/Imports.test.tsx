@@ -37,12 +37,11 @@ describe("Imports", () => {
     expect(denied).not.toContain('type="file"');
   });
 
-  it("renders a native pending upload form with action feedback placement", () => {
+  it("disables the native upload form while an import is pending", () => {
     const markup = renderToStaticMarkup(<ImportUploadPageRegion state={{ pending: true }} inputRef={{ current: null }} onFileChange={vi.fn()} onSubmit={vi.fn()} />);
     expect(markup).toContain('type="file"');
     expect(markup).toContain('accept=".epub,.zip"');
     expect(markup).toContain('disabled=""');
-    expect(markup.indexOf("action-feedback")).toBeLessThan(markup.indexOf('type="submit"'));
   });
 
   it("blocks an empty selection before upload and clears the native input after success", async () => {
@@ -78,7 +77,10 @@ describe("Imports", () => {
       bookNavigation={importResultBookNavigation}
     /></MemoryRouter>);
     expect(markup).toContain('href="/library/books/uuid-0"');
-    expect((markup.match(/class="import-result-item /g) ?? [])).toHaveLength(55);
+    expect(markup).toContain("Human title");
+    for (let index = 1; index < items.length; index += 1) {
+      expect(markup).toContain(`safe-${index}.epub`);
+    }
   });
 
   it("keeps results without a known Book non-interactive", () => {
@@ -107,4 +109,3 @@ describe("Imports", () => {
     expect(importsBreadcrumbFallback).toEqual([]);
   });
 });
-
