@@ -30,7 +30,15 @@ def parser() -> argparse.ArgumentParser:
     argument_parser = argparse.ArgumentParser(description="Run a supported verification lane.")
     argument_parser.add_argument(
         "--lane",
-        choices=("all", "fast", "backend", "backend-coverage", "frontend", "frontend-coverage"),
+        choices=(
+            "all",
+            "fast",
+            "backend",
+            "backend-coverage",
+            "frontend",
+            "frontend-coverage",
+            "security-deps",
+        ),
         default="all",
     )
     return argument_parser
@@ -62,6 +70,31 @@ def main() -> int:
         return 0
     if lane == "frontend-coverage":
         run("Frontend coverage", [npm, "--prefix", "frontend", "run", "test:coverage"])
+        return 0
+    if lane == "security-deps":
+        failures = []
+        for label, command in (
+            (
+                "Python dependency advisories",
+                [python, "-m", "pip_audit", "--requirement", "requirements.txt"],
+            ),
+            (
+                "Frontend dependency advisories",
+                [npm, "--prefix", "frontend", "audit", "--audit-level=high"],
+            ),
+        ):
+            try:
+                run(label, command)
+            except subprocess.CalledProcessError:
+                failures.append(label)
+        if failures:
+            print(
+                "\nDependency advisory verification failed: "
+                f"{', '.join(failures)}. Review the scanner output for "
+                "advisories or registry/tool errors.",
+                file=sys.stderr,
+            )
+            return 1
         return 0
 
     run("Ruff", [python, "-m", "ruff", "check", "."])

@@ -288,7 +288,15 @@ same script. Select a narrower supported lane with `--lane`:
 - `frontend`: Vitest, TypeScript, the boundary checker, and production build;
 - `frontend-coverage`: separate Product UI and SDK coverage under
   `test-results/coverage/frontend/`;
+- `security-deps`: opt-in live dependency advisory checks using `pip-audit`
+  for pinned Python requirements and `npm audit` for the frontend lockfile;
 - `all`: the release-confidence aggregate and default.
+
+The advisory lane requires network access and a developer-installed
+`pip-audit` (`python -m pip install pip-audit`). It is intentionally separate
+from fast and release-confidence verification so registry outages do not block
+offline development. `pip check` and `npm ls` remain dependency-integrity
+checks, not vulnerability scans.
 
 Individual checks remain available below for focused work.
 
