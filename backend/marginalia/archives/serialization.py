@@ -263,14 +263,16 @@ def _serialize_annotation(annotation: Annotation) -> ArchiveAnnotation:
 
 
 def _book_to_wire(book: ArchiveBook) -> dict[str, Any]:
-    return {
-        "fileHash": book.file_hash,
+    value = {
         "title": book.title,
         "authors": list(book.authors),
         "readingSessions": [
             _session_to_wire(session) for session in book.reading_sessions
         ],
     }
+    if book.file_hash:
+        value["fileHash"] = book.file_hash
+    return value
 
 
 def _session_to_wire(session: ArchiveReadingSession) -> dict[str, Any]:

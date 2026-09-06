@@ -81,18 +81,28 @@ def unmatched_archive_zip(*, user, import_token: str) -> bytes:
 def _unmatched_books(
     *, preview: dict, archive: MarginaliaArchive, include_empty_sessions: bool
 ) -> tuple[tuple[ArchiveBook, tuple], ...]:
-    archive_books = {book.file_hash: book for book in archive.books}
+    archive_books = [
+        book
+        for book in archive.books
+        if any(
+            include_empty_sessions or session.annotations
+            for session in book.reading_sessions
+        )
+    ]
+    if len(archive_books) != len(preview["books"]):
+        raise UnmatchedStageIntegrityError
     results = []
     candidate_ids = set()
     downloadable_count = 0
-    for preview_book in preview["books"]:
+    for preview_book, source_book in zip(
+        preview["books"], archive_books, strict=True
+    ):
         match_status = preview_book["match"]["status"]
         if match_status not in {"matched", "unmatched"}:
             raise UnmatchedStageIntegrityError
         if match_status == "unmatched" and preview_book["match"].get("reason") not in UNMATCHED_REASONS:
             raise UnmatchedStageIntegrityError
-        source_book = archive_books.get(preview_book["file_hash"])
-        if source_book is None:
+        if source_book.file_hash != preview_book["file_hash"]:
             raise UnmatchedStageIntegrityError
         source_sessions = {
             session.source_reading_session_id: session

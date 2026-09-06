@@ -78,13 +78,20 @@ class MarginaliaArchiveValidationTests(SimpleTestCase):
             lambda value: _annotation(value).__setitem__("id", "ambiguous"),
             lambda value: _annotation(value).pop("clientAnnotationId"),
             lambda value: value["books"][0].__setitem__("source", "not-portable"),
-            lambda value: value["books"][0].pop("fileHash"),
         )
         for mutate in mutations:
             payload = _valid_archive()
             mutate(payload)
             with self.subTest(mutate=mutate), self.assertRaises(ArchiveValidationError):
                 parse_archive(json.dumps(payload))
+
+    def test_missing_file_hash_is_preserved_as_absent_identity(self):
+        payload = _valid_archive()
+        payload["books"][0].pop("fileHash")
+
+        archive = parse_archive(json.dumps(payload))
+
+        self.assertEqual(archive.books[0].file_hash, "")
 
     def test_strict_annotation_shapes_are_enforced(self):
         bookmark_with_body = _valid_archive()

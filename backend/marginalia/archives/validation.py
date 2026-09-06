@@ -202,7 +202,7 @@ def _archive_from_wire(value: dict[str, Any]) -> MarginaliaArchive:
 
 def _book_from_wire(value: dict[str, Any]) -> ArchiveBook:
     return ArchiveBook(
-        file_hash=value["fileHash"],
+        file_hash=value.get("fileHash", ""),
         title=value["title"],
         authors=tuple(value["authors"]),
         reading_sessions=tuple(

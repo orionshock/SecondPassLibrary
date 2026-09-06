@@ -197,6 +197,18 @@ class MarginaliaImportUnmatchedAPITests(IsolatedUserdataMixin, APITestCase):
             len(raw_members),
         )
 
+    def test_missing_file_hash_remains_downloadable_as_unmatched(self):
+        payload = archive_payload(file_hash=f"sha256:{'b' * 64}")
+        payload["books"][0].pop("fileHash")
+        preview = self.preview(payload)
+
+        response = self.download(preview["import_token"])
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        with ZipFile(BytesIO(response.content)) as archive:
+            exported = parse_archive(archive.read(archive.namelist()[0]))
+        self.assertEqual(exported.books[0].file_hash, "")
+
     def test_staged_empty_policy_controls_content_and_omits_empty_books(self):
         nonempty = archive_session(source_id="nonempty")
         empty = archive_session(source_id="empty", annotations=[])

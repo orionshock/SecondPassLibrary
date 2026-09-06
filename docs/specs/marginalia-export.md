@@ -33,14 +33,23 @@ envelope, Book, Session, progress, location, body, and annotation properties.
 
 ## Book identity and review metadata
 
-`fileHash` is the sole portable Book identity. It is the SHA-256 checksum of the
-exact EPUB bytes because locations and quote context belong to those bytes. A
-hash is unique across one archive; a missing or duplicate hash is an integrity
-failure, not an instruction to merge Books.
+`fileHash` is the sole portable Book identity. It has the form
+`sha256:<lowercase hex>` and is the SHA-256 checksum of the exact uploaded EPUB
+bytes, calculated before EPUB parsing and stored on the Library Book. Export
+serializes that stored checksum without hashing metadata, extracted files, or a
+repacked archive. Locations and quote context belong to those exact bytes. A
+hash is unique across one archive. Second Pass Library exports always include
+it and reject export when the Book lacks a usable checksum. Import accepts an
+entry with no `fileHash` only as an Unmatched Book; absence is never an
+instruction to infer identity from metadata. Duplicate supplied hashes remain
+an archive integrity failure.
 
-Title and ordered Author names are bounded review metadata. They are not
-matching fallbacks and do not replace the hash. The archive contains no local
-Book UUID, storage or download data, permission state, Groups, or Shelves.
+Import checks `fileHash` before any other Book data and has no metadata-only
+matching path. A different checksum remains Unmatched even when title, ordered
+Author names, ISBN, EPUB UID, Calibre ID, or other metadata describe the same
+bibliographic work. Title and ordered Author names are bounded review metadata;
+they do not replace the hash. The archive contains no local Book UUID, storage
+or download data, permission state, Groups, or Shelves.
 
 ## Archive semantics
 

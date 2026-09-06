@@ -134,12 +134,27 @@ and preview consistency are checked without disclosing whether another user's
 stage exists. Cleanup scheduling and command usage belong in
 [Operations](operations.md#marginalia-import-stages).
 
-Book matching uses the canonical `fileHash` identity only; title, author,
-identifier, and CFI values are not matching fallbacks. Preview distinguishes:
+Book matching uses the canonical `fileHash` identity only. `fileHash` is
+`sha256:<lowercase hex>`, where the digest is calculated from the exact uploaded
+EPUB byte stream before parsing and is the same checksum stored on the Library
+Book. Export serializes that stored checksum; import compares it directly with
+currently stored Book checksums. Title, Author, ISBN, EPUB UID, Calibre ID,
+other identifiers, and CFI values are never matching fallbacks. The same
+bibliographic work in a repacked or otherwise byte-different EPUB therefore
+remains Unmatched because its annotation locations may not be compatible.
+Preview distinguishes:
 
 - `not_found`: no Book has the supplied identity;
 - `ambiguous_match`: more than one currently visible Book has it;
 - `book_inaccessible`: a Book identity exists but is not currently visible.
+
+For `not_found`, import the exact EPUB represented by the archive before
+previewing again. Similar title, Author, or identifier metadata cannot repair a
+checksum mismatch.
+
+Second Pass Library exports always include `fileHash`. An imported entry that
+omits it remains Unmatched and can be downloaded again; the importer does not
+substitute bibliographic metadata for the missing identity.
 
 `book_inaccessible` deliberately confirms that the exact archive-supplied hash
 is known. The privacy boundary is that it reveals no fresh live metadata,

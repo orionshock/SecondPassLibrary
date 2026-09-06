@@ -179,6 +179,24 @@ describe("My Marginalia Import", () => {
     expect(markup).not.toContain("source-session-1");
   });
 
+  it("gives an unmatched checksum a safe, actionable recovery path", () => {
+    const unmatchedPreview = {
+      ...preview,
+      books: preview.books.map((book) => book.candidateId === "book-000002"
+        ? { ...book, match: { status: "unmatched" as const, reason: "not_found" as const } }
+        : book),
+    };
+
+    const markup = renderImport({
+      preview: unmatchedPreview,
+      draft: createMarginaliaImportDraft(unmatchedPreview),
+    });
+
+    expect(markup).toContain("exact EPUB file checksum");
+    expect(markup).toContain("Import the same EPUB file");
+    expect(markup).not.toContain("sha256:missing");
+  });
+
   it("keeps candidate-driven Book bulk selection and optional Session editors", () => {
     const draft = createMarginaliaImportDraft(preview);
     draft["reading-session-000002"] = { ...draft["reading-session-000002"]!, selected: false };

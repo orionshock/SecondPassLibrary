@@ -15,8 +15,11 @@ from rest_framework.test import APIClient, APITestCase
 from accounts.client_sessions.services import generate_bearer_token, hash_client_secret
 from accounts.models import UserClientSession
 from library.models import (
+    Author,
     Book,
+    BookAuthor,
     BookGroupAssignment,
+    BookIdentifier,
     LibraryGroup,
     LibraryGroupMembership,
 )
@@ -90,7 +93,11 @@ class MarginaliaImportPreviewAPITests(IsolatedUserdataMixin, APITestCase):
     def test_preview_contract_uses_explicit_candidates_and_exact_accessible_hash_match(
         self,
     ):
-        response = self.post_preview(archive_payload(file_hash=f"sha256:{'a' * 64}"))
+        payload = archive_payload(file_hash=f"sha256:{'a' * 64}")
+        payload["books"][0]["title"] = "Different title"
+        payload["books"][0]["authors"] = ["Different Author"]
+
+        response = self.post_preview(payload)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         payload = response.data
@@ -119,6 +126,39 @@ class MarginaliaImportPreviewAPITests(IsolatedUserdataMixin, APITestCase):
         self.assertNotIn("path", json.dumps(payload).lower())
         self.assertNotIn("download_url", json.dumps(payload))
 
+    def test_same_title_author_and_library_identifiers_do_not_replace_checksum(self):
+        author = Author.objects.create(name="Example Author")
+        BookAuthor.objects.create(book=self.book, author=author, position=0)
+        BookIdentifier.objects.create(
+            book=self.book,
+            scheme=BookIdentifier.SCHEME_ISBN_13,
+            value="9780000000001",
+            normalized_value="9780000000001",
+        )
+
+        response = self.post_preview(archive_payload(file_hash=f"sha256:{'c' * 64}"))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["books"][0]["match"],
+            {"status": "unmatched", "reason": "not_found"},
+        )
+        self.assertFalse(response.data["can_apply"])
+
+    def test_missing_file_hash_is_unmatched_without_metadata_lookup(self):
+        payload = archive_payload(file_hash=f"sha256:{'a' * 64}")
+        payload["books"][0].pop("fileHash")
+
+        response = self.post_preview(payload)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data["books"][0]["match"],
+            {"status": "unmatched", "reason": "not_found"},
+        )
+        self.assertEqual(response.data["books"][0]["file_hash"], "")
+        self.assertFalse(response.data["can_apply"])
+
     def test_inaccessible_book_is_unmatched_with_staged_metadata_only(self):
         staged = archive_payload(file_hash=f"sha256:{'b' * 64}")
         staged["books"][0]["title"] = "Staged hidden title"
@@ -146,13 +186,28 @@ class MarginaliaImportPreviewAPITests(IsolatedUserdataMixin, APITestCase):
         )
 
     def test_missing_book_has_distinct_unmatched_reason(self):
-        response = self.post_preview(archive_payload(file_hash=f"sha256:{'c' * 64}"))
+        with self.assertLogs("marginalia.imports.services", level="INFO") as logs:
+            response = self.post_preview(
+                archive_payload(file_hash=f"sha256:{'c' * 64}")
+            )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(
             response.data["books"][0]["match"],
             {"status": "unmatched", "reason": "not_found"},
         )
+        diagnostic = next(
+            message for message in logs.output if "Book match evaluated" in message
+        )
+        self.assertIn("source_method=web", diagnostic)
+        self.assertIn("file_hash_present=true", diagnostic)
+        self.assertIn("hash_algorithm=sha256", diagnostic)
+        self.assertIn("visible_checksum_matches=0", diagnostic)
+        self.assertIn("metadata_fallback_attempted=false", diagnostic)
+        self.assertIn("outcome=not_found", diagnostic)
+        self.assertNotIn("Archive Book", diagnostic)
+        self.assertNotIn("c" * 64, diagnostic)
+        self.assertNotIn("books/", diagnostic)
 
     def test_empty_policy_defaults_to_exclusion_and_opt_in_includes(self):
         sessions = [

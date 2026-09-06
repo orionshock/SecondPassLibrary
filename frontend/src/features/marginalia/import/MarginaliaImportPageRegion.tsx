@@ -89,7 +89,7 @@ function MarginaliaImportReview({ preview, draft, editingSessionKeys, selectedCo
                 : <Badge>{book.match.reason === "book_inaccessible" ? "Unavailable Book" : "Unmatched Book"}</Badge>}
             </span>
           </header>
-          {book.match.status === "unmatched" && book.match.reason === "book_inaccessible" ? <p className="marginalia-import-warning">This Book exists but is not currently available through your Library access. Its staged Sessions remain in the Unmatched download.</p> : null}
+          {book.match.status === "unmatched" ? <p className="marginalia-import-warning">{unmatchedBookGuidance(book.match.reason)}</p> : null}
           <div className="marginalia-import-sessions">{book.readingSessions.map((session, sessionIndex) => {
           const key = session.candidateId;
           const value = draft[key] ?? { selected: false, name: session.name, notes: session.notes };
@@ -126,6 +126,16 @@ function MarginaliaImportReview({ preview, draft, editingSessionKeys, selectedCo
       <Button type="button" disabled={!preview.canApply || selectedCount === 0 || applyState.pending || downloadState.pending} onClick={onApply}>{applyState.pending ? "Importing..." : "Import Selected Sessions"}</Button>
     </ActionRow>
   </section>;
+}
+
+function unmatchedBookGuidance(reason: "not_found" | "ambiguous_match" | "book_inaccessible") {
+  if (reason === "book_inaccessible") {
+    return "This Book exists but is not currently available through your Library access. Its staged Sessions remain in the Unmatched download.";
+  }
+  if (reason === "ambiguous_match") {
+    return "More than one visible Book has this file checksum. Resolve the duplicate file identities, then preview the import again.";
+  }
+  return "No visible Book matched this exact EPUB file checksum. Import the same EPUB file, then preview again.";
 }
 
 function BookSelectionCheckbox({ label, state, disabled, onChange }: { label: string; state: MarginaliaImportBookSelectionState; disabled: boolean; onChange: (selected: boolean) => void }) {

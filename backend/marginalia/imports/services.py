@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+import logging
+import re
 from typing import cast
 
 from django.utils.dateparse import parse_datetime
 
+from core.operational_logging import user_uuid
 from library.models import Book
 from library.queries import visible_books_for_user
 from marginalia.archives import MarginaliaArchive, parse_archive
@@ -13,6 +16,8 @@ from .staging import create_import_stage
 
 
 MAX_IMPORT_BYTES = 25 * 1024 * 1024
+_SHA256_FILE_HASH_RE = re.compile(r"^sha256:(?P<digest>[0-9a-f]{64})$", re.IGNORECASE)
+logger = logging.getLogger(__name__)
 
 
 class ImportPreviewError(ValueError):
@@ -101,6 +106,12 @@ def _build_preview(
 
     for book_number, (book, sessions) in enumerate(surviving_books, start=1):
         match = matches.get(book.file_hash, {"status": "unmatched", "reason": "not_found"})
+        _log_match_evaluation(
+            user=user,
+            candidate_number=book_number,
+            file_hash=book.file_hash,
+            match=match,
+        )
         matched_book = (
             cast(Book, match["book"]) if match["status"] == "matched" else None
         )
@@ -179,7 +190,7 @@ def _build_preview(
 
 
 def _book_matches(*, user, file_hashes: list[str]) -> dict[str, dict]:
-    """Resolve exact identities, exposing only caller-owned data for hidden Books."""
+    """Resolve exact EPUB identities without bibliographic metadata fallback."""
     checksums = [value.removeprefix("sha256:") for value in file_hashes]
     accessible: dict[str, list] = {}
     for book in visible_books_for_user(user, cached=False).filter(
@@ -197,15 +208,61 @@ def _book_matches(*, user, file_hashes: list[str]) -> dict[str, dict]:
     matches = {}
     for file_hash in file_hashes:
         visible = accessible.get(file_hash, [])
+        match_context = {
+            "visible_checksum_matches": len(visible),
+            "known_checksum_matches": int(file_hash in known_hashes),
+            "metadata_fallback_attempted": False,
+        }
         if len(visible) == 1:
-            matches[file_hash] = {"status": "matched", "book": visible[0]}
+            matches[file_hash] = {
+                "status": "matched",
+                "book": visible[0],
+                "matched_by": "checksum",
+                **match_context,
+            }
         elif len(visible) > 1:
-            matches[file_hash] = {"status": "unmatched", "reason": "ambiguous_match"}
+            matches[file_hash] = {
+                "status": "unmatched",
+                "reason": "ambiguous_match",
+                **match_context,
+            }
         elif file_hash in known_hashes:
-            matches[file_hash] = {"status": "unmatched", "reason": "book_inaccessible"}
+            matches[file_hash] = {
+                "status": "unmatched",
+                "reason": "book_inaccessible",
+                **match_context,
+            }
         else:
-            matches[file_hash] = {"status": "unmatched", "reason": "not_found"}
+            matches[file_hash] = {
+                "status": "unmatched",
+                "reason": "not_found",
+                **match_context,
+            }
     return matches
+
+
+def _log_match_evaluation(
+    *, user, candidate_number: int, file_hash: str, match: dict
+) -> None:
+    if match.get("status") == "matched" and match.get("matched_by") == "checksum":
+        return
+    file_hash_match = _SHA256_FILE_HASH_RE.fullmatch(str(file_hash or "").strip())
+    logger.info(
+        "Marginalia import Book match evaluated: source_method=web user=%s "
+        "candidate=book-%06d "
+        "file_hash_present=%s hash_algorithm=%s visible_checksum_matches=%d "
+        "known_checksum_matches=%d metadata_fallback_attempted=%s "
+        "status=%s outcome=%s",
+        user_uuid(user),
+        candidate_number,
+        str(bool(file_hash)).lower(),
+        "sha256" if file_hash_match is not None else "unknown",
+        match.get("visible_checksum_matches", 0),
+        match.get("known_checksum_matches", 0),
+        str(bool(match.get("metadata_fallback_attempted"))).lower(),
+        match.get("status", "unmatched"),
+        match.get("matched_by") or match.get("reason", "not_found"),
+    )
 
 
 def _existing_session_keys(*, user, book_ids) -> set[tuple]:

@@ -24,7 +24,7 @@
       "maxItems": 10000,
       "items": {
         "type": "object",
-        "required": ["fileHash", "title", "authors", "readingSessions"],
+        "required": ["title", "authors", "readingSessions"],
         "properties": {
           "fileHash": {
             "type": "string",
