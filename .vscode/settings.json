@@ -19,9 +19,6 @@
     "**/var": true
   },
   "python.analysis.diagnosticMode": "workspace",
-  "python.analysis.extraPaths": [
-    "${workspaceFolder}/backend"
-  ],
   "python.envFile": "${workspaceFolder}/.env",
   "python.terminal.activateEnvironment": true,
   "python.testing.autoTestDiscoverOnSaveEnabled": true,

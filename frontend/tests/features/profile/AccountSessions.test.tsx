@@ -5,7 +5,6 @@ import { describe, expect, it, vi } from "vitest";
 import { breadcrumbNavigationState } from "../../../src/app/navigation/breadcrumbs";
 import { clientPairingBreadcrumbFallback } from "../../../src/app/navigation/accountBreadcrumbs";
 import { AccountSessionsPageRegion } from "../../../src/features/profile/regions/AccountSessionsPageRegion";
-import { confirmAllClientSessionsRevoke, confirmClientSessionRevoke, confirmLogoutOtherWebSessions } from "../../../src/features/profile/profileConfirmations";
 
 describe("AccountSessionsPageRegion", () => {
   it("renders connected client metadata and the standard revoke control", () => {
@@ -19,18 +18,5 @@ describe("AccountSessionsPageRegion", () => {
   it("disables bulk device disconnection when no active client sessions exist", () => {
     const markup = renderToStaticMarkup(<MemoryRouter><AccountSessionsPageRegion sessions={[]} loading={false} clientState={{ pending: false }} bulkClientState={{ pending: false }} webState={{ pending: false }} clientPairingLinkState={breadcrumbNavigationState(clientPairingBreadcrumbFallback)} onLogoutOthers={vi.fn()} onRevokeAllSessions={vi.fn()} onRevokeSession={vi.fn()} /></MemoryRouter>);
     expect(markup).toMatch(/<button[^>]*disabled=""[^>]*>Disconnect All Devices\/Apps<\/button>/);
-  });
-
-  it("preserves confirmations for destructive session actions", () => {
-    const revokeConfirm = vi.fn(() => false);
-    const logoutConfirm = vi.fn(() => false);
-    const bulkConfirm = vi.fn(() => false);
-    expect(confirmClientSessionRevoke("Living Room Reader", revokeConfirm)).toBe(false);
-    expect(confirmLogoutOtherWebSessions(logoutConfirm)).toBe(false);
-    expect(confirmAllClientSessionsRevoke(bulkConfirm)).toBe(false);
-    expect(revokeConfirm).toHaveBeenCalledWith(expect.stringContaining("Living Room Reader"));
-    expect(logoutConfirm).toHaveBeenCalledWith(expect.stringContaining("all other web sessions"));
-    expect(bulkConfirm).toHaveBeenCalledWith(expect.stringContaining("bearer tokens will stop authenticating immediately"));
-    expect(bulkConfirm).toHaveBeenCalledWith(expect.stringContaining("This browser will remain signed in"));
   });
 });

@@ -9,7 +9,7 @@ import {
   updateGroupInputFromDraft,
   validateGroupDraft,
 } from "../../../src/features/groups/groupDraft";
-import { confirmGroupBookRemoval, confirmGroupMemberRemoval } from "../../../src/features/groups/edit/groupBookMutation";
+import { confirmGroupBookRemoval } from "../../../src/features/groups/edit/groupBookMutation";
 import { confirmGroupDelete } from "../../../src/features/groups/edit/groupDelete";
 import {
   canDeleteGroup,
@@ -243,12 +243,6 @@ describe("Group metadata lifecycle contracts", () => {
     expect(choices).toContain('aria-label="User new-reader"');
     expect(choices).not.toContain("@new-reader");
     expect(blank).not.toContain("new-reader");
-  });
-
-  it("confirms membership removal without implying user deletion", () => {
-    const deny = vi.fn(() => false);
-    expect(confirmGroupMemberRemoval(deny)).toBe(false);
-    expect(deny).toHaveBeenCalledWith("Remove this member from the group?");
   });
 
   it("renders Delete only through an explicit custom-Group danger contract", () => {

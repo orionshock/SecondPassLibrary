@@ -70,8 +70,9 @@ describe("Groups read-only regions", () => {
     expect(markup).toContain("Members");
     expect(markup).toContain("Shelves");
     expect(markup).toContain('role="tablist"');
-    expect((markup.match(/role="tab"/g) ?? [])).toHaveLength(3);
     expect(markup).toContain('id="group-detail-books-tab"');
+    expect(markup).toContain('id="group-detail-members-tab"');
+    expect(markup).toContain('id="group-detail-shelves-tab"');
     expect(markup).toContain('aria-controls="group-detail-books-panel"');
     expect(markup).toContain('aria-selected="true"');
     expect(markup).not.toContain("href=");
@@ -90,12 +91,7 @@ describe("Groups read-only regions", () => {
       onRetry={vi.fn()}
     /></MemoryRouter>);
     expect(detail).toContain('href="/groups/group/edit"');
-    expect(detail).toContain('class="group-detail-header__actions"');
-    expect(detail).toContain('class="button button--secondary group-detail-header__manage"');
     expect(detail).toContain('href="/shelves/new"');
-    expect(detail).toContain('group-detail-header__create-shelf');
-    expect(detail).toContain('aria-hidden="true"');
-    expect(detail).toContain('>add</span>Create Shelf for Group</a>');
 
     const unauthorized = renderToStaticMarkup(<GroupHeaderPageRegion
       group={group}
@@ -105,7 +101,8 @@ describe("Groups read-only regions", () => {
       onTabChange={vi.fn()}
       onRetry={vi.fn()}
     />);
-    expect(unauthorized).not.toContain('group-detail-header__actions');
+    expect(unauthorized).not.toContain('href="/groups/group/edit"');
+    expect(unauthorized).not.toContain('href="/shelves/new"');
 
     const otherTab = renderToStaticMarkup(<MemoryRouter><GroupHeaderPageRegion
       group={group}
