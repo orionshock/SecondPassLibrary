@@ -199,16 +199,46 @@ class DjangoSettingsContractTests(SimpleTestCase):
 
         self.assertIn("secondpass.W001", {message.id for message in messages})
 
-    def test_deploy_check_warns_for_trusted_proxy_without_secure_cookies(self):
+    def test_deploy_check_rejects_trusted_https_proxy_without_secure_cookies(self):
+        for session_secure, csrf_secure in (
+            (False, False),
+            (False, True),
+            (True, False),
+        ):
+            with (
+                self.subTest(session_secure=session_secure, csrf_secure=csrf_secure),
+                self.settings(
+                    DEBUG=False,
+                    SECURE_PROXY_SSL_HEADER=("HTTP_X_FORWARDED_PROTO", "https"),
+                    SESSION_COOKIE_SECURE=session_secure,
+                    CSRF_COOKIE_SECURE=csrf_secure,
+                ),
+            ):
+                messages = run_checks(
+                    tags=[Tags.security],
+                    include_deployment_checks=True,
+                )
+
+            self.assertIn("secondpass.E002", {message.id for message in messages})
+
+    def test_deploy_check_allows_direct_local_http_with_insecure_cookies(self):
         with self.settings(
             DEBUG=False,
-            SECURE_PROXY_SSL_HEADER=("HTTP_X_FORWARDED_PROTO", "https"),
+            SECURE_PROXY_SSL_HEADER=None,
             SESSION_COOKIE_SECURE=False,
             CSRF_COOKIE_SECURE=False,
         ):
-            messages = run_checks(
-                tags=[Tags.security],
-                include_deployment_checks=True,
-            )
+            messages = run_checks(tags=[Tags.security], include_deployment_checks=True)
 
-        self.assertIn("secondpass.W002", {message.id for message in messages})
+        self.assertNotIn("secondpass.E002", {message.id for message in messages})
+
+    def test_deploy_check_accepts_trusted_https_proxy_with_secure_cookies(self):
+        with self.settings(
+            DEBUG=False,
+            SECURE_PROXY_SSL_HEADER=("HTTP_X_FORWARDED_PROTO", "https"),
+            SESSION_COOKIE_SECURE=True,
+            CSRF_COOKIE_SECURE=True,
+        ):
+            messages = run_checks(tags=[Tags.security], include_deployment_checks=True)
+
+        self.assertNotIn("secondpass.E002", {message.id for message in messages})

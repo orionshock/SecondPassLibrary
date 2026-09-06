@@ -25,19 +25,16 @@ def production_security_settings_check(_app_configs=None, **_kwargs):
             )
         )
 
-    if (
-        settings.SECURE_PROXY_SSL_HEADER == ("HTTP_X_FORWARDED_PROTO", "https")
-        and not settings.SESSION_COOKIE_SECURE
-        and not settings.CSRF_COOKIE_SECURE
+    if settings.SECURE_PROXY_SSL_HEADER == ("HTTP_X_FORWARDED_PROTO", "https") and (
+        not settings.SESSION_COOKIE_SECURE or not settings.CSRF_COOKIE_SECURE
     ):
         messages.append(
-            Warning(
-                "Forwarded HTTPS proxy trust is enabled but secure cookies are off.",
+            Error(
+                "Forwarded HTTPS proxy trust requires secure session and CSRF cookies.",
                 hint=(
-                    "Set DJANGO_SECURE_COOKIES=1 for HTTPS reverse-proxy "
-                    "deployments."
+                    "Set DJANGO_SECURE_COOKIES=1 for HTTPS reverse-proxy deployments."
                 ),
-                id="secondpass.W002",
+                id="secondpass.E002",
             )
         )
 
