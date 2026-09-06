@@ -39,7 +39,7 @@ export function SelectedLibraryContextPageRegion({ kind, entityId, name, blurb, 
           breadcrumbs: libraryEntityBreadcrumbs(kind, "edit", name, entityId),
           returnTo,
         })}
-      >Edit</Link> : null}
+      >Edit {entityLabel}</Link> : null}
     </div>
   </header>;
 }

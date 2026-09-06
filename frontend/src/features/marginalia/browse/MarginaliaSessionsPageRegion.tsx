@@ -63,7 +63,7 @@ export function MarginaliaSessionsPageRegion({
           id="marginalia-search"
           type="search"
           value={search}
-          placeholder={bookContext ? "Session name or notes..." : "Session, notes, or Book..."}
+          placeholder={bookContext ? "Session name or notes..." : "Session, notes, or Book…"}
           onChange={(event) => onSearchChange(event.target.value)}
         />
         <Button type="submit">Search</Button>

@@ -1,5 +1,5 @@
 import type { CatalogTag } from "@second-pass/spl-api";
-import { useEffect, useRef, type CSSProperties, type RefObject } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type RefObject } from "react";
 
 import { Button, ErrorPanel } from "../../../components/UiPrimitives";
 
@@ -16,16 +16,25 @@ export function CatalogTagRailPageRegion({ tags, activeTag, activeTagDetails, lo
 }) {
   const desktopActiveTag = useRef<HTMLButtonElement>(null);
   const mobileActiveTag = useRef<HTMLButtonElement>(null);
+  const [tagSearch, setTagSearch] = useState("");
 
   useEffect(() => {
     for (const button of [desktopActiveTag.current, mobileActiveTag.current]) {
       button?.scrollIntoView?.({ block: "nearest" });
     }
-  }, [activeTag, tags]);
+  }, [activeTag, tagSearch, tags]);
 
-  const allTagsButton = <button type="button" className={`catalog-tag-rail__all${!activeTag ? " active" : ""}`} aria-pressed={!activeTag} onClick={() => onTagChange(undefined)}>
+  const allTagsButton = <button type="button" className={`catalog-tag-rail__all${!activeTag ? " active" : ""}`} aria-current={!activeTag ? "true" : undefined} aria-pressed={!activeTag} onClick={() => onTagChange(undefined)}>
     All tags
   </button>;
+  const tagSearchInput = <input
+    className="catalog-tag-rail__search"
+    type="search"
+    aria-label="Search Catalog Tags"
+    placeholder="Search tags..."
+    value={tagSearch}
+    onChange={(event) => setTagSearch(event.target.value)}
+  />;
 
   return <aside
     className="catalog-tag-rail"
@@ -34,16 +43,18 @@ export function CatalogTagRailPageRegion({ tags, activeTag, activeTagDetails, lo
   >
     <h2>Catalog Tags</h2>
     <div className="catalog-tag-rail__desktop">
+      {tagSearchInput}
       {allTagsButton}
-      {tagList(tags, activeTag, activeTagDetails, loading, error, onTagChange, onRetry, desktopActiveTag)}
+      {tagList(tags, activeTag, activeTagDetails, tagSearch, loading, error, onTagChange, onRetry, desktopActiveTag)}
     </div>
     <details className="catalog-tag-rail__mobile">
       <summary>{activeTag
         ? tags?.find(({ slug }) => slug === activeTag)?.name ?? activeTagDetails?.name ?? "Catalog Tags"
         : "All Catalog Tags"}</summary>
       <div className="catalog-tag-rail__mobile-body">
+        {tagSearchInput}
         {allTagsButton}
-        {tagList(tags, activeTag, activeTagDetails, loading, error, onTagChange, onRetry, mobileActiveTag)}
+        {tagList(tags, activeTag, activeTagDetails, tagSearch, loading, error, onTagChange, onRetry, mobileActiveTag)}
       </div>
     </details>
   </aside>;
@@ -53,6 +64,7 @@ function tagList(
   tags: CatalogTag[] | undefined,
   activeTag: string | undefined,
   activeTagDetails: CatalogTag | undefined,
+  tagSearch: string,
   loading: boolean,
   error: Error | undefined,
   onTagChange: (tag?: string) => void,
@@ -60,9 +72,15 @@ function tagList(
   activeTagRef: RefObject<HTMLButtonElement | null>,
 ) {
   const contextualIds = new Set(tags?.map(({ id }) => id));
-  const displayedTags = activeTagDetails && activeTag === activeTagDetails.slug && !contextualIds.has(activeTagDetails.id)
+  const availableTags = activeTagDetails && activeTag === activeTagDetails.slug && !contextualIds.has(activeTagDetails.id)
     ? [...(tags ?? []), activeTagDetails]
     : tags;
+  const normalizedSearch = tagSearch.trim().toLowerCase();
+  const displayedTags = normalizedSearch
+    ? availableTags?.filter((tag) => (
+      tag.slug === activeTag || tag.name.toLowerCase().includes(normalizedSearch)
+    ))
+    : availableTags;
   return <div
     className="catalog-tag-rail__list"
     data-minimum-visible-rows={CATALOG_TAG_MINIMUM_VISIBLE_ROWS}
@@ -76,6 +94,7 @@ function tagList(
         ref={active ? activeTagRef : undefined}
         type="button"
         className={active ? "active" : ""}
+        aria-current={active ? "true" : undefined}
         aria-pressed={active}
         onClick={() => onTagChange(catalogTagSelection(activeTag, tag.slug))}
       >

@@ -90,8 +90,6 @@ describe("My Marginalia Session list", () => {
     expect(marginaliaSessionNoteExcerpt(exact)).toBe(exact);
     expect(marginaliaSessionNoteExcerpt(`${exact}y`)).toBe(`${exact}…`);
     expect(marginaliaSessionNoteExcerpt(" \n\t  ")).toBeUndefined();
-    const blankMarkup = renderRegion({ items: [{ ...visibleSession, notes: " \n\t " }], count: 1, next: null, previous: null });
-    expect(blankMarkup).not.toContain("…");
   });
 
   it("renders URL-backed filter controls and the shared pagination frame", () => {

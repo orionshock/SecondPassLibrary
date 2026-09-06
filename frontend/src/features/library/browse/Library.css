@@ -215,6 +215,13 @@
   min-height: 0;
 }
 
+.catalog-tag-rail__search {
+  min-width: 0;
+  margin: 0.2rem 0.45rem;
+  padding: 0.38rem 0.45rem;
+  font-size: 0.78rem;
+}
+
 .catalog-tag-rail__list {
   display: grid;
   grid-template-columns: max-content minmax(0, 1fr);
@@ -266,8 +273,10 @@
 .catalog-tag-rail__all.active,
 .catalog-tag-rail__list > button.active {
   border-color: color-mix(in srgb, var(--focus), transparent 45%);
+  box-shadow: inset 3px 0 0 var(--focus);
   color: var(--text);
   background: rgb(125 211 252 / 8%);
+  font-weight: 700;
 }
 
 .catalog-tag-rail__name {

@@ -66,7 +66,7 @@ export function MarginaliaExportPageRegion({ page, pageNumber, pageSize, search,
       <section className="marginalia-controls" aria-label="Export Session filters">
         <form role="search" onSubmit={submit}>
           <label htmlFor="marginalia-export-search">Search</label>
-          <input id="marginalia-export-search" type="search" value={search} placeholder="Session, notes, or available Book..." onChange={(event) => onSearchChange(event.target.value)} />
+          <input id="marginalia-export-search" type="search" value={search} placeholder="Session, notes, or Book…" onChange={(event) => onSearchChange(event.target.value)} />
           <Button type="submit">Search</Button>
         </form>
         <label className="marginalia-status-filter" htmlFor="marginalia-export-status">Status

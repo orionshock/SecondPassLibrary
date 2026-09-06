@@ -162,6 +162,7 @@ describe("Library Books components", () => {
     expect(markup).toContain("(304)");
     expect(markup).toContain('title="Fantasy and Extremely Long Adventures"');
     expect(markup).toContain('aria-pressed="true"');
+    expect(markup).toContain('aria-current="true"');
     expect(markup).not.toMatch(/Add Catalog Tag|Edit Catalog Tag|Delete Catalog Tag|Merge Catalog Tags/);
     const failed = renderToStaticMarkup(<CatalogTagRailPageRegion loading={false} error={new Error("Tags unavailable")} onTagChange={vi.fn()} onRetry={vi.fn()} />);
     expect(failed).toContain("Tags unavailable");

@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { CatalogResultPage, CatalogTag, CompactBook, CurrentUser, LibraryAuthor, LibrarySeries, ServerInfo } from "@second-pass/spl-api";
 import type { AppOutletContext } from "../../../../src/app/layout/AppOrchestrator";
 import { LibraryOrchestrator } from "../../../../src/features/library/browse/LibraryOrchestrator";
-import { buttonNamed, deferred } from "../../../support/domInteraction";
+import { buttonNamed, deferred, setControlValue } from "../../../support/domInteraction";
 
 const sdk = vi.hoisted(() => ({
   listBooks: vi.fn(), listAuthors: vi.fn(), listSeries: vi.fn(), listTags: vi.fn(), getAuthor: vi.fn(), getSeries: vi.fn(),
@@ -87,6 +87,44 @@ describe("LibraryOrchestrator browse behavior", () => {
     const activeTag = Array.from(container.querySelectorAll<HTMLButtonElement>('aside[aria-label="Catalog Tags"] button'))
       .find((button) => button.getAttribute("aria-pressed") === "true" && button.textContent?.includes("Fantasy"));
     expect(activeTag).toBeDefined();
+  });
+
+  it("filters loaded Catalog Tags locally while retaining the selected tag and query behavior", async () => {
+    const history: CatalogTag = { id: "history", name: "History", slug: "history", bookCount: 12 };
+    const science: CatalogTag = { id: "science", name: "Science", slug: "science", bookCount: 8 };
+    const tags = [fantasy, history, science];
+    sdk.listTags.mockResolvedValue(tags);
+    sdk.listBooks.mockResolvedValue(catalogPage([compactBook("book-one", "Book One")], tags));
+    const { container, router } = await mount("/library?tag=history");
+    const search = container.querySelector<HTMLInputElement>('aside[aria-label="Catalog Tags"] input[aria-label="Search Catalog Tags"]')!;
+    const rail = search.parentElement!;
+    const tagButton = (name: string) => {
+      const button = Array.from(rail.querySelectorAll<HTMLButtonElement>("button"))
+        .find((candidate) => candidate.textContent?.includes(name));
+      if (!button) throw new Error(`Catalog Tag button not found: ${name}`);
+      return button;
+    };
+
+    await act(async () => setControlValue(search, "FANT"));
+
+    expect(tagButton("Fantasy").textContent).toContain("(4)");
+    const selected = tagButton("History");
+    expect(selected.textContent).toContain("(12)");
+    expect(selected.getAttribute("aria-current")).toBe("true");
+    expect(selected.getAttribute("aria-pressed")).toBe("true");
+    expect(Array.from(rail.querySelectorAll("button")).some((button) => button.textContent?.includes("Science"))).toBe(false);
+    expect(sdk.listTags).toHaveBeenCalledOnce();
+
+    await act(async () => setControlValue(search, ""));
+
+    expect(Array.from(rail.querySelectorAll("button")).some((button) => button.textContent?.includes("Science"))).toBe(true);
+
+    await act(async () => setControlValue(search, "fant"));
+    await act(async () => tagButton("Fantasy").click());
+
+    expect(new URLSearchParams(router.state.location.search).get("tag")).toBe("fantasy");
+    expect(sdk.listBooks).toHaveBeenLastCalledWith(expect.objectContaining({ tag: "fantasy" }));
+    expect(sdk.listTags).toHaveBeenCalledOnce();
   });
 
   it("switches axes and delegates the Author result request to the axis SDK", async () => {
