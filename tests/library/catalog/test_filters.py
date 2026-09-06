@@ -17,7 +17,13 @@ class LibraryCatalogBookFilterTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.json(),
-            {"count": 0, "next": None, "previous": None, "results": []},
+            {
+                "count": 0,
+                "next": None,
+                "previous": None,
+                "results": [],
+                "catalog_tags": [],
+            },
         )
 
     def test_q_searches_visible_books_only(self):
