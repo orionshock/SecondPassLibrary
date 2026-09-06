@@ -53,7 +53,7 @@ def import_zip_file(
     _rewind_file(file_obj)
     try:
         with defer_visible_books_cache_invalidation(), zipfile.ZipFile(file_obj, "r") as archive:
-            for candidate in plan.candidates:
+            for candidate_ordinal, candidate in enumerate(plan.candidates, start=1):
                 batch.items.append(
                     _import_zip_candidate(
                         archive,
@@ -61,6 +61,7 @@ def import_zip_file(
                         members_index=plan.members_index,
                         actor=actor,
                         epub_limits=epub_limits,
+                        candidate_ordinal=candidate_ordinal,
                     )
                 )
     except Exception as exc:
@@ -87,6 +88,7 @@ def _import_zip_candidate(
     members_index: dict[str, ZipMember],
     actor=None,
     epub_limits: EpubArchiveLimits | None = None,
+    candidate_ordinal: int | None = None,
 ) -> ImportItemResult:
     from library.imports.epub import import_epub_file
 
@@ -121,6 +123,8 @@ def _import_zip_candidate(
             members_index=members_index,
         ),
         archive_limits=epub_limits,
+        source_method="zip",
+        candidate_ordinal=candidate_ordinal,
     )
 
 

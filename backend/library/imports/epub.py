@@ -5,6 +5,7 @@ import logging
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.files.base import ContentFile
 
+from library.catalog.names import AmbiguousCatalogEntityName
 from library.cover_services import replace_book_cover
 from library.imports.covers import extract_epub_cover, validate_cover_bytes
 from library.imports import epub_validation
@@ -41,6 +42,7 @@ def import_epub_file(
     source_label: str | None = None,
     source_method: str = "web",
     archive_limits: epub_validation.EpubArchiveLimits | None = None,
+    candidate_ordinal: int | None = None,
 ) -> ImportItemResult:
     """
     Safe item-level import wrapper.
@@ -60,6 +62,8 @@ def import_epub_file(
             sidecar_opf=sidecar_opf,
             sidecar_cover_bytes=sidecar_cover_bytes,
             archive_limits=archive_limits,
+            source_method=source_method,
+            candidate_ordinal=candidate_ordinal,
         )
     except (InvalidEpubImportError, UnsupportedImportSourceError, DjangoValidationError) as exc:
         result = ImportItemResult(
@@ -128,6 +132,8 @@ def _import_epub_file(
     sidecar_opf: ParsedSidecarOpf | None = None,
     sidecar_cover_bytes: bytes | None = None,
     archive_limits: epub_validation.EpubArchiveLimits | None = None,
+    source_method: str,
+    candidate_ordinal: int | None = None,
 ) -> ImportItemResult:
     source_filename = (source_filename or "").strip()
     if not source_filename.lower().endswith(".epub"):
@@ -157,13 +163,45 @@ def _import_epub_file(
             data=data,
             sidecar_cover_bytes=sidecar_cover_bytes,
         )
+    if persistence_result.ambiguity is not None:
+        _log_ambiguous_identity_conflict(
+            ambiguity=persistence_result.ambiguity,
+            source_method=source_method,
+            source_label=source_label,
+            candidate_ordinal=candidate_ordinal,
+        )
     return _item_result_from_persistence_result(
         source_label=source_label,
         status=persistence_result.status,
         book=persistence_result.book,
         message=persistence_result.message,
+        persistence_error_category=persistence_result.error_category,
         title=metadata.title,
         authors=tuple(author.name for author in metadata.authors),
+    )
+
+
+def _log_ambiguous_identity_conflict(
+    *,
+    ambiguity: AmbiguousCatalogEntityName,
+    source_method: str,
+    source_label: str,
+    candidate_ordinal: int | None,
+) -> None:
+    logger.warning(
+        "Import relationship identity conflict: source_method=%s source=%s "
+        "candidate_ordinal=%s category=%s entity_type=%s incoming_name=%s "
+        "normalized_name=%s match_count=%d matched_ids=%s "
+        "candidate_persisted=false resolution=operator_cleanup_required",
+        source_method,
+        _bounded_log_source(source_label),
+        candidate_ordinal if candidate_ordinal is not None else "unavailable",
+        f"{ambiguity.kind.casefold()}_ambiguous",
+        ambiguity.kind,
+        ambiguity.display_name,
+        ambiguity.normalized_name,
+        ambiguity.match_count,
+        ",".join(ambiguity.matched_ids),
     )
 
 
@@ -199,6 +237,7 @@ def _item_result_from_persistence_result(
     status: str,
     book,
     message: str,
+    persistence_error_category: str,
     title: str,
     authors: tuple[str, ...],
 ) -> ImportItemResult:
@@ -216,7 +255,7 @@ def _item_result_from_persistence_result(
             "Catalog metadata matches multiple existing records. "
             "Review the Author and Series metadata, then retry the import."
         )
-        error_category = "catalog_identity_conflict"
+        error_category = persistence_error_category or "catalog_identity_conflict"
     else:
         status = IMPORT_STATUS_FAILED
         safe_message = message or INVALID_EPUB_MESSAGE

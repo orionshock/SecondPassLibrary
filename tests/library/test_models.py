@@ -84,6 +84,27 @@ class LibraryModelConstraintTests(TestCase):
         with self.assertRaises(IntegrityError), transaction.atomic():
             CatalogTag.objects.create(name="Sci-Fi", normalized_name="science fiction", slug="sci-fi")
 
+    def test_author_and_series_normalized_names_are_not_unique_identity(self):
+        for model, name, normalized_name in (
+            (Author, "Alex Smith", "alex smith"),
+            (Series, "Chronicles", "chronicles"),
+        ):
+            with self.subTest(model=model.__name__):
+                model.objects.create(
+                    name=name,
+                    sort_name=name,
+                    normalized_name=normalized_name,
+                )
+                model.objects.create(
+                    name=name.upper(),
+                    sort_name=name.upper(),
+                    normalized_name=normalized_name,
+                )
+                self.assertEqual(
+                    model.objects.filter(normalized_name=normalized_name).count(),
+                    2,
+                )
+
     def test_book_catalog_tag_is_unique_per_book(self):
         book = Book.objects.create(title="Book")
         tag = CatalogTag.objects.create(name="Fantasy", normalized_name="fantasy", slug="fantasy")

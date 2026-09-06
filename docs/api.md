@@ -236,6 +236,15 @@ duplicate identical identifier entries within the same Book are rejected.
 Import duplicate-file detection uses the EPUB checksum, not identifier
 metadata.
 
+Import relationship resolution treats normalized Author and Series names as
+lookup aids rather than identities. Zero matches may create an entity, exactly
+one match may be reused, and multiple matches return a `conflict` because the
+server will not select or merge entities arbitrarily. The bounded conflict
+message identifies whether Author or Series resolution was ambiguous and tells
+the operator to resolve the catalog ambiguity or adjust the source metadata
+before retrying. Import result items also expose the stable `error_category`
+field; relationship ambiguity uses `author_ambiguous` or `series_ambiguous`.
+
 Author and Series collections share normalized-name matching, `exclude_id`,
 Catalog Tag filtering, previews, and axis ordering. Their counts and previews
 derive from the same scoped Book population. Catalog Tag counts likewise use

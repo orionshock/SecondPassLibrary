@@ -31,7 +31,14 @@ const serverInfo = {
 const result: LibraryImportResult = {
   sourceType: "epub", sourceLabel: "book.epub",
   counts: { imported: 1, duplicate: 0, conflict: 0, failed: 0, skipped: 0 },
-  items: [{ status: "imported", sourceLabel: "book.epub", safeMessage: "", bookId: "book", title: "Imported Book" }],
+  items: [{
+    status: "imported",
+    sourceLabel: "book.epub",
+    safeMessage: "",
+    errorCategory: "",
+    bookId: "book",
+    title: "Imported Book",
+  }],
 };
 let root: ReturnType<typeof createRoot> | undefined;
 

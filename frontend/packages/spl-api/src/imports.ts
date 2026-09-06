@@ -14,6 +14,7 @@ export interface LibraryImportItem {
   status: ImportItemStatus;
   sourceLabel: string;
   safeMessage: string;
+  errorCategory: string;
   bookId?: string;
   title?: string;
   authors?: string[];
@@ -36,6 +37,7 @@ interface LibraryImportResponse {
     status: ImportItemStatus;
     source_label: string;
     safe_message: string;
+    error_category: string;
     book_id?: string;
     title?: string;
     authors?: string[];
@@ -56,6 +58,7 @@ export async function uploadLibraryImport(file: File, client: ApiClient = apiCli
       status: item.status,
       sourceLabel: item.source_label,
       safeMessage: item.safe_message,
+      errorCategory: item.error_category,
       ...(item.book_id ? { bookId: item.book_id } : {}),
       ...(item.title ? { title: item.title } : {}),
       ...(item.authors ? { authors: [...item.authors] } : {}),

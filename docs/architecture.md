@@ -233,3 +233,8 @@ apply changes through cohesive import services rather than views, serializers,
 or model hooks. [Imports](imports.md) owns metadata precedence, normalization,
 duplicate advisories, and archive safety; module layout remains discoverable
 from `backend/library/imports/`.
+
+The EPUB checksum is authoritative file identity. Book identifiers are
+repeatable metadata. Author and Series UUIDs are entity identity, while their
+normalized names support only 0/1/multiple-match lookup; an ambiguous lookup
+stops the candidate rather than guessing or merging relationships.

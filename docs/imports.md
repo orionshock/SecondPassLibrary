@@ -32,6 +32,21 @@ system never treats normalized equality as authority to merge, rename,
 reassign, or delete records. Renaming an Author or Series preserves its UUID
 and relationships.
 
+Normalized names support deterministic lookup; they do not prove entity
+identity. Import relationship resolution therefore follows one policy for both
+Authors and Series:
+
+- zero normalized matches creates a new Author or Series;
+- exactly one normalized match reuses that existing entity;
+- two or more normalized matches produce an import `conflict` without creating
+  the Book or choosing, merging, or creating another matching entity.
+
+An ambiguity conflict identifies the incoming name and matching entity type.
+The operator must resolve the ambiguous catalog records or adjust the source
+metadata, then retry the import. Distinct Authors and Series may legitimately
+retain the same normalized name; the importer does not impose global name
+uniqueness as a shortcut around that ambiguity.
+
 Imported titles, names, tags, identifier schemes, and identifier values are
 NFKC-normalized and whitespace-collapsed before persistence or comparison.
 Scheme-specific identifier normalization removes ISBN punctuation, folds DOI
@@ -170,6 +185,11 @@ The API returns a transient batch summary with per-item `imported`, `duplicate`,
 `conflict`, `failed`, or `skipped` status. Each item may include its safe source
 label, resulting Book ID, and a bounded message. Results cannot be retrieved
 after the request; there is no import detail endpoint.
+
+`duplicate` means an exact EPUB checksum match. A relationship `conflict`
+means normalized Author or Series lookup found multiple possible existing
+entities and the importer refused to guess. Shared Book identifier metadata
+does not produce either outcome.
 
 Source names exist only for immediate diagnostics and are not retained as Book
 metadata or provenance. Final EPUB and cover files are stored through the

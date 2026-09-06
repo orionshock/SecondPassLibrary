@@ -19,6 +19,7 @@ def import_item_payload(item: ImportItemResult, *, book_summary: dict | None = N
         "status": item.status,
         "source_label": item.source_label,
         "safe_message": item.safe_message,
+        "error_category": item.error_category,
     }
     if item.book is not None:
         payload["book_id"] = str(item.book.id)

@@ -4,7 +4,7 @@ from unittest.mock import patch
 from library.imports.archives import ZipImportCandidate, ZipImportPlan, plan_zip_import
 from library.imports.batches import import_zip_file
 from library.imports.epub import import_epub_file
-from library.models import Book, BookIdentifier
+from library.models import Author, Book, BookIdentifier, Series
 from tests.library.imports.helpers import (
     epub_with_cover_bytes,
     image_bytes,
@@ -98,6 +98,85 @@ class ImportOperationalLoggingTests(
             )
 
         self.assertEqual(result.status, "imported")
+
+    def test_ambiguous_author_conflict_logs_bounded_resolution_context(self):
+        authors = [
+            Author.objects.create(
+                name=name,
+                sort_name=name,
+                normalized_name="shared author",
+            )
+            for name in ("Shared Author", "SHARED AUTHOR")
+        ]
+        data = minimal_epub_bytes(metadata_xml="""
+            <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+              <dc:title>Ambiguous Author Book</dc:title>
+              <dc:creator> shared   author </dc:creator>
+            </metadata>
+        """)
+
+        with self.assertLogs("library.imports.epub", level="WARNING") as logs:
+            result = import_epub_file(
+                BytesIO(data),
+                source_filename=r"C:\private\author.epub",
+                source_label="safe-author.epub",
+                source_method="tree",
+                candidate_ordinal=7,
+            )
+
+        message = " ".join(logs.output)
+        self.assertEqual(result.status, "conflict")
+        self.assertEqual(result.error_category, "author_ambiguous")
+        self.assertIn("source_method=tree", message)
+        self.assertIn("source=safe-author.epub", message)
+        self.assertIn("candidate_ordinal=7", message)
+        self.assertIn("category=author_ambiguous", message)
+        self.assertIn("entity_type=Author", message)
+        self.assertIn("incoming_name=shared author", message)
+        self.assertIn("normalized_name=shared author", message)
+        self.assertIn("match_count=2", message)
+        for author in authors:
+            self.assertIn(str(author.pk), message)
+        self.assertIn("candidate_persisted=false", message)
+        self.assertIn("resolution=operator_cleanup_required", message)
+        self.assertNotIn("C:\\private", message)
+
+    def test_ambiguous_series_conflict_logs_bounded_resolution_context(self):
+        series_rows = [
+            Series.objects.create(
+                name=name,
+                sort_name=name,
+                normalized_name="chronicles",
+            )
+            for name in ("Chronicles", "CHRONICLES")
+        ]
+        data = minimal_epub_bytes(metadata_xml="""
+            <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+              <dc:title>Ambiguous Series Book</dc:title>
+              <dc:creator>Writer</dc:creator>
+              <meta name="calibre:series" content=" Chronicles "/>
+            </metadata>
+        """)
+
+        with self.assertLogs("library.imports.epub", level="WARNING") as logs:
+            result = import_epub_file(
+                BytesIO(data),
+                source_filename="series.epub",
+                source_method="web",
+            )
+
+        message = " ".join(logs.output)
+        self.assertEqual(result.status, "conflict")
+        self.assertEqual(result.error_category, "series_ambiguous")
+        self.assertIn("category=series_ambiguous", message)
+        self.assertIn("entity_type=Series", message)
+        self.assertIn("incoming_name=Chronicles", message)
+        self.assertIn("normalized_name=chronicles", message)
+        self.assertIn("match_count=2", message)
+        for series in series_rows:
+            self.assertIn(str(series.pk), message)
+        self.assertIn("candidate_persisted=false", message)
+        self.assertIn("resolution=operator_cleanup_required", message)
 
     def test_candidate_pipeline_logs_bounded_lifecycle_context(self):
         with self.assertLogs("library.imports.epub", level="INFO") as logs:

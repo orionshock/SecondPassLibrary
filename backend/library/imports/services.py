@@ -42,6 +42,8 @@ class ImportPersistenceResult:
     status: str
     book: Book | None
     message: str = ""
+    error_category: str = ""
+    ambiguity: AmbiguousCatalogEntityName | None = None
 
 
 @dataclass(frozen=True)
@@ -93,10 +95,9 @@ def persist_imported_book(
         return ImportPersistenceResult(
             status=IMPORT_STATUS_CONFLICT,
             book=None,
-            message=(
-                f"A {exc.kind} name matches multiple catalog records; "
-                "the import was not applied."
-            ),
+            message=_ambiguous_entity_message(exc),
+            error_category=f"{exc.kind.casefold()}_ambiguous",
+            ambiguity=exc,
         )
 
     stored_file: _StoredBookFile | None = None
@@ -150,6 +151,16 @@ def persist_imported_book(
         raise
 
     return ImportPersistenceResult(status=IMPORT_STATUS_IMPORTED, book=book)
+
+
+def _ambiguous_entity_message(exc: AmbiguousCatalogEntityName) -> str:
+    plural = "Authors" if exc.kind == "Author" else "Series"
+    return (
+        f'Multiple existing {plural} match "{exc.display_name}" '
+        f"({exc.match_count} matches). The importer cannot safely determine "
+        f"which {exc.kind} belongs to this Book. Resolve the ambiguous {exc.kind} "
+        "records or adjust the source metadata, then retry the import."
+    )
 
 
 def _attach_book_file(*, book: Book, book_file) -> _StoredBookFile:

@@ -11,7 +11,7 @@ from tests.library.imports.helpers import ImportPersistenceFixtureMixin, sample_
 
 
 class ImportPersistencePeopleTests(ImportPersistenceFixtureMixin, TestCase):
-    def test_creates_authors_and_book_author_positions(self):
+    def test_zero_author_matches_creates_authors_and_positions(self):
         result = persist_imported_book(
             metadata=sample_metadata(
                 authors=[
@@ -26,7 +26,7 @@ class ImportPersistencePeopleTests(ImportPersistenceFixtureMixin, TestCase):
         self.assertEqual([row.author.name for row in rows], ["First Author", "Second Author"])
         self.assertEqual([row.position for row in rows], [0, 1])
 
-    def test_reuses_existing_author_by_display_identity(self):
+    def test_one_author_match_reuses_existing_author(self):
         existing = Author.objects.create(
             name="Existing Author",
             sort_name="Author, Existing",
@@ -87,7 +87,7 @@ class ImportPersistencePeopleTests(ImportPersistenceFixtureMixin, TestCase):
         existing.refresh_from_db()
         self.assertEqual(existing.sort_name, "Original Sort")
 
-    def test_creates_series_and_book_series_index(self):
+    def test_zero_series_matches_creates_series_and_index(self):
         result = persist_imported_book(
             metadata=sample_metadata(
                 series=ImportSeries(
@@ -143,7 +143,7 @@ class ImportPersistencePeopleTests(ImportPersistenceFixtureMixin, TestCase):
         existing.refresh_from_db()
         self.assertEqual(existing.sort_name, "Original Series Sort")
 
-    def test_normalized_author_and_series_matches_are_reused(self):
+    def test_one_normalized_author_and_series_match_are_reused(self):
         author = Author.objects.create(
             name="Ada Lovelace",
             sort_name="Lovelace, Ada",
@@ -200,9 +200,18 @@ class ImportPersistencePeopleTests(ImportPersistenceFixtureMixin, TestCase):
         )
 
         self.assertEqual(result.status, IMPORT_STATUS_CONFLICT)
+        self.assertEqual(result.error_category, "author_ambiguous")
+        self.assertEqual(result.ambiguity.kind, "Author")
+        self.assertEqual(result.ambiguity.display_name, "shared name")
+        self.assertEqual(result.ambiguity.normalized_name, "shared name")
+        self.assertEqual(result.ambiguity.match_count, 2)
         self.assertIsNone(result.book)
         self.assertFalse(Book.objects.filter(checksum="ambiguous-author").exists())
         self.assertEqual(Author.objects.count(), 2)
+        self.assertIn("Multiple existing Authors", result.message)
+        self.assertIn("shared name", result.message)
+        self.assertIn("Resolve the ambiguous Author records", result.message)
+        self.assertIn("retry", result.message)
 
     def test_ambiguous_series_match_returns_conflict_without_creating_a_book(self):
         for name in ("Shared Series", "Ｓhared Series"):
@@ -224,6 +233,15 @@ class ImportPersistencePeopleTests(ImportPersistenceFixtureMixin, TestCase):
         )
 
         self.assertEqual(result.status, IMPORT_STATUS_CONFLICT)
+        self.assertEqual(result.error_category, "series_ambiguous")
+        self.assertEqual(result.ambiguity.kind, "Series")
+        self.assertEqual(result.ambiguity.display_name, "SHARED SERIES")
+        self.assertEqual(result.ambiguity.normalized_name, "shared series")
+        self.assertEqual(result.ambiguity.match_count, 2)
         self.assertIsNone(result.book)
         self.assertFalse(Book.objects.filter(checksum="ambiguous-series").exists())
         self.assertEqual(Series.objects.count(), 2)
+        self.assertIn("Multiple existing Series", result.message)
+        self.assertIn("SHARED SERIES", result.message)
+        self.assertIn("Resolve the ambiguous Series records", result.message)
+        self.assertIn("retry", result.message)

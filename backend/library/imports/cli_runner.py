@@ -70,6 +70,7 @@ def run_cli_import(*, command: BaseCommand, source: ImportSourceAdapter) -> Impo
                         sidecar_opf=candidate.sidecar_opf,
                         sidecar_cover_bytes=candidate.sidecar_cover_bytes,
                         actor=None,
+                        candidate_ordinal=ordinal,
                     )
                 else:
                     result = event.result

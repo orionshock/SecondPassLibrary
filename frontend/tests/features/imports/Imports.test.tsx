@@ -65,6 +65,7 @@ describe("Imports", () => {
     const items = Array.from({ length: 55 }, (_, index) => ({
       status: index === 54 ? "failed" as const : "imported" as const,
       sourceLabel: `safe-${index}.epub`, safeMessage: index === 54 ? "Invalid EPUB package." : "", bookId: `uuid-${index}`,
+      errorCategory: index === 54 ? "invalid_candidate" : "",
       ...(index === 0 ? { title: "Human title", authors: ["First Author", "Second Author"], series: "Human series", seriesIndex: "1.00" } : {}),
     }));
     const result: LibraryImportResult = {
@@ -86,7 +87,12 @@ describe("Imports", () => {
     const result: LibraryImportResult = {
       sourceType: "epub", sourceLabel: "fallback.epub",
       counts: { imported: 1, duplicate: 0, conflict: 0, failed: 0, skipped: 0 },
-      items: [{ status: "imported", sourceLabel: "fallback.epub", safeMessage: "Imported." }],
+      items: [{
+        status: "imported",
+        sourceLabel: "fallback.epub",
+        safeMessage: "Imported.",
+        errorCategory: "",
+      }],
     };
     const markup = renderToStaticMarkup(<MemoryRouter><ImportResultPageRegion
       result={result}
