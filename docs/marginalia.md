@@ -31,10 +31,19 @@ start-over idempotency keys are retained for 24 hours: an identical replay
 returns the stored success, while reuse for changed input or an in-progress
 operation is a conflict.
 
-Only active Sessions accept title, note, progress, or annotation changes. Progress is one
-complete saved location stored on the Session: an opaque CFI, an optional
-display label, and a server/source timestamp. Marginalia does not parse,
-normalize, derive, or assign numeric meaning to CFIs or labels.
+Only active Sessions accept title, note, progress, or annotation changes.
+Progress is one saved location stored on the Session: an opaque CFI, an
+optional display label, and a server/source timestamp. The CFI is the durable
+anchor. `locationLabel` is persisted display text, not a second position or
+identity field. Marginalia does not parse, normalize, derive, or assign numeric
+meaning to either value.
+
+The Reader may show a richer live label while a Book is open, such as
+`Dedication • p1/2 • 1%`. Page fragments describe the current rendition and are
+not saved. New saved labels use the stable `PPP% - Label` form described in the
+[interchange profile](specs/reading-session-annotation-profile/profile.md#saved-location-labels).
+Historical labels remain valid display text and are never migrated or
+reinterpreted by the server.
 
 Replacing progress requires current Library access. Closing is explicit and
 does not create a replacement Session. Final metadata, optional final progress,
@@ -72,8 +81,9 @@ Annotations are owned through their Reading Session and have one of two kinds:
 - a bookmark has a location but no highlight body or comment content.
 
 Every annotation has an opaque CFI, an optional bounded location label, and a
-portable `client_id` unique within its Session. Client identity is not global
-and is distinct from the local database UUID.
+portable `client_id` unique within its Session. The CFI anchors the annotation;
+the label only describes that saved location for display. Client identity is
+not global and is distinct from the local database UUID.
 
 Annotation synchronization is an atomic batch against an owned active Session.
 The service locks/rechecks the Session and current uncached Book visibility
@@ -105,11 +115,13 @@ Any display-only whitespace treatment belongs to the client and must apply to
 `text` alone. The Product UI follows this boundary for both active and closed
 Session detail.
 
-The authoritative collection uses stable reading order. Nonblank location
-labels sort first and lexically; blank labels fall back to CFI, creation time,
-and server identity. Marginalia does not attempt to interpret that ordering as
-EPUB structure. Active and closed collections remain readable by their owner
-after Book visibility changes, but closed Sessions cannot be synchronized.
+Annotation collections use a stable display order. Nonblank location labels
+sort first and lexically; blank labels fall back to CFI, creation time, and
+server identity. The server compares the complete label as opaque text. It does
+not parse the percentage or suffix, and this ordering is not a substitute for
+EPUB navigation or annotation anchoring. Active and closed collections remain
+readable by their owner after Book visibility changes, but closed Sessions
+cannot be synchronized.
 
 ## Visibility and preservation
 

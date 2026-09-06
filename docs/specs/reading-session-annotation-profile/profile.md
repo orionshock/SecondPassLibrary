@@ -37,20 +37,60 @@ non-null close time and null progress are materially different conditions.
 
 ## Locations and progress
 
-Every located value uses an opaque CFI plus an optional Reader-generated
-`locationLabel`. The same pair locates progress, highlights, and bookmarks.
-The server stores and transfers these values without parsing, normalizing,
-repairing, or deriving them from EPUB content.
+Every saved location uses an opaque CFI and may include a Reader-generated
+`locationLabel`. Progress, highlights, and bookmarks all use this pair. The CFI
+is the durable anchor. The label is persisted display text and must not be used
+for navigation, identity, Book or Session matching, or annotation anchoring.
 
-`locationLabel` is a display and sorting companion, not an anchor or numeric
-progress value. A Reader should keep it stable and lexically sortable in reading
-order within one Book and Session. Decorative context may be appended, but the
-label is not selected text, a title, a note, or an annotation category.
+The server stores and transfers both values without parsing, normalizing,
+repairing, or deriving them from EPUB content. Progress also carries its own
+update time. Product list responses may include summaries, but those are not
+interchange fields.
 
-Progress is the Session's current located state and includes its own update
-time. A percentage may appear as Reader-authored display text in
-`locationLabel`; there is no canonical numeric progression field. Product list
-projections may expose summaries, but those are not interchange fields.
+### Saved location labels
+
+The live Reader chrome and a saved `locationLabel` serve different purposes.
+While a Book is open, the Reader may show transient rendition context such as
+`Dedication • p1/2 • 1%`. The page fragment applies only to that live rendition
+and must not be persisted as location identity.
+
+Newly generated saved labels use this form:
+
+```text
+PPP% - Label
+```
+
+`PPP` is the zero-padded whole-Book percentage from `000` through `100`. The
+suffix is chosen in this order:
+
+1. a useful TOC or section label, when available;
+2. `Start` or `End` at the corresponding Book boundary;
+3. a stable spine ordinal such as `Chapter 08`;
+4. `Location`.
+
+Examples:
+
+- `000% - Start`
+- `001% - Dedication`
+- `003% - PROLOGUE`
+- `014% - Chapter 08`
+- `042% - Location`
+- `099% - End`
+- `100% - End`
+
+Saved labels must not contain rendition page fragments such as `p1/2`, spine
+hrefs, raw CFIs, Session IDs, or timestamps. Those values are transient
+rendering details, machine anchors, or unrelated metadata.
+
+Historical labels remain valid. A value such as `Chapter 08 - 01%` is still
+opaque display text and must not be migrated, parsed, or reformatted
+automatically. Clients and servers must accept both historical values and the
+new `PPP% - Label` style without treating either form as identity.
+
+Second Pass Library currently uses a nonblank label as the first lexical sort
+key for annotation display, followed by CFI, creation time, and stable identity.
+This compares the entire string; it does not parse the percentage or infer EPUB
+position. There is no canonical numeric progression field.
 
 ## Annotation semantics
 

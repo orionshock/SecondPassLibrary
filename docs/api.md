@@ -139,6 +139,24 @@ Marginalia highlights keep selected `text` separate from the anchoring
 `prefix` and `suffix`. Only `text` is displayed as the quotation. See
 [Marginalia](marginalia.md#annotation-lifecycle).
 
+## Saved Marginalia locations
+
+Every saved progress value and annotation location has a CFI and may include a
+`locationLabel` (`location_label` in the REST API). The CFI is the durable
+reading-position anchor. The label is persisted display text: clients may show
+it in Session history, progress summaries, bookmarks, highlights, and notes,
+but must not parse it for navigation, identity, matching, or anchoring.
+
+The Reader's live chrome may show temporary rendition details such as
+`Dedication • p1/2 • 1%`. That live label is not the saved label. New saved
+labels use `PPP% - Label`, with a zero-padded whole-Book percentage from `000`
+through `100`, for example `001% - Dedication` or `014% - Chapter 08`.
+
+Older labels such as `Chapter 08 - 01%` remain valid. The server stores and
+returns them as supplied and does not migrate or reinterpret them. See the
+[Reading Session and Annotation profile](specs/reading-session-annotation-profile/profile.md#saved-location-labels)
+for label construction and fallback rules.
+
 ## Errors
 
 Several error shapes are already in use:

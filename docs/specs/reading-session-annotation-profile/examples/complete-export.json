@@ -23,7 +23,7 @@
           "updatedAt": "2026-07-29T12:00:00Z",
           "progress": {
             "cfi": "epubcfi(/6/8!/4/2)",
-            "locationLabel": "Chapter 08 · 42%",
+            "locationLabel": "042% - Chapter 08",
             "updatedAt": "2026-07-29T12:00:00Z"
           },
           "annotations": [
@@ -32,7 +32,7 @@
               "kind": "highlight",
               "location": {
                 "cfi": "epubcfi(/6/8!/4/4)",
-                "locationLabel": "Chapter 08 · 43% · The Blackstaff"
+                "locationLabel": "043% - Chapter 08"
               },
               "body": {
                 "text": "The selected passage",
@@ -49,7 +49,7 @@
               "kind": "bookmark",
               "location": {
                 "cfi": "epubcfi(/6/10!/4/2)",
-                "locationLabel": "Chapter 09 · 47%"
+                "locationLabel": "047% - Chapter 09"
               },
               "createdAt": "2026-07-29T11:00:00Z",
               "updatedAt": "2026-07-29T11:00:00Z"
