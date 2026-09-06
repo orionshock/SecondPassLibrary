@@ -1,0 +1,14 @@
+# Project source scope for scc reports.
+*
+!*/
+!/backend/**/*
+!/frontend/index.html
+!/frontend/src/**/*
+!/frontend/packages/spl-api/src/**/*
+
+**/__pycache__/**
+**/__tests__/**
+**/migrations/**
+/backend/web/product_ui/**
+/backend/var/**
+**/*.png

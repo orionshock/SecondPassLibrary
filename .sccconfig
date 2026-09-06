@@ -1,0 +1,4 @@
+# Produce source-focused reports with per-file detail.
+--by-file
+--no-cocomo
+--no-gitignore

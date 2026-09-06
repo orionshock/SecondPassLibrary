@@ -26,6 +26,14 @@
       "**/out": true,
       "**/var": true,
     },
+    "repoStats.excludePatterns": [
+      "**/__pycache__/**",
+      "**/__tests__/**",
+      "**/migrations/**",
+      "backend/web/product_ui/**",
+      "backend/var/**",
+      "**/*.png"
+    ],
     "terminal.integrated.defaultProfile.linux": "bash",
     "terminal.integrated.cwd": "${workspaceFolder}",
     "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
@@ -47,30 +55,6 @@
       "mv": true,
       "true": true
     },
-    "LineCount.includes": [
-      "backend/**/*",
-      "frontend/index.html",
-      "frontend/src/**/*",
-      "frontend/packages/spl-api/src/**/*"
-    ],
-    "LineCount.excludes": [
-      "**/__pycache__/**",
-      "**/__tests__/**",
-      "**/migrations/**",
-      "backend/web/product_ui/**",
-      "backend/var/**",
-      "**/*.png"
-    ],
-    "LineCount.showStatusBarItem": true,
-    "LineCount.output": {
-      "txt": true,
-      "json": false,
-      "csv": false,
-      "md": false,
-      "outdir": ".linecount"
-    },
-    "LineCount.sort": "filename",
-    "LineCount.order": "asc",
     "sqltools.connections": [
       {
         "previewLimit": 50,
@@ -91,7 +75,10 @@
       "vitest.explorer",
       "ms-azuretools.vscode-docker",
       "redhat.vscode-yaml",
-      "yycalm.linecount"
+      "ms-vscode.powershell",
+      "mhutchie.git-graph",
+      "openai.chatgpt",
+      "guwidoe.vscode-repo-stats"
     ]
   }
 }
