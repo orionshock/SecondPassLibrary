@@ -157,6 +157,11 @@ class MaintenanceTaskConfigAdmin(SuperuserMaintenanceAdminMixin, admin.ModelAdmi
         super().save_model(request, obj, form, change)
         if obj.task_key != DELETED_ANNOTATION_CLEANUP_TASK_KEY:
             return
+        if not {
+            "active_retention_days",
+            "closed_retention_days",
+        }.issubset(form.cleaned_data):
+            return
         set_marginalia_active_session_tombstone_retention_days(
             form.cleaned_data["active_retention_days"]
         )

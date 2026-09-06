@@ -13,6 +13,8 @@ from core.server_settings import (
     clear_server_settings_cache,
     get_marginalia_active_session_tombstone_retention_days,
     get_marginalia_closed_session_tombstone_retention_days,
+    set_marginalia_active_session_tombstone_retention_days,
+    set_marginalia_closed_session_tombstone_retention_days,
 )
 from maintenance.admin import MaintenanceTaskConfigAdmin
 from maintenance.models import (
@@ -41,6 +43,33 @@ class MaintenanceAdminTests(TestCase):
 
     def tearDown(self):
         clear_server_settings_cache()
+
+    def _post_task_list_update(self, *, task_key, **changes):
+        url = reverse("admin:maintenance_maintenancetaskconfig_changelist")
+        page = self.client.get(url)
+        formset = page.context["cl"].formset
+        prefix = formset.prefix
+        payload = {
+            f"{prefix}-{name}": value
+            for name, value in formset.management_form.initial.items()
+        }
+        payload["_save"] = "Save"
+        for index, form in enumerate(formset.forms):
+            configuration = form.instance
+            payload[f"{prefix}-{index}-id"] = str(configuration.pk)
+            enabled = (
+                changes.get("enabled", configuration.enabled)
+                if configuration.task_key == task_key
+                else configuration.enabled
+            )
+            if enabled:
+                payload[f"{prefix}-{index}-enabled"] = "on"
+            payload[f"{prefix}-{index}-frequency"] = (
+                changes.get("frequency", configuration.frequency)
+                if configuration.task_key == task_key
+                else configuration.frequency
+            )
+        return self.client.post(url, payload)
 
     def test_surface_is_superuser_only_and_identity_is_read_only(self):
         staff = get_user_model().objects.create_user(
@@ -165,6 +194,52 @@ class MaintenanceAdminTests(TestCase):
         self.assertEqual(result.counts["active_retention_days"], 35)
         self.assertEqual(result.counts["closed_retention_days"], 9)
 
+    def test_task_list_frequency_update_preserves_annotation_retention(self):
+        configuration = MaintenanceTaskConfig.objects.get(
+            task_key="cleanup_deleted_annotations"
+        )
+        set_marginalia_active_session_tombstone_retention_days(35)
+        set_marginalia_closed_session_tombstone_retention_days(9)
+        self.client.force_login(self.superuser)
+
+        response = self._post_task_list_update(
+            task_key=configuration.task_key,
+            frequency=MaintenanceFrequency.WEEKLY,
+        )
+
+        self.assertEqual(response.status_code, 302)
+        configuration.refresh_from_db()
+        self.assertEqual(configuration.frequency, MaintenanceFrequency.WEEKLY)
+        self.assertEqual(
+            get_marginalia_active_session_tombstone_retention_days(), 35
+        )
+        self.assertEqual(
+            get_marginalia_closed_session_tombstone_retention_days(), 9
+        )
+
+    def test_task_list_enabled_update_preserves_annotation_retention(self):
+        configuration = MaintenanceTaskConfig.objects.get(
+            task_key="cleanup_deleted_annotations"
+        )
+        set_marginalia_active_session_tombstone_retention_days(35)
+        set_marginalia_closed_session_tombstone_retention_days(9)
+        self.client.force_login(self.superuser)
+
+        response = self._post_task_list_update(
+            task_key=configuration.task_key,
+            enabled=False,
+        )
+
+        self.assertEqual(response.status_code, 302)
+        configuration.refresh_from_db()
+        self.assertFalse(configuration.enabled)
+        self.assertEqual(
+            get_marginalia_active_session_tombstone_retention_days(), 35
+        )
+        self.assertEqual(
+            get_marginalia_closed_session_tombstone_retention_days(), 9
+        )
+
     def test_deleted_annotation_task_page_rejects_invalid_retention(self):
         configuration = MaintenanceTaskConfig.objects.get(
             task_key="cleanup_deleted_annotations"
@@ -175,26 +250,35 @@ class MaintenanceAdminTests(TestCase):
             args=(configuration.pk,),
         )
 
-        response = self.client.post(
-            url,
-            {
-                "enabled": "on",
-                "frequency": MaintenanceFrequency.MONTHLY,
-                "active_retention_days": "-1",
-                "closed_retention_days": "7",
-            },
-        )
+        set_marginalia_active_session_tombstone_retention_days(35)
+        set_marginalia_closed_session_tombstone_retention_days(9)
 
-        self.assertEqual(response.status_code, 200)
-        self.assertIn(
-            "active_retention_days", response.context["adminform"].form.errors
-        )
-        self.assertEqual(
-            get_marginalia_active_session_tombstone_retention_days(), 28
-        )
-        self.assertEqual(
-            get_marginalia_closed_session_tombstone_retention_days(), 7
-        )
+        for invalid_field in ("active_retention_days", "closed_retention_days"):
+            with self.subTest(invalid_field=invalid_field):
+                payload = {
+                    "enabled": "on",
+                    "frequency": MaintenanceFrequency.WEEKLY,
+                    "active_retention_days": "35",
+                    "closed_retention_days": "9",
+                }
+                payload[invalid_field] = "-1"
+
+                response = self.client.post(url, payload)
+
+                self.assertEqual(response.status_code, 200)
+                self.assertIn(
+                    invalid_field, response.context["adminform"].form.errors
+                )
+                configuration.refresh_from_db()
+                self.assertEqual(
+                    configuration.frequency, MaintenanceFrequency.MONTHLY
+                )
+                self.assertEqual(
+                    get_marginalia_active_session_tombstone_retention_days(), 35
+                )
+                self.assertEqual(
+                    get_marginalia_closed_session_tombstone_retention_days(), 9
+                )
 
     def test_server_settings_admin_excludes_task_owned_retention_rows(self):
         self.client.force_login(self.superuser)
