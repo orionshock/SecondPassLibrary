@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from io import BytesIO
 import hashlib
 import zipfile
@@ -19,6 +20,28 @@ MAX_EPUB_MEMBERS = 2000
 MAX_EPUB_MEMBER_UNCOMPRESSED_BYTES = 100 * 1024 * 1024
 MAX_EPUB_TOTAL_UNCOMPRESSED_BYTES = 1024 * 1024 * 1024
 MAX_EPUB_MEMBER_COMPRESSION_RATIO = 100
+
+
+@dataclass(frozen=True)
+class EpubArchiveLimits:
+    compressed_bytes: int
+    members: int
+    member_uncompressed_bytes: int
+    total_uncompressed_bytes: int
+    member_compression_ratio: int
+
+
+# Browser uploads are untrusted and are parsed in the web process. These limits
+# retain ample room for image-heavy EPUBs while bounding one request to a
+# home-server-appropriate working set. Trusted local import commands keep the
+# established defaults above.
+WEB_EPUB_LIMITS = EpubArchiveLimits(
+    compressed_bytes=64 * 1024 * 1024,
+    members=1000,
+    member_uncompressed_bytes=32 * 1024 * 1024,
+    total_uncompressed_bytes=256 * 1024 * 1024,
+    member_compression_ratio=50,
+)
 
 
 def read_file_with_sha256(
@@ -61,8 +84,20 @@ def read_file_with_sha256(
     return output.getvalue(), digest.hexdigest(), total_size
 
 
-def validate_epub_bytes(data: bytes) -> None:
-    validate_epub_archive(data)
+def validate_epub_bytes(
+    data: bytes, *, limits: EpubArchiveLimits | None = None
+) -> None:
+    if limits is None:
+        validate_epub_archive(data)
+    else:
+        validate_epub_archive(
+            data,
+            max_compressed_bytes=limits.compressed_bytes,
+            max_members=limits.members,
+            max_member_uncompressed_bytes=limits.member_uncompressed_bytes,
+            max_total_uncompressed_bytes=limits.total_uncompressed_bytes,
+            max_member_compression_ratio=limits.member_compression_ratio,
+        )
     try:
         epub.read_epub(BytesIO(data), options={"ignore_ncx": True})
     except Exception as exc:
@@ -150,4 +185,3 @@ def _safe_epub_member_name(info: zipfile.ZipInfo) -> str | None:
     if safe_name is None:
         return None
     return safe_name
-

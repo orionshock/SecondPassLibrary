@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from unittest.mock import patch
 
 from rest_framework.authentication import SessionAuthentication
 
 from library.groups.public_group import get_public_group
 from library.imports.views import ImportUploadView
+from library.imports.epub_validation import WEB_EPUB_LIMITS
 from library.models import Book, BookGroupAssignment
 from tests.library.imports.helpers import (
     epub_with_cover_bytes,
@@ -39,7 +41,13 @@ class LibraryImportUploadBoundaryTests(
     def test_unsafe_epub_preflight_uses_bounded_import_error_response(self):
         self.login_librarian()
 
-        with patch("library.imports.epub_validation.MAX_EPUB_MEMBERS", 3):
+        with (
+            patch(
+                "library.imports.views.WEB_EPUB_LIMITS",
+                replace(WEB_EPUB_LIMITS, members=3),
+            ),
+            patch("library.imports.epub_validation.epub.read_epub") as read_epub,
+        ):
             response = self.client.post(
                 self.url,
                 {"file": upload_file("unsafe.epub", minimal_epub_bytes())},
@@ -52,6 +60,7 @@ class LibraryImportUploadBoundaryTests(
             "Invalid or unsupported EPUB file.",
         )
         self.assertFalse(Book.objects.exists())
+        read_epub.assert_not_called()
 
     def test_skipped_item_has_no_book_id(self):
         self.login_librarian()
@@ -125,6 +134,29 @@ class LibraryImportUploadBoundaryTests(
                 added_by=self.librarian,
             ).exists()
         )
+
+    def test_outer_zip_ratio_rejection_preserves_normal_batch_candidates(self):
+        self.login_librarian()
+
+        response = self.client.post(
+            self.url,
+            {
+                "file": upload_file(
+                    "batch.zip",
+                    zip_bytes(
+                        ("bomb.epub", b"x" * 100_000),
+                        ("ordinary.epub", minimal_epub_bytes()),
+                    ).getvalue(),
+                )
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            {item["source_label"]: item["status"] for item in response.json()["items"]},
+            {"bomb.epub": "failed", "ordinary.epub": "imported"},
+        )
+        self.assertEqual(Book.objects.count(), 1)
 
     def test_upload_api_response_unchanged_while_book_gets_cover(self):
         self.login_librarian()

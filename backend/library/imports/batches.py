@@ -11,6 +11,7 @@ from library.imports.archives import (
     resolve_zip_member_reference,
     safe_import_source_name,
 )
+from library.imports.epub_validation import EpubArchiveLimits
 from library.imports.covers import MAX_COVER_IMAGE_BYTES
 from library.imports.errors import INVALID_ZIP_MESSAGE, operator_import_detail
 from library.imports.opf import ParsedSidecarOpf, parse_sidecar_opf
@@ -30,10 +31,16 @@ def import_zip_file(
     *,
     source_filename: str,
     actor=None,
+    epub_limits: EpubArchiveLimits | None = None,
+    planner_limits: dict[str, int] | None = None,
 ) -> ImportBatchResult:
     source_label = safe_import_source_name(source_filename)
     _rewind_file(file_obj)
-    plan = plan_zip_import(file_obj, source_label=source_label)
+    plan = plan_zip_import(
+        file_obj,
+        source_label=source_label,
+        **(planner_limits or {}),
+    )
     batch = ImportBatchResult(
         source_type="zip",
         source_label=source_label,
@@ -53,6 +60,7 @@ def import_zip_file(
                         candidate,
                         members_index=plan.members_index,
                         actor=actor,
+                        epub_limits=epub_limits,
                     )
                 )
     except Exception as exc:
@@ -78,6 +86,7 @@ def _import_zip_candidate(
     *,
     members_index: dict[str, ZipMember],
     actor=None,
+    epub_limits: EpubArchiveLimits | None = None,
 ) -> ImportItemResult:
     from library.imports.epub import import_epub_file
 
@@ -111,6 +120,7 @@ def _import_zip_candidate(
             sidecar_opf=sidecar_opf,
             members_index=members_index,
         ),
+        archive_limits=epub_limits,
     )
 
 

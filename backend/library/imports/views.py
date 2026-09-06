@@ -8,14 +8,21 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from accounts.roles import is_librarian
+from library.imports.archives import (
+    WEB_ZIP_EPUB_COMPRESSION_RATIO,
+    WEB_ZIP_EPUB_MEMBER_BYTES,
+    WEB_ZIP_MEMBERS,
+    WEB_ZIP_TOTAL_EPUB_BYTES,
+)
 from library.imports.batches import import_zip_file
 from library.imports.epub import import_epub_file
+from library.imports.epub_validation import WEB_EPUB_LIMITS
 from library.imports.results import ImportBatchResult
 from library.imports.operational_logging import log_import_batch_completed
 from library.imports.serializers import import_batch_payload
 
 
-MAX_IMPORT_UPLOAD_BYTES = 256 * 1024 * 1024
+MAX_IMPORT_UPLOAD_BYTES = 128 * 1024 * 1024
 
 
 class ImportUploadView(APIView):
@@ -44,9 +51,22 @@ class ImportUploadView(APIView):
                 actor=request.user,
             )
         elif suffix == ".zip":
-            result = import_zip_file(upload, source_filename=source_label, actor=request.user)
+            result = import_zip_file(
+                upload,
+                source_filename=source_label,
+                actor=request.user,
+                epub_limits=WEB_EPUB_LIMITS,
+                planner_limits={
+                    "max_zip_members": WEB_ZIP_MEMBERS,
+                    "max_epub_member_bytes": WEB_ZIP_EPUB_MEMBER_BYTES,
+                    "max_total_epub_bytes": WEB_ZIP_TOTAL_EPUB_BYTES,
+                    "max_epub_compression_ratio": WEB_ZIP_EPUB_COMPRESSION_RATIO,
+                },
+            )
         else:
-            raise ValidationError({"file": ["Only .epub and .zip uploads are supported."]})
+            raise ValidationError(
+                {"file": ["Only .epub and .zip uploads are supported."]}
+            )
 
         log_import_batch_completed(
             result=result,
@@ -56,8 +76,15 @@ class ImportUploadView(APIView):
         return Response(import_batch_payload(result), status=status.HTTP_200_OK)
 
 
-def _batch_from_epub_upload(upload, *, source_filename: str, actor) -> ImportBatchResult:
-    item = import_epub_file(upload, source_filename=source_filename, actor=actor)
+def _batch_from_epub_upload(
+    upload, *, source_filename: str, actor
+) -> ImportBatchResult:
+    item = import_epub_file(
+        upload,
+        source_filename=source_filename,
+        actor=actor,
+        archive_limits=WEB_EPUB_LIMITS,
+    )
     return ImportBatchResult(
         source_type="epub",
         source_label=source_filename,

@@ -250,6 +250,23 @@ class ZipPlannerLimitTests(TestCase):
         self.assertEqual(plan.item_results[0].status, IMPORT_STATUS_FAILED)
         self.assertEqual(plan.item_results[0].source_label, "oversized.epub")
 
+    def test_extreme_outer_zip_compression_ratio_is_rejected_before_expansion(self):
+        plan = plan_zip_import(
+            zip_bytes(
+                ("bomb.epub", b"x" * 10_000),
+                ("ordinary.epub", b"not-compressible-enough-1234567890"),
+            ),
+            max_epub_compression_ratio=5,
+        )
+
+        self.assertEqual(
+            [candidate.safe_name for candidate in plan.candidates],
+            ["ordinary.epub"],
+        )
+        self.assertEqual(plan.discovered_count, 2)
+        self.assertEqual(plan.item_results[0].source_label, "bomb.epub")
+        self.assertIn("compression-ratio", plan.item_results[0].safe_message)
+
     def test_invalid_zip_produces_failed_result(self):
         plan = plan_zip_import(BytesIO(b"not a zip"))
 

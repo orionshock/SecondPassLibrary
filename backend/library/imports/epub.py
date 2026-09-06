@@ -40,6 +40,7 @@ def import_epub_file(
     sidecar_cover_bytes: bytes | None = None,
     source_label: str | None = None,
     source_method: str = "web",
+    archive_limits: epub_validation.EpubArchiveLimits | None = None,
 ) -> ImportItemResult:
     """
     Safe item-level import wrapper.
@@ -58,6 +59,7 @@ def import_epub_file(
             actor=actor,
             sidecar_opf=sidecar_opf,
             sidecar_cover_bytes=sidecar_cover_bytes,
+            archive_limits=archive_limits,
         )
     except (InvalidEpubImportError, UnsupportedImportSourceError, DjangoValidationError) as exc:
         result = ImportItemResult(
@@ -105,6 +107,7 @@ def _import_epub_file(
     actor=None,
     sidecar_opf: ParsedSidecarOpf | None = None,
     sidecar_cover_bytes: bytes | None = None,
+    archive_limits: epub_validation.EpubArchiveLimits | None = None,
 ) -> ImportItemResult:
     source_filename = (source_filename or "").strip()
     if not source_filename.lower().endswith(".epub"):
@@ -112,9 +115,13 @@ def _import_epub_file(
 
     data, checksum, file_size = epub_validation.read_file_with_sha256(
         file_obj,
-        max_bytes=epub_validation.MAX_EPUB_COMPRESSED_BYTES,
+        max_bytes=(
+            archive_limits.compressed_bytes
+            if archive_limits is not None
+            else epub_validation.MAX_EPUB_COMPRESSED_BYTES
+        ),
     )
-    epub_validation.validate_epub_bytes(data)
+    epub_validation.validate_epub_bytes(data, limits=archive_limits)
     metadata = read_import_metadata(data, sidecar_opf=sidecar_opf)
 
     persistence_result = persist_imported_book(

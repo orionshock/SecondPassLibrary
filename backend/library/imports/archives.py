@@ -21,6 +21,11 @@ from library.imports.results import (
 MAX_ZIP_MEMBERS = 5000
 MAX_ZIP_EPUB_MEMBER_BYTES = 200 * 1024 * 1024
 MAX_ZIP_TOTAL_EPUB_BYTES = 2 * 1024 * 1024 * 1024
+MAX_ZIP_EPUB_COMPRESSION_RATIO = 100
+WEB_ZIP_MEMBERS = 2000
+WEB_ZIP_EPUB_MEMBER_BYTES = 64 * 1024 * 1024
+WEB_ZIP_TOTAL_EPUB_BYTES = 256 * 1024 * 1024
+WEB_ZIP_EPUB_COMPRESSION_RATIO = 50
 MAX_OPF_SIDECAR_XML_BYTES = 1024 * 1024
 logger = logging.getLogger(__name__)
 
@@ -210,6 +215,7 @@ def plan_zip_import(
     max_zip_members: int = MAX_ZIP_MEMBERS,
     max_epub_member_bytes: int = MAX_ZIP_EPUB_MEMBER_BYTES,
     max_total_epub_bytes: int = MAX_ZIP_TOTAL_EPUB_BYTES,
+    max_epub_compression_ratio: int = MAX_ZIP_EPUB_COMPRESSION_RATIO,
 ) -> ZipImportPlan:
     try:
         with zipfile.ZipFile(zip_file, "r") as archive:
@@ -261,6 +267,18 @@ def plan_zip_import(
     total_epub_bytes = 0
     for member in index.epub_members:
         plan.discovered_count += 1
+        if member.file_size and (
+            member.compress_size == 0
+            or member.file_size > member.compress_size * max_epub_compression_ratio
+        ):
+            plan.item_results.append(
+                ImportItemResult(
+                    status=IMPORT_STATUS_FAILED,
+                    source_label=member.source_label,
+                    safe_message="EPUB member exceeds the ZIP compression-ratio limit.",
+                )
+            )
+            continue
         if member.file_size > max_epub_member_bytes:
             plan.item_results.append(
                 ImportItemResult(

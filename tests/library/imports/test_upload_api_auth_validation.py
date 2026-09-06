@@ -16,8 +16,8 @@ class LibraryImportUploadAuthValidationTests(
     IsolatedMediaRootMixin,
     LibraryImportUploadApiTestCase,
 ):
-    def test_web_upload_ceiling_is_256_mib(self):
-        self.assertEqual(MAX_IMPORT_UPLOAD_BYTES, 256 * 1024 * 1024)
+    def test_web_upload_ceiling_is_128_mib(self):
+        self.assertEqual(MAX_IMPORT_UPLOAD_BYTES, 128 * 1024 * 1024)
 
     def test_unauthenticated_upload_is_rejected(self):
         response = self.client.post(

@@ -135,19 +135,21 @@ imported, and duplicate/conflicting Book candidates do not acquire a cover.
 ## Limits and archive safety
 
 Application limits are enforced before untrusted input reaches expensive
-parser or checksum work:
+parser work. Product UI/API imports use tighter limits because parsing occurs
+in the web process:
 
-- compressed EPUB, whether uploaded directly or read from a batch ZIP: 200 MiB
-- EPUB entries: 2,000
-- expanded EPUB member: 100 MiB
-- aggregate expanded EPUB contents: 1 GiB
-- per-member EPUB compression ratio: 100:1
+- uploaded EPUB: 64 MiB compressed, 1,000 entries, 32 MiB per expanded member,
+  256 MiB aggregate expanded contents, and 50:1 per-member compression ratio;
 - encrypted EPUB members, unsafe member names, and normalized duplicate names are rejected
-- Product UI/API upload: 256 MiB
-- batch ZIP entries: 5,000
-- EPUB member expanded from a batch ZIP: 200 MiB
-- total EPUB members expanded from a batch ZIP: 2 GiB
+- Product UI/API upload: 128 MiB
+- uploaded batch ZIP: 2,000 entries, 64 MiB per expanded EPUB, 256 MiB
+  aggregate expanded EPUBs, and 50:1 outer ZIP compression ratio;
 - marginalia JSON import: 25 MiB
+
+Trusted local CLI imports retain the larger established ceilings: 200 MiB
+compressed EPUBs, 2,000 EPUB entries, 100 MiB per expanded member, 1 GiB
+aggregate expanded EPUB contents, 100:1 EPUB member ratio, 5,000 outer ZIP
+entries, 200 MiB per outer EPUB member, and 2 GiB aggregate outer EPUB data.
 
 Large migrations should use the local CLI commands below. Reverse-proxy limits
 may impose a lower ceiling on the Product UI/API upload.
