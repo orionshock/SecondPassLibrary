@@ -72,6 +72,18 @@ operations validate their item limits before expensive queries or
 serialization. Limits, idempotency keys, and replay fingerprints are defined by
 the workflow that uses them rather than by one universal API mechanism.
 
+The only Reader operation that currently requires an `Idempotency-Key` is:
+
+```text
+POST /api/v1/marginalia/books/{book_id}/start-over/
+```
+
+The key is scoped to the authenticated user, not to one Book. It identifies
+the method, full request path, and validated body for 24 hours. Repeating that
+same request returns its stored result. Reusing the key for a different Book,
+path, method, or body returns `409`; so does a retry made while the first
+request is still processing. After 24 hours the key may be used again.
+
 Marginalia Session deletion is intentionally a single-resource operation:
 
 ```text
@@ -195,6 +207,42 @@ handling in [Architecture](architecture.md), pairing in
 [Client API authorization](client-api-auth.md), and Marginalia import/export
 errors in [Marginalia](marginalia.md).
 
+### Reader error handling
+
+The server does not return an error code named `RESOURCE_NOT_FOUND`. A Reader
+may use that name internally for HTTP `404`, but it must keep the server's
+anti-enumeration meaning: the requested object is unavailable to this
+credential. For a Book operation, that can mean the Book is missing or not
+currently visible. For a Session, progress, or annotation operation, it can
+mean the Session is missing or belongs to another user. Clients must not infer
+which condition occurred.
+
+A well-formed progress or annotation write to a closed Session returns `409`
+with `error.code` set to `SESSION_CLOSED`. Invalid request data is rejected
+before Session state is checked, so a malformed write still returns its normal
+`400` validation response. An owned active Session whose Book is no longer
+visible returns `403` with `PERMISSION_DENIED` for those live writes.
+
+```json
+{
+  "error": {
+    "code": "SESSION_CLOSED",
+    "message": "The Reading Session is closed.",
+    "detail": "",
+    "hint": ""
+  }
+}
+```
+
+Clients should treat unchanged `400` requests, `SESSION_CLOSED`, and
+idempotency-key reuse with different input as permanent failures. A `403` or
+`404` should be retried only after authority or local identity has been
+refreshed. An idempotency request that is still processing, `429`, transport
+failure, and most `5xx` responses may be retried with the same operation's
+replay rules. Progress `PUT` is a replacement and may be repeated. Annotation
+batches converge on their client-generated identities. An identical Session
+close may be repeated. Start-over retries must keep the same key and payload.
+
 ## Pagination and collections
 
 Most list endpoints use page-number pagination:
@@ -286,6 +334,12 @@ Book details and Book mutations, downloads, and imports remain global routes.
 Group routes add only Group assignment, membership, and Group-owned Shelf
 operations; they do not duplicate Book, Author, Series, or Tag detail routes.
 
+The 120-second visible-Book cache is an internal server optimization for
+ordinary browse queries. It is not an HTTP cache lifetime and does not tell a
+Reader, browser, or intermediary to retain a response for two minutes.
+Authorization-sensitive Book details, mutations, and downloads use an
+uncached visibility check.
+
 ## Visibility and anti-enumeration
 
 Backend queries and services enforce authorization. React route guards,
@@ -318,6 +372,16 @@ uncached authorization path. A URL or object returned by an earlier request
 does not grant continuing access. Public cover images are a separate,
 display-only surface. EPUB files and private archives are never served as raw
 public media.
+
+An authorized Book detail response exposes the stored EPUB checksum as
+`file.checksum`. For current imports this is lowercase hexadecimal SHA-256 of
+the exact EPUB bytes stored and served by the download route. A Reader can
+hash the downloaded response bytes and compare that digest with the detail
+field. The download itself does not currently include a `Digest` or checksum
+header. A missing `file` object or blank checksum means the server has no
+usable value for client-side verification. Marginalia archives express the
+same digest as `sha256:<lowercase hex>`; the Book detail field contains only
+the hexadecimal digest.
 
 Successful attachments use their actual media type and a bounded
 `Content-Disposition` filename. Filenames derived from user data are cleaned so

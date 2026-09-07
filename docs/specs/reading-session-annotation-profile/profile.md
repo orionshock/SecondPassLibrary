@@ -113,8 +113,11 @@ specifically to prove this closed-shape rule.
 
 `clientAnnotationId` is a stable Reader-generated identity unique within one
 Reading Session. It supports correlation and retry-safe synchronization; it is
-not the server's Annotation primary key. Reusing the same identity targets the
-same logical annotation, including restoration after a prior soft deletion.
+not the server's Annotation primary key. It is an opaque, nonblank string of at
+most 255 characters rather than a UUID-typed field, although Readers should
+normally generate a UUID v4. Reusing the same identity within one Session
+targets the same logical annotation, including restoration after a prior soft
+deletion. The same value may be used in another Session without collision.
 
 Soft deletion is server state rather than an interchange variant. Deleted
 annotations are omitted from archives and current collections.

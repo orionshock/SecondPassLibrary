@@ -27,9 +27,22 @@ one when none exists. It never replaces or implicitly closes an active Session.
 Starting over requires current Book access and atomically closes the current
 Session, optionally finalizes its metadata and progress, and creates a blank
 active Session. The old Session keeps its progress and annotations. User-scoped
-start-over idempotency keys are retained for 24 hours: an identical replay
-returns the stored success, while reuse for changed input or an in-progress
-operation is a conflict.
+start-over idempotency keys have a 24-hour replay window. The key namespace is
+shared by all such requests from the same user rather than being scoped to one
+Book. Method, full path, and validated body are part of the identity: an
+identical replay returns the stored success, while reuse for another request
+or a retry made while the first request is still processing returns a
+conflict. Once the window expires, the key may be used again.
+
+`POST /api/v1/marginalia/books/{book_id}/open/` always returns an active
+Session. It returns the one already active for that user and Book or creates
+one; the database prevents multiple active Sessions for the pair.
+`GET /api/v1/marginalia/books/{book_id}/active-session/` is the read-only way
+to ask whether one exists and may return `null`.
+`POST /api/v1/marginalia/books/{book_id}/start-over/` is an intentional
+new-reading-pass action, not a recovery mechanism for an ordinary
+closed-session write. All three are supported Reader operations when the Book
+is currently visible.
 
 Only active Sessions accept title, note, progress, or annotation changes.
 Progress is one saved location stored on the Session: an opaque CFI, an
@@ -52,6 +65,19 @@ without new progress may complete after Book access is lost; supplying final
 progress still requires current access because it is a live location write.
 An identical close retry is safe, while an attempt to alter an already-closed
 Session is rejected.
+
+Closing and live writes are serialized as one-or-the-other outcomes. If a
+progress or annotation write commits first, it succeeds and closure follows.
+If closure commits first, the write makes no changes and returns
+`SESSION_CLOSED`. Progress replacement, annotation synchronization, and close
+all recheck the active state inside their transaction; an annotation batch is
+never partially applied.
+
+Session names are at most 255 characters. Notes have no separate field-level
+character limit. On open, close, start-over, and metadata edits, the API trims
+leading and trailing whitespace from supplied names and notes. Omitting a
+field preserves its current value where the operation updates an existing
+Session; explicitly sending an allowed blank value stores an empty string.
 
 An owner may permanently delete exactly one of their active or closed Sessions
 through one normal server request, with the intended single-resource shape
@@ -83,7 +109,11 @@ Annotations are owned through their Reading Session and have one of two kinds:
 Every annotation has an opaque CFI, an optional bounded location label, and a
 portable `client_id` unique within its Session. The CFI anchors the annotation;
 the label only describes that saved location for display. Client identity is
-not global and is distinct from the local database UUID.
+not global and is distinct from the local database UUID. The API accepts any
+non-whitespace string up to 255 characters and does not require UUID syntax.
+Readers should normally generate a UUID v4 because it provides a simple,
+collision-resistant identity. The same `client_id` may legally appear in two
+different Sessions.
 
 Annotation synchronization is an atomic batch against an owned active Session.
 The service locks/rechecks the Session and current uncached Book visibility
@@ -91,6 +121,15 @@ before mutation. Any invalid operation, closed Session, or lost authority
 leaves the whole batch unapplied. Upsert by `client_id` creates, updates, or
 restores the same row without duplication; deleting an unknown or already
 deleted identity is a retry-safe no-op.
+
+When a whole batch is rejected with `SESSION_CLOSED`, a Reader should preserve
+locally authored, unacknowledged upserts rather than discard them. It may open
+the same Book, then replay those upserts as one batch into the active Session
+returned by `open`, retaining their `client_id` values. It must not use
+start-over for this recovery and must not replay deletes from the historical
+Session into the new one. If the Book can no longer be opened, the Reader
+should keep the authored annotations locally as unsynced. The server never
+moves annotations between Sessions automatically.
 
 Deletion is soft deletion. Deleted annotations remain storage state but are
 excluded from ordinary reads, activity, counts, import/export empty-Session
