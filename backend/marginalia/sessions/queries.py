@@ -32,6 +32,8 @@ def marginalia_sessions_for_user(
     has_annotations: bool | None = None,
     group_by_book: bool = False,
 ) -> QuerySet[ReadingSession]:
+    # Owned history survives later Book-visibility loss; visibility only controls
+    # whether the Book can be opened now.
     queryset = ReadingSession.objects.filter(user=user)
     search = (q or "").strip()
     if search:

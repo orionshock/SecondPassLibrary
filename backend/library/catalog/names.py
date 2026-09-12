@@ -32,6 +32,8 @@ class AmbiguousCatalogEntityName(Exception):
 
 
 def find_single_normalized_name_match(*, model, name: str, kind: str):
+    # Normalized names are lookup aids, not identities; multiple matches stay
+    # ambiguous instead of being merged by an arbitrary ordering.
     normalized_name = normalize_catalog_entity_name(name)
     queryset = model.objects.filter(normalized_name=normalized_name).order_by("id")
     matches = list(queryset[:2])

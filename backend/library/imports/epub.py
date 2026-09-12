@@ -211,6 +211,8 @@ def _attach_import_cover_if_available(
     data: bytes,
     sidecar_cover_bytes: bytes | None = None,
 ) -> None:
+    # Cover extraction is enrichment; it must not roll back an otherwise valid
+    # EPUB import.
     try:
         cover = (
             validate_cover_bytes(sidecar_cover_bytes)

@@ -57,6 +57,8 @@ export function apiErrorFromPayload(status: number, payload: unknown): ApiError 
     Object.entries(body).filter(([key]) => !["detail", "code", "error", "errors"].includes(key)),
   );
   const fields = normalizeFieldErrors(body.errors) ?? normalizeFieldErrors(fieldPayload);
+  // Only the bounded error envelope is user-facing; arbitrary DRF detail remains
+  // diagnostic data rather than Product UI copy.
   const customMessage = boundedText(bounded.message);
   const hint = boundedText(bounded.hint);
   const message = customMessage

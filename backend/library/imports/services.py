@@ -62,6 +62,8 @@ def persist_imported_book(
     actor=None,
 ) -> ImportPersistenceResult:
     _validate_import_inputs(metadata=metadata, checksum=checksum, book_file=book_file)
+    # Exact bytes are the duplicate-file identity; bibliographic identifiers are
+    # non-unique metadata and never collapse two Books.
     existing = Book.objects.filter(checksum=checksum).first()
     if existing is not None:
         return ImportPersistenceResult(
@@ -139,6 +141,8 @@ def persist_imported_book(
     except Exception as exc:
         cleanup_status = "not_needed"
         if stored_file is not None and stored_file.created:
+            # Cleanup is best effort so its failure cannot replace the persistence
+            # error from the rolled-back import.
             cleanup_status = _cleanup_rolled_back_book_file(
                 stored_file=stored_file, book=book, actor=actor
             )

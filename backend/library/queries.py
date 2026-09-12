@@ -100,6 +100,8 @@ def _visible_books_for_user_uncached(user) -> QuerySet[Book]:
         return Book.objects.all()
     if user is None or getattr(user, "is_anonymous", False):
         return Book.objects.none()
+    # The Public group is still an explicit membership scope, not anonymous or
+    # server-wide visibility.
     return Book.objects.filter(
         group_assignments__group_id__in=effective_group_ids_for_user(user)
     ).distinct()

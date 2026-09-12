@@ -105,6 +105,8 @@ def _cover_media(request, path: str):
         path,
         document_root=Path(settings.MEDIA_ROOT) / "covers",
     )
+    # The route rejects every noncanonical name above, so different bytes cannot
+    # be served later under a successfully cached URL.
     response["Cache-Control"] = IMMUTABLE_COVER_CACHE_CONTROL
     return response
 

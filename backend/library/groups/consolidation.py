@@ -29,6 +29,9 @@ from shelves.models import Shelf, ShelfItem
 logger = logging.getLogger(__name__)
 MAX_SHELF_NAME_LENGTH = Shelf._meta.get_field("name").max_length
 
+# Preview planning and execution share one fingerprinted state model so the
+# destructive apply step cannot drift from the plan the operator reviewed.
+
 
 class AdvancedGroupsConsolidationError(Exception):
     pass

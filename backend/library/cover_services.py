@@ -93,6 +93,8 @@ def replace_book_cover(
                 )
     except Exception:
         if created_file and not Book.objects.filter(cover_file=stored_name).exists():
+            # Preserve the database/storage failure being raised; orphan cleanup
+            # is deliberately best effort.
             try:
                 storage.delete(stored_name)
             except Exception as cleanup_exc:
@@ -159,6 +161,8 @@ def _cleanup_old_cover(
     operation: str,
     actor=None,
 ) -> None:
+    # Callers schedule this after commit so rollback never removes the cover still
+    # referenced by the Book; a shared content path is retained while referenced.
     referenced: bool | None = None
     try:
         referenced = Book.objects.filter(cover_file=name).exists()

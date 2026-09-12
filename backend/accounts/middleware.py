@@ -38,6 +38,8 @@ _ALLOWED_BROWSER_PATHS = {
 
 
 def _is_public_cover_path(path: str) -> bool:
+    # Immutable public covers bypass session policy and tracking so middleware does
+    # not attach cookie-dependent behavior or a useless Vary: Cookie.
     return path.startswith("/media/covers/")
 
 

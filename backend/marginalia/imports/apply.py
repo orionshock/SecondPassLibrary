@@ -37,6 +37,9 @@ from .staging import (
 logger = logging.getLogger(__name__)
 UNTITLED_BOOK = "Untitled Book"
 
+# Preview validation, replay checks, and persistence stay together because they
+# form one staged-import transaction boundary.
+
 
 class ImportApplyError(Exception):
     pass
@@ -155,6 +158,7 @@ def _apply_import_once(
             "updated_at",
         ]
     )
+    # The staged archive remains the source for unmatched-download recovery.
     if not result["unmatched_download_available"]:
         transaction.on_commit(partial(delete_stage_file, stage.storage_name))
     if inaccessible:

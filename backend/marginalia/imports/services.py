@@ -195,7 +195,10 @@ def _build_preview(
 
 
 def _book_matches(*, user, file_hashes: list[str]) -> dict[str, dict]:
-    """Resolve exact EPUB identities without bibliographic metadata fallback."""
+    """Match exact EPUB bytes.
+
+    Similar metadata cannot prove annotation-location compatibility.
+    """
     checksums = [value.removeprefix("sha256:") for value in file_hashes]
     accessible: dict[str, list] = {}
     for book in visible_books_for_user(user, cached=False).filter(

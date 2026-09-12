@@ -27,6 +27,8 @@ BOOK_DATE_PRECISION_CHOICES = [
 
 
 def book_cover_upload_path(instance: "Book", filename: str) -> str:
+    # Cover bytes own the URL: changing bytes must produce a new path so
+    # successful responses can be cached as immutable.
     base = Path(filename).name
     match = _COVER_FILENAME_RE.match(base)
     if not match:
@@ -287,6 +289,8 @@ class BookCatalogTag(TimeStampedModel):
 
 
 class BookIdentifier(TimeStampedModel):
+    # Identifiers are descriptive metadata and may be shared by different Books;
+    # uniqueness only prevents duplicate values on the same Book.
     SCHEME_ISBN_10 = "isbn_10"
     SCHEME_ISBN_13 = "isbn_13"
     SCHEME_ASIN = "asin"

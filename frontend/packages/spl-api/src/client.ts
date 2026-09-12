@@ -139,6 +139,8 @@ async function parseJson(response: Response, method: string): Promise<unknown> {
 }
 
 function logUnexpectedResponse(method: string, status: number, failureClass: string): void {
+  // Keep diagnostics bounded: request URLs and bodies can contain user data or
+  // credentials and must not be echoed to the browser console.
   console.error("Unexpected API response.", {
     method,
     status,

@@ -200,6 +200,8 @@ def disable_user(user, *, actor=None) -> SessionRevocationCounts:
 
 
 def _advance_web_session_generation(user) -> int:
+    # Deleting tracked rows is insufficient: generation also revokes valid browser
+    # sessions created before tracking existed or tracking completed.
     profile = UserProfile.objects.select_for_update().get(user=user)
     profile.web_session_generation += 1
     profile.save(update_fields=["web_session_generation", "updated_at"])

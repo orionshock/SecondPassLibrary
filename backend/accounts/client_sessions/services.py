@@ -38,6 +38,9 @@ SQLITE_CONSUMPTION_LOCK_RETRIES = 5
 SQLITE_CREATION_LOCK_RETRIES = 10
 UNKNOWN_SOURCE_BUCKET = "unknown"
 
+# Pairing creation, approval, and one-time consumption stay together because they
+# share one locked state machine and its abuse limits.
+
 
 class PairingRequestThrottled(ValueError):
     pass
@@ -566,4 +569,3 @@ def authenticate_bearer_token(raw_token: str) -> UserClientSession | None:
         session.last_seen_at = now
 
     return session
-
