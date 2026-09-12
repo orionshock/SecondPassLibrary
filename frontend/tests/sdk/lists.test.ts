@@ -6,6 +6,7 @@ import {
   getMarginaliaBook,
   listMarginaliaBooks,
   listMarginaliaBookSessions,
+  listMarginaliaExportCandidates,
   listMarginaliaSessions,
   listRecentMarginaliaSessions,
 } from "../../packages/spl-api/src/marginalia";
@@ -149,6 +150,26 @@ describe("Marginalia Session list SDK", () => {
       "/api/v1/marginalia/sessions/?has_annotations=false",
       "/api/v1/marginalia/sessions/",
     ]);
+  });
+
+  it("requests the batched Book projection for grouped export candidates", async () => {
+    const calls: string[] = [];
+    const client: ApiClient = { request: async <T>(path: string) => {
+      calls.push(path);
+      return { count: 1, next: null, previous: null, results: [{ ...session, book }] } as T;
+    } };
+
+    const page = await listMarginaliaExportCandidates(
+      { q: "series", hasAnnotations: true },
+      { groupByBook: true },
+      client,
+    );
+
+    expect(calls).toEqual([
+      "/api/v1/marginalia/sessions/?q=series&has_annotations=true&include_book_summary=true&group_by=book",
+    ]);
+    expect(page.items[0]?.book.authors[0]?.name).toBe("The Author");
+    expect(page.items[0]?.book.sessionCount).toBe(3);
   });
 });
 

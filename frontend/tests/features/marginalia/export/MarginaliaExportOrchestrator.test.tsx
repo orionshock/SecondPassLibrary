@@ -5,7 +5,7 @@ import { createRoot } from "react-dom/client";
 import { createMemoryRouter, Outlet, RouterProvider } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { CurrentUser, MarginaliaSessionListItem, Page, ServerInfo } from "@second-pass/spl-api";
+import type { CurrentUser, MarginaliaExportCandidate, Page, ServerInfo } from "@second-pass/spl-api";
 import type { AppOutletContext } from "../../../../src/app/layout/AppOrchestrator";
 import { MarginaliaExportOrchestrator } from "../../../../src/features/marginalia/export/MarginaliaExportOrchestrator";
 import { buttonNamed, deferred } from "../../../support/domInteraction";
@@ -14,7 +14,7 @@ const sdk = vi.hoisted(() => ({ listSessions: vi.fn(), downloadComplete: vi.fn()
 const browser = vi.hoisted(() => ({ save: vi.fn() }));
 vi.mock("@second-pass/spl-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@second-pass/spl-api")>()),
-  listMarginaliaSessions: sdk.listSessions,
+  listMarginaliaExportCandidates: sdk.listSessions,
   downloadCompleteMarginaliaExport: sdk.downloadComplete,
   downloadSelectedMarginaliaExport: sdk.downloadSelected,
 }));
@@ -22,12 +22,12 @@ vi.mock("../../../../src/shared/browser/saveDownloadedFile", () => ({ saveDownlo
 
 (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-const session = (id: string, name: string): MarginaliaSessionListItem => ({
+const session = (id: string, name: string): MarginaliaExportCandidate => ({
   id, name, notes: "", status: "active", startedAt: "2026-01-01T00:00:00Z", closedAt: null,
   updatedAt: "2026-01-01T00:00:00Z", lastActivityAt: "2026-01-01T00:00:00Z", annotationCount: 1,
-  book: { id: `book-${id}`, title: `Book ${name}`, coverUrl: null, canOpen: true },
+  book: { id: `book-${id}`, title: `Book ${name}`, coverUrl: null, canOpen: true, authors: [], series: null, sessionCount: 1, activeSessionCount: 1, lastActivityAt: "2026-01-01T00:00:00Z" },
 });
-const page = (items: MarginaliaSessionListItem[]): Page<MarginaliaSessionListItem> => ({ items, count: items.length, next: null, previous: null });
+const page = (items: MarginaliaExportCandidate[]): Page<MarginaliaExportCandidate> => ({ items, count: items.length, next: null, previous: null });
 const currentUser = {
   username: "reader", email: "", firstName: "", lastName: "", profileId: "profile", role: "reader",
   mustChangePassword: false, isOwner: false, isManager: false, isLibrarian: false, isReader: true,
@@ -67,7 +67,10 @@ describe("MarginaliaExportOrchestrator", () => {
   it("loads URL-backed export candidates and retries a recoverable failure", async () => {
     sdk.listSessions.mockRejectedValueOnce(new Error("Candidates unavailable.")).mockResolvedValueOnce(page([session("recovered", "Recovered")]));
     const { container } = await mount("/marginalia/export?q=notes&status=closed&page=2&page_size=50");
-    expect(sdk.listSessions).toHaveBeenCalledWith({ q: "notes", status: "closed", hasAnnotations: true, page: 2, pageSize: 50 });
+    expect(sdk.listSessions).toHaveBeenCalledWith(
+      { q: "notes", status: "closed", hasAnnotations: true, page: 2, pageSize: 50 },
+      { groupByBook: false },
+    );
     expect(container.querySelector('[role="alert"]')).not.toBeNull();
 
     await act(async () => buttonNamed(container, "Retry").click());
@@ -85,8 +88,8 @@ describe("MarginaliaExportOrchestrator", () => {
 
     act(() => buttonNamed(container, "Download complete archive").click());
     expect(sdk.downloadComplete).toHaveBeenCalledWith({ includeEmptySessions: false });
-    expect(buttonNamed(container, "Preparing...").disabled).toBe(true);
-    act(() => buttonNamed(container, "Preparing...").click());
+    expect(buttonNamed(container, "Preparing complete archive").disabled).toBe(true);
+    act(() => buttonNamed(container, "Preparing complete archive").click());
     expect(sdk.downloadComplete).toHaveBeenCalledOnce();
     await act(async () => pending.resolve(download));
 
@@ -106,9 +109,23 @@ describe("MarginaliaExportOrchestrator", () => {
     expect(container.querySelector('[role="alert"]')).not.toBeNull();
   });
 
+  it("preserves Reading Session selection when switching to the Book view", async () => {
+    sdk.listSessions.mockResolvedValue(page([session("one", "Selected Session")]));
+    const { container } = await mount();
+    await act(async () => (container.querySelector('[aria-label="Select Selected Session for Book Selected Session"]') as HTMLInputElement).click());
+
+    await act(async () => buttonNamed(container, "By Book").click());
+
+    expect(sdk.listSessions).toHaveBeenLastCalledWith(
+      { hasAnnotations: true, page: 1, pageSize: 20 },
+      { groupByBook: true },
+    );
+    expect((container.querySelector('[aria-label="Select Selected Session for Book Selected Session"]') as HTMLInputElement).checked).toBe(true);
+  });
+
   it("does not allow an older candidate request to replace a newer filter result", async () => {
-    const oldRequest = deferred<Page<MarginaliaSessionListItem>>();
-    const newRequest = deferred<Page<MarginaliaSessionListItem>>();
+    const oldRequest = deferred<Page<MarginaliaExportCandidate>>();
+    const newRequest = deferred<Page<MarginaliaExportCandidate>>();
     sdk.listSessions.mockReturnValueOnce(oldRequest.promise).mockReturnValueOnce(newRequest.promise);
     const { container, router } = await mount("/marginalia/export?q=old");
 

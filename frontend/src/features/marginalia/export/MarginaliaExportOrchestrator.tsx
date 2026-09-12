@@ -1,4 +1,4 @@
-import { downloadCompleteMarginaliaExport, downloadSelectedMarginaliaExport, listMarginaliaSessions, MarginaliaExportTooLargeError, type MarginaliaSessionListItem, type Page } from "@second-pass/spl-api";
+import { downloadCompleteMarginaliaExport, downloadSelectedMarginaliaExport, listMarginaliaExportCandidates, MarginaliaExportTooLargeError, type MarginaliaExportCandidate, type Page } from "@second-pass/spl-api";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useSearchParams } from "react-router";
 
@@ -15,7 +15,7 @@ import { MarginaliaExportPageRegion, type MarginaliaExportLimitFailure } from ".
 import "../Marginalia.css";
 
 interface MarginaliaExportLoadState {
-  page?: Page<MarginaliaSessionListItem>;
+  page?: Page<MarginaliaExportCandidate>;
   loading: boolean;
   error?: Error;
 }
@@ -53,7 +53,10 @@ export function MarginaliaExportOrchestrator() {
       pageSize: query.pageSize,
       recoveryKey: `marginalia-export:${canonicalQuery}`,
       recoveredKeys: recoveredPageKeys.current,
-      fetchPage: (page) => listMarginaliaSessions({ ...sdkQuery, page }),
+      fetchPage: (page) => listMarginaliaExportCandidates(
+        { ...sdkQuery, page },
+        { groupByBook: query.view === "books" },
+      ),
       buildRecoveredLocation: (page) => marginaliaExportSearchParams(withMarginaliaExportChange(query, { page }, false)).toString(),
       replaceLocation: (nextQuery) => {
         if (!active) return false;
@@ -67,7 +70,7 @@ export function MarginaliaExportOrchestrator() {
       if (active) setLoad((current) => ({ page: current.page, loading: false, error: normalizeMutationError(error) }));
     });
     return () => { active = false; };
-  }, [canonicalQuery, includeEmptySessions, location.state, query.page, query.pageSize, query.q, query.status, queryKey, retry, setSearchParameters]);
+  }, [canonicalQuery, includeEmptySessions, location.state, query.page, query.pageSize, query.q, query.status, query.view, queryKey, retry, setSearchParameters]);
 
   function changeQuery(changes: Parameters<typeof withMarginaliaExportChange>[1], resetPage = true) {
     setSearchParameters(marginaliaExportSearchParams(withMarginaliaExportChange(query, changes, resetPage)), { state: location.state });
@@ -107,6 +110,7 @@ export function MarginaliaExportOrchestrator() {
       pageSize={query.pageSize}
       search={searchDraft}
       status={query.status}
+      view={query.view}
       loading={load.loading}
       loadError={load.error}
       completeState={completeState}
@@ -126,6 +130,7 @@ export function MarginaliaExportOrchestrator() {
       onSearchChange={setSearchDraft}
       onSearch={() => changeQuery({ q: searchDraft.trim() })}
       onStatusChange={(status) => changeQuery({ status })}
+      onViewChange={(view) => changeQuery({ view })}
       onPageChange={(page) => changeQuery({ page }, false)}
       onPageSizeChange={(pageSize) => changeQuery({ pageSize })}
       onRetry={() => setRetry((value) => value + 1)}

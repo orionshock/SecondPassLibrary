@@ -6,6 +6,7 @@ import { Badge, Button, FormField, Surface } from "../../../components/UiPrimiti
 import { HelpPopover } from "../../../components/HelpPopover";
 import { BookCover } from "../../../shared/books/BookCover";
 import { marginaliaSessionDisplayName } from "../../../shared/marginaliaSessionDisplayName";
+import { isNestedInteractiveClick } from "../components/selectionClick";
 import { ActionFeedback } from "../../../shared/feedback/ActionFeedback";
 import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";
 import { ActionRow } from "../../../shared/forms/ActionRow";
@@ -73,14 +74,25 @@ function MarginaliaImportReview({ preview, draft, editingSessionKeys, selectedCo
     {preview.unmatchedBookCount ? <p className="marginalia-import-warning">{preview.unmatchedBookCount} {preview.unmatchedBookCount === 1 ? "Book has" : "Books have"} no exact EPUB checksum match. Download the unmatched Reading Sessions or import the matching EPUB and preview again.</p> : null}
     {summaryWarnings.length ? <div className="marginalia-import-summary__warnings">{summaryWarnings.map((warning) => <span className="marginalia-import-summary__warning" key={warning.code}><span className="css-dot" aria-hidden="true" />{warning.message}</span>)}</div> : null}
     <div className="marginalia-import-books">
-      {preview.books.map((book, bookIndex) => <section className="marginalia-import-book" key={book.candidateId}>
+      {preview.books.map((book, bookIndex) => {
+        const selectable = book.match.status === "matched" && book.readingSessions.some((session) => session.willImport);
+        const selectionState = marginaliaImportBookSelectionState(preview, draft, book.candidateId);
+        const clickable = selectable && !applyState.pending;
+        return <section
+          className={`marginalia-import-book${clickable ? " marginalia-selection-target" : ""}${selectionState === "all" ? " marginalia-selection-target--selected" : ""}`}
+          key={book.candidateId}
+          onClick={clickable ? (event) => {
+            if (isNestedInteractiveClick(event)) return;
+            onBookSelectionChange(book.candidateId, selectionState !== "all");
+          } : undefined}
+        >
         <div className="marginalia-import-book__cover">
-          <BookCover coverUrl={null} title={book.title || "Imported Book"} />
+          <BookCover coverUrl={book.match.status === "matched" ? book.match.coverUrl : null} title={book.title || "Imported Book"} />
         </div>
         <div className="marginalia-import-book__content">
           <header className="marginalia-import-book__header">
             <div className="marginalia-import-book__identity">
-              {book.match.status === "matched" && book.readingSessions.some((session) => session.willImport) ? <BookSelectionCheckbox label={book.title || "Untitled Book"} state={marginaliaImportBookSelectionState(preview, draft, book.candidateId)} disabled={applyState.pending} onChange={(selected) => onBookSelectionChange(book.candidateId, selected)} /> : null}
+              {selectable ? <BookSelectionCheckbox label={book.title || "Untitled Book"} state={selectionState} disabled={applyState.pending} onChange={(selected) => onBookSelectionChange(book.candidateId, selected)} /> : null}
               <h2>{book.title || "Untitled Book"}</h2>{book.authors.length ? <><span className="css-dot" aria-hidden="true" /><span className="marginalia-import-book__authors">{book.authors.join(", ")}</span></> : null}
             </div>
             <span className="marginalia-import-book__match">
@@ -97,11 +109,20 @@ function MarginaliaImportReview({ preview, draft, editingSessionKeys, selectedCo
           const sessionName = marginaliaSessionDisplayName({ id: session.candidateId, name: value.name });
           const sessionFacts = <><span className="css-dot" aria-hidden="true" /><span className="marginalia-import-session__annotation-count">{session.annotationCount} annotations</span></>;
           const duplicateWarning = session.warnings.find((warning) => warning.code === "POSSIBLE_DUPLICATE_SESSION");
-          return <article className="marginalia-import-session" key={key}>
+          const clickable = session.willImport && !applyState.pending;
+          return <article
+            className={`marginalia-import-session${clickable ? " marginalia-selection-target marginalia-selection-target--child" : ""}${value.selected ? " marginalia-selection-target--selected" : ""}`}
+            key={key}
+            onClick={clickable ? (event) => {
+              event.stopPropagation();
+              if (isNestedInteractiveClick(event)) return;
+              onDraftChange(key, { ...value, selected: !value.selected });
+            } : (event) => event.stopPropagation()}
+          >
             <div className="marginalia-import-session__summary">
               <div>
                 {session.willImport ? <div className="marginalia-import-session__select">
-                  <label><input type="checkbox" checked={value.selected} disabled={applyState.pending} onChange={(event) => onDraftChange(key, { ...value, selected: event.target.checked })} /><span>{sessionName}</span></label>
+                  <label><input type="checkbox" aria-label={`Select ${sessionName} for import`} checked={value.selected} disabled={applyState.pending} onChange={(event) => onDraftChange(key, { ...value, selected: event.target.checked })} /><span aria-hidden="true">{sessionName}</span></label>
                   {session.possibleDuplicate && duplicateWarning ? <HelpPopover ariaLabel={`Why ${sessionName} may be a duplicate Reading Session`} label="Possible duplicate" mouseoverText={duplicateWarning.message} border borderColor="#8f783f" color="#c2a85f" /> : null}
                   {sessionFacts}
                 </div> : <div className="marginalia-import-session__select"><span>{sessionName}</span>{sessionFacts}</div>}
@@ -118,7 +139,8 @@ function MarginaliaImportReview({ preview, draft, editingSessionKeys, selectedCo
           </article>;
           })}</div>
         </div>
-      </section>)}
+      </section>;
+      })}
     </div>
     <ActionRow state={applyState}>
       {preview.unmatchedDownloadableReadingSessionCount > 0 ? <span className="marginalia-import-download-action"><ActionFeedback state={downloadState} /><Button type="button" tone="secondary" disabled={downloadState.pending || applyState.pending} onClick={onDownloadUnmatched}>{downloadState.pending ? "Downloading…" : `Download unmatched (${preview.unmatchedDownloadableReadingSessionCount})`}</Button></span> : null}

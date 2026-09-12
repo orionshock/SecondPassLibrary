@@ -1,4 +1,4 @@
-import { MarginaliaExportTooLargeError, type CurrentUser, type MarginaliaSessionListItem, type Page, type ServerInfo } from "@second-pass/spl-api";
+import { MarginaliaExportTooLargeError, type CurrentUser, type MarginaliaExportCandidate, type Page, type ServerInfo } from "@second-pass/spl-api";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it, vi } from "vitest";
@@ -11,28 +11,29 @@ import { marginaliaExportSelectedBookCount, marginaliaExportSelectedSessionIds, 
 import { MarginaliaSessionsOrchestrator } from "../../../../src/features/marginalia/browse/MarginaliaSessionsOrchestrator";
 import { MarginaliaExportPageRegion, type MarginaliaExportLimitFailure } from "../../../../src/features/marginalia/export/MarginaliaExportPageRegion";
 
-const visibleSession: MarginaliaSessionListItem = {
+const visibleSession: MarginaliaExportCandidate = {
   id: "session-sensitive-1", name: "Morning notes", status: "active",
   startedAt: "2026-07-20T12:00:00Z", closedAt: null, updatedAt: "2026-07-21T12:00:00Z",
   lastActivityAt: "2026-07-21T12:00:00Z", notes: "", annotationCount: 2,
-  book: { id: "book-sensitive-1", title: "Visible Book", coverUrl: "/media/cover.jpg", canOpen: true },
+  book: { id: "book-sensitive-1", title: "Visible Book", coverUrl: "/media/cover.jpg", canOpen: true, authors: [{ id: "author-1", name: "Visible Author" }], series: null, sessionCount: 1, activeSessionCount: 1, lastActivityAt: "2026-07-21T12:00:00Z" },
 };
-const hiddenSession: MarginaliaSessionListItem = {
+const hiddenSession: MarginaliaExportCandidate = {
   ...visibleSession, id: "session-sensitive-2", name: "Recovered history", status: "closed",
   closedAt: "2026-07-22T12:00:00Z",
-  book: { id: "book-sensitive-2", title: "Remembered Book", coverUrl: null, canOpen: false },
+  book: { id: "book-sensitive-2", title: "Remembered Book", coverUrl: null, canOpen: false, authors: [], series: null, sessionCount: 1, activeSessionCount: 0, lastActivityAt: "2026-07-22T12:00:00Z" },
 };
-const page: Page<MarginaliaSessionListItem> = { items: [visibleSession, hiddenSession], count: 2, next: null, previous: null };
+const page: Page<MarginaliaExportCandidate> = { items: [visibleSession, hiddenSession], count: 2, next: null, previous: null };
 const user: CurrentUser = { username: "reader", email: "", firstName: "", lastName: "", profileId: "profile", role: "reader", mustChangePassword: false, isOwner: false, isManager: false, isLibrarian: false, isReader: true, canAccessDjangoAdmin: false, groups: [] };
 const server: ServerInfo = { name: "SPL", description: "", bannerText: "", advancedLibraryGroupsEnabled: false, secondPassReaderWebClientUrl: null, marginaliaProfileUri: "profile", publicGroup: { id: "public", name: "Common Room", description: "" }, version: "dev", releaseDate: "" };
 
-function renderExport(selectedSessionIds: ReadonlySet<string> = new Set(), options: { page?: Page<MarginaliaSessionListItem>; loadError?: Error; selectedError?: Error; completeError?: Error; selectedLimitFailure?: MarginaliaExportLimitFailure; completeLimitFailure?: MarginaliaExportLimitFailure } = {}) {
+function renderExport(selectedSessionIds: ReadonlySet<string> = new Set(), options: { page?: Page<MarginaliaExportCandidate>; view?: "sessions" | "books"; loadError?: Error; selectedError?: Error; completeError?: Error; selectedLimitFailure?: MarginaliaExportLimitFailure; completeLimitFailure?: MarginaliaExportLimitFailure } = {}) {
   return renderToStaticMarkup(<MemoryRouter><MarginaliaExportPageRegion
     page={options.page ?? page}
     pageNumber={1}
     pageSize={20}
     search=""
     status="all"
+    view={options.view ?? "sessions"}
     loading={false}
     loadError={options.loadError}
     completeState={{ pending: false, error: options.completeError }}
@@ -46,6 +47,7 @@ function renderExport(selectedSessionIds: ReadonlySet<string> = new Set(), optio
     onSearchChange={vi.fn()}
     onSearch={vi.fn()}
     onStatusChange={vi.fn()}
+    onViewChange={vi.fn()}
     onPageChange={vi.fn()}
     onPageSizeChange={vi.fn()}
     onRetry={vi.fn()}

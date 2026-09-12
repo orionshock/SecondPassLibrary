@@ -30,7 +30,8 @@ from .queries import (
 )
 from .serializers import (
     MarginaliaGlobalSessionSummarySerializer,
-    MarginaliaAnnotationPresenceQuerySerializer,
+    MarginaliaGlobalSessionWithBookSummarySerializer,
+    MarginaliaSessionListQuerySerializer,
     MarginaliaProgressPutSerializer,
     MarginaliaRecentSessionsQuerySerializer,
     MarginaliaRecentSessionSerializer,
@@ -79,20 +80,39 @@ class MarginaliaSessionListView(MarginaliaReadMixin, ListAPIView):
     serializer_class = MarginaliaGlobalSessionSummarySerializer
 
     def get_queryset(self):
-        presence = MarginaliaAnnotationPresenceQuerySerializer(
-            data={
-                "has_annotations": self.request.query_params.get("has_annotations")
-            }
-            if "has_annotations" in self.request.query_params
-            else {}
+        query = MarginaliaSessionListQuerySerializer(
+            data=self.request.query_params
         )
-        presence.is_valid(raise_exception=True)
+        query.is_valid(raise_exception=True)
+        self._list_options = query.validated_data
         return marginalia_sessions_for_user(
             user=self.request.user,
             status=self.request.query_params.get("status", ""),
             q=self.request.query_params.get("q", ""),
-            has_annotations=presence.validated_data.get("has_annotations"),
+            has_annotations=query.validated_data.get("has_annotations"),
+            group_by_book=query.validated_data["group_by"] == "book",
         )
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        if not self._list_options["include_book_summary"]:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
+        book_ids = {session.book_id for session in page}
+        book_by_id = {
+            book.pk: book
+            for book in marginalia_books_for_user(user=request.user).filter(pk__in=book_ids)
+        }
+        for session in page:
+            session.book = book_by_id[session.book_id]
+        serializer = MarginaliaGlobalSessionWithBookSummarySerializer(
+            page,
+            many=True,
+            context={"request": request},
+        )
+        return self.get_paginated_response(serializer.data)
 
 
 class MarginaliaRecentSessionListView(MarginaliaReadMixin, APIView):

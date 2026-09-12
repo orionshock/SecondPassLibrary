@@ -24,7 +24,7 @@ const previewResponse = {
       file_hash: "sha256:one",
       title: "Matched Book",
       authors: ["Author One"],
-      match: { status: "matched" as const, book_id: "local-book" },
+      match: { status: "matched" as const, book_id: "local-book", cover_url: "/media/covers/local.jpg" },
       reading_sessions: [{
         candidate_id: "reading-session-000001",
         source_reading_session_id: "source-session-1",
@@ -107,7 +107,7 @@ describe("Marginalia Import SDK", () => {
         {
           candidateId: "book-000001",
           fileHash: "sha256:one",
-          match: { status: "matched", bookId: "local-book" },
+          match: { status: "matched", bookId: "local-book", coverUrl: "/media/covers/local.jpg" },
           readingSessions: [{
             candidateId: "reading-session-000001",
             sourceReadingSessionId: "source-session-1",

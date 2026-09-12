@@ -33,7 +33,7 @@ const preview: MarginaliaImportPreview = {
       fileHash: "sha256:hidden",
       title: "Matched Book",
       authors: ["Author One"],
-      match: { status: "matched", bookId: "local-book" },
+      match: { status: "matched", bookId: "local-book", coverUrl: "/media/covers/matched.jpg" },
       readingSessions: [
         {
           candidateId: "reading-session-000001",

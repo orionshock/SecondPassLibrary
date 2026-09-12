@@ -1,12 +1,14 @@
 import type { MarginaliaSessionsQuery } from "@second-pass/spl-api";
 
 export type MarginaliaExportStatusFilter = "all" | "active" | "closed";
+export type MarginaliaExportView = "sessions" | "books";
 
 export interface MarginaliaExportUrlState {
   q: string;
   status: MarginaliaExportStatusFilter;
   page: number;
   pageSize: number;
+  view: MarginaliaExportView;
 }
 
 const pageSizes = new Set([20, 30, 40, 50]);
@@ -19,6 +21,7 @@ export function marginaliaExportStateFromSearchParams(parameters: URLSearchParam
     status: rawStatus && statuses.has(rawStatus) ? rawStatus : "all",
     page: positiveInteger(parameters.get("page"), 1),
     pageSize: validPageSize(parameters.get("page_size")),
+    view: parameters.get("view") === "books" ? "books" : "sessions",
   };
 }
 
@@ -28,6 +31,7 @@ export function marginaliaExportSearchParams(state: MarginaliaExportUrlState): U
   if (state.page > 1) parameters.set("page", String(state.page));
   if (state.pageSize !== 20) parameters.set("page_size", String(state.pageSize));
   if (state.q) parameters.set("q", state.q);
+  if (state.view === "books") parameters.set("view", "books");
   return parameters;
 }
 

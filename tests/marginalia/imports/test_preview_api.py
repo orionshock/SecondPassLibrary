@@ -45,7 +45,11 @@ class MarginaliaImportPreviewAPITests(IsolatedUserdataMixin, APITestCase):
         LibraryGroupMembership.objects.create(user=self.user, group=self.group)
         self.other_group = LibraryGroup.objects.create(name="Other Readers")
         LibraryGroupMembership.objects.create(user=self.other, group=self.other_group)
-        self.book = Book.objects.create(title="Archive Book", checksum="a" * 64)
+        self.book = Book.objects.create(
+            title="Archive Book",
+            checksum="a" * 64,
+            cover_file="covers/matched-archive.jpg",
+        )
         BookGroupAssignment.objects.create(book=self.book, group=self.group)
         self.hidden_book = Book.objects.create(title="Archive Book", checksum="b" * 64)
         BookGroupAssignment.objects.create(book=self.hidden_book, group=self.other_group)
@@ -114,8 +118,10 @@ class MarginaliaImportPreviewAPITests(IsolatedUserdataMixin, APITestCase):
         book = payload["books"][0]
         session = book["reading_sessions"][0]
         self.assertEqual(book["candidate_id"], "book-000001")
-        self.assertEqual(
-            book["match"], {"status": "matched", "book_id": str(self.book.pk)}
+        self.assertEqual(book["match"]["status"], "matched")
+        self.assertEqual(book["match"]["book_id"], str(self.book.pk))
+        self.assertTrue(
+            book["match"]["cover_url"].endswith("/media/covers/matched-archive.jpg")
         )
         self.assertEqual(session["candidate_id"], "reading-session-000001")
         self.assertEqual(session["source_reading_session_id"], "source-session-1")

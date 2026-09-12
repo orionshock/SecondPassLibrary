@@ -8,6 +8,7 @@ from django.utils.dateparse import parse_datetime
 
 from core.operational_logging import user_uuid
 from library.models import Book
+from library.catalog.serializers.books import book_cover_url
 from library.queries import visible_books_for_user
 from marginalia.archives import MarginaliaArchive, parse_archive
 from marginalia.models import ReadingSession
@@ -160,7 +161,11 @@ def _build_preview(
                 "title": book.title,
                 "authors": list(book.authors),
                 "match": (
-                    {"status": "matched", "book_id": str(matched_book.pk)}
+                    {
+                        "status": "matched",
+                        "book_id": str(matched_book.pk),
+                        "cover_url": book_cover_url(matched_book),
+                    }
                     if matched_book is not None
                     else {"status": "unmatched", "reason": match["reason"]}
                 ),

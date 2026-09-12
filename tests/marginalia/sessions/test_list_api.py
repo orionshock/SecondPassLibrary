@@ -140,6 +140,22 @@ class MarginaliaSessionListAPITests(APITestCase):
         self.assertEqual(by_book, [])
         self.assertEqual(by_session, [])
 
+    def test_book_group_search_uses_book_identity_not_session_notes(self):
+        by_author = self.client.get(
+            self.url,
+            {"q": "Searchable Author", "group_by": "book"},
+        ).json()["results"]
+        by_note = self.client.get(
+            self.url,
+            {"q": "Active notes phrase", "group_by": "book"},
+        ).json()["results"]
+
+        self.assertEqual(
+            {row["id"] for row in by_author},
+            {str(self.active.id), str(self.older_closed.id)},
+        )
+        self.assertEqual(by_note, [])
+
     def test_pagination_count_is_session_level_and_caller_scoped(self):
         first = self.client.get(self.url, {"page_size": 1})
         second = self.client.get(self.url, {"page_size": 1, "page": 2})
@@ -245,6 +261,32 @@ class MarginaliaSessionListAPITests(APITestCase):
                 "book",
             },
         )
+
+    def test_export_projection_batches_book_summary_and_groups_session_rows(self):
+        rows = self.client.get(
+            self.url,
+            {"include_book_summary": "true", "group_by": "book"},
+        ).json()["results"]
+
+        titles = [row["book"]["title"] for row in rows]
+        self.assertEqual(titles.count("Visible Book"), 2)
+        self.assertEqual(titles.count("Historical Book"), 1)
+        visible_positions = [
+            index for index, title in enumerate(titles) if title == "Visible Book"
+        ]
+        self.assertEqual(visible_positions[1] - visible_positions[0], 1)
+        historical = next(
+            row["book"] for row in rows if row["book"]["title"] == "Historical Book"
+        )
+        self.assertEqual(historical["series"]["name"], "Searchable Series")
+        self.assertEqual(historical["session_count"], 1)
+        self.assertEqual(historical["active_session_count"], 0)
+        visible = next(
+            row["book"] for row in rows if row["book"]["title"] == "Visible Book"
+        )
+        self.assertEqual(visible["authors"][0]["name"], "Searchable Author")
+        self.assertEqual(visible["session_count"], 2)
+        self.assertEqual(visible["active_session_count"], 1)
 
     def test_session_and_bearer_authentication_return_the_same_page(self):
         session_payload = self.client.get(self.url).json()

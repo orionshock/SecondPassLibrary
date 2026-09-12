@@ -1,9 +1,10 @@
 import { apiClient, type ApiClient } from "../client";
 import { toPage, type ApiPage, type Page } from "../pagination";
-import { mapBookReference, mapProgress, mapSessionEnvelope, mapSessionSummary } from "./mappers";
+import { mapBookReference, mapBookSummary, mapProgress, mapSessionEnvelope, mapSessionSummary } from "./mappers";
 import { jsonRequest, sessionPath, sessionQuery, withQuery } from "./requests";
 import type {
   MarginaliaSessionCloseInput,
+  MarginaliaExportCandidate,
   MarginaliaSessionEnvelope,
   MarginaliaSessionListItem,
   MarginaliaSessionMetadataInput,
@@ -11,11 +12,25 @@ import type {
   RecentMarginaliaSession,
   RecentMarginaliaSessionsQuery,
 } from "./types";
-import type { GlobalSessionSummaryResponse, RecentSessionsResponse, SessionEnvelopeResponse } from "./wire";
+import type { BookSummaryResponse, GlobalSessionSummaryResponse, RecentSessionsResponse, SessionEnvelopeResponse } from "./wire";
 
 export async function listMarginaliaSessions(query: MarginaliaSessionsQuery = {}, client: ApiClient = apiClient): Promise<Page<MarginaliaSessionListItem>> {
   const response = await client.request<ApiPage<GlobalSessionSummaryResponse>>(withQuery("/api/v1/marginalia/sessions/", sessionQuery(query)));
   return toPage(response, (item) => ({ ...mapSessionSummary(item), book: mapBookReference(item.book) }));
+}
+
+export async function listMarginaliaExportCandidates(
+  query: MarginaliaSessionsQuery = {},
+  options: { groupByBook?: boolean } = {},
+  client: ApiClient = apiClient,
+): Promise<Page<MarginaliaExportCandidate>> {
+  const parameters = sessionQuery(query);
+  parameters.set("include_book_summary", "true");
+  if (options.groupByBook) parameters.set("group_by", "book");
+  const response = await client.request<ApiPage<GlobalSessionSummaryResponse & { book: BookSummaryResponse }>>(
+    withQuery("/api/v1/marginalia/sessions/", parameters),
+  );
+  return toPage(response, (item) => ({ ...mapSessionSummary(item), book: mapBookSummary(item.book) }));
 }
 
 export async function listRecentMarginaliaSessions(query: RecentMarginaliaSessionsQuery = {}, client: ApiClient = apiClient): Promise<RecentMarginaliaSession[]> {

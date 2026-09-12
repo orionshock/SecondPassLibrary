@@ -77,9 +77,12 @@ class MarginaliaChecksumRoundTripTests(IsolatedUserdataMixin, TestCase):
         )
 
         self.assertEqual(preview["matched_book_count"], 1)
-        self.assertEqual(
-            preview["books"][0]["match"],
-            {"status": "matched", "book_id": str(second_import.book.pk)},
+        match = preview["books"][0]["match"]
+        self.assertEqual(match["status"], "matched")
+        self.assertEqual(match["book_id"], str(second_import.book.pk))
+        self.assertIn(
+            second_import.book.cover_file.name.replace("\\", "/"),
+            match["cover_url"],
         )
 
 

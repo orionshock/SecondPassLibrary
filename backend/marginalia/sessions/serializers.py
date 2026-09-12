@@ -107,8 +107,22 @@ class MarginaliaRecentSessionsQuerySerializer(serializers.Serializer):
     include_closed = serializers.BooleanField(default=False, required=False)
 
 
-class MarginaliaAnnotationPresenceQuerySerializer(serializers.Serializer):
+class MarginaliaSessionListQuerySerializer(serializers.Serializer):
     has_annotations = serializers.BooleanField(required=False, allow_null=True)
+    include_book_summary = serializers.BooleanField(required=False, default=False)
+    group_by = serializers.ChoiceField(
+        choices=["activity", "book"], required=False, default="activity"
+    )
+
+
+class MarginaliaGlobalSessionWithBookSummarySerializer(
+    MarginaliaSessionSummarySerializer
+):
+    book = MarginaliaBookSummarySerializer()
+
+    class Meta(MarginaliaSessionSummarySerializer.Meta):
+        fields = [*MarginaliaSessionSummarySerializer.Meta.fields, "book"]
+        read_only_fields = fields
 
 
 class MarginaliaSessionDetailSerializer(serializers.ModelSerializer):

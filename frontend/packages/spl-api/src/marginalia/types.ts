@@ -29,6 +29,7 @@ export interface MarginaliaSessionSummary {
   annotationCount: number;
 }
 export interface MarginaliaSessionListItem extends MarginaliaSessionSummary { book: MarginaliaBookReference; }
+export interface MarginaliaExportCandidate extends MarginaliaSessionSummary { book: MarginaliaBookSummary; }
 export interface RecentMarginaliaSession {
   id: string;
   name: string;

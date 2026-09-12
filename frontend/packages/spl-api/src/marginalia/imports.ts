@@ -1,4 +1,5 @@
 import { apiClient, type ApiClient, type AttachmentApiClient, type AttachmentDownload } from "../client";
+import { sameOriginUrl } from "../sameOriginUrl";
 import type { MarginaliaSessionStatus } from "./types";
 
 export type MarginaliaImportUnmatchedReason = "not_found" | "ambiguous_match" | "book_inaccessible";
@@ -25,7 +26,7 @@ export interface MarginaliaImportPreviewSession {
 }
 
 export type MarginaliaImportBookMatch =
-  | { status: "matched"; bookId: string }
+  | { status: "matched"; bookId: string; coverUrl: string | null }
   | { status: "unmatched"; reason: MarginaliaImportUnmatchedReason };
 
 export interface MarginaliaImportPreviewBook {
@@ -107,7 +108,7 @@ interface ImportPreviewResponse {
     file_hash: string;
     title: string;
     authors: string[];
-    match: { status: "matched"; book_id: string } | { status: "unmatched"; reason: MarginaliaImportUnmatchedReason };
+    match: { status: "matched"; book_id: string; cover_url: string | null } | { status: "unmatched"; reason: MarginaliaImportUnmatchedReason };
     reading_sessions: Array<{
       candidate_id: string;
       source_reading_session_id: string;
@@ -178,7 +179,11 @@ export async function previewMarginaliaImport(
       title: book.title,
       authors: [...book.authors],
       match: book.match.status === "matched"
-        ? { status: "matched", bookId: book.match.book_id }
+        ? {
+            status: "matched",
+            bookId: book.match.book_id,
+            coverUrl: book.match.cover_url === null ? null : sameOriginUrl(book.match.cover_url),
+          }
         : { status: "unmatched", reason: book.match.reason },
       readingSessions: book.reading_sessions.map((session) => ({
         candidateId: session.candidate_id,
@@ -262,4 +267,3 @@ function jsonRequest(method: string, body: unknown): RequestInit {
     body: JSON.stringify(body),
   };
 }
-

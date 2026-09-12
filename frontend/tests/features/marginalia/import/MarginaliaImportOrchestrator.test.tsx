@@ -29,7 +29,7 @@ const preview: MarginaliaImportPreview = {
   warnings: [],
   books: [{
     candidateId: "book-candidate", fileHash: "hidden", title: "Imported Book", authors: ["Author"],
-    match: { status: "matched", bookId: "book-id" },
+    match: { status: "matched", bookId: "book-id", coverUrl: null },
     readingSessions: [{
       candidateId: "session-candidate", sourceReadingSessionId: "source-session", name: "Imported Session",
       notes: "Notes", sourceStatus: "active", willImportAsStatus: "closed", startedAt: "2026-01-01T00:00:00Z",

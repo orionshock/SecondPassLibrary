@@ -30,16 +30,20 @@ def marginalia_sessions_for_user(
     status: str = "",
     q: str = "",
     has_annotations: bool | None = None,
+    group_by_book: bool = False,
 ) -> QuerySet[ReadingSession]:
     queryset = ReadingSession.objects.filter(user=user)
     search = (q or "").strip()
     if search:
-        queryset = queryset.filter(
-            Q(name__icontains=search)
-            | Q(notes__icontains=search)
-            | Q(book__title__icontains=search)
+        book_search = (
+            Q(book__title__icontains=search)
             | Q(book__book_authors__author__name__icontains=search)
             | Q(book__book_series__series__name__icontains=search)
+        )
+        queryset = queryset.filter(
+            book_search
+            if group_by_book
+            else Q(name__icontains=search) | Q(notes__icontains=search) | book_search
         )
     queryset = _filter_session_status(queryset, status=status)
     if has_annotations is not None:
@@ -50,7 +54,11 @@ def marginalia_sessions_for_user(
         queryset = queryset.annotate(
             _has_annotations=Exists(annotation_exists)
         ).filter(_has_annotations=has_annotations)
-    return _session_summary_queryset(queryset, user=user)
+    return _session_summary_queryset(
+        queryset,
+        user=user,
+        group_by_book=group_by_book,
+    )
 
 
 def recent_marginalia_sessions_for_user(
@@ -99,6 +107,7 @@ def _session_summary_queryset(
     queryset: QuerySet[ReadingSession],
     *,
     user,
+    group_by_book: bool = False,
 ) -> QuerySet[ReadingSession]:
     latest_annotation_activity = Max(
         "annotations__updated_at",
@@ -107,7 +116,7 @@ def _session_summary_queryset(
     visible_books = visible_books_for_user(user, cached=False).filter(
         pk=OuterRef("book_id")
     )
-    return (
+    queryset = (
         queryset.select_related("book")
         .annotate(
             annotation_count=Count(
@@ -123,5 +132,7 @@ def _session_summary_queryset(
             ),
             can_open=Exists(visible_books),
         )
-        .order_by("-last_activity_at", "-started_at", "-id")
     )
+    if group_by_book:
+        return queryset.order_by("book__sort_title", "book_id", "-last_activity_at", "-id")
+    return queryset.order_by("-last_activity_at", "-started_at", "-id")
