@@ -491,8 +491,8 @@
 
 .marginalia-import-book.marginalia-selection-target:hover,
 .marginalia-import-book.marginalia-selection-target:focus-within {
-  border-color: rgb(125 211 252 / 32%);
-  background: rgb(125 211 252 / 4%);
+  border-color: rgb(125 211 252 / 22%);
+  background: rgb(125 211 252 / 2.5%);
 }
 
 .marginalia-selection-target--selected {
@@ -501,8 +501,13 @@
 
 .marginalia-import-session.marginalia-selection-target:hover,
 .marginalia-import-session:focus-within {
-  border-color: rgb(125 211 252 / 45%);
-  background: rgb(125 211 252 / 7%);
+  border-color: rgb(125 211 252 / 58%);
+  background: rgb(125 211 252 / 9%);
+}
+
+.marginalia-import-book.marginalia-selection-target:has(.marginalia-import-session:hover) {
+  border-color: var(--border);
+  background: rgb(255 255 255 / 1.5%);
 }
 
 .marginalia-import-session__select,
@@ -643,8 +648,8 @@
 
 .marginalia-export-book-group.marginalia-selection-target:hover,
 .marginalia-export-book-group:focus-within {
-  border-color: rgb(125 211 252 / 32%);
-  background: rgb(125 211 252 / 4%);
+  border-color: rgb(125 211 252 / 22%);
+  background: rgb(125 211 252 / 2.5%);
 }
 
 .marginalia-export-book-group__summary {
@@ -668,8 +673,13 @@
 
 .marginalia-export-session-row.marginalia-selection-target:hover,
 .marginalia-export-session-row:focus-within {
-  border-color: rgb(125 211 252 / 45%);
-  background: rgb(125 211 252 / 7%);
+  border-color: rgb(125 211 252 / 58%);
+  background: rgb(125 211 252 / 9%);
+}
+
+.marginalia-export-book-group.marginalia-selection-target:has(.marginalia-export-session-row:hover) {
+  border-color: var(--border);
+  background: var(--surface);
 }
 
 .marginalia-export-session-row__selection input { margin: 0; }
@@ -696,6 +706,8 @@
   .marginalia-export-book-group.marginalia-selection-target:hover,
   .marginalia-import-session.marginalia-selection-target:hover,
   .marginalia-export-session-row.marginalia-selection-target:hover { border-color: Highlight; }
+  .marginalia-import-book.marginalia-selection-target:has(.marginalia-import-session:hover),
+  .marginalia-export-book-group.marginalia-selection-target:has(.marginalia-export-session-row:hover) { border-color: CanvasText; }
 }
 
 @media (prefers-reduced-motion: reduce) {
