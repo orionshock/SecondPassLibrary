@@ -26,7 +26,7 @@ export function BookEditIdentifiersPageRegion({ draft, error, onChange }: {
     ]);
   };
 
-  return <section className="book-edit-panel book-edit-identifiers" role="tabpanel">
+  return <section className="book-edit-panel book-edit-identifiers">
     <div className="book-edit-identifier-header" aria-hidden="true"><span>Scheme</span><span>Value</span><span>Remove</span></div>
     {draft.identifiers.map((identifier, index) => <div className="book-edit-identifier-row" key={identifier.key}>
       <div className="book-edit-identifier-field">

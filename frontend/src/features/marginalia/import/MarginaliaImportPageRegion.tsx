@@ -108,7 +108,7 @@ function MarginaliaImportReview({ preview, draft, editingSessionKeys, selectedCo
                 {session.sourceStatus === "active" ? <div className="marginalia-import-session__facts"><span>Active source Session imports as Closed</span></div> : null}
                 {!editing && value.notes.trim() ? <p className="marginalia-import-session__note">{value.notes}</p> : null}
               </div>
-              {session.willImport ? <Button type="button" size="small" tone="secondary" disabled={!value.selected || applyState.pending} onClick={() => onEditingChange(key, !editing)}>{editing ? "Done" : "Edit"}</Button> : null}
+              {session.willImport ? <Button type="button" size="small" tone="secondary" aria-label={`${editing ? "Finish editing" : "Edit"} ${sessionName}`} disabled={!value.selected || applyState.pending} onClick={() => onEditingChange(key, !editing)}>{editing ? "Done" : "Edit"}</Button> : null}
             </div>
             {session.warnings.filter((warning) => warning.code !== "POSSIBLE_DUPLICATE_SESSION").map((warning) => <p className="marginalia-import-warning" key={warning.code}>{warning.message}</p>)}
             {session.willImport && editing ? <div className="marginalia-import-session__edits">

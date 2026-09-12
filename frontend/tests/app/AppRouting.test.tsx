@@ -1,10 +1,12 @@
+/** @vitest-environment happy-dom */
+
 import { Children, isValidElement, type ReactElement, type ReactNode } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
 import type { CurrentUser, ServerInfo } from "@second-pass/spl-api";
-import { AppOrchestrator, navigationDestinationOwnsPath } from "../../src/app/layout/AppOrchestrator";
+import { AppOrchestrator, focusRouteHeading, navigationDestinationOwnsPath } from "../../src/app/layout/AppOrchestrator";
 import { appRoutes, NotFoundPageRegion, PlaceholderPageRegion, sectionRoutes } from "../../src/app/router";
 import {
   RouteModuleBoundary,
@@ -21,6 +23,19 @@ function navMarkup(userOverrides: Partial<CurrentUser> = {}, serverOverrides: Pa
 }
 
 describe("app frame and router", () => {
+  it("provides a skip target and moves route focus to the page heading", () => {
+    const markup = navMarkup();
+    expect(markup).toContain('href="#main-content"');
+    expect(markup).toContain('id="main-content"');
+
+    const main = document.createElement("main");
+    main.innerHTML = "<h1>Library</h1>";
+    document.body.append(main);
+    expect(focusRouteHeading(main)).toBe(true);
+    expect(document.activeElement).toBe(main.querySelector("h1"));
+    expect(main.querySelector("h1")?.tabIndex).toBe(-1);
+    main.remove();
+  });
   it("renders the Dashboard inside the frame", () => {
     const markup = renderToStaticMarkup(<MemoryRouter><Routes><Route element={<AppOrchestrator user={user} server={{ ...server, bannerText: "Maintenance tonight" }} onCurrentUserChange={vi.fn()} />}><Route index element={<DashboardOrchestrator />} /></Route></Routes></MemoryRouter>);
     expect(markup).toContain("Maintenance tonight");

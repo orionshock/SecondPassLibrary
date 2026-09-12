@@ -162,7 +162,8 @@ describe("Library Books components", () => {
     expect(markup).toContain("(304)");
     expect(markup).toContain('title="Fantasy and Extremely Long Adventures"');
     expect(markup).toContain('aria-pressed="true"');
-    expect(markup).toContain('aria-current="true"');
+    expect(markup).toContain('aria-pressed="true"');
+    expect(markup).not.toContain('aria-current="true"');
     expect(markup).not.toMatch(/Add Catalog Tag|Edit Catalog Tag|Delete Catalog Tag|Merge Catalog Tags/);
     const failed = renderToStaticMarkup(<CatalogTagRailPageRegion loading={false} error={new Error("Tags unavailable")} onTagChange={vi.fn()} onRetry={vi.fn()} />);
     expect(failed).toContain("Tags unavailable");
@@ -197,7 +198,7 @@ describe("Library Books components", () => {
     const onViewChange = vi.fn();
     const axes = renderToStaticMarkup(<LibraryAxesPageRegion activeView="authors" onViewChange={onViewChange} />);
     for (const label of ["Library", "Books", "Authors", "Series"]) expect(axes).toContain(label);
-    expect(axes).toMatch(/aria-current="page"[^>]*>Authors/);
+    expect(axes).toMatch(/aria-pressed="true"[^>]*>Authors/);
     const controls = renderToStaticMarkup(<LibraryAxisControlsPageRegion view="series" search="" ordering="name" onSearchChange={vi.fn()} onSearch={vi.fn()} onOrderingChange={vi.fn()} />);
     expect(controls).toContain('placeholder="Series name..."');
     expect(controls).toContain("Name A-Z");

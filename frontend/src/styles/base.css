@@ -69,3 +69,38 @@ h1 {
 .page-description {
   color: var(--muted);
 }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (forced-colors: active) {
+  body {
+    background: Canvas;
+  }
+
+  :where(button, input, select, textarea, [role="tab"], [role="menuitem"], [role="menuitemradio"]) {
+    border: 1px solid ButtonText;
+  }
+
+  :where([aria-current="page"], [aria-pressed="true"], [aria-selected="true"], [aria-checked="true"]) {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+
+  :where([role="dialog"], .surface, .error-panel) {
+    border: 1px solid CanvasText;
+  }
+
+  :where(button, input, select, textarea):disabled {
+    color: GrayText;
+    border-color: GrayText;
+  }
+}

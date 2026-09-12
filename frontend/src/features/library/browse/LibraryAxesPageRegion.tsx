@@ -18,15 +18,15 @@ export function LibraryAxesPageRegion({ activeView, canManageCatalog = false, on
   return <div className="library-heading">
     <PageHeader title="Library" />
     <div className="library-axis-bar">
-      <nav className="library-axes" aria-label="Library views">
+      <div className="library-axes" role="group" aria-label="Library views">
         {axes.map(({ view, label }) => <button
           key={view}
           type="button"
           className={activeView === view ? "active" : ""}
-          aria-current={activeView === view ? "page" : undefined}
+          aria-pressed={activeView === view}
           onClick={() => onViewChange(view)}
         >{label}</button>)}
-      </nav>
+      </div>
       {canManageCatalog && lifecycleKind ? <Link
         className="button button--secondary library-axis-create-action"
         to={libraryEntityNewPath(lifecycleKind)}

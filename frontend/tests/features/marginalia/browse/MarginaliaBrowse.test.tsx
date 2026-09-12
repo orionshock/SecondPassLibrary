@@ -38,7 +38,7 @@ describe("Marginalia view selector", () => {
     const selector = MarginaliaViewSelector({ activeView: "sessions", onViewChange }) as ReactElement<{ children: ReactNode }>;
     const markup = renderToStaticMarkup(selector);
     expect(markup).toContain('aria-label="Marginalia views"');
-    expect(markup).toMatch(/aria-current="page"[^>]*>/);
+    expect(markup).toMatch(/aria-pressed="true"[^>]*>/);
     expect(markup).toContain("Sessions");
     expect(markup).toContain("Books");
     expect(markup).not.toContain("tablist");

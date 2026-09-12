@@ -18,7 +18,7 @@
           <div class="login-heading">
             <div class="login-server-name">{{ server_name }}</div>
             <h1 class="page-title">Log in</h1>
-            <p class="muted login-subtitle">A SecondPass Library</p>
+            <p class="muted login-subtitle">A Second Pass Library</p>
             {% if server_description %}
               <div class="login-description">{{ server_description|safe }}</div>
             {% endif %}
@@ -48,10 +48,11 @@
                 autocomplete="username"
                 required
                 autofocus
+                {% if form.username.errors %}aria-invalid="true" aria-describedby="id_username_error"{% endif %}
                 {% if form.username.value %}value="{{ form.username.value }}"{% endif %}
               />
               {% if form.username.errors %}
-                <div class="error" role="alert">{{ form.username.errors|striptags }}</div>
+                <div id="id_username_error" class="error" role="alert">{{ form.username.errors|striptags }}</div>
               {% endif %}
             </div>
 
@@ -66,9 +67,10 @@
                 autocorrect="off"
                 autocomplete="current-password"
                 required
+                {% if form.password.errors %}aria-invalid="true" aria-describedby="id_password_error"{% endif %}
               />
               {% if form.password.errors %}
-                <div class="error" role="alert">{{ form.password.errors|striptags }}</div>
+                <div id="id_password_error" class="error" role="alert">{{ form.password.errors|striptags }}</div>
               {% endif %}
             </div>
 

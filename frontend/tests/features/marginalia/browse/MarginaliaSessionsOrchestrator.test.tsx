@@ -86,7 +86,7 @@ describe("MarginaliaSessionsOrchestrator", () => {
     sdk.listBookSessions.mockResolvedValue({ ...page([]), book } satisfies MarginaliaBookSessionsPage);
     const { container } = await mount();
 
-    const booksView = Array.from(container.querySelectorAll<HTMLButtonElement>('nav[aria-label="Marginalia views"] button'))
+    const booksView = Array.from(container.querySelectorAll<HTMLButtonElement>('[role="group"][aria-label="Marginalia views"] button'))
       .find((button) => button.textContent?.endsWith("Books"));
     await act(async () => booksView?.click());
     expect(sdk.listBooks).toHaveBeenCalledWith({ page: 1, pageSize: 20 });

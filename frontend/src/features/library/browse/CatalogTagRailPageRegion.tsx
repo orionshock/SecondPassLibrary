@@ -24,7 +24,7 @@ export function CatalogTagRailPageRegion({ tags, activeTag, activeTagDetails, lo
     }
   }, [activeTag, tagSearch, tags]);
 
-  const allTagsButton = <button type="button" className={`catalog-tag-rail__all${!activeTag ? " active" : ""}`} aria-current={!activeTag ? "true" : undefined} aria-pressed={!activeTag} onClick={() => onTagChange(undefined)}>
+  const allTagsButton = <button type="button" className={`catalog-tag-rail__all${!activeTag ? " active" : ""}`} aria-pressed={!activeTag} onClick={() => onTagChange(undefined)}>
     All tags
   </button>;
   const tagSearchInput = <input
@@ -94,7 +94,6 @@ function tagList(
         ref={active ? activeTagRef : undefined}
         type="button"
         className={active ? "active" : ""}
-        aria-current={active ? "true" : undefined}
         aria-pressed={active}
         onClick={() => onTagChange(catalogTagSelection(activeTag, tag.slug))}
       >

@@ -10,13 +10,13 @@ export function MarginaliaViewSelector({ activeView, onViewChange }: {
   activeView: MarginaliaView;
   onViewChange: (view: MarginaliaView) => void;
 }) {
-  return <nav className="marginalia-view-selector" aria-label="Marginalia views">
+  return <div className="marginalia-view-selector" role="group" aria-label="Marginalia views">
     {views.map(({ view, label, icon }) => <button
       key={view}
       type="button"
       className={activeView === view ? "active" : ""}
-      aria-current={activeView === view ? "page" : undefined}
+      aria-pressed={activeView === view}
       onClick={() => onViewChange(view)}
     ><MaterialIcon name={icon} /><span>{label}</span></button>)}
-  </nav>;
+  </div>;
 }

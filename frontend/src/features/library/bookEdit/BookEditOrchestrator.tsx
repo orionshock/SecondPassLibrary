@@ -339,7 +339,7 @@ export function BookEditOrchestrator() {
         onClear={clearCover}
       />
     </aside>
-    <main className="book-edit-content">
+    <div className="book-edit-content">
       <p className="eyebrow">Editing Book</p>
       <h1>{draft.title || readyBook.title}</h1>
       <div className="book-edit-summary">
@@ -385,7 +385,7 @@ export function BookEditOrchestrator() {
       /> : null}
       </div>
       <SaveCancelActionRow state={mutation} submitLabel="Save Book" pendingLabel="Saving..." disabled={immediateMutationPending} onCancel={cancel} />
-    </main>
+    </div>
   </form></ProductPageShell>;
 }
 

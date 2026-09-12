@@ -182,6 +182,24 @@ class BrowserLoginThrottleTests(TestCase):
 
 
 class BrowserLoginPresentationTests(TestCase):
+    def test_associates_field_errors_with_login_controls(self):
+        User.objects.create_superuser(username="owner", password="OwnerPassw0rd!")
+
+        response = self.client.post("/login/", {"username": "", "password": ""})
+
+        self.assertContains(response, 'id="id_username_error"')
+        self.assertContains(
+            response,
+            'aria-invalid="true" aria-describedby="id_username_error"',
+            count=1,
+        )
+        self.assertContains(response, 'id="id_password_error"')
+        self.assertContains(
+            response,
+            'aria-invalid="true" aria-describedby="id_password_error"',
+            count=1,
+        )
+
     def test_renders_the_server_sanitized_description_as_limited_html(self):
         User.objects.create_superuser(username="owner", password="OwnerPassw0rd!")
         server_settings.set_server_description(

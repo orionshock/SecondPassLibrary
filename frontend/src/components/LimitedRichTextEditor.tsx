@@ -25,12 +25,16 @@ export function LimitedRichTextEditor({
   onChange,
   disabled = false,
   maxLength,
+  "aria-describedby": ariaDescribedBy,
+  "aria-invalid": ariaInvalid,
 }: {
   id: string;
   value: string;
   onChange: (html: string) => void;
   disabled?: boolean;
   maxLength?: number;
+  "aria-describedby"?: string;
+  "aria-invalid"?: boolean | "true" | "false";
 }) {
   const [showRaw, setShowRaw] = useState(false);
   const rawEditorRef = useRef<HTMLTextAreaElement>(null);
@@ -46,6 +50,8 @@ export function LimitedRichTextEditor({
       attributes: {
         id,
         class: "limited-rich-text-editor__content",
+        ...(ariaDescribedBy ? { "aria-describedby": ariaDescribedBy } : {}),
+        ...(ariaInvalid ? { "aria-invalid": "true" } : {}),
       },
     },
     onUpdate: ({ editor: updatedEditor }) => {
@@ -246,6 +252,8 @@ export function LimitedRichTextEditor({
           disabled={disabled}
           maxLength={maxLength}
           spellCheck={false}
+          aria-describedby={ariaDescribedBy}
+          aria-invalid={ariaInvalid}
           onChange={(event) => commitRawValue(event.target.value)}
         />
         : <EditorContent className="limited-rich-text-editor__rendered" editor={editor} />}

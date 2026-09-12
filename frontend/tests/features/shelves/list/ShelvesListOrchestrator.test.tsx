@@ -47,7 +47,7 @@ describe("ShelvesListOrchestrator", () => {
     expect(sdk.listShelves).toHaveBeenCalledWith({ scope: "shared", ordering: "-item_count", includePreviewBooks: true, previewLimit: 12, page: 2, pageSize: 30 });
     expect(container.querySelector('a[href="/shelves/shared"]')).not.toBeNull();
 
-    const groupScope = Array.from(container.querySelectorAll<HTMLButtonElement>('nav[aria-label="Shelf scopes"] button'))
+    const groupScope = Array.from(container.querySelectorAll<HTMLButtonElement>('[role="group"][aria-label="Shelf scopes"] button'))
       .find((button) => button.textContent?.includes("Group Shelves"));
     expect(groupScope).toBeDefined();
     await act(async () => groupScope?.click());

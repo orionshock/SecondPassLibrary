@@ -1,4 +1,4 @@
-import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from "react";
+import { cloneElement, forwardRef, isValidElement, type ButtonHTMLAttributes, type ReactElement, type ReactNode } from "react";
 
 import "./UiPrimitives.css";
 
@@ -72,11 +72,20 @@ export function FormField({
   error?: string;
   children: ReactNode;
 }) {
+  const errorId = `${htmlFor}-error`;
+  let control = children;
+  if (error && isValidElement(children)) {
+    const child = children as ReactElement<{ "aria-describedby"?: string; "aria-invalid"?: boolean | "true" | "false" }>;
+    control = cloneElement(child, {
+      "aria-describedby": [child.props["aria-describedby"], errorId].filter(Boolean).join(" "),
+      "aria-invalid": true,
+    });
+  }
   return (
     <div className="form-field">
       <label htmlFor={htmlFor}>{label}</label>
-      {children}
-      {error ? <span className="field-error">{error}</span> : null}
+      {control}
+      {error ? <span id={errorId} className="field-error">{error}</span> : null}
     </div>
   );
 }

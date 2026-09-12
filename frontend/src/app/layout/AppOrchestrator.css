@@ -11,6 +11,26 @@
   flex-direction: column;
 }
 
+.skip-link {
+  position: fixed;
+  z-index: 100;
+  top: 0.5rem;
+  left: 0.5rem;
+  padding: 0.55rem 0.75rem;
+  border: 2px solid var(--focus);
+  border-radius: 0.4rem;
+  background: var(--surface-raised);
+  transform: translateY(calc(-100% - 1rem));
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+.app-content h1[tabindex="-1"]:focus {
+  outline: none;
+}
+
 .app-header {
   container-type: inline-size;
   display: grid;

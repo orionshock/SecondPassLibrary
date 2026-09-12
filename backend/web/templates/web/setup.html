@@ -96,7 +96,7 @@
         </p>
         <div class="setup-dialog__actions">
           <button class="button button--danger" value="enable">Enable advanced groups</button>
-          <button class="button button--success-outline" value="cancel">Keep disabled</button>
+          <button id="setup-advanced-groups-cancel" class="button button--success-outline" value="cancel">Keep disabled</button>
         </div>
       </form>
     </dialog>
@@ -130,6 +130,7 @@
             if (typeof dialog.showModal === "function") {
               dialog.returnValue = "";
               dialog.showModal();
+              dialog.querySelector("#setup-advanced-groups-cancel")?.focus();
               return;
             }
             if (window.confirm(form.dataset.advancedGroupsConfirm || "Enable advanced library groups?")) {

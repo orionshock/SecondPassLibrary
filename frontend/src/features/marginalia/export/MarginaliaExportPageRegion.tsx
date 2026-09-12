@@ -109,7 +109,7 @@ function MarginaliaExportSessionRow({ session, selected, disabled, onChange }: {
   const bookTitle = session.book.title || "Untitled Book";
   const relevantDate = session.closedAt ?? session.updatedAt;
   return <article className="marginalia-export-session-row">
-    <div className="marginalia-export-session-row__selection"><input type="checkbox" aria-label={`Select ${sessionName}`} checked={selected} disabled={disabled} onChange={(event) => onChange(event.target.checked)} /></div>
+    <div className="marginalia-export-session-row__selection"><input type="checkbox" aria-label={`Select ${sessionName} for ${bookTitle}`} checked={selected} disabled={disabled} onChange={(event) => onChange(event.target.checked)} /></div>
     <div className="marginalia-export-session-row__cover"><BookCover coverUrl={session.book.coverUrl} title={bookTitle} /></div>
     <div className="marginalia-export-session-row__body">
       <div className="marginalia-export-session-row__heading"><strong>{sessionName}</strong><Badge tone={session.status === "active" ? "success" : "default"}>{session.status === "active" ? "Active" : "Closed"}</Badge></div>

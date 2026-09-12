@@ -31,7 +31,7 @@
 .book-cover-editor__accept.button { border-color: rgb(74 222 128 / 72%); color: #bbf7d0; background: rgb(74 222 128 / 7%); }
 .book-cover-editor__accept.button:hover:not(:disabled), .book-cover-editor__accept.button:focus-visible:not(:disabled) { border-color: #4ade80; color: #dcfce7; background: rgb(74 222 128 / 14%); }
 .book-cover-dialog-backdrop { position: fixed; z-index: 100; inset: 0; display: grid; place-items: center; padding: 1rem; background: rgb(0 0 0 / 72%); }
-.book-cover-dialog { width: min(100%, 35rem); max-height: calc(100vh - 2rem); overflow: auto; padding: 1rem; border: 1px solid var(--border); border-radius: 0.8rem; background: var(--surface-raised); box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 45%); }
+.book-cover-dialog { width: min(100%, 35rem); max-height: calc(100dvh - 2rem); overflow: auto; padding: 1rem; border: 1px solid var(--border); border-radius: 0.8rem; background: var(--surface-raised); box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 45%); }
 .book-cover-dialog__header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
 .book-cover-dialog__header h2 { margin: 0; font-size: 1.1rem; }
 .book-cover-dialog__body { display: grid; grid-template-columns: 8rem minmax(0, 1fr); align-items: start; gap: 1rem; }
@@ -65,7 +65,7 @@
 .book-edit-tag { display: inline-flex; align-items: center; gap: 0.25rem; max-width: 100%; padding: 0.1rem 0.25rem 0.1rem 0.5rem; border: 1px solid var(--border); border-radius: 999px; color: #c4ceda; background: rgb(255 255 255 / 3%); font-size: 0.75rem; transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease; }
 .book-edit-tag:hover,
 .book-edit-tag:focus-within { border-color: rgb(125 178 255 / 55%); color: var(--text); background: rgb(125 178 255 / 10%); }
-.book-edit-tag button { display: inline-flex; align-items: center; justify-content: center; width: 1.15rem; height: 1.15rem; padding: 0; border: 0; border-radius: 999px; color: var(--muted); background: transparent; line-height: 1; }
+.book-edit-tag button { display: inline-flex; align-items: center; justify-content: center; width: 1.5rem; height: 1.5rem; padding: 0; border: 0; border-radius: 999px; color: var(--muted); background: transparent; line-height: 1; }
 .book-edit-tag button .material-icon { font-size: 0.85rem; }
 .book-edit-tag button:hover, .book-edit-tag button:focus-visible { color: var(--text); background: rgb(255 255 255 / 8%); }
 .book-edit-inline-control { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }

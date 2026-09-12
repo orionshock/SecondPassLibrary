@@ -80,7 +80,7 @@ describe("ShelfDetailOrchestrator", () => {
     const { container } = await mount();
     const ordering = container.querySelector<HTMLButtonElement>('button[aria-label^="Order shelf books"]')!;
     await act(async () => ordering.click());
-    const titleOrder = Array.from(container.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'))
+    const titleOrder = Array.from(container.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]'))
       .find((button) => button.textContent?.includes("Title A-Z"));
     expect(titleOrder).toBeDefined();
     await act(async () => titleOrder?.click());

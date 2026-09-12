@@ -236,8 +236,8 @@ button:disabled {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.35rem;
-  height: 1.35rem;
+  min-width: 1.5rem;
+  min-height: 1.5rem;
   padding: 0;
   border: 0;
   border-radius: 999px;

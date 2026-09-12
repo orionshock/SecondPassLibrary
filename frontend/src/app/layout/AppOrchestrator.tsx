@@ -6,7 +6,7 @@ import {
   type CurrentUser,
   type ServerInfo,
 } from "@second-pass/spl-api";
-import { Suspense, useCallback, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router";
 
 import { BreadcrumbsComponent } from "../navigation/BreadcrumbsComponent";
@@ -49,6 +49,14 @@ export function navigationDestinationOwnsPath(destination: string, pathname: str
   return pathname === destination || pathname.startsWith(`${destination}/`);
 }
 
+export function focusRouteHeading(container: HTMLElement | null): boolean {
+  const heading = container?.querySelector<HTMLElement>("h1");
+  if (!heading) return false;
+  heading.tabIndex = -1;
+  heading.focus();
+  return true;
+}
+
 export function accountMenuItems(
   pathname: string,
   onLogout: () => void = () => undefined,
@@ -79,6 +87,7 @@ export function AppOrchestrator({
   onRefreshServerInfo?: () => Promise<ServerInfo>;
 }) {
   const location = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
   const [breadcrumbRegistration, setBreadcrumbRegistration] = useState<{ pathname: string; items: readonly BreadcrumbItem[] }>();
   const setBreadcrumbs = useCallback((pathname: string, items: readonly BreadcrumbItem[]) => {
     setBreadcrumbRegistration({ pathname, items });
@@ -102,8 +111,19 @@ export function AppOrchestrator({
       .catch(() => undefined);
   }, []);
 
+  useEffect(() => {
+    if (focusRouteHeading(mainRef.current)) return;
+    mainRef.current?.focus();
+    const observer = new MutationObserver(() => {
+      if (focusRouteHeading(mainRef.current)) observer.disconnect();
+    });
+    if (mainRef.current) observer.observe(mainRef.current, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [location.pathname]);
+
   return (
     <div className="app-shell">
+      <a className="skip-link" href="#main-content">Skip to main content</a>
       <header className={`app-header${hasFullNavigation ? " app-header--full-navigation" : ""}`}>
         <Link
           className={`app-identity ${location.pathname === "/" ? "active" : ""}`}
@@ -147,7 +167,7 @@ export function AppOrchestrator({
         <BreadcrumbsComponent items={breadcrumbs} />
       </div>
 
-      <main className="app-content">
+      <main ref={mainRef} id="main-content" className="app-content" tabIndex={-1}>
         <RouteModuleBoundary key={location.pathname}>
           <Suspense fallback={<RouteModuleLoading />}>
             <Outlet context={{ currentUser: user, serverInfo: server, onCurrentUserChange, refreshCurrentUser: onRefreshCurrentUser, refreshServerInfo: onRefreshServerInfo, setBreadcrumbs } satisfies AppOutletContext} />

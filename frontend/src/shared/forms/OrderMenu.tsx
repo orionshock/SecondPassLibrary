@@ -26,8 +26,15 @@ export function orderMenuReducer(open: boolean, action: OrderMenuAction): boolea
   return action === "toggle" ? !open : false;
 }
 
-export function orderMenuStateForKey(open: boolean, key: string): boolean {
-  return key === "Escape" ? false : open;
+export function orderMenuFocusIndexForKey(currentIndex: number, key: string, count: number): number | undefined {
+  if (count < 1) return undefined;
+  if (key === "Home") return 0;
+  if (key === "End") return count - 1;
+  if (currentIndex < 0 && key === "ArrowDown") return 0;
+  if (currentIndex < 0 && key === "ArrowUp") return count - 1;
+  if (key === "ArrowDown") return (currentIndex + 1) % count;
+  if (key === "ArrowUp") return (currentIndex - 1 + count) % count;
+  return undefined;
 }
 
 export function OrderMenu<Value extends string>({
@@ -59,16 +66,30 @@ export function OrderMenu<Value extends string>({
     if (disabled) dispatch("close");
   }, [disabled]);
 
+  useEffect(() => {
+    if (!open) return;
+    rootRef.current?.querySelector<HTMLButtonElement>('[role="menuitemradio"][aria-checked="true"]')?.focus();
+  }, [open]);
+
   function closeAndRestoreFocus() {
     dispatch("close");
     buttonRef.current?.focus();
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    if (orderMenuStateForKey(open, event.key) === open) return;
+    if (event.key === "Escape" && open) {
+      event.preventDefault();
+      event.stopPropagation();
+      closeAndRestoreFocus();
+      return;
+    }
+    if (!open) return;
+    const items = Array.from(event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="menuitemradio"]'));
+    const currentIndex = items.indexOf(document.activeElement as HTMLButtonElement);
+    const nextIndex = orderMenuFocusIndexForKey(currentIndex, event.key, items.length);
+    if (nextIndex === undefined) return;
     event.preventDefault();
-    event.stopPropagation();
-    closeAndRestoreFocus();
+    items[nextIndex]?.focus();
   }
 
   if (!activeOption) return null;
@@ -93,6 +114,11 @@ export function OrderMenu<Value extends string>({
         aria-controls={open ? menuId : undefined}
         disabled={disabled}
         onClick={() => dispatch("toggle")}
+        onKeyDown={(event) => {
+          if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+          event.preventDefault();
+          dispatch("toggle");
+        }}
       >
         <MaterialIcon name={activeOption.icon} />
         <span>{activeOption.label}</span>
@@ -125,8 +151,8 @@ export function OrderMenuOptions<Value extends string>({ id, value, options, ari
       return <button
         key={option.value}
         type="button"
-        role="menuitem"
-        aria-current={active ? "true" : undefined}
+        role="menuitemradio"
+        aria-checked={active}
         className={active ? "active" : ""}
         onClick={() => onSelect(option.value)}
       >

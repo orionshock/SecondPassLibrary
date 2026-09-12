@@ -33,7 +33,7 @@ export function BookEditAuthorsSeriesPageRegion({ draft, error, authors, series,
     [next[index], next[index + delta]] = [next[index + delta], next[index]];
     onChange("authorIds", next);
   };
-  return <section className="book-edit-panel book-edit-relationships" role="tabpanel">
+  return <section className="book-edit-panel book-edit-relationships">
     <div className="book-edit-relationship-group">
       <div className="book-edit-relationship-heading book-edit-relationship-heading--actions-only"><Link
         className="button button--small button--secondary"

@@ -110,7 +110,7 @@ describe("LibraryOrchestrator browse behavior", () => {
     expect(tagButton("Fantasy").textContent).toContain("(4)");
     const selected = tagButton("History");
     expect(selected.textContent).toContain("(12)");
-    expect(selected.getAttribute("aria-current")).toBe("true");
+    expect(selected.getAttribute("aria-pressed")).toBe("true");
     expect(selected.getAttribute("aria-pressed")).toBe("true");
     expect(Array.from(rail.querySelectorAll("button")).some((button) => button.textContent?.includes("Science"))).toBe(false);
     expect(sdk.listTags).toHaveBeenCalledOnce();

@@ -8,12 +8,12 @@ export function ShelfScopesPageRegion({ activeScope, onScopeChange }: {
   activeScope: ShelfScope;
   onScopeChange: (scope: ShelfScope) => void;
 }) {
-  return <nav className="shelf-scopes-region" aria-label="Shelf scopes">
+  return <div className="shelf-scopes-region" role="group" aria-label="Shelf scopes">
     {shelfScopePresentations.map((scope) => <Button
       key={scope.id}
       type="button"
-      aria-current={activeScope === scope.id ? "page" : undefined}
+      aria-pressed={activeScope === scope.id}
       onClick={() => onScopeChange(scope.id)}
     ><MaterialIcon name={scope.materialIcon} /><span>{scope.label}</span></Button>)}
-  </nav>;
+  </div>;
 }

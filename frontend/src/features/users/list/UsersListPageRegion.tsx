@@ -38,11 +38,11 @@ export function UsersListPageRegion({ page, pageNumber, pageSize, ordering, adva
     >
       {page.items.length === 0 ? <p className="users-empty muted">No users match these filters.</p> : <div className="users-table-wrap"><table className="users-table">
         <thead><tr>
-          <th><div className="users-heading-group"><SortableControl label="Name" sortKey="name" ordering={ordering} onOrderingChange={onOrderingChange} /><SortableControl label="Username" sortKey="username" ordering={ordering} onOrderingChange={onOrderingChange} /><span>Email</span></div></th>
-          <th><div className="users-heading-group"><SortableControl label="Role" sortKey="role" ordering={ordering} onOrderingChange={onOrderingChange} /><SortableControl label="Status" sortKey="is_active" ordering={ordering} onOrderingChange={onOrderingChange} /></div></th>
-          <th>Last login</th>
-          {advancedGroupsEnabled ? <th>Groups / Curates</th> : null}
-          <th className="users-actions-heading">Actions</th>
+          <th scope="col"><div className="users-heading-group"><SortableControl label="Name" sortKey="name" ordering={ordering} onOrderingChange={onOrderingChange} /><SortableControl label="Username" sortKey="username" ordering={ordering} onOrderingChange={onOrderingChange} /><span>Email</span></div></th>
+          <th scope="col"><div className="users-heading-group"><SortableControl label="Role" sortKey="role" ordering={ordering} onOrderingChange={onOrderingChange} /><SortableControl label="Status" sortKey="is_active" ordering={ordering} onOrderingChange={onOrderingChange} /></div></th>
+          <th scope="col">Last login</th>
+          {advancedGroupsEnabled ? <th scope="col">Groups / Curates</th> : null}
+          <th scope="col" className="users-actions-heading">Actions</th>
         </tr></thead>
         <tbody>{page.items.map((user) => <UserRow key={user.id} user={user} showGroups={advancedGroupsEnabled} />)}</tbody>
       </table></div>}

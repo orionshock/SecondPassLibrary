@@ -87,8 +87,12 @@ class FirstRunProductUiTests(TestCase):
         )
         self.assertContains(
             response,
-            '<button class="button button--success-outline" value="cancel">Keep disabled</button>',
+            '<button id="setup-advanced-groups-cancel" class="button button--success-outline" value="cancel">Keep disabled</button>',
             html=False,
+        )
+        self.assertContains(
+            response,
+            'dialog.querySelector("#setup-advanced-groups-cancel")?.focus()',
         )
         self.assertContains(response, 'id="setup-advanced-groups-enabled-status"')
         self.assertContains(response, "Disable before setup")

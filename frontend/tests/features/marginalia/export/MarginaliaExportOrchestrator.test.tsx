@@ -73,7 +73,7 @@ describe("MarginaliaExportOrchestrator", () => {
     await act(async () => buttonNamed(container, "Retry").click());
 
     expect(sdk.listSessions).toHaveBeenCalledTimes(2);
-    expect(container.querySelector('[aria-label="Select Recovered"]')).not.toBeNull();
+    expect(container.querySelector('[aria-label="Select Recovered for Book Recovered"]')).not.toBeNull();
   });
 
   it("downloads a complete archive once and sends it through the browser save boundary", async () => {
@@ -97,12 +97,12 @@ describe("MarginaliaExportOrchestrator", () => {
     sdk.listSessions.mockResolvedValue(page([session("one", "Selected Session")]));
     sdk.downloadSelected.mockRejectedValue(new Error("Selected export failed."));
     const { container } = await mount();
-    act(() => (container.querySelector('[aria-label="Select Selected Session"]') as HTMLInputElement).click());
+    act(() => (container.querySelector('[aria-label="Select Selected Session for Book Selected Session"]') as HTMLInputElement).click());
 
     await act(async () => buttonNamed(container, "Export selected Sessions").click());
 
     expect(sdk.downloadSelected).toHaveBeenCalledWith({ readingSessionIds: ["one"], includeEmptySessions: false });
-    expect((container.querySelector('[aria-label="Select Selected Session"]') as HTMLInputElement).checked).toBe(true);
+    expect((container.querySelector('[aria-label="Select Selected Session for Book Selected Session"]') as HTMLInputElement).checked).toBe(true);
     expect(container.querySelector('[role="alert"]')).not.toBeNull();
   });
 
@@ -116,7 +116,7 @@ describe("MarginaliaExportOrchestrator", () => {
     await act(async () => newRequest.resolve(page([session("new", "New Candidate")])));
     await act(async () => oldRequest.resolve(page([session("old", "Old Candidate")])));
 
-    expect(container.querySelector('[aria-label="Select New Candidate"]')).not.toBeNull();
-    expect(container.querySelector('[aria-label="Select Old Candidate"]')).toBeNull();
+    expect(container.querySelector('[aria-label="Select New Candidate for Book New Candidate"]')).not.toBeNull();
+    expect(container.querySelector('[aria-label="Select Old Candidate for Book Old Candidate"]')).toBeNull();
   });
 });

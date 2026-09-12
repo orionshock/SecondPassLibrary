@@ -124,7 +124,6 @@
 .member-choice-picker__option:hover,
 .member-choice-picker__option:focus-visible {
   background: rgba(255, 255, 255, 0.08);
-  outline: none;
 }
 
 .form { margin-top: 10px; }
@@ -224,8 +223,8 @@
 .catalog-tag-pill__name { line-height: 18px; }
 .catalog-tag-pill__remove {
   display: inline-grid;
-  width: 18px;
-  height: 18px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   place-items: center;
   border: 0;
@@ -240,7 +239,6 @@
 .catalog-tag-pill__remove:focus-visible {
   background: rgb(190, 24, 93);
   color: white;
-  outline: none;
 }
 @media (pointer: coarse) {
   .catalog-tag-pill__remove {

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent, type
 
 import { Button } from "../../../components/UiPrimitives";
 import { BookCover } from "../../../shared/books/BookCover";
+import { trapModalTabKey } from "../../../shared/dialogs/modalFocus";
 import { fieldError, type MutationState } from "../../../shared/feedback/mutationState";
 
 const acceptedCoverTypes = "image/jpeg,image/png,image/webp";
@@ -96,6 +97,7 @@ export function BookCoverEditor({
   const changeButton = useRef<HTMLButtonElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
+  const backButton = useRef<HTMLButtonElement>(null);
   const previewOwner = useRef<CoverPreviewUrlOwner | null>(null);
   const [preview, setPreview] = useState<{ file: File; url: string }>();
   if (!previewOwner.current) previewOwner.current = new CoverPreviewUrlOwner();
@@ -104,8 +106,11 @@ export function BookCoverEditor({
   const previewUrl = preview && preview.file === selectedFile ? preview.url : undefined;
 
   useEffect(() => {
-    if (open) closeButton.current?.focus();
-  }, [open]);
+    if (!open) return;
+    if (mode === "file") fileInput.current?.focus();
+    else if (mode === "clear") backButton.current?.focus();
+    else closeButton.current?.focus();
+  }, [mode, open]);
 
   useEffect(() => {
     let active = true;
@@ -151,6 +156,7 @@ export function BookCoverEditor({
   }
 
   function handleDialogKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    trapModalTabKey(event);
     if (event.key === "Escape") {
       event.preventDefault();
       close();
@@ -166,7 +172,7 @@ export function BookCoverEditor({
       Change Cover
     </Button>
     {open ? <div className="book-cover-dialog-backdrop" onClick={handleBackdropClick}>
-      <div className="book-cover-dialog" role="dialog" aria-modal="true" aria-labelledby="book-cover-dialog-title" onKeyDown={handleDialogKeyDown}>
+      <div className="book-cover-dialog" role="dialog" aria-modal="true" aria-labelledby="book-cover-dialog-title" tabIndex={-1} onKeyDown={handleDialogKeyDown}>
         <header className="book-cover-dialog__header">
           <h2 id="book-cover-dialog-title">Change Cover</h2>
           <Button ref={closeButton} type="button" size="small" tone="secondary" disabled={state.pending} onClick={close}>Close</Button>
@@ -196,7 +202,7 @@ export function BookCoverEditor({
             </> : null}
             {mode === "clear" ? <div className="book-cover-dialog__confirmation">
               <span>Clear the current cover?</span>
-              <Button type="button" size="small" tone="secondary" disabled={controlsDisabled} onClick={() => showMode("menu")}>Back</Button>
+              <Button ref={backButton} type="button" size="small" tone="secondary" disabled={controlsDisabled} onClick={() => showMode("menu")}>Back</Button>
               <Button type="button" size="small" tone="danger" disabled={controlsDisabled} onClick={clearCover}>{pendingAction === "clear" ? "Clearing..." : "Confirm Clear Cover"}</Button>
             </div> : null}
           </div>

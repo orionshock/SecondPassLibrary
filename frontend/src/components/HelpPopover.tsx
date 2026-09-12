@@ -1,4 +1,4 @@
-import { useId, useState, type CSSProperties } from "react";
+import { useId, useState, type CSSProperties, type KeyboardEvent } from "react";
 
 import { MaterialIcon } from "./icons/MaterialIcon";
 
@@ -16,8 +16,13 @@ export function HelpPopover({ ariaLabel, mouseoverText, icon, label, border = fa
   const descriptionId = useId();
   const [open, setOpen] = useState(false);
   const style: CSSProperties | undefined = borderColor || color ? { borderColor, color } : undefined;
+  const dismiss = (event: KeyboardEvent<HTMLSpanElement>) => {
+    if (event.key !== "Escape" || !open) return;
+    event.preventDefault();
+    setOpen(false);
+  };
 
-  return <span className="help-popover" data-open={open}>
+  return <span className="help-popover" data-open={open} onKeyDown={dismiss}>
     <button
       type="button"
       className={`help-popover__button${label ? " help-popover__button--labelled" : ""}${border ? " help-popover__button--bordered" : ""}`}

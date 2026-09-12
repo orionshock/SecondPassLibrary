@@ -24,7 +24,7 @@ export function BookEditCatalogPageRegion({ draft, error, tags, tagsLoading, tag
     setTagName("");
   };
   const precision = draft.publishedDatePrecision;
-  return <section className="book-edit-panel book-edit-catalog-panel" role="tabpanel">
+  return <section className="book-edit-panel book-edit-catalog-panel">
     <div className="book-edit-catalog-section">
       <h2>Catalog details</h2>
       <FormField label="Publisher" htmlFor="book-edit-publisher" error={fieldError(error, "publisher")}>

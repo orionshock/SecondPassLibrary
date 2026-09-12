@@ -5,8 +5,8 @@ import { describe, expect, it, vi } from "vitest";
 import {
   OrderMenu,
   OrderMenuOptions,
+  orderMenuFocusIndexForKey,
   orderMenuReducer,
-  orderMenuStateForKey,
 } from "../../../src/shared/forms/OrderMenu";
 import { libraryAxisOrderingOptions, libraryBookOrderingOptions, libraryStateFromSearchParams, withLibraryChange, type LibraryUiOrdering } from "../../../src/features/library/libraryQuery";
 
@@ -36,12 +36,12 @@ describe("OrderMenu", () => {
       onSelect={vi.fn()}
     />);
 
-    expect((markup.match(/role="menuitem"/g) ?? [])).toHaveLength(6);
+    expect((markup.match(/role="menuitemradio"/g) ?? [])).toHaveLength(6);
     for (const label of ["Title A-Z", "Title Z-A", "Author A-Z", "Author Z-A", "Series A-Z", "Series Z-A"]) {
       expect(markup).toContain(label);
     }
     expect(markup).toContain('role="menu" aria-label="Sort books"');
-    expect(markup).toMatch(/aria-current="true"[^>]*>.*Series A-Z/s);
+    expect(markup).toMatch(/role="menuitemradio" aria-checked="true"[^>]*>.*Series A-Z/s);
   });
 
   it("selects through the consumer handler and uses the close transition", () => {
@@ -66,10 +66,14 @@ describe("OrderMenu", () => {
       onSelect={vi.fn()}
     />);
 
-    expect((markup.match(/role="menuitem"/g) ?? [])).toHaveLength(4);
+    expect((markup.match(/role="menuitemradio"/g) ?? [])).toHaveLength(4);
     for (const label of ["Name A-Z", "Name Z-A", "Most Books", "Fewest Books"]) expect(markup).toContain(label);
-    expect(orderMenuStateForKey(true, "Escape")).toBe(false);
-    expect(orderMenuStateForKey(true, "ArrowDown")).toBe(true);
+    expect(orderMenuFocusIndexForKey(3, "ArrowDown", 4)).toBe(0);
+    expect(orderMenuFocusIndexForKey(0, "ArrowUp", 4)).toBe(3);
+    expect(orderMenuFocusIndexForKey(2, "Home", 4)).toBe(0);
+    expect(orderMenuFocusIndexForKey(1, "End", 4)).toBe(3);
+    expect(orderMenuFocusIndexForKey(-1, "ArrowDown", 4)).toBe(0);
+    expect(orderMenuFocusIndexForKey(-1, "ArrowUp", 4)).toBe(3);
   });
 
   it("keeps a disabled menu closed", () => {

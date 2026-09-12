@@ -48,7 +48,7 @@ export function RecentSessionScroller({ items }: { items: RecentMarginaliaSessio
       <IconButton className="dashboard-scroller__control dashboard-scroller__control--previous" type="button" aria-label="Previous reading sessions" title="Previous" disabled={scrollState.atStart} onClick={() => scrollerRef.current && scrollDashboardScroller(scrollerRef.current, -1)}><MaterialIcon name="chevron_left" /></IconButton>
       <IconButton className="dashboard-scroller__control dashboard-scroller__control--next" type="button" aria-label="Next reading sessions" title="Next" disabled={scrollState.atEnd} onClick={() => scrollerRef.current && scrollDashboardScroller(scrollerRef.current, 1)}><MaterialIcon name="chevron_right" /></IconButton>
     </div> : null}
-    <div ref={scrollerRef} className="dashboard-scroller__track" aria-label="Recent reading sessions" tabIndex={0} onScroll={updateScrollState}>
+    <div ref={scrollerRef} className="dashboard-scroller__track" role="region" aria-label="Recent reading sessions" tabIndex={0} onScroll={updateScrollState}>
       {items.slice(0, 50).map((item) => <RecentSessionCoverCard key={item.id} item={item} />)}
     </div>
   </div>;

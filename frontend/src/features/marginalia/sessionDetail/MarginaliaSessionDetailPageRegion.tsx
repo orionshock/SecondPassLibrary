@@ -6,6 +6,7 @@ import { MaterialIcon } from "../../../components/icons/MaterialIcon";
 import { Badge, Button, ErrorPanel, Surface } from "../../../components/UiPrimitives";
 import type { MutationState } from "../../../shared/feedback/mutationState";
 import { BookCover } from "../../../shared/books/BookCover";
+import { trapModalTabKey } from "../../../shared/dialogs/modalFocus";
 import { OrderMenu, type OrderMenuOption } from "../../../shared/forms/OrderMenu";
 import { marginaliaBookSessionsPath } from "../browse/marginaliaQuery";
 
@@ -167,6 +168,7 @@ export function MarginaliaSessionDeleteDialog({ sessionName, bookTitle, pending,
   useEffect(() => { cancelButton.current?.focus(); }, []);
 
   function handleDialogKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    trapModalTabKey(event);
     if (event.key === "Escape") {
       event.preventDefault();
       onCancel();
@@ -178,7 +180,7 @@ export function MarginaliaSessionDeleteDialog({ sessionName, bookTitle, pending,
   }
 
   return <div className="marginalia-session-delete-dialog-backdrop" onClick={handleBackdropClick}>
-    <div className="marginalia-session-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="marginalia-session-delete-dialog-title" aria-describedby="marginalia-session-delete-dialog-description" onKeyDown={handleDialogKeyDown}>
+    <div className="marginalia-session-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="marginalia-session-delete-dialog-title" aria-describedby="marginalia-session-delete-dialog-description" tabIndex={-1} onKeyDown={handleDialogKeyDown}>
       <h2 id="marginalia-session-delete-dialog-title">Delete this reading session?</h2>
       <div id="marginalia-session-delete-dialog-description" className="marginalia-session-delete-dialog__body">
         {sessionName.trim() ? <p>Session: <strong>{sessionName}</strong></p> : null}

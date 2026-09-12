@@ -11,7 +11,7 @@ export function BookEditBookPageRegion({ draft, error, onChange }: {
   error?: Error;
   onChange: <K extends keyof BookEditDraft>(field: K, value: BookEditDraft[K]) => void;
 }) {
-  return <section className="book-edit-panel" role="tabpanel">
+  return <section className="book-edit-panel">
     <FormField label="Title" htmlFor="book-edit-title" error={fieldError(error, "title")}>
       <input id="book-edit-title" maxLength={512} required value={draft.title} onChange={(event) => onChange("title", event.target.value)} />
     </FormField>
