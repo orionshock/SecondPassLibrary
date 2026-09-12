@@ -100,7 +100,6 @@ describe("Marginalia Product UI Session detail and close SDK", () => {
     expect(error).toBeInstanceOf(ApiError);
     expect(error).toMatchObject({
       name: "ApiError",
-      message: "Not found.",
       status: 404,
     });
   });

@@ -38,9 +38,12 @@ def book_access_required_response():
     )
 
 
-def invalid_request_response(*, message: str, status_code=status.HTTP_400_BAD_REQUEST):
+def invalid_request_response(
+    *, message: str, hint: str = "", status_code=status.HTTP_400_BAD_REQUEST
+):
     return api_error_response(
         code=ErrorCode.INVALID_REQUEST,
         message=message,
+        hint=hint,
         status_code=status_code,
     )

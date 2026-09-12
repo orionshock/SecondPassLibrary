@@ -128,7 +128,7 @@ describe("My Marginalia Import", () => {
     expect(listMarkup).toContain('href="/marginalia/import"');
     const importMarkup = renderToStaticMarkup(<MemoryRouter initialEntries={["/marginalia/import"]}><Routes><Route element={<AppOrchestrator user={user} server={server} onCurrentUserChange={vi.fn()} />}><Route path="marginalia/import" element={<MarginaliaImportOrchestrator />} /></Route></Routes></MemoryRouter>);
     expect(importMarkup).toContain('type="file"');
-    expect(importMarkup).toContain("Include empty sessions");
+    expect(importMarkup).toContain("Include empty Reading Sessions");
   });
 
   it("requires a file locally and sends the staged empty-Session policy", async () => {
@@ -174,7 +174,6 @@ describe("My Marginalia Import", () => {
     const markup = renderImport({ preview, draft: createMarginaliaImportDraft(preview) });
     expect(markup).toContain("Matched Book");
     expect(markup).toContain("Missing Book");
-    expect(markup).toContain("Possible Duplicate Session");
     expect(markup).not.toContain("sha256:hidden");
     expect(markup).not.toContain("source-session-1");
   });
@@ -192,8 +191,8 @@ describe("My Marginalia Import", () => {
       draft: createMarginaliaImportDraft(unmatchedPreview),
     });
 
-    expect(markup).toContain("exact EPUB file checksum");
-    expect(markup).toContain("Import the same EPUB file");
+    expect(markup).toContain("exact EPUB checksum");
+    expect(markup).toContain("matching EPUB");
     expect(markup).not.toContain("sha256:missing");
   });
 
@@ -201,8 +200,8 @@ describe("My Marginalia Import", () => {
     const draft = createMarginaliaImportDraft(preview);
     draft["reading-session-000002"] = { ...draft["reading-session-000002"]!, selected: false };
     const markup = renderImport({ preview, draft, editingSessionKeys: new Set(["reading-session-000001"]) });
-    expect(markup).toContain('aria-label="Select all importable sessions from Matched Book"');
-    expect(markup).not.toContain('aria-label="Select all importable sessions from Missing Book"');
+    expect(markup).toContain('aria-label="Select all importable Reading Sessions from Matched Book"');
+    expect(markup).not.toContain('aria-label="Select all importable Reading Sessions from Missing Book"');
     expect(markup).toContain('aria-checked="mixed"');
     expect(markup).toContain("<textarea");
     expect(markup).toContain('value="Imported session"');
@@ -210,9 +209,9 @@ describe("My Marginalia Import", () => {
 
   it("shows unmatched download only for the staged downloadable count", () => {
     const markup = renderImport({ preview, draft: createMarginaliaImportDraft(preview) });
-    expect(markup).toContain("Download Unmatched Sessions (1)");
+    expect(markup).toContain("Download unmatched (1)");
     const empty = { ...preview, unmatchedDownloadableReadingSessionCount: 0 };
-    expect(renderImport({ preview: empty, draft: createMarginaliaImportDraft(empty) })).not.toContain("Download Unmatched Sessions");
+    expect(renderImport({ preview: empty, draft: createMarginaliaImportDraft(empty) })).not.toContain("Download unmatched");
   });
 
   it("keeps Apply and unmatched feedback independent while preserving review content", () => {
@@ -225,14 +224,14 @@ describe("My Marginalia Import", () => {
     expect(markup).toContain("Apply needs attention.");
     expect(markup).toContain("ZIP download failed.");
     expect(markup).toContain("Imported session");
-    expect(markup).toContain("Import Selected Sessions");
+    expect(markup).toContain("Import selected");
   });
 
   it("disables Apply for an empty selection", () => {
     const draft = createMarginaliaImportDraft(preview);
     Object.values(draft).forEach((session) => { session.selected = false; });
     const markup = renderImport({ preview, draft });
-    expect(markup).toMatch(/<button[^>]*disabled=""[^>]*>Import Selected Sessions<\/button>/);
+    expect(markup).toMatch(/<button[^>]*disabled=""[^>]*>Import selected<\/button>/);
   });
 
   it("renders canonical imported counts and candidate-to-created Session results", () => {
@@ -247,11 +246,11 @@ describe("My Marginalia Import", () => {
       warnings: [],
     };
     const markup = renderImport({ preview, draft: createMarginaliaImportDraft(preview), result });
-    expect(markup).toContain("1 session created");
+    expect(markup).toContain("1 Reading Session created");
     expect(markup).toContain("3 annotations created");
     expect(markup).toContain('href="/marginalia/sessions/local-session"');
-    expect(markup).toContain("1 Session remains unmatched");
-    expect(markup).toContain("Download Unmatched Sessions (1)");
+    expect(markup).toContain("1 unmatched Reading Session remains");
+    expect(markup).toContain("Download unmatched (1)");
     expect(markup).toContain("Missing Book");
     expect(markup).not.toContain("Something went wrong");
     expect(markup).toContain("Closed");

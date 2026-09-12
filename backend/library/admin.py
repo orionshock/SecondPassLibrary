@@ -654,7 +654,10 @@ class LibraryGroupAdmin(admin.ModelAdmin):
                 )
             formset.save_m2m()
             if removed:
-                self.message_user(request, f"Removed {removed} membership(s).")
+                self.message_user(
+                    request,
+                    f"Removed {removed} membership{'s' if removed != 1 else ''}.",
+                )
             return
         if formset.model is BookGroupAssignment:
             formset.save(commit=False)
@@ -667,7 +670,10 @@ class LibraryGroupAdmin(admin.ModelAdmin):
                 )
             formset.save_m2m()
             if removed:
-                self.message_user(request, f"Removed {removed} Book assignment(s).")
+                self.message_user(
+                    request,
+                    f"Removed {removed} Book assignment{'s' if removed != 1 else ''}.",
+                )
             return
         return super().save_formset(request, form, formset, change)
 
@@ -1012,20 +1018,25 @@ class CatalogTagAdmin(admin.ModelAdmin):
                         request,
                         result.survivor,
                         (
-                            f"Merged {result.source_tags_deleted} Catalog Tag(s); "
-                            f"preserved {result.books_affected} Book relationship(s); "
+                            f"Merged {result.source_tags_deleted} Catalog "
+                            f"{'Tag' if result.source_tags_deleted == 1 else 'Tags'}; "
+                            f"preserved {result.books_affected} Book "
+                            f"{'relationship' if result.books_affected == 1 else 'relationships'}; "
                             "collapsed "
-                            f"{result.duplicate_relationships_collapsed} overlap(s)."
+                            f"{result.duplicate_relationships_collapsed} "
+                            f"{'overlap' if result.duplicate_relationships_collapsed == 1 else 'overlaps'}."
                         ),
                     )
                     self.message_user(
                         request,
                         (
                             f'Merged into "{result.survivor.name}": '
-                            f"{result.source_tags_deleted} source tag(s) deleted, "
-                            f"{result.books_affected} Book(s) preserved, and "
+                            f"{result.source_tags_deleted} source "
+                            f"{'tag' if result.source_tags_deleted == 1 else 'tags'} deleted, "
+                            f"{result.books_affected} "
+                            f"{'Book' if result.books_affected == 1 else 'Books'} preserved, and "
                             f"{result.duplicate_relationships_collapsed} "
-                            "overlap(s) collapsed."
+                            f"{'overlap' if result.duplicate_relationships_collapsed == 1 else 'overlaps'} collapsed."
                         ),
                         level=messages.SUCCESS,
                     )

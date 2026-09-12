@@ -43,7 +43,7 @@ export function MarginaliaSessionTitleEditor({
     {isEditing
       ? <input
           className="marginalia-session-title-editor__input"
-          aria-label="Session name"
+          aria-label="Reading Session name"
           autoFocus
           maxLength={255}
           value={draft}
@@ -53,9 +53,9 @@ export function MarginaliaSessionTitleEditor({
         />
       : <span>{displayName}</span>}
     {isEditing ? <>
-      <IconButton className="marginalia-inline-edit-button" type="button" aria-label="Save session name" title="Save session name" disabled={pending} onClick={onSave}><MaterialIcon name="check" /></IconButton>
-      <IconButton className="marginalia-inline-edit-button" type="button" aria-label="Cancel editing session name" title="Cancel editing session name" disabled={pending} onClick={onCancel}><MaterialIcon name="close" /></IconButton>
-    </> : editable ? <IconButton className="marginalia-inline-edit-button" type="button" aria-label="Edit session name" title="Edit session name" disabled={pending} onClick={onEdit}><MaterialIcon name="edit" /></IconButton> : null}
+      <IconButton className="marginalia-inline-edit-button" type="button" aria-label="Save Reading Session name" title="Save Reading Session name" disabled={pending} onClick={onSave}><MaterialIcon name="check" /></IconButton>
+      <IconButton className="marginalia-inline-edit-button" type="button" aria-label="Cancel editing Reading Session name" title="Cancel editing Reading Session name" disabled={pending} onClick={onCancel}><MaterialIcon name="close" /></IconButton>
+    </> : editable ? <IconButton className="marginalia-inline-edit-button" type="button" aria-label="Edit Reading Session name" title="Edit Reading Session name" disabled={pending} onClick={onEdit}><MaterialIcon name="edit" /></IconButton> : null}
     {feedback ? <span className="marginalia-inline-editor-feedback">{feedback}</span> : null}
   </span>;
 }

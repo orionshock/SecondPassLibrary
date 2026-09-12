@@ -13,7 +13,7 @@
 {% block content %}
 <h1>{{ definition.name }}</h1>
 <p>{{ definition.description }}</p>
-<p>This starts an asynchronous maintenance run. Disabled tasks may still be run explicitly by a superuser.</p>
+<p>Run this task now. A superuser can run it even when its schedule is disabled.</p>
 <form method="post">
   {% csrf_token %}
   <div class="submit-row">

@@ -2,7 +2,7 @@ import { MaterialIcon } from "../../../components/icons/MaterialIcon";
 import type { MarginaliaView } from "./marginaliaQuery";
 
 const views: readonly { view: MarginaliaView; label: string; icon: string }[] = [
-  { view: "sessions", label: "Sessions", icon: "history" },
+  { view: "sessions", label: "Reading Sessions", icon: "history" },
   { view: "books", label: "Books", icon: "menu_book" },
 ];
 

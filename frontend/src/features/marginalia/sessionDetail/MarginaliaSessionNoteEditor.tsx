@@ -41,15 +41,15 @@ export function MarginaliaSessionNoteEditor({
 
   return <div className="marginalia-session-detail__notes">
     <div className="marginalia-session-detail__notes-heading">
-      <strong>Session Note</strong>
+      <strong>Reading Session note</strong>
       {isEditing ? <span className="marginalia-inline-editor-actions">
-        <IconButton className="marginalia-inline-edit-button" type="button" aria-label="Save session note" title="Save session note" disabled={pending} onClick={onSave}><MaterialIcon name="check" /></IconButton>
-        <IconButton className="marginalia-inline-edit-button" type="button" aria-label="Cancel editing session note" title="Cancel editing session note" disabled={pending} onClick={onCancel}><MaterialIcon name="close" /></IconButton>
-      </span> : editable ? <IconButton className="marginalia-inline-edit-button" type="button" aria-label="Edit session note" title="Edit session note" disabled={pending} onClick={onEdit}><MaterialIcon name="edit" /></IconButton> : null}
+        <IconButton className="marginalia-inline-edit-button" type="button" aria-label="Save Reading Session note" title="Save Reading Session note" disabled={pending} onClick={onSave}><MaterialIcon name="check" /></IconButton>
+        <IconButton className="marginalia-inline-edit-button" type="button" aria-label="Cancel editing Reading Session note" title="Cancel editing Reading Session note" disabled={pending} onClick={onCancel}><MaterialIcon name="close" /></IconButton>
+      </span> : editable ? <IconButton className="marginalia-inline-edit-button" type="button" aria-label="Edit Reading Session note" title="Edit Reading Session note" disabled={pending} onClick={onEdit}><MaterialIcon name="edit" /></IconButton> : null}
       {feedback ? <span className="marginalia-inline-editor-feedback">{feedback}</span> : null}
     </div>
     {isEditing
-      ? <textarea aria-label="Session Note" value={draft} disabled={pending} onChange={(event) => onDraftChange(event.target.value)} onKeyDown={handleKeyDown} />
+      ? <textarea aria-label="Reading Session note" value={draft} disabled={pending} onChange={(event) => onDraftChange(event.target.value)} onKeyDown={handleKeyDown} />
       : note.trim() ? <p>{note}</p> : null}
   </div>;
 }

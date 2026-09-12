@@ -50,28 +50,34 @@ class MarginaliaImportPreviewView(APIView):
             preview = preview_import(user=request.user, **serializer.validated_data)
         except ImportUploadTooLargeError:
             return invalid_request_response(
-                message="The import archive exceeds the 25 MiB limit."
+                message="The import archive exceeds the 25 MiB limit.",
+                hint="Choose a smaller archive and try again.",
             )
         except MalformedArchiveError:
             return invalid_request_response(
-                message="The import archive must be valid UTF-8 JSON."
+                message="The import archive must be valid UTF-8 JSON.",
+                hint="Choose a Marginalia archive exported from Second Pass Library.",
             )
         except UnsupportedArchiveProfileError:
             return invalid_request_response(
-                message="The import archive profile is not supported."
+                message="The import archive profile is not supported.",
+                hint="Export a new archive from a supported Second Pass Library version.",
             )
         except ArchiveValidationError:
             return invalid_request_response(
-                message="The import archive does not satisfy the canonical contract."
+                message="The import archive is invalid.",
+                hint="Export a new archive from Second Pass Library and try again.",
             )
         except NoImportCandidatesError:
             return invalid_request_response(
                 message="No Reading Sessions are available to import.",
+                hint="Choose an archive that contains at least one Reading Session.",
                 status_code=status.HTTP_409_CONFLICT,
             )
         except ImportStageStorageError:
             return invalid_request_response(
                 message="The import preview could not be staged.",
+                hint="Try again. If it keeps failing, ask the server operator to check the application logs.",
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
         return Response(preview)
@@ -90,20 +96,24 @@ class MarginaliaImportApplyView(APIView):
             return api_error_response(
                 code=ErrorCode.NOT_FOUND,
                 message="The import stage is unavailable.",
+                hint="Preview the archive again.",
                 status_code=status.HTTP_404_NOT_FOUND,
             )
         except ImportCandidateError:
             return invalid_request_response(
-                message="A selected Reading Session is not importable."
+                message="A selected Reading Session is not importable.",
+                hint="Return to the preview, change the selection, and try again.",
             )
         except ImportReplayConflictError:
             return invalid_request_response(
                 message="The import stage was already applied with a different request.",
+                hint="Preview the archive again before importing.",
                 status_code=status.HTTP_409_CONFLICT,
             )
         except StagedArchiveInvalidError:
             return invalid_request_response(
                 message="The staged import archive is no longer usable.",
+                hint="Preview the archive again.",
                 status_code=status.HTTP_409_CONFLICT,
             )
         return Response(result)
@@ -125,21 +135,25 @@ class MarginaliaImportUnmatchedView(APIView):
             return api_error_response(
                 code=ErrorCode.NOT_FOUND,
                 message="The import stage is unavailable.",
+                hint="Preview the archive again.",
                 status_code=status.HTTP_404_NOT_FOUND,
             )
         except NoDownloadableUnmatchedSessionsError:
             return invalid_request_response(
                 message="No unmatched Reading Sessions are available to download.",
+                hint="Return to the import preview and review its current matches.",
                 status_code=status.HTTP_409_CONFLICT,
             )
         except UnmatchedStageIntegrityError:
             return invalid_request_response(
                 message="The staged import archive is no longer usable.",
+                hint="Preview the archive again.",
                 status_code=status.HTTP_409_CONFLICT,
             )
         except UnmatchedZipAssemblyError:
             return invalid_request_response(
                 message="The unmatched archive could not be assembled.",
+                hint="Try again. If it keeps failing, ask the server operator to check the application logs.",
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             )
         response = HttpResponse(content, content_type="application/zip")

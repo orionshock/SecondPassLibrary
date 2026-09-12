@@ -34,12 +34,12 @@ export function MarginaliaImportPageRegion({ preview, draft, result, editingSess
   return <div className="marginalia-import-page">
     <Surface title="Upload">
       <form className="marginalia-import-upload" encType="multipart/form-data" onSubmit={onPreview}>
-        <p className="muted">Choose a native Second Pass marginalia JSON archive. Nothing changes until Apply.</p>
+        <p className="muted">Choose a Marginalia archive exported from Second Pass Library. Nothing is imported until you confirm the preview.</p>
         <div className="marginalia-import-upload__file-row">
           <FormField label="Marginalia archive" htmlFor="marginalia-import-file" error={fieldError(previewState.error, "file")}>
             <input ref={inputRef} id="marginalia-import-file" name="file" type="file" accept=".json,application/json" disabled={previewState.pending || applyState.pending} onChange={(event) => onFileChange(event.target.files?.[0])} />
           </FormField>
-          <label className="marginalia-empty-sessions-toggle"><input type="checkbox" checked={includeEmptySessions} disabled={previewState.pending || applyState.pending} onChange={(event) => onIncludeEmptySessionsChange(event.target.checked)} />Include empty sessions</label>
+          <label className="marginalia-empty-sessions-toggle"><input type="checkbox" checked={includeEmptySessions} disabled={previewState.pending || applyState.pending} onChange={(event) => onIncludeEmptySessionsChange(event.target.checked)} />Include empty Reading Sessions</label>
           <ActionRow state={previewState}><Button type="submit" disabled={previewState.pending || applyState.pending}>{previewState.pending ? "Previewing..." : "Preview"}</Button></ActionRow>
         </div>
       </form>
@@ -67,10 +67,10 @@ function MarginaliaImportReview({ preview, draft, editingSessionKeys, selectedCo
     <header className="marginalia-import-review__header">
       <h2 id="marginalia-import-review-heading">Review</h2>
       <div className="marginalia-import-summary" aria-label="Import preview summary">
-        <Badge>{preview.summary.bookCount} books</Badge><Badge>{preview.summary.readingSessionCount} sessions</Badge><Badge>{preview.summary.annotationCount} annotations</Badge>
+        <Badge>{preview.summary.bookCount} Books</Badge><Badge>{preview.summary.readingSessionCount} Reading Sessions</Badge><Badge>{preview.summary.annotationCount} annotations</Badge>
       </div>
     </header>
-    {preview.unmatchedBookCount ? <p className="marginalia-import-warning">{preview.unmatchedBookCount} {preview.unmatchedBookCount === 1 ? "Book has" : "Books have"} no usable Library match. Unmatched Sessions can be downloaded but not applied here.</p> : null}
+    {preview.unmatchedBookCount ? <p className="marginalia-import-warning">{preview.unmatchedBookCount} {preview.unmatchedBookCount === 1 ? "Book has" : "Books have"} no exact EPUB checksum match. Download the unmatched Reading Sessions or import the matching EPUB and preview again.</p> : null}
     {summaryWarnings.length ? <div className="marginalia-import-summary__warnings">{summaryWarnings.map((warning) => <span className="marginalia-import-summary__warning" key={warning.code}><span className="css-dot" aria-hidden="true" />{warning.message}</span>)}</div> : null}
     <div className="marginalia-import-books">
       {preview.books.map((book, bookIndex) => <section className="marginalia-import-book" key={book.candidateId}>
@@ -102,10 +102,10 @@ function MarginaliaImportReview({ preview, draft, editingSessionKeys, selectedCo
               <div>
                 {session.willImport ? <div className="marginalia-import-session__select">
                   <label><input type="checkbox" checked={value.selected} disabled={applyState.pending} onChange={(event) => onDraftChange(key, { ...value, selected: event.target.checked })} /><span>{sessionName}</span></label>
-                  {session.possibleDuplicate && duplicateWarning ? <HelpPopover ariaLabel={`Why ${sessionName} may be a duplicate Session`} label="Possible Duplicate Session" mouseoverText={duplicateWarning.message} border borderColor="#8f783f" color="#c2a85f" /> : null}
+                  {session.possibleDuplicate && duplicateWarning ? <HelpPopover ariaLabel={`Why ${sessionName} may be a duplicate Reading Session`} label="Possible duplicate" mouseoverText={duplicateWarning.message} border borderColor="#8f783f" color="#c2a85f" /> : null}
                   {sessionFacts}
                 </div> : <div className="marginalia-import-session__select"><span>{sessionName}</span>{sessionFacts}</div>}
-                {session.sourceStatus === "active" ? <div className="marginalia-import-session__facts"><span>Active source Session imports as Closed</span></div> : null}
+                {session.sourceStatus === "active" ? <div className="marginalia-import-session__facts"><span>Active source Reading Session imports as closed</span></div> : null}
                 {!editing && value.notes.trim() ? <p className="marginalia-import-session__note">{value.notes}</p> : null}
               </div>
               {session.willImport ? <Button type="button" size="small" tone="secondary" aria-label={`${editing ? "Finish editing" : "Edit"} ${sessionName}`} disabled={!value.selected || applyState.pending} onClick={() => onEditingChange(key, !editing)}>{editing ? "Done" : "Edit"}</Button> : null}
@@ -121,21 +121,21 @@ function MarginaliaImportReview({ preview, draft, editingSessionKeys, selectedCo
       </section>)}
     </div>
     <ActionRow state={applyState}>
-      {preview.unmatchedDownloadableReadingSessionCount > 0 ? <span className="marginalia-import-download-action"><ActionFeedback state={downloadState} /><Button type="button" tone="secondary" disabled={downloadState.pending || applyState.pending} onClick={onDownloadUnmatched}>{downloadState.pending ? "Downloading..." : `Download Unmatched Sessions (${preview.unmatchedDownloadableReadingSessionCount})`}</Button></span> : null}
-      <span className="muted">{selectedCount} {selectedCount === 1 ? "session" : "sessions"} selected</span>
-      <Button type="button" disabled={!preview.canApply || selectedCount === 0 || applyState.pending || downloadState.pending} onClick={onApply}>{applyState.pending ? "Importing..." : "Import Selected Sessions"}</Button>
+      {preview.unmatchedDownloadableReadingSessionCount > 0 ? <span className="marginalia-import-download-action"><ActionFeedback state={downloadState} /><Button type="button" tone="secondary" disabled={downloadState.pending || applyState.pending} onClick={onDownloadUnmatched}>{downloadState.pending ? "Downloading…" : `Download unmatched (${preview.unmatchedDownloadableReadingSessionCount})`}</Button></span> : null}
+      <span className="muted">{selectedCount} {selectedCount === 1 ? "Reading Session" : "Reading Sessions"} selected</span>
+      <Button type="button" disabled={!preview.canApply || selectedCount === 0 || applyState.pending || downloadState.pending} onClick={onApply}>{applyState.pending ? "Importing…" : "Import selected"}</Button>
     </ActionRow>
   </section>;
 }
 
 function unmatchedBookGuidance(reason: "not_found" | "ambiguous_match" | "book_inaccessible") {
   if (reason === "book_inaccessible") {
-    return "This Book exists but is not currently available through your Library access. Its staged Sessions remain in the Unmatched download.";
+    return "The matching Book exists, but you cannot currently access it. Download this Reading Session or restore access and preview again.";
   }
   if (reason === "ambiguous_match") {
-    return "More than one visible Book has this file checksum. Resolve the duplicate file identities, then preview the import again.";
+    return "More than one visible Book has this EPUB checksum. Fix the duplicate Book files, then preview again.";
   }
-  return "No visible Book matched this exact EPUB file checksum. Import the same EPUB file, then preview again.";
+  return "No visible Book has this exact EPUB checksum. Import the matching EPUB, then preview again.";
 }
 
 function BookSelectionCheckbox({ label, state, disabled, onChange }: { label: string; state: MarginaliaImportBookSelectionState; disabled: boolean; onChange: (selected: boolean) => void }) {
@@ -143,23 +143,23 @@ function BookSelectionCheckbox({ label, state, disabled, onChange }: { label: st
   useEffect(() => {
     if (inputRef.current) inputRef.current.indeterminate = state === "some";
   }, [state]);
-  return <input ref={inputRef} type="checkbox" checked={state === "all"} aria-checked={state === "some" ? "mixed" : state === "all"} aria-label={`Select all importable sessions from ${label}`} disabled={disabled} onChange={(event) => onChange(event.target.checked)} />;
+  return <input ref={inputRef} type="checkbox" checked={state === "all"} aria-checked={state === "some" ? "mixed" : state === "all"} aria-label={`Select all importable Reading Sessions from ${label}`} disabled={disabled} onChange={(event) => onChange(event.target.checked)} />;
 }
 
 function MarginaliaImportResultRegion({ result, downloadState, onDownloadUnmatched }: { result: MarginaliaImportApplyResult; downloadState: MutationState; onDownloadUnmatched: () => void }) {
   return <Surface title="Import complete">
     <div className="marginalia-import-summary">
-      <Badge tone="success">{result.importedReadingSessionCount} {result.importedReadingSessionCount === 1 ? "session" : "sessions"} created</Badge>
+      <Badge tone="success">{result.importedReadingSessionCount} {result.importedReadingSessionCount === 1 ? "Reading Session" : "Reading Sessions"} created</Badge>
       <Badge>{result.importedAnnotationCount} annotations created</Badge>
     </div>
     {result.unmatchedReadingSessionCount > 0 ? <div className="marginalia-import-warning">
-      <p>{result.unmatchedReadingSessionCount} {result.unmatchedReadingSessionCount === 1 ? "Session remains" : "Sessions remain"} unmatched. Download them and retry after Library access is restored.</p>
+      <p>{result.unmatchedReadingSessionCount} unmatched {result.unmatchedReadingSessionCount === 1 ? "Reading Session remains" : "Reading Sessions remain"}. Download them, then retry after restoring Book access.</p>
       {result.unmatchedBooks.length ? <ul>{result.unmatchedBooks.map((book) => <li key={book.candidateId}>{book.title}</li>)}</ul> : null}
     </div> : null}
     {result.readingSessions.length ? <ul>{result.readingSessions.map((session) => <li key={session.candidateId}><Link to={`/marginalia/sessions/${encodeURIComponent(session.readingSessionId)}`}>{marginaliaSessionDisplayName({ id: session.readingSessionId, name: session.name })}</Link> · {session.annotationCount} annotations · Closed</li>)}</ul> : null}
     {result.warnings.length ? <ul>{result.warnings.map((warning) => <li key={`${warning.code}:${warning.candidateId ?? "general"}`}>{warning.message}</li>)}</ul> : null}
     <div className="marginalia-import-result-actions">
-      {result.unmatchedDownloadAvailable ? <><ActionFeedback state={downloadState} /><Button type="button" tone="secondary" disabled={downloadState.pending} onClick={onDownloadUnmatched}>{downloadState.pending ? "Downloading..." : `Download Unmatched Sessions (${result.unmatchedDownloadableReadingSessionCount})`}</Button></> : null}
+      {result.unmatchedDownloadAvailable ? <><ActionFeedback state={downloadState} /><Button type="button" tone="secondary" disabled={downloadState.pending} onClick={onDownloadUnmatched}>{downloadState.pending ? "Downloading…" : `Download unmatched (${result.unmatchedDownloadableReadingSessionCount})`}</Button></> : null}
       <Link className="button" to="/marginalia">Back to My Marginalia</Link>
     </div>
   </Surface>;

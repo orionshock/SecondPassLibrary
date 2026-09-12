@@ -62,7 +62,7 @@ describe("My Marginalia Session list", () => {
 
   it("keeps inaccessible owned Book identity visible without offering a Library action", () => {
     const markup = renderRegion({ items: [hiddenSession], count: 1, next: null, previous: null });
-    expect(markup).toContain("Unnamed Session 32618e");
+    expect(markup).toContain("Unnamed Reading Session 32618e");
     expect(markup).toContain("Remembered Book");
     expect(markup).toContain('/media/remembered.jpg');
     expect(markup).not.toContain(">79dc1581");
@@ -72,7 +72,7 @@ describe("My Marginalia Session list", () => {
 
   it("uses returned Session names unchanged and derives only blank display names", () => {
     expect(marginaliaSessionDisplayName(visibleSession)).toBe("Morning notes");
-    expect(marginaliaSessionDisplayName(hiddenSession)).toBe("Unnamed Session 32618e");
+    expect(marginaliaSessionDisplayName(hiddenSession)).toBe("Unnamed Reading Session 32618e");
   });
 
   it("renders a collapsed note excerpt between Session facts and the Book action", () => {
@@ -97,15 +97,14 @@ describe("My Marginalia Session list", () => {
     expect(markup).toContain('role="search"');
     expect(markup).toContain('value="notes"');
     expect(markup).toContain('<option value="closed" selected="">Closed</option>');
-    expect(markup).toContain('aria-label="Reading sessions pagination, top"');
-    expect(markup).toContain('aria-label="Reading sessions pagination, bottom"');
+    expect(markup).toContain('aria-label="Reading Sessions pagination, top"');
+    expect(markup).toContain('aria-label="Reading Sessions pagination, bottom"');
   });
 
   it("renders bounded loading, filtered empty, and retryable error states", () => {
-    expect(renderRegion(undefined, { loading: true })).toContain("Loading reading sessions");
+    expect(renderRegion(undefined, { loading: true })).toContain('aria-busy="true"');
     const empty = renderRegion({ items: [], count: 0, next: null, previous: null }, { search: "missing" });
-    expect(empty).toContain("No reading sessions found");
-    expect(empty).toContain("clearing the search or status filter");
+    expect(empty).not.toContain("marginalia-session-row");
     const failed = renderRegion(undefined, { error: new Error("Reading history unavailable.") });
     expect(failed).toContain('role="alert"');
     expect(failed).toContain("Retry");

@@ -16,12 +16,12 @@
           <span>{{ server_name }}</span>
         </div>
         <h1 class="page-title">Set up your library</h1>
-        <p class="muted">Configure this server and create the first Owner account.</p>
+        <p class="muted">Name this server and create its Owner account.</p>
 
         <form
           method="post"
           class="form setup-form"
-          data-advanced-groups-confirm="Enable advanced library groups? Product UI will expose custom library rooms and will not normally offer a disable action afterward. Disabling later is an operator recovery action through Django admin that consolidates custom groups into the Public Library/Common Room.">
+          data-advanced-groups-confirm="Enable Advanced Library Groups? Turning this off later requires a Django Admin recovery action that moves custom groups into the Public Library/Common Room.">
           {% csrf_token %}
 
           {% if form.non_field_errors %}
@@ -54,18 +54,18 @@
             <fieldset class="setup-section setup-section--advanced">
               <legend>Advanced</legend>
               <div id="setup-advanced-summary" class="setup-advanced-summary">
-                <strong>Advanced library groups default to off.</strong>
+                <strong>Advanced Library Groups default to off.</strong>
                 <p>
-                  Leave this disabled. Consult documentation and help for more information.
+                  Leave this off unless you need separate Library Groups.
                 </p>
               </div>
               <div class="setup-advanced-actions" data-advanced-groups-actions>
                 <button id="setup-advanced-groups-open" class="button" type="button">
-                  Enable advanced library groups
+                  Enable Advanced Library Groups
                 </button>
                 <div id="setup-advanced-groups-enabled-status" class="setup-advanced-status is-hidden" role="status">
-                  <strong>Advanced library groups will be enabled.</strong>
-                  <button id="setup-advanced-groups-disable" class="linklike" type="button">Disable before setup</button>
+                  <strong>Advanced Library Groups will be enabled.</strong>
+                  <button id="setup-advanced-groups-disable" class="linklike" type="button">Keep disabled</button>
                 </div>
               </div>
               <div class="setup-advanced-fallback">
@@ -84,18 +84,15 @@
     </main>
     <dialog id="setup-advanced-groups-dialog" class="setup-dialog" aria-labelledby="setup-advanced-groups-dialog-title">
       <form method="dialog" class="setup-dialog__panel">
-        <h2 id="setup-advanced-groups-dialog-title">Enable advanced library groups?</h2>
+        <h2 id="setup-advanced-groups-dialog-title">Enable Advanced Library Groups?</h2>
         <p>
-          Advanced Library Groups allows for additional groups to be created and assigned their own members and book restrictions.
+          This adds separate Library Groups with their own members and Book access.
         </p>
         <p>
-          Disabling this feature is an Admin Recovery Action that is intentionally difficult to get to.
-        </p>
-        <p>
-          Please see documentation and help files for further information.
+          Turning it off later requires a recovery action in Django Admin.
         </p>
         <div class="setup-dialog__actions">
-          <button class="button button--danger" value="enable">Enable advanced groups</button>
+          <button class="button button--danger" value="enable">Enable Library Groups</button>
           <button id="setup-advanced-groups-cancel" class="button button--success-outline" value="cancel">Keep disabled</button>
         </div>
       </form>
@@ -133,7 +130,7 @@
               dialog.querySelector("#setup-advanced-groups-cancel")?.focus();
               return;
             }
-            if (window.confirm(form.dataset.advancedGroupsConfirm || "Enable advanced library groups?")) {
+            if (window.confirm(form.dataset.advancedGroupsConfirm || "Enable Advanced Library Groups?")) {
               checkbox.checked = true;
               renderAdvancedGroupsState();
             }
@@ -158,7 +155,7 @@
         form.addEventListener("submit", (event) => {
           if (
             checkbox.checked &&
-            !window.confirm(form.dataset.advancedGroupsConfirm || "Enable advanced library groups?")
+            !window.confirm(form.dataset.advancedGroupsConfirm || "Enable Advanced Library Groups?")
           ) {
             event.preventDefault();
             return;

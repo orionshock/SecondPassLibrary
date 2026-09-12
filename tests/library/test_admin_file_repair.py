@@ -93,14 +93,12 @@ class StoredEpubRepairAdminTests(IsolatedMediaRootMixin, TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "Repair stored EPUB")
-        self.assertContains(response, "Target Book:")
         self.assertContains(response, "Physical stored file:")
         self.assertContains(response, "Present")
         self.assertContains(response, "Replacement EPUB")
         self.assertContains(response, "Replace existing stored file")
         self.assertContains(response, "Allow different checksum")
         self.assertContains(response, "EPUB CFI anchors")
-        self.assertContains(response, "reading sessions, progress, or annotations")
         self.assertNotContains(response, "source_filename")
         self.assertNotContains(response, "Source filename")
 

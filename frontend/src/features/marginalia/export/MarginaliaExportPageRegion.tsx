@@ -49,24 +49,24 @@ export function MarginaliaExportPageRegion({ page, pageNumber, pageSize, search,
   }
 
   return <div className="marginalia-export-page">
-    <label className="marginalia-empty-sessions-toggle marginalia-export-empty-sessions"><input type="checkbox" checked={includeEmptySessions} disabled={completeState.pending || selectedState.pending} onChange={(event) => onIncludeEmptySessionsChange(event.target.checked)} />Include empty sessions</label>
+    <label className="marginalia-empty-sessions-toggle marginalia-export-empty-sessions"><input type="checkbox" checked={includeEmptySessions} disabled={completeState.pending || selectedState.pending} onChange={(event) => onIncludeEmptySessionsChange(event.target.checked)} />Include empty Reading Sessions</label>
     <Surface title="Complete archive">
       <div className="marginalia-export-complete">
-        <p>Download all of your reading history, including Sessions tied to Books that are no longer available.</p>
+        <p>Includes Reading Sessions for Books that are no longer available.</p>
         <div className="marginalia-export-action-row"><MarginaliaExportFeedback state={completeState} limitFailure={completeLimitFailure} /><Button type="button" disabled={completeState.pending} onClick={onCompleteExport}>{completeState.pending ? "Preparing..." : "Download complete archive"}</Button></div>
       </div>
     </Surface>
 
     <section className="marginalia-export-selective" aria-labelledby="marginalia-export-selective-heading">
       <header className="marginalia-export-selective__header">
-        <div><h2 id="marginalia-export-selective-heading">Selected Sessions</h2><p className="muted">Choose Sessions from the current pages and filters.</p></div>
-        <div className="marginalia-export-selection-summary"><strong>{selectedSessionIds.size} {selectedSessionIds.size === 1 ? "Session" : "Sessions"} selected</strong>{selectedSessionIds.size ? <span>{selectedBookCount} {selectedBookCount === 1 ? "Book" : "Books"}</span> : null}</div>
+        <div><h2 id="marginalia-export-selective-heading">Selected Reading Sessions</h2><p className="muted">Selections remain checked as you change pages or filters.</p></div>
+        <div className="marginalia-export-selection-summary"><strong>{selectedSessionIds.size} {selectedSessionIds.size === 1 ? "Reading Session" : "Reading Sessions"} selected</strong>{selectedSessionIds.size ? <span>{selectedBookCount} {selectedBookCount === 1 ? "Book" : "Books"}</span> : null}</div>
       </header>
 
-      <section className="marginalia-controls" aria-label="Export Session filters">
+      <section className="marginalia-controls" aria-label="Reading Session export filters">
         <form role="search" onSubmit={submit}>
           <label htmlFor="marginalia-export-search">Search</label>
-          <input id="marginalia-export-search" type="search" value={search} placeholder="Session, notes, or Book…" onChange={(event) => onSearchChange(event.target.value)} />
+          <input id="marginalia-export-search" type="search" value={search} placeholder="Reading Session, note, or Book…" onChange={(event) => onSearchChange(event.target.value)} />
           <Button type="submit">Search</Button>
         </form>
         <label className="marginalia-status-filter" htmlFor="marginalia-export-status">Status
@@ -78,18 +78,18 @@ export function MarginaliaExportPageRegion({ page, pageNumber, pageSize, search,
 
       {page ? <div className="marginalia-export-page-actions"><Button type="button" size="small" tone="secondary" disabled={!page.items.length || selectedState.pending} onClick={onSelectPage}>Select this page</Button><Button type="button" size="small" tone="secondary" disabled={!selectedSessionIds.size || selectedState.pending} onClick={onClearSelection}>Clear selection</Button></div> : null}
 
-      {!page && loading ? <div className="marginalia-state" aria-live="polite" aria-busy="true">Loading reading sessions...</div> : null}
+      {!page && loading ? <div className="marginalia-state" aria-live="polite" aria-busy="true">Loading Reading Sessions…</div> : null}
       {!page && loadError ? <div className="marginalia-state"><ErrorPanel>{loadError.message}</ErrorPanel><Button type="button" tone="secondary" onClick={onRetry}>Retry</Button></div> : null}
       {page ? <div className={loading ? "marginalia-results marginalia-results--loading" : "marginalia-results"} aria-busy={loading}>
         {loadError ? <div className="marginalia-inline-error"><ErrorPanel>{loadError.message}</ErrorPanel><Button type="button" tone="secondary" onClick={onRetry}>Retry</Button></div> : null}
-        <PaginatedListFrame page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Export Sessions" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange}>
-          {page.items.length ? <div className="marginalia-export-session-rows">{page.items.map((session) => <MarginaliaExportSessionRow key={session.id} session={session} selected={selectedSessionIds.has(session.id)} disabled={selectedState.pending} onChange={(selected) => onSessionSelectionChange(session, selected)} />)}</div> : <div className="marginalia-empty"><p>No reading sessions found.</p></div>}
+        <PaginatedListFrame page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Reading Sessions to export" onPageChange={onPageChange} onPageSizeChange={onPageSizeChange}>
+          {page.items.length ? <div className="marginalia-export-session-rows">{page.items.map((session) => <MarginaliaExportSessionRow key={session.id} session={session} selected={selectedSessionIds.has(session.id)} disabled={selectedState.pending} onChange={(selected) => onSessionSelectionChange(session, selected)} />)}</div> : <div className="marginalia-empty"><p>No Reading Sessions match these filters.</p></div>}
         </PaginatedListFrame>
       </div> : null}
 
       <div className="marginalia-export-submit">
         <MarginaliaExportFeedback state={selectedState} limitFailure={selectedLimitFailure} />
-        <Button type="button" disabled={!selectedSessionIds.size || selectedState.pending} onClick={onSelectedExport}>{selectedState.pending ? "Preparing..." : "Export selected Sessions"}</Button>
+        <Button type="button" disabled={!selectedSessionIds.size || selectedState.pending} onClick={onSelectedExport}>{selectedState.pending ? "Preparing…" : "Export selected"}</Button>
       </div>
     </section>
   </div>;

@@ -18,14 +18,15 @@ describe("apiErrorFromPayload", () => {
         { path: "$.books[0].sessions[0]", message: "Session is invalid." },
       ],
     });
-    expect(error.message).toBe("The server could not complete the request.");
+    expect(error.message).toContain("try again");
+    expect(error.message).not.toContain("$.books");
     expect(error.fields).toEqual({
       file: ["Upload a JSON file."],
       importToken: ["Import preview expired."],
       "books[0].sessions[0]": ["Session is invalid."],
     });
   });
-  it("normalizes structured server errors", () => {
+  it("does not promote arbitrary DRF detail into the user message", () => {
     const error = apiErrorFromPayload(400, {
       detail: "Check the submitted fields.",
       code: "validation_error",
@@ -33,7 +34,8 @@ describe("apiErrorFromPayload", () => {
     });
 
     expect(error.status).toBe(400);
-    expect(error.message).toBe("Check the submitted fields.");
+    expect(error.message).toContain("highlighted fields");
+    expect(error.message).not.toContain("submitted fields");
     expect(error.code).toBe("validation_error");
     expect(error.fields).toEqual({ email: ["Enter a valid email address."] });
   });
@@ -52,6 +54,19 @@ describe("apiErrorFromPayload", () => {
     expect(error.message).toBe("The Reading Session is closed.");
     expect(error.code).toBe("SESSION_CLOSED");
     expect(error.fields).toBeUndefined();
+  });
+
+  it("keeps the bounded project recovery hint with its stable category", () => {
+    const error = apiErrorFromPayload(409, {
+      error: {
+        code: "IMPORT_CONFLICT",
+        message: "The import conflicts with existing data.",
+        hint: "Review the conflict and import again.",
+      },
+    });
+
+    expect(error).toMatchObject({ status: 409, code: "IMPORT_CONFLICT" });
+    expect(error.message).toContain("Review the conflict and import again.");
   });
 
   it("normalizes Author and Series attachment conflicts without treating bounded details as fields", () => {

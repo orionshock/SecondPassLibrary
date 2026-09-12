@@ -63,7 +63,7 @@ function BookResults({ page, pageNumber, pageSize, searching, loading, error, bo
           book={book}
           detailPath={bookPath(book.id)}
           details={<BookMarginaliaFacts book={book} />}
-          actions={book.canOpen ? <Link className="button button--small button--secondary" to={`/library/books/${encodeURIComponent(book.id)}`}>Go To Book Detail</Link> : null}
+          actions={book.canOpen ? <Link className="button button--small button--secondary" to={`/library/books/${encodeURIComponent(book.id)}`}>View Book</Link> : null}
         />)}</div>}
     </PaginatedListFrame>
   </section>;
@@ -71,7 +71,7 @@ function BookResults({ page, pageNumber, pageSize, searching, loading, error, bo
 
 function BookMarginaliaFacts({ book }: { book: MarginaliaBookSummary }) {
   return <p className="marginalia-book-facts">
-    <span>{formatCount(book.sessionCount, "Session")}</span>
+    <span>{formatCount(book.sessionCount, "Reading Session")}</span>
     <span>{book.activeSessionCount} active</span>
     <span>Last activity <time dateTime={book.lastActivityAt}>{formatDate(book.lastActivityAt)}</time></span>
   </p>;

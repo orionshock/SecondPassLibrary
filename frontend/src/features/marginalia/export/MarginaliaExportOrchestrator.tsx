@@ -91,7 +91,7 @@ export function MarginaliaExportOrchestrator() {
         readingSessionIds: marginaliaExportSelectedSessionIds(selection),
         includeEmptySessions,
       }));
-      setSelectedState({ pending: false, message: "Selected Sessions downloaded." });
+      setSelectedState({ pending: false, message: "Selected Reading Sessions downloaded." });
     } catch (error: unknown) {
       setSelectedState({ pending: false, error: normalizeMutationError(error) });
     }
@@ -144,7 +144,7 @@ export function marginaliaExportLimitFailure(
   if (!(error instanceof MarginaliaExportTooLargeError)) return undefined;
   const limitLabel = error.limitKind.endsWith("_bytes")
     ? `Maximum archive size: ${formatByteLimit(error.maximum)}.`
-    : `Maximum: ${error.maximum.toLocaleString("en-US")} ${error.limitKind === "annotations" ? "annotations" : "Sessions"}.`;
+    : `Maximum: ${error.maximum.toLocaleString("en-US")} ${error.limitKind === "annotations" ? "annotations" : "Reading Sessions"}.`;
   return {
     message: error.message,
     guidance: error.guidance,

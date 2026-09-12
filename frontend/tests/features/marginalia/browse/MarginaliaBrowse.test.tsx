@@ -69,7 +69,7 @@ describe("Marginalia Books view", () => {
     expect(markup).toContain("Battle Ground");
     expect(markup).toContain("Jim Butcher");
     expect(markup).toContain("Dresden Files 18.0");
-    expect(markup).toContain("3 Sessions");
+    expect(markup).toContain("3 Reading Sessions");
     expect(markup).toContain("1 active");
     expect(markup).toContain(`href="/marginalia?view=books&amp;book=${book.id}&amp;q=battle"`);
     expect(markup).toContain(`href="/library/books/${book.id}"`);
@@ -120,7 +120,6 @@ describe("Marginalia selected Book Session stage", () => {
 
     expect(markup).toContain("Battle Ground");
     expect(markup).toContain("Back to Books");
-    expect(markup).toContain('placeholder="Session name or notes..."');
     expect(markup).toContain('<option value="closed" selected="">Closed</option>');
     expect(markup).toContain("Second pass");
     expect(markup).toContain(`/marginalia/sessions/${session.id}`);

@@ -162,8 +162,14 @@ def _delete_staged_file(*, storage, staged_name: str) -> None:
     try:
         if storage.exists(staged_name):
             storage.delete(staged_name)
-    except Exception:
-        logger.warning("Failed to clean a staged EPUB repair file.")
+    except Exception as exc:
+        logger.warning(
+            "Stored EPUB repair cleanup failed: operation=remove_staged_file "
+            "failure_class=%s persistence_disposition=database_unchanged "
+            "cleanup_disposition=staged_file_may_remain retry_safety=safe "
+            "next_inspection_point=storage_backend",
+            type(exc).__name__,
+        )
 
 
 def _delete_unreferenced_file(*, storage, file_name: str) -> None:
@@ -172,5 +178,11 @@ def _delete_unreferenced_file(*, storage, file_name: str) -> None:
     try:
         if storage.exists(file_name):
             storage.delete(file_name)
-    except Exception:
-        logger.warning("Failed to clean an unreferenced replaced EPUB file.")
+    except Exception as exc:
+        logger.warning(
+            "Stored EPUB repair cleanup failed: operation=remove_replaced_file "
+            "failure_class=%s persistence_disposition=replacement_committed "
+            "cleanup_disposition=unreferenced_file_may_remain retry_safety=safe "
+            "next_inspection_point=storage_backend",
+            type(exc).__name__,
+        )

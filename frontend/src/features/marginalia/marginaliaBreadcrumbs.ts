@@ -16,6 +16,6 @@ export const marginaliaExportBreadcrumbFallback: readonly BreadcrumbItem[] = [
 export function marginaliaSessionBreadcrumbFallback(session?: { id: string; name: string }): readonly BreadcrumbItem[] {
   return [
     { label: "My Marginalia", to: "/marginalia", resetTrail: true },
-    { label: session ? marginaliaSessionDisplayName(session) : "Session" },
+    { label: session ? marginaliaSessionDisplayName(session) : "Reading Session" },
   ];
 }

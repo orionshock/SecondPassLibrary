@@ -17,7 +17,9 @@ export class LocalValidationError extends Error {
 export const idleMutationState: MutationState = { pending: false };
 
 export function normalizeMutationError(error: unknown): Error {
-  return error instanceof Error ? error : new Error("The request could not be completed.");
+  if (error instanceof Error) return error;
+  console.error("Unexpected Product UI failure value.", { failureClass: typeof error });
+  return new Error("The action couldn't be completed. Try again.");
 }
 
 export function fieldError(error: Error | undefined, field: string): string | undefined {

@@ -125,10 +125,10 @@ describe("MarginaliaImportOrchestrator", () => {
     const container = await mount();
     await loadPreview(container);
 
-    act(() => buttonNamed(container, "Import Selected Sessions").click());
+    act(() => buttonNamed(container, "Import selected").click());
     expect(sdk.apply).toHaveBeenCalledWith({ importToken: "import-token", readingSessions: [{ candidateId: "session-candidate" }] });
-    expect(buttonNamed(container, "Importing...").disabled).toBe(true);
-    act(() => buttonNamed(container, "Importing...").click());
+    expect(buttonNamed(container, "Importing…").disabled).toBe(true);
+    act(() => buttonNamed(container, "Importing…").click());
     expect(sdk.apply).toHaveBeenCalledOnce();
 
     await act(async () => pending.resolve(result));
@@ -141,7 +141,7 @@ describe("MarginaliaImportOrchestrator", () => {
     const container = await mount();
     await loadPreview(container);
 
-    await act(async () => buttonNamed(container, "Import Selected Sessions").click());
+    await act(async () => buttonNamed(container, "Import selected").click());
 
     expect(container.querySelector('[aria-label="Import preview summary"]')).not.toBeNull();
     expect(container.querySelector('[role="alert"]')).not.toBeNull();
@@ -154,7 +154,7 @@ describe("MarginaliaImportOrchestrator", () => {
     const container = await mount();
     await loadPreview(container);
 
-    await act(async () => buttonNamed(container, "Download Unmatched Sessions (1)").click());
+    await act(async () => buttonNamed(container, "Download unmatched (1)").click());
 
     expect(sdk.download).toHaveBeenCalledWith("import-token");
     expect(browser.save).toHaveBeenCalledWith(download);

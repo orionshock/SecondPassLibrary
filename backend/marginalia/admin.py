@@ -199,8 +199,10 @@ class ReadingSessionAdmin(admin.ModelAdmin):
         if soft_deleted or hard_deleted:
             self.message_user(
                 request,
-                f"Soft deleted {soft_deleted} annotation(s); permanently deleted "
-                f"{hard_deleted} annotation(s).",
+                f"Soft deleted {soft_deleted} "
+                f"{'annotation' if soft_deleted == 1 else 'annotations'}; "
+                f"permanently deleted {hard_deleted} "
+                f"{'annotation' if hard_deleted == 1 else 'annotations'}.",
             )
 
 

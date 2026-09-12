@@ -44,27 +44,27 @@ export function DashboardPageRegion({
 function RecentReadingPageRegion({ state, onRetry }: { state: RecentReadingState; onRetry: () => void }) {
   return <section className="surface dashboard-recent" aria-labelledby="dashboard-recent-title">
     <header className="dashboard-section-header">
-      <h2 id="dashboard-recent-title">Recent Sessions</h2>
+      <h2 id="dashboard-recent-title">Recent History</h2>
       {state.status === "ready" && state.items.length > 0
         ? <Link className="button button--small button--secondary" to="/marginalia">View all</Link>
         : null}
     </header>
-    {state.status === "loading" ? <p className="dashboard-section-state" aria-live="polite" aria-busy="true">Loading recent reading...</p> : null}
+    {state.status === "loading" ? <p className="dashboard-section-state" aria-live="polite" aria-busy="true">Loading Recent History…</p> : null}
     {state.status === "error" ? <div className="dashboard-section-state">
       <ErrorPanel>{state.error.message}</ErrorPanel>
       <Button type="button" size="small" tone="secondary" onClick={onRetry}>Retry</Button>
     </div> : null}
     {state.status === "ready" && state.items.length === 0 ? <div className="dashboard-section-state dashboard-section-state--empty">
       <MaterialIcon name="auto_stories" size="2rem" />
-      <div><p>No recent reading activity yet.</p><p className="muted">Start with a Book from the Library.</p></div>
-      <Link className="button button--small button--secondary" to="/library">Browse Library</Link>
+      <div><p>No Recent History yet.</p><p className="muted">Open a Book from the Library to get started.</p></div>
+      <Link className="button button--small button--secondary" to="/library">Open Library</Link>
     </div> : null}
     {state.status === "ready" && state.items.length > 0 ? <RecentSessionScroller items={state.items} /> : null}
   </section>;
 }
 
 const marginaliaActions: DashboardAction[] = [
-  { to: "/marginalia", label: "By Session", icon: "history" },
+  { to: "/marginalia", label: "By Reading Session", icon: "history" },
   { to: "/marginalia?view=books", label: "By Book", icon: "menu_book" },
   { to: "/marginalia/import", label: "Import", icon: "upload_file" },
   { to: "/marginalia/export", label: "Export", icon: "download" },
@@ -75,7 +75,7 @@ function DashboardLaunchPadsPageRegion({ showAdvancedGroups }: { showAdvancedGro
     { to: "/shelves", label: "My Shelves", icon: "shelves" },
     { to: "/shelves?scope=shared", label: "Shared with Me", icon: "share" },
     { to: "/shelves?scope=group", label: "Group Shelves", icon: "group_work" },
-    { to: "/shelves/new", label: "Create Shelf", icon: "add" },
+    { to: "/shelves/new", label: "New Shelf", icon: "add" },
   ];
   const libraryActions: DashboardAction[] = [
     { to: "/library", label: "Books", icon: "book_2" },
@@ -85,9 +85,9 @@ function DashboardLaunchPadsPageRegion({ showAdvancedGroups }: { showAdvancedGro
   ];
 
   return <section className="dashboard-launch-pads" aria-label="Dashboard actions">
-    <LaunchPad title="My Marginalia" description="Sessions, annotations, import, and export." actions={marginaliaActions} />
+    <LaunchPad title="My Marginalia" description="Reading Sessions, highlights, bookmarks, and notes." actions={marginaliaActions} />
     <LaunchPad title="My Shelves" description="Personal and shared shelves." actions={shelfActions} />
-    <LaunchPad title="Browse Library" description="Explore the collection." actions={libraryActions} />
+    <LaunchPad title="Browse Library" description="Books, Authors, Series, and Library Groups." actions={libraryActions} />
   </section>;
 }
 

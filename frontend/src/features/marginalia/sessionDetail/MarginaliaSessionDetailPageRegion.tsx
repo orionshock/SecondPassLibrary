@@ -116,14 +116,14 @@ function SessionSummaryRegion({ detail, sessionNote, closeState, deleteState, ex
             {book.series ? <p className="marginalia-session-summary__book-meta">{book.series.name}{book.series.seriesIndex ? ` ${book.series.seriesIndex}` : ""}</p> : null}
           </div>
           <div className="marginalia-session-summary__book-actions">
-            {book.canOpen ? <Link className="button button--small button--secondary" to={`/library/books/${encodeURIComponent(book.id)}`}>Go To Book Detail</Link> : null}
-            <Link className="button button--small button--secondary" to={marginaliaBookSessionsPath(book.id)}>View Sessions for This Book</Link>
+            {book.canOpen ? <Link className="button button--small button--secondary" to={`/library/books/${encodeURIComponent(book.id)}`}>View Book</Link> : null}
+            <Link className="button button--small button--secondary" to={marginaliaBookSessionsPath(book.id)}>View Reading Sessions</Link>
           </div>
         </header>
         <div className="marginalia-session-summary__session">
           <div className="marginalia-session-summary__status-actions">
             <Badge tone={session.status === "active" ? "success" : "default"}>{session.status === "active" ? "Active" : "Closed"}</Badge>
-            {session.status === "active" ? <Button type="button" size="small" tone="secondary" className="marginalia-session-summary__lifecycle-action" disabled={lifecyclePending} onClick={onClose}><MaterialIcon name="close" />{closeState.pending ? "Closing..." : "Close Session"}</Button> : null}
+            {session.status === "active" ? <Button type="button" size="small" tone="secondary" className="marginalia-session-summary__lifecycle-action" disabled={lifecyclePending} onClick={onClose}><MaterialIcon name="close" />{closeState.pending ? "Closing…" : "Close Reading Session"}</Button> : null}
             <Button ref={deleteButton} type="button" size="small" tone="danger" className="marginalia-session-summary__lifecycle-action" disabled={lifecyclePending} onClick={() => setDeleteConfirmationOpen(true)}><MaterialIcon name="delete" />{deleteState.pending ? "Deleting…" : "Delete"}</Button>
             {closeState.error ? <span className="field-error" role="alert">{closeState.error.message}</span> : null}
             {closeState.message ? <span className="success-message" role="status">{closeState.message}</span> : null}
@@ -181,25 +181,24 @@ export function MarginaliaSessionDeleteDialog({ sessionName, bookTitle, pending,
 
   return <div className="marginalia-session-delete-dialog-backdrop" onClick={handleBackdropClick}>
     <div className="marginalia-session-delete-dialog" role="dialog" aria-modal="true" aria-labelledby="marginalia-session-delete-dialog-title" aria-describedby="marginalia-session-delete-dialog-description" tabIndex={-1} onKeyDown={handleDialogKeyDown}>
-      <h2 id="marginalia-session-delete-dialog-title">Delete this reading session?</h2>
+      <h2 id="marginalia-session-delete-dialog-title">Delete this Reading Session?</h2>
       <div id="marginalia-session-delete-dialog-description" className="marginalia-session-delete-dialog__body">
-        {sessionName.trim() ? <p>Session: <strong>{sessionName}</strong></p> : null}
+        {sessionName.trim() ? <p>Reading Session: <strong>{sessionName}</strong></p> : null}
         <p>Book: <strong>{bookTitle}</strong></p>
-        <p>This permanently deletes this Session and all annotations attached to it.</p>
-        <p>This cannot be undone.</p>
-        <p className="marginalia-session-delete-dialog__export-note">You may export this Session before deleting it.</p>
+        <p>Deleting this Reading Session also deletes all Marginalia in it. This cannot be undone.</p>
+        <p className="marginalia-session-delete-dialog__export-note">Export the Reading Session first if you want to keep a copy.</p>
         {exportState.error ? <span className="field-error" role="alert">{exportState.error.message}</span> : null}
       </div>
       <div className="marginalia-session-delete-dialog__actions">
-        <Button type="button" tone="secondary" className="marginalia-session-delete-dialog__export" disabled={pending || exportState.pending} onClick={onExport}><MaterialIcon name="download" />{exportState.pending ? "Exporting…" : "Export Session"}</Button>
+        <Button type="button" tone="secondary" className="marginalia-session-delete-dialog__export" disabled={pending || exportState.pending} onClick={onExport}><MaterialIcon name="download" />{exportState.pending ? "Exporting…" : "Export Reading Session"}</Button>
         <Button ref={cancelButton} type="button" tone="secondary" disabled={pending} onClick={onCancel}>Cancel</Button>
-        <Button type="button" tone="danger" disabled={pending || exportState.pending} onClick={onContinue}>Continue to delete</Button>
+        <Button type="button" tone="danger" disabled={pending || exportState.pending} onClick={onContinue}>Continue</Button>
       </div>
     </div>
   </div>;
 }
 
-export const permanentSessionDeletionWarning = "Permanently delete this Session and all of its annotations? This cannot be undone.";
+export const permanentSessionDeletionWarning = "Delete this Reading Session and all of its Marginalia? This cannot be undone.";
 
 export function confirmPermanentSessionDeletion(
   onConfirm: () => void,

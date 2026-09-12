@@ -112,9 +112,9 @@ describe("Library Books components", () => {
       onReplace={vi.fn()}
       onClear={vi.fn()}
     />);
-    expect(markup).toContain("Change Cover");
+    expect(markup).toContain("Change cover");
     expect(markup).not.toContain('type="file"');
-    expect(markup).not.toContain("Clear Cover");
+    expect(markup).not.toContain("Clear cover");
   });
 
   it("renders only the accepted compact row presentation", () => {

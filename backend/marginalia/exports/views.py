@@ -57,6 +57,7 @@ class MarginaliaExportView(APIView):
         except NoExportableSessionsError:
             return invalid_request_response(
                 message="No Reading Sessions are available to export.",
+                hint="Create or import a Reading Session, then try again.",
                 status_code=status.HTTP_409_CONFLICT,
             )
         except ExportTooLargeError as exc:
@@ -64,9 +65,9 @@ class MarginaliaExportView(APIView):
                 code=ErrorCode.EXPORT_TOO_LARGE,
                 message="The Marginalia export is too large.",
                 hint=(
-                    "Use Selected Sessions and choose fewer Sessions, then try again."
+                    "Choose Selected Reading Sessions and export fewer at a time."
                     if exc.mode == "full"
-                    else "Choose fewer Sessions and try the export again."
+                    else "Choose fewer Reading Sessions and try again."
                 ),
                 status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
             )
@@ -78,11 +79,13 @@ class MarginaliaExportView(APIView):
         except MissingBookChecksumError:
             return invalid_request_response(
                 message="Marginalia export requires a valid Book checksum.",
+                hint="Ask the server operator to repair the Book's stored EPUB, then try again.",
                 status_code=status.HTTP_409_CONFLICT,
             )
         except DuplicateBookHashError:
             return invalid_request_response(
                 message="Marginalia export found conflicting Book checksums.",
+                hint="Ask the server operator to resolve the checksum conflict before exporting.",
                 status_code=status.HTTP_409_CONFLICT,
             )
 

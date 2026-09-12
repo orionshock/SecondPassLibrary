@@ -18,7 +18,7 @@ export class ApiError extends Error {
 }
 
 export class NetworkError extends Error {
-  constructor(message = "The server could not be reached.") {
+  constructor(message = "Can't reach the server. Check your connection and try again.") {
     super(message);
     this.name = "NetworkError";
   }
@@ -48,11 +48,6 @@ type ErrorPayload = {
 export function apiErrorFromPayload(status: number, payload: unknown): ApiError {
   const body = isRecord(payload) ? (payload as ErrorPayload) : {};
   const bounded = isRecord(body.error) ? body.error : {};
-  const message = typeof bounded.message === "string"
-    ? bounded.message
-    : typeof body.detail === "string"
-      ? body.detail
-      : "The server could not complete the request.";
   const code = typeof bounded.code === "string"
     ? bounded.code
     : typeof body.code === "string"
@@ -62,7 +57,30 @@ export function apiErrorFromPayload(status: number, payload: unknown): ApiError 
     Object.entries(body).filter(([key]) => !["detail", "code", "error", "errors"].includes(key)),
   );
   const fields = normalizeFieldErrors(body.errors) ?? normalizeFieldErrors(fieldPayload);
+  const customMessage = boundedText(bounded.message);
+  const hint = boundedText(bounded.hint);
+  const message = customMessage
+    ? `${customMessage}${hint ? ` ${hint}` : ""}`
+    : apiErrorMessage(status, Boolean(fields));
   return new ApiError(message, status, { code, fields });
+}
+
+export function apiErrorMessage(status: number, hasFieldErrors = false): string {
+  if (status === 400 && hasFieldErrors) return "Check the highlighted fields and try again.";
+  if (status === 400 || status === 422) return "Check your entries and try again.";
+  if (status === 401) return "Your session has ended. Log in and try again.";
+  if (status === 403) return "You don't have permission to do that.";
+  if (status === 404) return "This item is no longer available. Return to the list and try again.";
+  if (status === 409) return "This item changed before your request finished. Reload and try again.";
+  if (status === 413) return "The request is too large. Choose a smaller file or selection and try again.";
+  if (status === 429) return "Too many requests. Wait a moment and try again.";
+  return "The server couldn't complete the request. Try again. If it keeps failing, check the server logs.";
+}
+
+function boundedText(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim().replace(/\s+/g, " ");
+  return normalized && normalized.length <= 500 ? normalized : undefined;
 }
 
 function normalizeFieldErrors(value: unknown): Record<string, string[]> | undefined {

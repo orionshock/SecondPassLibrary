@@ -11,12 +11,12 @@ describe("AccountSessionsPageRegion", () => {
     const markup = renderToStaticMarkup(<MemoryRouter><AccountSessionsPageRegion sessions={[{ id: "one", name: "Phone", clientType: "reader", createdAt: "created", updatedAt: "updated" }]} loading={false} clientState={{ pending: false }} bulkClientState={{ pending: false }} webState={{ pending: false }} clientPairingLinkState={breadcrumbNavigationState(clientPairingBreadcrumbFallback)} onLogoutOthers={vi.fn()} onRevokeAllSessions={vi.fn()} onRevokeSession={vi.fn()} /></MemoryRouter>);
     expect(markup).toContain("Phone");
     expect(markup).toContain(">delete</span>");
-    expect(markup).toContain("Connect a Device/App");
-    expect(markup).toMatch(/<button[^>]*>Disconnect All Devices\/Apps<\/button>/);
+    expect(markup).toContain('href="/profile/client-pairing"');
+    expect(markup).toMatch(/<button[^>]*>Disconnect all devices and apps<\/button>/);
   });
 
   it("disables bulk device disconnection when no active client sessions exist", () => {
     const markup = renderToStaticMarkup(<MemoryRouter><AccountSessionsPageRegion sessions={[]} loading={false} clientState={{ pending: false }} bulkClientState={{ pending: false }} webState={{ pending: false }} clientPairingLinkState={breadcrumbNavigationState(clientPairingBreadcrumbFallback)} onLogoutOthers={vi.fn()} onRevokeAllSessions={vi.fn()} onRevokeSession={vi.fn()} /></MemoryRouter>);
-    expect(markup).toMatch(/<button[^>]*disabled=""[^>]*>Disconnect All Devices\/Apps<\/button>/);
+    expect(markup).toMatch(/<button[^>]*disabled=""[^>]*>Disconnect all devices and apps<\/button>/);
   });
 });

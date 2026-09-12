@@ -56,14 +56,14 @@ export function MarginaliaSessionsPageRegion({
 
   return <div className="marginalia-page">
     {bookContext ? <SelectedBookContextComponent book={bookContext} onBack={onBackToBooks} /> : onBackToBooks ? <div className="marginalia-selected-book__fallback"><Button type="button" size="small" tone="secondary" onClick={onBackToBooks}>Back to Books</Button></div> : null}
-    <section className="marginalia-controls" aria-label={bookContext ? "Selected Book session filters" : "Reading session filters"}>
+    <section className="marginalia-controls" aria-label={bookContext ? "Selected Book Reading Session filters" : "Reading Session filters"}>
       <form role="search" onSubmit={submit}>
         <label htmlFor="marginalia-search">Search</label>
         <input
           id="marginalia-search"
           type="search"
           value={search}
-          placeholder={bookContext ? "Session name or notes..." : "Session, notes, or Book…"}
+          placeholder={bookContext ? "Reading Session name or notes…" : "Reading Session, notes, or Book…"}
           onChange={(event) => onSearchChange(event.target.value)}
         />
         <Button type="submit">Search</Button>
@@ -90,9 +90,9 @@ function SelectedBookContextComponent({ book, onBack }: { book: MarginaliaBookSu
   return <section className="marginalia-selected-book" aria-label="Selected Marginalia Book">
     <CompactBookRow
       book={book}
-      details={<p className="marginalia-book-facts"><span>{formatCount(book.sessionCount, "Session")}</span><span>{book.activeSessionCount} active</span></p>}
+      details={<p className="marginalia-book-facts"><span>{formatCount(book.sessionCount, "Reading Session")}</span><span>{book.activeSessionCount} active</span></p>}
       actions={<div className="marginalia-selected-book__actions">
-        {book.canOpen ? <Link className="button button--small button--secondary" to={`/library/books/${encodeURIComponent(book.id)}`}>Go To Book Detail</Link> : null}
+        {book.canOpen ? <Link className="button button--small button--secondary" to={`/library/books/${encodeURIComponent(book.id)}`}>View Book</Link> : null}
         {onBack ? <Button type="button" size="small" tone="secondary" onClick={onBack}>Back to Books</Button> : null}
       </div>}
     />
@@ -113,13 +113,13 @@ function ReadingSessionResults({ page, pageNumber, pageSize, status, bookContext
   onStatusChange: (value: MarginaliaStatusFilter) => void;
   onRetry: () => void;
 }) {
-  if (!page && loading) return <section className="marginalia-state" aria-live="polite" aria-busy="true">Loading reading sessions...</section>;
+  if (!page && loading) return <section className="marginalia-state" aria-live="polite" aria-busy="true">Loading Reading Sessions…</section>;
   if (!page && error) return <section className="marginalia-state"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></section>;
   if (!page) return null;
 
   return <section className={`marginalia-results marginalia-results--browse${page.items.length ? " marginalia-results--populated" : ""}${loading ? " marginalia-results--loading" : ""}`} aria-busy={loading}>
     {error ? <div className="marginalia-inline-error"><ErrorPanel>{error.message}</ErrorPanel><Button type="button" onClick={onRetry}>Retry</Button></div> : null}
-    <PaginatedListFrame page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Reading sessions" topPagerAction={<label className="marginalia-status-filter marginalia-status-filter--pager" htmlFor="marginalia-status">Status
+    <PaginatedListFrame page={pageNumber} pageSize={pageSize} count={page.count} hasPrevious={Boolean(page.previous)} hasNext={Boolean(page.next)} itemLabel="Reading Sessions" topPagerAction={<label className="marginalia-status-filter marginalia-status-filter--pager" htmlFor="marginalia-status">Status
       <select className="form-control form-control--small form-control--select" id="marginalia-status" value={status} onChange={(event) => onStatusChange(event.target.value as MarginaliaStatusFilter)}>
         <option value="all">All</option>
         <option value="active">Active</option>
@@ -127,7 +127,7 @@ function ReadingSessionResults({ page, pageNumber, pageSize, status, bookContext
       </select>
     </label>} onPageChange={onPageChange} onPageSizeChange={onPageSizeChange}>
       {page.items.length === 0
-        ? <div className="marginalia-empty"><p>{bookContext ? "No reading sessions match for this Book." : "No reading sessions found."}</p>{hasFilters ? <p className="muted">Try clearing the search or status filter.</p> : <p className="muted">{bookContext ? "This Book has no Sessions in the selected status." : "Your reading history will appear here."}</p>}</div>
+        ? <div className="marginalia-empty"><p>{bookContext ? "No Reading Sessions match this Book and the current filters." : "No Reading Sessions match the current filters."}</p>{hasFilters ? <p className="muted">Clear the search or choose another status.</p> : <p className="muted">{bookContext ? "This Book has no Reading Sessions yet." : "Reading Sessions from Second Pass Reader will appear here."}</p>}</div>
         : <div className="marginalia-browse-rows marginalia-session-rows">{page.items.map((session) => <SessionSummaryRow key={session.id} session={session} book={bookReference(session, bookContext)} />)}</div>}
     </PaginatedListFrame>
   </section>;

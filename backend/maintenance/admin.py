@@ -49,7 +49,7 @@ class MaintenanceTaskConfigAdminForm(forms.ModelForm):
     active_retention_days = forms.IntegerField(
         required=False,
         min_value=0,
-        label="Active Session Annotation Tombstone Retention",
+        label="Active Reading Session annotation retention",
         help_text=(
             "Days to retain tombstoned Annotations while their Reading Session "
             "remains active before permanent deletion."
@@ -58,7 +58,7 @@ class MaintenanceTaskConfigAdminForm(forms.ModelForm):
     closed_retention_days = forms.IntegerField(
         required=False,
         min_value=0,
-        label="Closed Session Annotation Tombstone Retention",
+        label="Closed Reading Session annotation retention",
         help_text=(
             "Days to retain tombstoned Annotations once their Reading Session "
             "is closed before permanent deletion."
@@ -183,7 +183,7 @@ class MaintenanceTaskConfigAdmin(SuperuserMaintenanceAdminMixin, admin.ModelAdmi
             else "No registered executor is available for this task key."
         )
 
-    @admin.display(description="Last Run")
+    @admin.display(description="Last run")
     def latest_run(self, obj):
         run = obj.runs.first()
         if run is None:
@@ -191,12 +191,12 @@ class MaintenanceTaskConfigAdmin(SuperuserMaintenanceAdminMixin, admin.ModelAdmi
         url = reverse("admin:maintenance_maintenancetaskrun_change", args=(run.pk,))
         return format_html('<a href="{}">{}</a>', url, run.queued_at)
 
-    @admin.display(description="Last Status")
+    @admin.display(description="Last status")
     def latest_status(self, obj):
         run = obj.runs.first()
         return run.get_status_display() if run else "—"
 
-    @admin.display(description="Run Now")
+    @admin.display(description="Run now")
     def run_now_link(self, obj):
         if get_task_definition(obj.task_key) is None:
             return "Unavailable"
@@ -232,7 +232,7 @@ class MaintenanceTaskConfigAdmin(SuperuserMaintenanceAdminMixin, admin.ModelAdmi
             except ActiveMaintenanceRunError:
                 self.message_user(
                     request,
-                    "This task already has a queued or running execution.",
+                    "This task already has a queued or running run.",
                     level=messages.WARNING,
                 )
                 return redirect(
@@ -314,7 +314,8 @@ class MaintenanceTaskRunAdmin(SuperuserMaintenanceAdminMixin, admin.ModelAdmin):
             deleted = prune_completed_runs()
             self.message_user(
                 request,
-                f"Pruned {deleted} completed maintenance task run(s).",
+                f"Pruned {deleted} completed maintenance task "
+                f"{'run' if deleted == 1 else 'runs'}.",
                 level=messages.SUCCESS,
             )
             return redirect("admin:maintenance_maintenancetaskrun_changelist")
@@ -336,7 +337,8 @@ class MaintenanceTaskRunAdmin(SuperuserMaintenanceAdminMixin, admin.ModelAdmin):
             deleted = delete_completed_run_history()
             self.message_user(
                 request,
-                f"Deleted {deleted} completed maintenance task run(s).",
+                f"Deleted {deleted} completed maintenance task "
+                f"{'run' if deleted == 1 else 'runs'}.",
                 level=messages.SUCCESS,
             )
             return redirect("admin:maintenance_maintenancetaskrun_changelist")

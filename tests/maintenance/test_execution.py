@@ -96,7 +96,7 @@ class MaintenanceExecutionTests(TestCase):
                 TASK_REGISTRY,
                 {run.task_key: replace(definition, execute=executor)},
             ),
-            self.assertLogs("maintenance.services", level="ERROR"),
+            self.assertLogs("maintenance.services", level="WARNING") as captured,
         ):
             execute_run(run.pk)
 
@@ -106,6 +106,8 @@ class MaintenanceExecutionTests(TestCase):
             run.failure_summary,
             "Cleanup completed with failures. failures=2",
         )
+        self.assertIn("operational failure", captured.output[0])
+        self.assertIn("retry_safety=inspect_task_result_before_retry", captured.output[0])
 
     def test_enqueue_failure_marks_only_the_still_queued_run_failed(self):
         queued = self.create_run()

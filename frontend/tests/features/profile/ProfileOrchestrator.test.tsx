@@ -116,12 +116,12 @@ describe("ProfileOrchestrator account sessions", () => {
     sdk.revokeAll.mockReturnValue(pending.promise);
     const { container } = await mount();
 
-    await act(async () => buttonNamed(container, "Disconnect All Devices/Apps").click());
+    await act(async () => buttonNamed(container, "Disconnect all devices and apps").click());
     expect(sdk.revokeAll).not.toHaveBeenCalled();
     confirm.mockReturnValue(true);
-    act(() => buttonNamed(container, "Disconnect All Devices/Apps").click());
+    act(() => buttonNamed(container, "Disconnect all devices and apps").click());
     expect(sdk.revokeAll).toHaveBeenCalledOnce();
-    expect(buttonNamed(container, "Disconnecting...").disabled).toBe(true);
+    expect(buttonNamed(container, "Disconnecting…").disabled).toBe(true);
     expect(container.textContent).toContain("Phone");
 
     await act(async () => pending.resolve());
@@ -136,7 +136,7 @@ describe("ProfileOrchestrator account sessions", () => {
     vi.stubGlobal("confirm", vi.fn(() => true));
     const { container } = await mount();
 
-    await act(async () => buttonNamed(container, "Disconnect All Devices/Apps").click());
+    await act(async () => buttonNamed(container, "Disconnect all devices and apps").click());
 
     expect(container.querySelector('[aria-label="Revoke Phone"]')).not.toBeNull();
     expect(container.querySelector("[role=\"alert\"]")).not.toBeNull();
@@ -148,7 +148,7 @@ describe("ProfileOrchestrator account sessions", () => {
     vi.stubGlobal("confirm", vi.fn(() => true));
     const { container, onCurrentUserChange } = await mount();
 
-    await act(async () => buttonNamed(container, "Log Out All Other Web Sessions").click());
+    await act(async () => buttonNamed(container, "Log out other web sessions").click());
 
     expect(sdk.logoutOthers).toHaveBeenCalledOnce();
     expect(onCurrentUserChange).not.toHaveBeenCalled();
@@ -161,7 +161,7 @@ describe("ProfileOrchestrator account sessions", () => {
     vi.stubGlobal("confirm", vi.fn(() => true));
     const { container } = await mount();
 
-    await act(async () => buttonNamed(container, "Log Out All Other Web Sessions").click());
+    await act(async () => buttonNamed(container, "Log out other web sessions").click());
 
     expect(container.querySelector('a[href="/profile/password"]')).not.toBeNull();
     expect(container.querySelector("[role=\"alert\"]")).not.toBeNull();

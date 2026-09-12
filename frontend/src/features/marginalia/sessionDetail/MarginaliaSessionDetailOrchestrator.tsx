@@ -161,7 +161,7 @@ export function MarginaliaSessionDetailOrchestrator() {
       setSessionLoad({ status: "ready", detail });
       setNameDraft(detail.session.name);
       setEditingName(false);
-      setRenameState(changed ? { pending: false, message: "Session name saved." } : idleMutationState);
+      setRenameState(changed ? { pending: false, message: "Reading Session name saved." } : idleMutationState);
     } catch (error: unknown) {
       setRenameState({ pending: false, error: normalizeMutationError(error) });
     }
@@ -189,7 +189,7 @@ export function MarginaliaSessionDetailOrchestrator() {
       setSessionLoad({ status: "ready", detail });
       setNoteDraft(detail.session.notes);
       setEditingNote(false);
-      setNoteState(changed ? { pending: false, message: "Session note saved." } : idleMutationState);
+      setNoteState(changed ? { pending: false, message: "Reading Session note saved." } : idleMutationState);
     } catch (error: unknown) {
       setNoteState({ pending: false, error: normalizeMutationError(error) });
     }
@@ -203,7 +203,7 @@ export function MarginaliaSessionDetailOrchestrator() {
       setSessionLoad({ status: "ready", detail });
       setEditingName(false);
       setEditingNote(false);
-      setCloseState({ pending: false, message: "Session closed." });
+      setCloseState({ pending: false, message: "Reading Session closed." });
     } catch (error: unknown) {
       setCloseState({ pending: false, error: normalizeMutationError(error) });
     }
@@ -239,8 +239,8 @@ export function MarginaliaSessionDetailOrchestrator() {
     }
   }
 
-  const title = sessionLoad.status === "ready" ? marginaliaSessionDisplayName(sessionLoad.detail.session) : "Reading session";
-  if (sessionLoad.status === "loading") return <ProductPageShell title={title}><p aria-live="polite" aria-busy="true">Loading reading session...</p></ProductPageShell>;
+  const title = sessionLoad.status === "ready" ? marginaliaSessionDisplayName(sessionLoad.detail.session) : "Reading Session";
+  if (sessionLoad.status === "loading") return <ProductPageShell title={title}><p aria-live="polite" aria-busy="true">Loading Reading Session…</p></ProductPageShell>;
   if (sessionLoad.status === "error") return <ProductPageShell title={title}><ErrorPanel>{sessionLoad.error.message}</ErrorPanel><Button type="button" tone="secondary" onClick={() => setSessionRetry((value) => value + 1)}>Retry</Button></ProductPageShell>;
 
   const renameFeedback = mutationFeedback(renameState);

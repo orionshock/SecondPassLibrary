@@ -29,26 +29,26 @@ from .models import ServerSetting
 
 class ServerIdentityAdminForm(forms.ModelForm):
     server_name = forms.CharField(
-        label="Server Name",
-        help_text="Display name used in Product UI and discovery.",
+        label="Server name",
+        help_text="Shown in the Product UI and server discovery.",
         max_length=server_settings.SERVER_NAME_MAX_LEN,
         widget=forms.TextInput(attrs={"size": 80}),
     )
     server_description = forms.CharField(
-        label="Server Description",
+        label="Server description",
         help_text=(
-            "Sanitized limited HTML used in discovery and server identity. "
-            "Links, images, attributes, and arbitrary HTML are removed."
+            "Shown in server discovery. Basic formatting is allowed; links, "
+            "images, attributes, and other HTML are removed."
         ),
         required=False,
         max_length=server_settings.SERVER_DESCRIPTION_MAX_LEN,
         widget=forms.Textarea(attrs={"rows": 4, "cols": 100}),
     )
     server_banner_message = forms.CharField(
-        label="Server Banner Message",
+        label="Server banner message",
         help_text=(
-            "Sanitized limited HTML shown in Product UI. Links, images, "
-            "attributes, and arbitrary HTML are removed."
+            "Shown in the Product UI. Basic formatting is allowed; links, "
+            "images, attributes, and other HTML are removed."
         ),
         required=False,
         max_length=server_settings.SERVER_BANNER_MESSAGE_MAX_LEN,
@@ -97,11 +97,10 @@ class ServerSettingAdminForm(forms.ModelForm):
 
         if key == server_settings.APPLICATION_LOG_LEVEL_SETTING:
             self.fields["value"] = forms.ChoiceField(
-                label="Application Log Level",
+                label="Application log level",
                 help_text=(
-                    "Controls diagnostic output from Second Pass Library application "
-                    "code. INFO is recommended for normal operation; use DEBUG "
-                    "temporarily when diagnosing a problem."
+                    "Controls logs from Second Pass Library. Use INFO normally "
+                    "and DEBUG only while investigating a problem."
                 ),
                 choices=[(level, level) for level in server_settings.APPLICATION_LOG_LEVELS],
                 initial=value,
@@ -110,7 +109,7 @@ class ServerSettingAdminForm(forms.ModelForm):
 
         if key == server_settings.SECOND_PASS_READER_WEB_CLIENT_URL_SETTING:
             self.fields["value"] = forms.CharField(
-                label="Second Pass Reader Web Client URL",
+                label="Second Pass Reader web client URL",
                 help_text=(
                     "Enter an absolute http or https URL. Only its scheme, host, "
                     "and optional port are stored; path, query, and fragment are removed."
@@ -126,8 +125,8 @@ class ServerSettingAdminForm(forms.ModelForm):
         if key == PUBLIC_GROUP_ID_SETTING:
             group_field = BookGroupAssignment._meta.get_field("group")
             self.fields["value"] = forms.ModelChoiceField(
-                label="Public/Common Room Group",
-                help_text="Select the LibraryGroup that should hold the protected Public identity.",
+                label="Public/Common Room group",
+                help_text="Select the LibraryGroup that holds the protected Public identity.",
                 queryset=LibraryGroup.objects.order_by("name"),
                 required=True,
                 widget=AutocompleteSelect(group_field, self.admin_site),
@@ -212,8 +211,8 @@ class PublicGroupRepairAdminForm(forms.Form):
         required=False,
         label="Create a new Common Room",
         help_text=(
-            "When selected, create a fresh protected Common Room and make it the "
-            "Public identity. Otherwise repair using the currently configured group."
+            "Create a protected Common Room for the Public identity. Leave this "
+            "off to repair the currently configured group."
         ),
     )
 
@@ -462,10 +461,10 @@ class ServerSettingAdmin(admin.ModelAdmin):
     def advanced_groups_recovery_summary(self, obj):
         return format_html(
             "<strong>{}</strong> "
-            "Product UI can enable advanced groups, but disabling after use must "
-            "run the recovery flow so custom group shelves, books, users, and "
-            "containers are consolidated safely into the configured Public/Common "
-            "Room group. That group still uses normal group access control.",
+            "The Product UI can enable Advanced Library Groups. To disable them, "
+            "run this recovery flow. It moves custom group shelves, Books, and "
+            "users into the configured Public/Common Room group, which keeps its "
+            "normal access controls.",
             "Do not edit this database setting directly.",
         )
 
@@ -510,8 +509,10 @@ class ServerSettingAdmin(admin.ModelAdmin):
                 messages.success(
                     request,
                     f"{action} Public/Common Room identity as {result.group.name}. "
-                    f"Restored {result.users_restored} user(s) and "
-                    f"{result.books_restored} book(s) that had no group.",
+                    f"Restored {result.users_restored} "
+                    f"{'user' if result.users_restored == 1 else 'users'} and "
+                    f"{result.books_restored} "
+                    f"{'Book' if result.books_restored == 1 else 'Books'} that had no group.",
                 )
                 return HttpResponseRedirect(
                     reverse("admin:core_serversetting_changelist")
@@ -568,7 +569,7 @@ class ServerSettingAdmin(admin.ModelAdmin):
                 else:
                     messages.success(
                         request,
-                        "Advanced library groups disabled and consolidated into "
+                        "Advanced Library Groups disabled and consolidated into "
                         "the configured Public/Common Room group.",
                     )
                     return self._advanced_groups_completion_response(request, result)
@@ -581,7 +582,7 @@ class ServerSettingAdmin(admin.ModelAdmin):
             **self.admin_site.each_context(request),
             "opts": self.model._meta,
             "title": (
-                "Disable advanced library groups and consolidate into "
+                "Disable Advanced Library Groups and consolidate into "
                 "Public/Common Room"
             ),
             "plan": plan,

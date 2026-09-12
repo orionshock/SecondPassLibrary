@@ -55,10 +55,9 @@ describe("Dashboard", () => {
     expect(renderDashboard({ status: "loading" }, { bannerText: "  \n " })).not.toContain('aria-label="Server message"');
   });
 
-  it("keeps recent-reading loading, empty, and failure states inside the section", () => {
-    expect(renderDashboard({ status: "loading" })).toContain("Loading recent reading");
+  it("keeps Recent History loading, empty, and failure states inside the section", () => {
+    expect(renderDashboard({ status: "loading" })).toContain('aria-busy="true"');
     const empty = renderDashboard({ status: "ready", items: [] });
-    expect(empty).toContain("No recent reading activity yet.");
     expect(empty).toContain('href="/library"');
     expect(empty).not.toContain(">View all</a>");
 
@@ -119,7 +118,7 @@ describe("Dashboard", () => {
       id: "7f0c9ea5-2c36-4a84-b55b-447e57c24736",
       name: "",
     }] });
-    expect(markup).toContain("Unnamed Session c24736");
+    expect(markup).toContain("Unnamed Reading Session c24736");
     expect(markup).toContain("/marginalia/sessions/7f0c9ea5-2c36-4a84-b55b-447e57c24736");
   });
 
@@ -192,8 +191,18 @@ describe("Dashboard", () => {
       showUsers: false,
       showServerSettings: false,
     });
-    for (const label of ["Groups", "Import Books", "Users", "Server Settings", "Server tools"]) expect(reader).not.toContain(label);
-    for (const label of ["Books", "Authors", "Series", "By Session", "Import", "Export", "My Shelves", "Shared with Me", "Group Shelves", "Create Shelf"]) expect(reader).toContain(label);
+    expect(reader).not.toContain('href="/groups"');
+    expect(reader).not.toContain('href="/imports"');
+    expect(reader).not.toContain('href="/users"');
+    expect(reader).not.toContain('href="/server"');
+    expect(reader).not.toContain('aria-label="Server tools actions"');
+    for (const destination of [
+      'href="/library"',
+      'href="/library?view=authors"',
+      'href="/library?view=series"',
+      'href="/marginalia"',
+      'href="/shelves"',
+    ]) expect(reader).toContain(destination);
   });
 
   it("calculates carousel end states and scrolls by a useful viewport increment", () => {

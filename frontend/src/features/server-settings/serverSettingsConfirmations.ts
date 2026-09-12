@@ -2,7 +2,7 @@ import { confirmDangerousAction } from "../../shared/confirmations/confirmDanger
 
 export function confirmEnableAdvancedGroups(confirmAction?: (message: string) => boolean): boolean {
   return confirmDangerousAction(
-    "Enable advanced library groups? This exposes separate group management. Turning it off later requires the Django Admin Service Hatch recovery flow.",
+    "Enable Advanced Library Groups? Turning this off later requires a recovery action in Django Admin.",
     confirmAction,
   );
 }

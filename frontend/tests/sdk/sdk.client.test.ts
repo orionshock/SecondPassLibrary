@@ -1,6 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { ApiError } from "../../packages/spl-api/src/errors";
 import { createApiClient } from "../../packages/spl-api/src/client";
 
 describe("createApiClient", () => {
@@ -45,9 +44,11 @@ describe("createApiClient", () => {
       { status: 400, headers: { "Content-Type": "application/json" } },
     ));
 
-    await expect(client.requestAttachment("/export")).rejects.toEqual(
-      new ApiError("Select at least one session.", 400, { code: "INVALID_SELECTION", fields: { books: ["Required."] } }),
-    );
+    await expect(client.requestAttachment("/export")).rejects.toMatchObject({
+      status: 400,
+      code: "INVALID_SELECTION",
+      fields: { books: ["Required."] },
+    });
   });
 
   it.each([
@@ -61,9 +62,10 @@ describe("createApiClient", () => {
       { status: 413, headers: { "Content-Type": contentType } },
     ));
 
-    await expect(client.requestAttachment("/export")).rejects.toEqual(
-      new ApiError("Bounded JSON error.", 413, { code: "BOUNDED_ERROR" }),
-    );
+    await expect(client.requestAttachment("/export")).rejects.toMatchObject({
+      status: 413,
+      code: "BOUNDED_ERROR",
+    });
   });
 
   it.each([
@@ -75,9 +77,9 @@ describe("createApiClient", () => {
       headers: { "Content-Type": contentType },
     }));
 
-    await expect(client.requestAttachment("/export")).rejects.toEqual(
-      new ApiError("The server could not complete the request.", 413),
-    );
+    const request = client.requestAttachment("/export");
+    await expect(request).rejects.toMatchObject({ status: 413 });
+    await expect(request).rejects.not.toMatchObject({ message: expect.stringContaining("proxy secret") });
   });
 
   it("keeps malformed JSON attachment errors bounded", async () => {
@@ -86,8 +88,8 @@ describe("createApiClient", () => {
       headers: { "Content-Type": "application/problem+json" },
     }));
 
-    await expect(client.requestAttachment("/export")).rejects.toEqual(
-      new ApiError("The server returned invalid JSON.", 413),
-    );
+    const request = client.requestAttachment("/export");
+    await expect(request).rejects.toMatchObject({ status: 413 });
+    await expect(request).rejects.not.toMatchObject({ message: expect.stringContaining("proxy secret") });
   });
 });

@@ -198,8 +198,10 @@ def _fail_run(run, summary, *, started_clock=None):
     duration_ms = (
         int((monotonic() - started_clock) * 1000) if started_clock is not None else 0
     )
-    logger.error(
-        "Maintenance task failed: task_key=%s trigger=%s run_id=%s duration_ms=%d",
+    logger.warning(
+        "Maintenance task reported an operational failure: task_key=%s trigger=%s "
+        "run_id=%s duration_ms=%d persistence_disposition=failed_run_recorded "
+        "retry_safety=inspect_task_result_before_retry next_inspection_point=run_summary",
         run.task_key,
         run.trigger,
         run.pk,

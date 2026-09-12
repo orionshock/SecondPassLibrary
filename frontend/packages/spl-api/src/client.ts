@@ -42,7 +42,12 @@ export function createApiClient(
         credentials: "same-origin",
         headers,
       });
-    } catch {
+    } catch (error: unknown) {
+      console.warn("API request could not reach the server.", {
+        method,
+        failureClass: error instanceof Error ? error.name : typeof error,
+        retryable: true,
+      });
       throw new NetworkError();
     }
   }
@@ -54,7 +59,7 @@ export function createApiClient(
       errorMapper: ApiErrorMapper = apiErrorFromPayload,
     ): Promise<T> {
       const response = await send(path, init, "application/json");
-      const payload = await parseJson(response);
+      const payload = await parseJson(response, (init.method ?? "GET").toUpperCase());
 
       if (!response.ok) throw errorMapper(response.status, payload);
       return payload as T;
@@ -65,6 +70,7 @@ export function createApiClient(
       fallbackFilename = "download",
       errorMapper: ApiErrorMapper = apiErrorFromPayload,
     ) {
+      const method = (init.method ?? "GET").toUpperCase();
       const response = await send(path, init, "application/json, application/octet-stream");
       if (!response.ok) {
         const contentType = response.headers.get("content-type") ?? "";
@@ -73,11 +79,13 @@ export function createApiClient(
           try {
             payload = await response.json();
           } catch {
-            throw new ApiError("The server returned invalid JSON.", response.status);
+            logUnexpectedResponse(method, response.status, "invalid_json");
+            throw new ApiError("The server returned an invalid response. Try again. If it keeps failing, check the server logs.", response.status);
           }
           throw errorMapper(response.status, payload);
         }
-        throw new ApiError("The server could not complete the request.", response.status);
+        logUnexpectedResponse(method, response.status, "non_json_error");
+        throw new ApiError("The server couldn't complete the download. Try again. If it keeps failing, check the server logs.", response.status);
       }
       const contentType = response.headers.get("content-type") ?? "application/octet-stream";
       return {
@@ -113,19 +121,31 @@ function browserCsrfToken(): string | undefined {
     ?.slice("csrftoken=".length);
 }
 
-async function parseJson(response: Response): Promise<unknown> {
+async function parseJson(response: Response, method: string): Promise<unknown> {
   if (response.status === 204) return undefined;
 
   const contentType = response.headers.get("content-type") ?? "";
   if (!isJsonMediaType(contentType)) {
-    throw new ApiError("The server returned an unexpected response.", response.status);
+    logUnexpectedResponse(method, response.status, "non_json_success");
+    throw new ApiError("The server returned an invalid response. Reload and try again.", response.status);
   }
 
   try {
     return await response.json();
   } catch {
-    throw new ApiError("The server returned invalid JSON.", response.status);
+    logUnexpectedResponse(method, response.status, "invalid_json");
+    throw new ApiError("The server returned an invalid response. Reload and try again.", response.status);
   }
+}
+
+function logUnexpectedResponse(method: string, status: number, failureClass: string): void {
+  console.error("Unexpected API response.", {
+    method,
+    status,
+    failureClass,
+    retryable: status >= 500,
+    nextInspectionPoint: "server logs and reverse-proxy response handling",
+  });
 }
 
 function isJsonMediaType(contentType: string): boolean {

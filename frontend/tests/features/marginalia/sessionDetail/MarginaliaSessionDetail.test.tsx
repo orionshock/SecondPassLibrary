@@ -147,8 +147,8 @@ describe("My Marginalia Session Detail", () => {
 
     const unnamedSession = { ...detail.session, id: "7f0c9ea5-2c36-4a84-b55b-447e57c24736", name: "" };
     const unnamedDetail = { ...detail, session: unnamedSession };
-    expect(marginaliaSessionBreadcrumbFallback(unnamedSession).at(-1)?.label).toBe("Unnamed Session c24736");
-    expect(marginaliaSessionDisplayName(unnamedSession)).toBe("Unnamed Session c24736");
+    expect(marginaliaSessionBreadcrumbFallback(unnamedSession).at(-1)?.label).toBe("Unnamed Reading Session c24736");
+    expect(marginaliaSessionDisplayName(unnamedSession)).toBe("Unnamed Reading Session c24736");
 
     const update = vi.fn();
     await expect(renameMarginaliaSession(unnamedDetail, "", update)).resolves.toEqual({ detail: unnamedDetail, changed: false });
@@ -163,9 +163,9 @@ describe("My Marginalia Session Detail", () => {
       onDraftChange: vi.fn(), onEdit: vi.fn(), onSave, onCancel,
     }) as ReactElement<{ children: unknown }>;
     const markup = renderToStaticMarkup(editor);
-    expect(markup).toContain('aria-label="Session name"');
-    expect(markup).toContain('aria-label="Save session name"');
-    expect(markup).toContain('aria-label="Cancel editing session name"');
+    expect(markup).toContain('aria-label="Reading Session name"');
+    expect(markup).toContain('aria-label="Save Reading Session name"');
+    expect(markup).toContain('aria-label="Cancel editing Reading Session name"');
     const input = Children.toArray(editor.props.children as ReactNode)[0] as ReactElement<{ onKeyDown: (event: { key: string; preventDefault: () => void }) => void }>;
     input.props.onKeyDown({ key: "Enter", preventDefault: vi.fn() });
     input.props.onKeyDown({ key: "Escape", preventDefault: vi.fn() });
@@ -176,7 +176,7 @@ describe("My Marginalia Session Detail", () => {
       displayName: "Closed", editable: false, draft: "", editing: false, pending: false,
       onDraftChange: vi.fn(), onEdit: vi.fn(), onSave: vi.fn(), onCancel: vi.fn(),
     }));
-    expect(closedMarkup).not.toContain("Edit session name");
+    expect(closedMarkup).not.toContain("Edit Reading Session name");
   });
 
   it("updates active names and notes through the canonical detail envelope", async () => {
@@ -206,8 +206,8 @@ describe("My Marginalia Session Detail", () => {
       onCancel,
     }) as ReactElement<{ children: unknown }>;
     const markup = renderToStaticMarkup(editor);
-    expect(markup).toContain('aria-label="Session Note"');
-    expect(markup).toContain('aria-label="Save session note"');
+    expect(markup).toContain('aria-label="Reading Session note"');
+    expect(markup).toContain('aria-label="Save Reading Session note"');
     const textarea = Children.toArray(editor.props.children as ReactNode)[1] as ReactElement<{
       onKeyDown: (event: { key: string; ctrlKey?: boolean; metaKey?: boolean; preventDefault: () => void }) => void;
     }>;
@@ -274,10 +274,10 @@ describe("My Marginalia Session Detail", () => {
   it("closes only active Sessions and replaces the page with the authoritative closed detail", async () => {
     const onClose = vi.fn();
     const activeMarkup = renderDetail({ onClose });
-    expect(activeMarkup).toContain("Close Session");
-    expect(activeMarkup.indexOf("Active")).toBeLessThan(activeMarkup.indexOf("Close Session"));
-    expect(activeMarkup.indexOf("Close Session")).toBeLessThan(activeMarkup.indexOf("Delete"));
-    expect(activeMarkup).toContain(">close</span>Close Session");
+    expect(activeMarkup).toContain("Close Reading Session");
+    expect(activeMarkup.indexOf("Active")).toBeLessThan(activeMarkup.indexOf("Close Reading Session"));
+    expect(activeMarkup.indexOf("Close Reading Session")).toBeLessThan(activeMarkup.indexOf("Delete"));
+    expect(activeMarkup).toContain(">close</span>Close Reading Session");
     expect(activeMarkup).toContain(">delete</span>Delete");
 
     const closed = {
@@ -297,8 +297,8 @@ describe("My Marginalia Session Detail", () => {
     });
     expect(closedMarkup).toContain("Closed");
     expect(closedMarkup).toContain(">delete</span>Delete");
-    expect(closedMarkup).not.toContain("Close Session");
-    expect(closedMarkup).not.toContain("Edit session note");
+    expect(closedMarkup).not.toContain("Close Reading Session");
+    expect(closedMarkup).not.toContain("Edit Reading Session note");
   });
 
   it("requires the native final confirmation after the application confirmation", () => {
@@ -327,14 +327,14 @@ describe("My Marginalia Session Detail", () => {
     />);
     expect(markup).toContain('role="dialog"');
     expect(markup).toContain('aria-modal="true"');
-    expect(markup).toContain("Delete this reading session?");
+    expect(markup).toContain("Delete this Reading Session?");
     expect(markup).toContain("Imported history");
     expect(markup).toContain("Visible Book");
-    expect(markup).toContain("all annotations attached to it");
+    expect(markup).toContain("all Marginalia in it");
     expect(markup).toContain("This cannot be undone.");
     expect(markup).toContain("Cancel");
-    expect(markup).toContain("Continue to delete");
-    expect(markup).toContain(">download</span>Export Session");
+    expect(markup).toContain(">Continue</button>");
+    expect(markup).toContain(">download</span>Export Reading Session");
   });
 
   it("uses the selected-Session archive and existing browser download path for exactly the current Session", async () => {
@@ -377,9 +377,9 @@ describe("My Marginalia Session Detail", () => {
       onExport={vi.fn()}
     />);
     expect(failed).toContain("Archive unavailable");
-    expect(failed).toContain("Export Session");
+    expect(failed).toContain("Export Reading Session");
     expect(failed).toContain("Cancel");
-    expect(failed).toContain("Continue to delete");
+    expect(failed).toContain(">Continue</button>");
 
     const deleting = renderToStaticMarkup(<MarginaliaSessionDeleteDialog
       sessionName={detail.session.name}
@@ -390,7 +390,7 @@ describe("My Marginalia Session Detail", () => {
       onContinue={vi.fn()}
       onExport={vi.fn()}
     />);
-    expect(deleting).toMatch(/disabled=""[^>]*><span[^>]*>download<\/span>Export Session/);
+    expect(deleting).toMatch(/disabled=""[^>]*><span[^>]*>download<\/span>Export Reading Session/);
   });
 
   it("deletes exactly one Session and navigates only after SDK success", async () => {
@@ -416,7 +416,7 @@ describe("My Marginalia Session Detail", () => {
 
     const failed = renderDetail({ deleteState: { pending: false, error: new Error("Session deletion failed") } });
     expect(failed).toContain("Session deletion failed");
-    expect(failed).toContain("Close Session");
+    expect(failed).toContain("Close Reading Session");
     expect(failed).toContain(">delete</span>Delete");
   });
 
@@ -428,7 +428,7 @@ describe("My Marginalia Session Detail", () => {
     expect(markup).toContain("Annotations unavailable");
     expect(markup).toContain("Session changed elsewhere");
     expect(markup).toContain("Quoted passage");
-    expect(markup).toContain("Close Session");
+    expect(markup).toContain("Close Reading Session");
   });
 
   it("preserves annotation loading and empty states without client pagination controls", () => {

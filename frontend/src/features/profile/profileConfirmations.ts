@@ -13,7 +13,7 @@ export function confirmLogoutOtherWebSessions(confirmAction?: (message: string) 
 
 export function confirmAllClientSessionsRevoke(confirmAction?: (message: string) => boolean): boolean {
   return confirmDangerousAction(
-    "Disconnect all devices/apps? All paired Reader/app sessions will be revoked and their bearer tokens will stop authenticating immediately. This browser will remain signed in.",
+    "Disconnect all devices and apps? Their access will end immediately, and they will need to pair again. This browser will remain signed in.",
     confirmAction,
   );
 }

@@ -3,14 +3,14 @@
 {% block content %}
   <div id="content-main">
     <p>
-      This recovery action disables advanced library groups after consolidating
-      custom group state into <strong>{{ plan.public_group_name }}</strong>.
-      It is intentionally destructive to custom group containers.
+      This recovery action disables Advanced Library Groups and moves custom
+      group state into <strong>{{ plan.public_group_name }}</strong>.
+      It deletes the custom group containers.
       Public/Common Room remains a normal access-controlled LibraryGroup; this
       operation does not make its books universally visible.
     </p>
     <p>
-      Preserved: books, EPUB files, reading sessions, progress, annotations,
+      Preserved: Books, EPUB files, Reading Sessions, progress, annotations,
       users, shelves, shelf items, shelf order, and the Public/Common Room group.
     </p>
     <p>
@@ -20,22 +20,22 @@
 
     <h2>Summary</h2>
     <ul>
-      <li>Advanced groups currently enabled: {{ plan.enabled_before }}</li>
+      <li>Advanced Library Groups currently enabled: {{ plan.enabled_before }}</li>
       <li>Custom groups deleted: {{ plan.summary.custom_groups }}</li>
       <li>Shelves moved: {{ plan.summary.shelves_moved }}</li>
       <li>Shelf items preserved: {{ plan.summary.shelf_items_preserved }}</li>
       <li>Book/group associations removed: {{ plan.summary.book_assignments_removed }}</li>
-      <li>Books expected to fall back to Public: {{ plan.summary.books_expected_public_fallback }}</li>
+      <li>Books moving to Public: {{ plan.summary.books_expected_public_fallback }}</li>
       <li>Memberships removed: {{ plan.summary.memberships_removed }}</li>
       <li>Curator assignments removed: {{ plan.summary.curator_assignments_removed }}</li>
-      <li>Users expected to fall back to Public: {{ plan.summary.users_expected_public_fallback }}</li>
+      <li>Users moving to Public: {{ plan.summary.users_expected_public_fallback }}</li>
       <li>Shelf name collision warnings: {{ plan.summary.shelf_name_collisions }}</li>
     </ul>
 
     {% if plan.display_limit %}
       <p>
-        Itemized preview sections are capped at {{ plan.display_limit }} rows.
-        Summary counts show the full planned operation.
+        Previews show up to {{ plan.display_limit }} rows. Summary counts cover
+        the full operation.
       </p>
     {% endif %}
 
@@ -79,7 +79,7 @@
       to Public when the final custom association is removed.
     </p>
     {% if plan.book_public_fallbacks %}
-      <h3>Books expected to fall back to Public</h3>
+      <h3>Books moving to Public</h3>
       <ul>
         {% for op in plan.book_public_fallbacks %}
           <li>{{ op.title }} from {{ op.removed_group_names|join:", " }}</li>
@@ -103,7 +103,7 @@
       Public when the final custom membership is removed.
     </p>
     {% if plan.user_public_fallbacks %}
-      <h3>Users expected to fall back to Public</h3>
+      <h3>Users moving to Public</h3>
       <ul>
         {% for op in plan.user_public_fallbacks %}
           <li>{{ op.username }} from {{ op.removed_group_names|join:", " }}</li>
@@ -135,14 +135,14 @@
       <p>No custom groups remain to delete.</p>
     {% endif %}
 
-    <h2>6. Disable advanced groups</h2>
+    <h2>6. Disable Advanced Library Groups</h2>
     <p>
-      The setting is changed only after all consolidation phases and assertions succeed.
+      The setting changes only after every consolidation step succeeds.
     </p>
 
     {% if plan.enabled_before %}
       <form method="post" novalidate
-            onsubmit="return confirm('Disable advanced library groups and consolidate custom groups into Public/Common Room?');">
+            onsubmit="return confirm('Disable Advanced Library Groups and move custom groups into Public/Common Room?');">
         {% csrf_token %}
         {{ form.as_p }}
         <div class="submit-row">
@@ -151,7 +151,7 @@
         </div>
       </form>
     {% else %}
-      <p>Advanced library groups are already disabled. No recovery action is required.</p>
+      <p>Advanced Library Groups are already disabled. No recovery action is needed.</p>
       <div class="submit-row">
         <a href="{% url 'admin:core_serversetting_changelist' %}">Return to Server Settings</a>
       </div>

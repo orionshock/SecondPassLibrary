@@ -182,7 +182,9 @@ Several error shapes are already in use:
 
 Do not assume a universal error envelope. Stable machine-readable codes are
 added when callers need to distinguish specific conditions; the SDK normalizes
-the established response variants.
+the established response variants. The Product UI presents bounded workflow
+`message` and `hint` values, field validation, or a status-based recovery
+message. It does not present arbitrary top-level DRF `detail` text.
 
 Status codes follow these general rules:
 

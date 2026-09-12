@@ -99,7 +99,7 @@ describe("MarginaliaExportOrchestrator", () => {
     const { container } = await mount();
     act(() => (container.querySelector('[aria-label="Select Selected Session for Book Selected Session"]') as HTMLInputElement).click());
 
-    await act(async () => buttonNamed(container, "Export selected Sessions").click());
+    await act(async () => buttonNamed(container, "Export selected").click());
 
     expect(sdk.downloadSelected).toHaveBeenCalledWith({ readingSessionIds: ["one"], includeEmptySessions: false });
     expect((container.querySelector('[aria-label="Select Selected Session for Book Selected Session"]') as HTMLInputElement).checked).toBe(true);

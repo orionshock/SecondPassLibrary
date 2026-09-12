@@ -91,7 +91,7 @@ export function MarginaliaImportOrchestrator() {
       const download = await downloadUnmatchedMarginaliaImport(preview.importToken);
       if (!requestGuardRef.current.accepts(requestVersion)) return;
       saveDownloadedFile(download);
-      setDownloadState({ pending: false, message: "Unmatched Sessions downloaded." });
+      setDownloadState({ pending: false, message: "Unmatched Reading Sessions downloaded." });
     } catch (error: unknown) {
       if (!requestGuardRef.current.accepts(requestVersion)) return;
       setDownloadState({ pending: false, error: normalizeMutationError(error) });

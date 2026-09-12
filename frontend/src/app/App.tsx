@@ -85,8 +85,7 @@ export function AppBootstrapView({
     return (
       <main className="bootstrap-panel" aria-live="polite" aria-busy="true">
         <p className="eyebrow">Second Pass Library</p>
-        <h1>Opening your library</h1>
-        <p>Loading your account and server details.</p>
+        <h1>Opening Second Pass Library</h1>
       </main>
     );
   }
@@ -104,9 +103,8 @@ export function AppBootstrapView({
   if (state.status === "failed") {
     return (
       <main className="bootstrap-panel" role="alert">
-        <p className="eyebrow">Unable to load</p>
-        <h1>Your library is temporarily unavailable</h1>
-        <p>Check the server connection, then try again.</p>
+        <h1>Second Pass Library is unavailable</h1>
+        <p>Check the server connection and try again.</p>
         <button type="button" onClick={onRetry}>Retry</button>
       </main>
     );

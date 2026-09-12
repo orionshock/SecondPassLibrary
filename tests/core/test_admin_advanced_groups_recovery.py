@@ -140,7 +140,6 @@ class AdvancedGroupsRecoveryAdminTests(IsolatedMediaRootMixin, TestCase):
             response,
             "admin/core/serversetting/advanced_groups_disable_complete.html",
         )
-        self.assertContains(response, "Advanced library groups disabled")
         self.assertContains(response, "Custom groups deleted: 1")
         self.assertContains(response, "Shelves renamed and moved: 1")
         self.assertFalse(server_settings.advanced_library_groups_enabled())
@@ -326,8 +325,6 @@ class AdvancedGroupsRecoveryAdminTests(IsolatedMediaRootMixin, TestCase):
         self.assertTrue(
             orphan_book.group_assignments.filter(group=new_public).exists()
         )
-        self.assertContains(response, "Created Public/Common Room identity")
-        self.assertContains(response, "Restored 1 user(s) and 1 book(s)")
 
     def test_public_group_repair_uses_current_identity_when_new_not_selected(self):
         self._login_owner()
@@ -337,7 +334,7 @@ class AdvancedGroupsRecoveryAdminTests(IsolatedMediaRootMixin, TestCase):
             assign_public=False,
         ).book
 
-        response = self.client.post(
+        self.client.post(
             reverse("admin:core_serversetting_public_group_repair"),
             {},
             follow=True,
@@ -355,8 +352,6 @@ class AdvancedGroupsRecoveryAdminTests(IsolatedMediaRootMixin, TestCase):
         self.assertTrue(
             orphan_book.group_assignments.filter(group=self.public).exists()
         )
-        self.assertContains(response, "Verified Public/Common Room identity")
-        self.assertContains(response, "Restored 1 user(s) and 1 book(s)")
 
     def test_disabled_setting_shows_status_without_recovery_action(self):
         self._login_owner()

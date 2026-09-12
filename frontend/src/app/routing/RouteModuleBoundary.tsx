@@ -4,14 +4,14 @@ import { Button, ErrorPanel } from "../../components/UiPrimitives";
 
 export function RouteModuleLoading() {
   return <section className="page-panel" data-route-state="loading" aria-live="polite" aria-busy="true">
-    <p>Loading page...</p>
+    <p>Loading page…</p>
   </section>;
 }
 
 export function RouteModuleError({ onReload }: { onReload: () => void }) {
   return <section className="page-panel" data-route-state="error">
-    <ErrorPanel>Unable to load this page.</ErrorPanel>
-    <Button type="button" tone="secondary" onClick={onReload}>Reload page</Button>
+    <ErrorPanel>This page didn’t load. Reload it to try again.</ErrorPanel>
+    <Button type="button" tone="secondary" onClick={onReload}>Reload</Button>
   </section>;
 }
 

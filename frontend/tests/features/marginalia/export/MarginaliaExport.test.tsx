@@ -77,9 +77,9 @@ describe("My Marginalia Export", () => {
     expect(markup).not.toContain("session-sensitive");
     expect(markup).not.toContain("book-sensitive");
     expect(markup).toContain("Select this page");
-    expect(markup).toContain("Include empty sessions");
-    expect(markup).toMatch(/Export selected Sessions<\/button>/);
-    expect(markup).toMatch(/disabled=""[^>]*>Export selected Sessions/);
+    expect(markup).toContain("Include empty Reading Sessions");
+    expect(markup).toMatch(/Export selected<\/button>/);
+    expect(markup).toMatch(/disabled=""[^>]*>Export selected/);
   });
 
   it("keeps flat Session selection across page/filter-shaped updates", () => {
@@ -92,10 +92,10 @@ describe("My Marginalia Export", () => {
 
   it("enables selected export for retained selection and keeps errors section-local", () => {
     const markup = renderExport(new Set([visibleSession.id]), { selectedError: new Error("Selected export failed."), completeError: new Error("Complete export failed.") });
-    expect(markup).toContain("1 Session selected");
+    expect(markup).toContain("1 Reading Session selected");
     expect(markup).toContain("Selected export failed.");
     expect(markup).toContain("Complete export failed.");
-    expect(markup).not.toMatch(/disabled=""[^>]*>Export selected Sessions/);
+    expect(markup).not.toMatch(/disabled=""[^>]*>Export selected/);
   });
 
   it("shows actionable oversized-export guidance in the affected section", () => {
@@ -112,7 +112,7 @@ describe("My Marginalia Export", () => {
     expect(markup).toContain(failure.message);
     expect(markup).toContain(failure.guidance);
     expect(markup).toContain(failure.limitLabel);
-    expect(markup).toContain("Export selected Sessions");
+    expect(markup).toContain("Export selected");
   });
 
   it("maps the SDK limit error at the Export orchestrator boundary", () => {

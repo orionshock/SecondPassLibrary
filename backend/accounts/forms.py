@@ -28,7 +28,7 @@ class ThrottledAuthenticationForm(AuthenticationForm):
     error_messages = {
         **AuthenticationForm.error_messages,
         "temporarily_throttled": (
-            "Too many login attempts. Please wait a few minutes and try again."
+            "Too many login attempts. Wait a few minutes and try again."
         ),
     }
 
@@ -64,25 +64,25 @@ class ThrottledAuthenticationForm(AuthenticationForm):
 
 class FirstOwnerSetupForm(UserCreationForm):
     server_name = forms.CharField(
-        label="Server Name",
+        label="Server name",
         max_length=120,
         initial=DEFAULT_SERVER_NAME,
         widget=forms.TextInput(attrs={"autocomplete": "off"}),
     )
     server_description = forms.CharField(
-        label="Server Description",
+        label="Server description",
         max_length=1000,
         required=False,
         widget=forms.Textarea(attrs={"rows": 3, "autocomplete": "off"}),
     )
     public_group_name = forms.CharField(
-        label="Public Group Name",
+        label="Public group name",
         max_length=255,
         initial=DEFAULT_PUBLIC_GROUP_NAME,
         widget=forms.TextInput(attrs={"autocomplete": "off"}),
     )
     public_group_description = forms.CharField(
-        label="Public Group Description",
+        label="Public group description",
         required=False,
         initial=DEFAULT_PUBLIC_GROUP_DESCRIPTION,
         widget=forms.Textarea(attrs={"rows": 3, "autocomplete": "off"}),
@@ -112,13 +112,12 @@ class FirstOwnerSetupForm(UserCreationForm):
         ),
     )
     advanced_library_groups_enabled = forms.BooleanField(
-        label="I understand and want advanced library groups",
+        label="Enable Advanced Library Groups",
         required=False,
         initial=False,
         widget=forms.CheckboxInput(attrs={"autocomplete": "off"}),
         help_text=(
-            "Most households should leave this off unless they know they need "
-            "multiple managed library rooms."
+            "Leave this off unless you need separate Library Groups."
         ),
     )
 

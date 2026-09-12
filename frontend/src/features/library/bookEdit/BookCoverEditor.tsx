@@ -169,12 +169,12 @@ export function BookCoverEditor({
 
   return <section className="book-cover-editor" aria-label="Book cover controls">
     <Button ref={changeButton} type="button" tone="primary" className="book-cover-editor__trigger" disabled={controlsDisabled} onClick={() => { setMode("menu"); setOpen(true); }}>
-      Change Cover
+      Change cover
     </Button>
     {open ? <div className="book-cover-dialog-backdrop" onClick={handleBackdropClick}>
       <div className="book-cover-dialog" role="dialog" aria-modal="true" aria-labelledby="book-cover-dialog-title" tabIndex={-1} onKeyDown={handleDialogKeyDown}>
         <header className="book-cover-dialog__header">
-          <h2 id="book-cover-dialog-title">Change Cover</h2>
+          <h2 id="book-cover-dialog-title">Change cover</h2>
           <Button ref={closeButton} type="button" size="small" tone="secondary" disabled={state.pending} onClick={close}>Close</Button>
         </header>
         <div className="book-cover-dialog__body">
@@ -183,8 +183,8 @@ export function BookCoverEditor({
             {error ? <p className="book-cover-dialog__error" role="alert">{error}</p> : null}
             {state.message ? <p className="book-cover-dialog__success" role="status">{state.message}</p> : null}
             {mode === "menu" ? <div className="book-cover-dialog__menu">
-              <Button type="button" disabled={controlsDisabled} onClick={() => showMode("file")}>{coverUrl ? "Replace Cover" : "Set Cover"}</Button>
-              {coverUrl ? <Button type="button" tone="danger" disabled={controlsDisabled} onClick={() => showMode("clear")}>Clear Cover</Button> : null}
+              <Button type="button" disabled={controlsDisabled} onClick={() => showMode("file")}>{coverUrl ? "Replace cover" : "Set cover"}</Button>
+              {coverUrl ? <Button type="button" tone="danger" disabled={controlsDisabled} onClick={() => showMode("clear")}>Clear cover</Button> : null}
             </div> : null}
             {mode === "file" ? <>
               <label className="book-cover-editor__file" htmlFor="book-edit-cover-file">
@@ -197,13 +197,13 @@ export function BookCoverEditor({
               </div>
               <div className="book-cover-editor__actions">
                 <Button type="button" tone="secondary" disabled={state.pending} onClick={() => showMode("menu")}>Back</Button>
-                <Button type="button" className="book-cover-editor__accept" disabled={controlsDisabled || !selectedFile} onClick={replaceCover}>{pendingAction === "replace" ? "Saving..." : coverUrl ? "Replace Cover" : "Set Cover"}</Button>
+                <Button type="button" className="book-cover-editor__accept" disabled={controlsDisabled || !selectedFile} onClick={replaceCover}>{pendingAction === "replace" ? "Saving…" : coverUrl ? "Replace cover" : "Set cover"}</Button>
               </div>
             </> : null}
             {mode === "clear" ? <div className="book-cover-dialog__confirmation">
               <span>Clear the current cover?</span>
               <Button ref={backButton} type="button" size="small" tone="secondary" disabled={controlsDisabled} onClick={() => showMode("menu")}>Back</Button>
-              <Button type="button" size="small" tone="danger" disabled={controlsDisabled} onClick={clearCover}>{pendingAction === "clear" ? "Clearing..." : "Confirm Clear Cover"}</Button>
+              <Button type="button" size="small" tone="danger" disabled={controlsDisabled} onClick={clearCover}>{pendingAction === "clear" ? "Clearing…" : "Clear cover"}</Button>
             </div> : null}
           </div>
         </div>
