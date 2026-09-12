@@ -108,6 +108,11 @@ Cover images (and other user media) are addressed under `MEDIA_URL` (default: `/
 
 In local development, Django serves only `/media/covers/` so cover images render in the product UI.
 
+Django owns cover cache headers in development and production-like direct
+serving. Canonical SHA-256 cover paths are public and immutable for one year,
+and non-content-addressed cover paths are not served. The route retains
+`Last-Modified` and conditional `304` handling for canonical covers.
+
 Production deployments must handle durable media separately from WhiteNoise.
 WhiteNoise serves packaged Product UI assets under `/static/` only. Django
 serves only the public cover namespace, `/media/covers/`; stored EPUB files,

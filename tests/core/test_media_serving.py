@@ -5,12 +5,15 @@ from pathlib import Path
 import warnings
 
 from asgiref.sync import sync_to_async
+from django.contrib.auth import get_user_model
 from django.test import AsyncClient, TestCase
 from django.test.utils import override_settings
 
 from PIL import Image
 
-from library.cover_services import set_book_cover_from_bytes
+from library.cover_services import replace_book_cover
+from library.imports.covers import validate_cover_bytes
+from secondpass.urls import IMMUTABLE_COVER_CACHE_CONTROL
 from tests.testenv.filesystem import IsolatedMediaRootMixin
 from tests.utils.books import create_file_backed_book
 
@@ -29,15 +32,21 @@ class CoverMediaServingSmokeTest(IsolatedMediaRootMixin, TestCase):
         img.save(buf, format="PNG")
         return buf.getvalue()
 
+    def _set_cover(self, book, content: bytes) -> None:
+        cover = validate_cover_bytes(content)
+        assert cover is not None
+        replace_book_cover(book=book, cover=cover, log_success=False)
+
     def test_debug_serves_cover_file_only(self):
         book = create_file_backed_book(title="Has Cover").book
-        set_book_cover_from_bytes(book=book, data=self._png_bytes(), source="manual")
+        self._set_cover(book, self._png_bytes())
         book.refresh_from_db()
         self.assertTrue(bool(book.cover_file))
 
         url = book.cover_file.url
         resp = self.client.get(url)
         self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp["Cache-Control"], IMMUTABLE_COVER_CACHE_CONTROL)
         resp.close()
 
         private_dir = Path(self._media_root) / "books" / "aa" / "bb"
@@ -65,26 +74,84 @@ class DirectServerCoverServingTest(IsolatedMediaRootMixin, TestCase):
         img.save(buf, format="PNG")
         return buf.getvalue()
 
+    def _set_cover(self, book, content: bytes) -> None:
+        cover = validate_cover_bytes(content)
+        assert cover is not None
+        replace_book_cover(book=book, cover=cover, log_success=False)
+
     def test_non_debug_direct_server_serves_cover_file(self):
         book = create_file_backed_book(title="Has Cover").book
-        set_book_cover_from_bytes(book=book, data=self._png_bytes(), source="manual")
+        self._set_cover(book, self._png_bytes())
         book.refresh_from_db()
         self.assertTrue(bool(book.cover_file))
 
         response = self.client.get(book.cover_file.url)
 
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Cache-Control"], IMMUTABLE_COVER_CACHE_CONTROL)
+        self.assertIn("Last-Modified", response)
+        self.assertNotIn("ETag", response)
+        self.assertNotIn("Expires", response)
+        self.assertNotIn("Vary", response)
         response.close()
+
+    def test_hashed_cover_is_public_and_query_strings_do_not_bust_identity(self):
+        book = create_file_backed_book(title="Public Cover").book
+        content = self._png_bytes()
+        self._set_cover(book, content)
+        book.refresh_from_db()
+
+        response = self.client.get(f"{book.cover_file.url}?cache_bust=unnecessary")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(b"".join(response.streaming_content), content)
+        self.assertEqual(response["Cache-Control"], IMMUTABLE_COVER_CACHE_CONTROL)
+        response.close()
+
+    def test_hashed_cover_response_does_not_vary_by_authenticated_session(self):
+        book = create_file_backed_book(title="Session-independent Cover").book
+        self._set_cover(book, self._png_bytes())
+        book.refresh_from_db()
+        get_user_model().objects.create_user(username="reader", password="pw")
+        self.assertTrue(self.client.login(username="reader", password="pw"))
+
+        response = self.client.get(book.cover_file.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Cache-Control"], IMMUTABLE_COVER_CACHE_CONTROL)
+        self.assertNotIn("Vary", response)
+        response.close()
+
+    def test_hashed_cover_conditional_get_keeps_immutable_policy(self):
+        book = create_file_backed_book(title="Conditional Cover").book
+        self._set_cover(book, self._png_bytes())
+        book.refresh_from_db()
+        initial = self.client.get(book.cover_file.url)
+        last_modified = initial["Last-Modified"]
+        initial.close()
+
+        response = self.client.get(
+            book.cover_file.url,
+            HTTP_IF_MODIFIED_SINCE=last_modified,
+        )
+
+        self.assertEqual(response.status_code, 304)
+        self.assertEqual(response["Cache-Control"], IMMUTABLE_COVER_CACHE_CONTROL)
+
+    def test_non_hashed_cover_is_not_a_served_media_contract(self):
+        unsupported_cover = Path(self._media_root) / "covers" / "default.png"
+        unsupported_cover.parent.mkdir(parents=True, exist_ok=True)
+        unsupported_cover.write_bytes(self._png_bytes())
+
+        response = self.client.get("/media/covers/default.png")
+
+        self.assertEqual(response.status_code, 404)
 
     async def test_non_debug_asgi_cover_uses_an_async_iterator(self):
         book = await sync_to_async(
             lambda: create_file_backed_book(title="ASGI Cover").book
         )()
-        await sync_to_async(set_book_cover_from_bytes)(
-            book=book,
-            data=self._png_bytes(),
-            source="manual",
-        )
+        await sync_to_async(self._set_cover)(book, self._png_bytes())
         await book.arefresh_from_db()
 
         response = await AsyncClient().get(book.cover_file.url)

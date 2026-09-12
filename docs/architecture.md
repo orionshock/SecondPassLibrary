@@ -209,6 +209,14 @@ EPUB files are stored content-addressed by checksum (SHA-256). Imported filename
 are transient import diagnostics only and are not stored as Book provenance;
 human-readable filenames are derived from metadata when downloading/exporting.
 
+Cover files are also content-addressed. Validation detects JPEG, PNG, or WebP
+from the bytes, and storage uses the SHA-256 of those exact bytes in
+`covers/<first two>/<next two>/<digest>.<detected extension>`. There is no cover
+resizing or other generated-cover variant. `Book.cover_file` stores that object
+name, and API cover URLs are storage URLs for it. Replacing the bytes therefore
+changes the URL; unreferenced old objects are removed after the database commit
+on a best-effort basis.
+
 Books are import-only and file-backed. `Book` stores the
 file fields directly: `book_file`, `file_format`, `checksum`, `file_size`,
 and optional `cover_file`.

@@ -37,6 +37,10 @@ _ALLOWED_BROWSER_PATHS = {
 }
 
 
+def _is_public_cover_path(path: str) -> bool:
+    return path.startswith("/media/covers/")
+
+
 class WebSessionGenerationMiddleware:
     """Invalidate browser sessions superseded by an account-wide revocation."""
 
@@ -44,6 +48,8 @@ class WebSessionGenerationMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        if _is_public_cover_path(request.path_info):
+            return self.get_response(request)
         user = getattr(request, "user", None)
         session = getattr(request, "session", None)
         if user and not getattr(user, "is_anonymous", True) and session is not None:
@@ -90,6 +96,8 @@ class MustChangePasswordMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
+        if _is_public_cover_path(request.path_info):
+            return self.get_response(request)
         user = getattr(request, "user", None)
         if not user or not user.is_authenticated:
             return self.get_response(request)
@@ -177,6 +185,9 @@ class UserWebSessionMiddleware:
 
     def __call__(self, request):
         response = self.get_response(request)
+
+        if _is_public_cover_path(request.path_info):
+            return response
 
         try:
             user = getattr(request, "user", None)

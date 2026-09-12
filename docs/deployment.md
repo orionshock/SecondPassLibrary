@@ -188,6 +188,12 @@ WhiteNoise serves packaged assets under `/static/`; Django exposes only
 `/media/covers/` as public display media. Stored EPUBs, imports, exports, and
 Marginalia remain protected application responses.
 
+Django owns cover response caching. It serves only canonical content-addressed
+cover paths and marks them public and immutable for one year. A reverse proxy
+may cache `/media/covers/`, but must preserve the application's `Cache-Control`
+and `Last-Modified` headers. It must not expose noncanonical cover names or any
+sibling media path.
+
 ## Optional Admin boundary
 
 Django Admin is an optional repair tool. Its route is registered

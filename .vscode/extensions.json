@@ -6,7 +6,6 @@
     "ms-python.vscode-python-envs",
     "charliermarsh.ruff",
     "vitest.explorer",
-    "ms-vscode.powershell",
     "mhutchie.git-graph",
     "openai.chatgpt",
     "guwidoe.vscode-repo-stats",

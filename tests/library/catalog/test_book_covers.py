@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from contextlib import nullcontext
+import hashlib
+from urllib.parse import urlsplit
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -153,6 +155,40 @@ class BookCoverApiTests(IsolatedMediaRootMixin, TestCase):
             },
             before,
         )
+
+    def test_replace_changes_url_and_old_object_is_removed_after_commit(self):
+        self._login("manager")
+        old_bytes = image_bytes("PNG")
+        first = self._upload(old_bytes)
+        old_url = first.json()["cover_url"]
+
+        self.assertIn(hashlib.sha256(old_bytes).hexdigest(), old_url)
+        self.assertFalse(urlsplit(old_url).query)
+        self.assertFalse(urlsplit(old_url).fragment)
+
+        old_response = self.client.get(old_url)
+        self.assertEqual(old_response.status_code, 200)
+        self.assertEqual(b"".join(old_response.streaming_content), old_bytes)
+        old_response.close()
+
+        with self.captureOnCommitCallbacks(execute=False) as callbacks:
+            new_bytes = image_bytes("JPEG")
+            replacement = self._upload(new_bytes)
+        new_url = replacement.json()["cover_url"]
+        self.book.refresh_from_db()
+
+        self.assertEqual(replacement.status_code, 200)
+        self.assertNotEqual(new_url, old_url)
+        self.assertIn(hashlib.sha256(new_bytes).hexdigest(), new_url)
+        self.assertTrue(new_url.endswith(self.book.cover_file.url))
+        retained = self.client.get(old_url)
+        self.assertEqual(retained.status_code, 200)
+        self.assertEqual(b"".join(retained.streaming_content), old_bytes)
+        retained.close()
+
+        for callback in callbacks:
+            callback()
+        self.assertEqual(self.client.get(old_url).status_code, 404)
 
     def test_clear_is_idempotent_and_returns_book_contract(self):
         self._login("manager")

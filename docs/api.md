@@ -373,6 +373,15 @@ does not grant continuing access. Public cover images are a separate,
 display-only surface. EPUB files and private archives are never served as raw
 public media.
 
+Canonical cover URLs contain the SHA-256 of the exact stored bytes and return
+`Cache-Control: public, max-age=31536000, immutable`. Possession of a cover URL
+is sufficient to fetch that display asset; the response does not disclose Book
+metadata or Group membership and does not vary by session cookie. A replacement
+cover has a different URL, so a retained Book response can show the old image
+only until the client reloads that Book metadata. The media route rejects
+non-content-addressed cover paths. The Product UI's normal no-cover fallback is
+rendered inline and has no cover-media request or independent HTTP cache policy.
+
 An authorized Book detail response exposes the stored EPUB checksum as
 `file.checksum`. For current imports this is lowercase hexadecimal SHA-256 of
 the exact EPUB bytes stored and served by the download route. A Reader can
