@@ -33,7 +33,15 @@ RUN python -m venv "$VIRTUAL_ENV"
 COPY requirements.txt ./
 
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --disable-pip-version-check -r requirements.txt
+    pip install --disable-pip-version-check --no-compile -r requirements.txt \
+    && pip check \
+    && pip uninstall --yes pip \
+    && find /opt/venv -type d -name __pycache__ -prune -exec rm -rf {} + \
+    && rm -rf \
+        /opt/venv/lib/python*/site-packages/huey/tests \
+        /opt/venv/lib/python*/site-packages/jsonschema/tests \
+        /opt/venv/lib/python*/site-packages/jsonschema_specifications/tests \
+        /opt/venv/lib/python*/site-packages/referencing/tests
 
 
 FROM python-runtime-dependencies AS static-collection
@@ -77,9 +85,11 @@ RUN groupadd --gid "${APP_GID}" secondpass \
     && mkdir -p /app/userdata/db /app/userdata/media /app/userdata/imports \
     && chown -R secondpass:secondpass /app/userdata
 
-COPY --from=python-runtime-dependencies /opt/venv/ /opt/venv/
-COPY --chmod=755 docker/entrypoint.sh /app/docker/entrypoint.sh
-COPY --from=static-collection /runtime/ /app/
+# Independent layers keep script, dependency, and application changes isolated.
+COPY --link --chmod=755 docker/entrypoint.sh /app/docker/entrypoint.sh
+COPY --link docker/healthcheck.py /app/docker/healthcheck.py
+COPY --link --from=python-runtime-dependencies /opt/venv/ /opt/venv/
+COPY --link --from=static-collection /runtime/ /app/
 
 
 EXPOSE 8000
