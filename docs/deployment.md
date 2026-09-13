@@ -39,8 +39,8 @@ The multi-stage image builds only `frontend/`, copies `backend/` into the
 runtime tree, places the React artifact at `web/product_ui/`, and runs
 `collectstatic`. The final image contains the prepared backend runtime and one
 collected static asset tree, not Node, frontend source, tests, docs, or tools.
-The image also omits the development-only `seed_dev_users` command, dependency
-test suites, and the virtualenv's pip and bytecode caches. Runtime package
+The image also omits dependency test suites and the virtualenv's pip and
+bytecode caches. The `seed_dev_users` command remains included. Runtime package
 metadata, migrations, templates, translations, and schemas remain available.
 The final script, dependency, and application copies use independent BuildKit
 layers so changes to one do not invalidate the others.

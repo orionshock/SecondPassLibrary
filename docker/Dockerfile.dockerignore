@@ -56,6 +56,3 @@ tools/
 *.code-workspace
 AGENTS.md
 README.md
-
-# Development-only demo data command
-backend/accounts/management/commands/seed_dev_users.py
