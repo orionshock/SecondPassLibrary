@@ -10,6 +10,7 @@ from rest_framework.test import APIClient, APITestCase
 
 from accounts.client_sessions.services import generate_bearer_token, hash_client_secret
 from accounts.models import UserClientSession
+from library.cover_objects import canonical_cover_storage_name
 from library.models import (
     Author,
     Book,
@@ -41,7 +42,7 @@ class MarginaliaBookAPITests(APITestCase):
         BookGroupAssignment.objects.create(book=self.visible, group=self.visible_group)
         self.hidden = Book.objects.create(
             title="Hidden Archive",
-            cover_file="covers/hidden-archive.jpg",
+            cover_file=canonical_cover_storage_name(digest="4" * 64, extension=".jpg"),
         )
         self.other_only = Book.objects.create(title="Someone Else's Notes")
         self.no_sessions = Book.objects.create(title="No Marginalia")
@@ -102,7 +103,9 @@ class MarginaliaBookAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         row = response.json()
         self.assertFalse(row["can_open"])
-        self.assertTrue(row["cover_url"].endswith("/media/covers/hidden-archive.jpg"))
+        self.assertTrue(
+            row["cover_url"].endswith(f"/media/{self.hidden.cover_file.name}")
+        )
         self.assertEqual(
             set(row),
             {

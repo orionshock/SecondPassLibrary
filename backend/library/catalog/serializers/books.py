@@ -7,6 +7,7 @@ from django.urls import reverse
 from rest_framework import serializers
 
 from library.groups.public_group import is_public_group
+from library.cover_objects import is_canonical_cover_storage_name
 from library.models import Author, Book, BookIdentifier, CatalogTag, LibraryGroup, Series
 from library.series_indexes import (
     SERIES_INDEX_DECIMAL_PLACES,
@@ -29,6 +30,8 @@ def book_cover_url(
     if not cover:
         return None
     storage_name = str(cover.name or "")
+    if not is_canonical_cover_storage_name(storage_name):
+        return None
     try:
         url = cover.url
     except Exception as exc:

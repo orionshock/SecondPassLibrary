@@ -14,6 +14,7 @@ from rest_framework.test import APIClient, APITestCase
 
 from accounts.client_sessions.services import generate_bearer_token, hash_client_secret
 from accounts.models import UserClientSession
+from library.cover_objects import canonical_cover_storage_name
 from library.models import (
     Author,
     Book,
@@ -48,7 +49,7 @@ class MarginaliaImportPreviewAPITests(IsolatedUserdataMixin, APITestCase):
         self.book = Book.objects.create(
             title="Archive Book",
             checksum="a" * 64,
-            cover_file="covers/matched-archive.jpg",
+            cover_file=canonical_cover_storage_name(digest="5" * 64, extension=".jpg"),
         )
         BookGroupAssignment.objects.create(book=self.book, group=self.group)
         self.hidden_book = Book.objects.create(title="Archive Book", checksum="b" * 64)
@@ -121,7 +122,7 @@ class MarginaliaImportPreviewAPITests(IsolatedUserdataMixin, APITestCase):
         self.assertEqual(book["match"]["status"], "matched")
         self.assertEqual(book["match"]["book_id"], str(self.book.pk))
         self.assertTrue(
-            book["match"]["cover_url"].endswith("/media/covers/matched-archive.jpg")
+            book["match"]["cover_url"].endswith(f"/media/{self.book.cover_file.name}")
         )
         self.assertEqual(session["candidate_id"], "reading-session-000001")
         self.assertEqual(session["source_reading_session_id"], "source-session-1")

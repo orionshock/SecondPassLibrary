@@ -11,6 +11,7 @@ import zipfile
 from defusedxml import ElementTree
 from PIL import Image, UnidentifiedImageError
 
+from library.cover_objects import cover_extension_for_image_format
 from library.imports.errors import InvalidEpubImportError
 
 
@@ -19,11 +20,6 @@ MAX_COVER_IMAGE_PIXELS = 20_000_000
 MAX_CONTAINER_XML_BYTES = 128 * 1024
 MAX_PACKAGE_OPF_BYTES = 1024 * 1024
 
-_SUPPORTED_IMAGE_FORMATS = {
-    "JPEG": ".jpg",
-    "PNG": ".png",
-    "WEBP": ".webp",
-}
 _UNSUPPORTED_COVER_MEDIA_TYPES = {
     "image/svg+xml",
     "image/gif",
@@ -201,7 +197,7 @@ def _validated_image_extension(data: bytes) -> str | None:
         Image.DecompressionBombError,
     ):
         return None
-    return _SUPPORTED_IMAGE_FORMATS.get((image.format or "").upper())
+    return cover_extension_for_image_format(image.format or "")
 
 
 def _read_zip_member_bytes(*, archive: zipfile.ZipFile, member: str, max_bytes: int) -> bytes:

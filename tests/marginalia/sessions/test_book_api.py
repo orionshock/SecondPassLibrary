@@ -10,6 +10,7 @@ from rest_framework.test import APIClient, APITestCase
 
 from accounts.client_sessions.services import generate_bearer_token, hash_client_secret
 from accounts.models import UserClientSession
+from library.cover_objects import canonical_cover_storage_name
 from library.models import Book
 from marginalia.models import Annotation, ReadingSession
 from marginalia.books.queries import marginalia_books_for_user
@@ -30,7 +31,7 @@ class MarginaliaBookSessionAPITests(APITestCase):
         self.client.force_login(self.user)
         self.book = Book.objects.create(
             title="Hidden Session Book",
-            cover_file="covers/hidden-session-book.jpg",
+            cover_file=canonical_cover_storage_name(digest="1" * 64, extension=".jpg"),
         )
         self.unowned = Book.objects.create(title="Unowned Book")
         self.active = ReadingSession.objects.create(
@@ -113,7 +114,7 @@ class MarginaliaBookSessionAPITests(APITestCase):
         self.assertFalse(response.json()["context"]["book"]["can_open"])
         self.assertTrue(
             response.json()["context"]["book"]["cover_url"].endswith(
-                "/media/covers/hidden-session-book.jpg"
+                f"/media/{self.book.cover_file.name}"
             )
         )
 

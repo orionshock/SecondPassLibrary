@@ -10,6 +10,7 @@ from django.utils import timezone
 from accounts.operational_logging import logger, user_uuid
 from accounts.request_identity import get_client_ip
 from accounts.session_control import WEB_SESSION_GENERATION_KEY
+from library.cover_objects import is_immutable_public_cover_path
 
 from .models import UserProfile, UserWebSession
 
@@ -37,12 +38,6 @@ _ALLOWED_BROWSER_PATHS = {
 }
 
 
-def _is_public_cover_path(path: str) -> bool:
-    # Immutable public covers bypass session policy and tracking so middleware does
-    # not attach cookie-dependent behavior or a useless Vary: Cookie.
-    return path.startswith("/media/covers/")
-
-
 class WebSessionGenerationMiddleware:
     """Invalidate browser sessions superseded by an account-wide revocation."""
 
@@ -50,7 +45,7 @@ class WebSessionGenerationMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        if _is_public_cover_path(request.path_info):
+        if is_immutable_public_cover_path(request.path_info):
             return self.get_response(request)
         user = getattr(request, "user", None)
         session = getattr(request, "session", None)
@@ -81,7 +76,6 @@ _ALLOWED_BROWSER_PREFIXES = (
     "/imports",
     "/library",
     "/marginalia",
-    "/media/covers/",
     "/profile",
     "/server",
     "/settings",
@@ -98,7 +92,7 @@ class MustChangePasswordMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        if _is_public_cover_path(request.path_info):
+        if is_immutable_public_cover_path(request.path_info):
             return self.get_response(request)
         user = getattr(request, "user", None)
         if not user or not user.is_authenticated:
@@ -188,7 +182,7 @@ class UserWebSessionMiddleware:
     def __call__(self, request):
         response = self.get_response(request)
 
-        if _is_public_cover_path(request.path_info):
+        if is_immutable_public_cover_path(request.path_info):
             return response
 
         try:

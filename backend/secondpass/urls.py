@@ -16,7 +16,6 @@ Including another URLconf
 """
 
 from pathlib import Path
-import re
 
 from django.conf import settings
 from django.contrib import admin
@@ -28,14 +27,11 @@ from django.views import defaults as default_views
 from django.views.static import serve as static_serve
 
 from core.views import secondpass_well_known
-from web import views as web_views
-
-
-IMMUTABLE_COVER_CACHE_CONTROL = "public, max-age=31536000, immutable"
-_CONTENT_ADDRESSED_COVER_PATH_RE = re.compile(
-    r"^(?P<first>[0-9a-f]{2})/(?P<second>[0-9a-f]{2})/"
-    r"(?P<digest>[0-9a-f]{64})\.(?:jpg|png|webp)$"
+from library.cover_objects import (
+    IMMUTABLE_COVER_CACHE_CONTROL,
+    is_canonical_cover_relative_path,
 )
+from web import views as web_views
 
 
 def favicon(request):
@@ -97,7 +93,7 @@ def _cover_media(request, path: str):
     if (
         ".." in parts
         or path.startswith("/")
-        or not _is_content_addressed_cover_path(path)
+        or not is_canonical_cover_relative_path(path)
     ):
         raise Http404()
     response = static_serve(
@@ -109,15 +105,6 @@ def _cover_media(request, path: str):
     # be served later under a successfully cached URL.
     response["Cache-Control"] = IMMUTABLE_COVER_CACHE_CONTROL
     return response
-
-
-def _is_content_addressed_cover_path(path: str) -> bool:
-    match = _CONTENT_ADDRESSED_COVER_PATH_RE.fullmatch(path)
-    if match is None:
-        return False
-    digest = match.group("digest")
-    return match.group("first") == digest[:2] and match.group("second") == digest[2:4]
-
 
 urlpatterns += [
     # Keep cover URLs stable in direct-server mode without exposing all media.

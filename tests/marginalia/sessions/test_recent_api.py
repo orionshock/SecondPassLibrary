@@ -12,6 +12,7 @@ from rest_framework.test import APIClient, APITestCase
 from accounts.client_sessions.services import generate_bearer_token, hash_client_secret
 from accounts.models import UserClientSession
 from django.db import connection
+from library.cover_objects import canonical_cover_storage_name
 from library.models import Book
 from marginalia.models import Annotation, ReadingSession
 from marginalia.sessions.queries import recent_marginalia_sessions_for_user
@@ -30,7 +31,7 @@ class MarginaliaRecentSessionAPITests(APITestCase):
         self.client.force_login(self.user)
         self.book = Book.objects.create(
             title="Remembered Book",
-            cover_file="covers/remembered.jpg",
+            cover_file=canonical_cover_storage_name(digest="3" * 64, extension=".jpg"),
         )
         self.other_book = Book.objects.create(title="Other Book")
         self.active = ReadingSession.objects.create(
@@ -167,7 +168,9 @@ class MarginaliaRecentSessionAPITests(APITestCase):
         )
         self.assertEqual(set(row["book"]), {"id", "title", "cover_url", "can_open"})
         self.assertEqual(row["book"]["title"], "Remembered Book")
-        self.assertTrue(row["book"]["cover_url"].endswith("/media/covers/remembered.jpg"))
+        self.assertTrue(
+            row["book"]["cover_url"].endswith(f"/media/{self.book.cover_file.name}")
+        )
         self.assertFalse(row["book"]["can_open"])
         self.assertEqual(row["progress"]["cfi"], "epubcfi(/6/8!/4/2)")
         self.assertEqual(row["progress"]["location_label"], "Chapter 08 · 42%")

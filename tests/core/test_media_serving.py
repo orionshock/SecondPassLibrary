@@ -11,9 +11,15 @@ from django.test.utils import override_settings
 
 from PIL import Image
 
+from accounts.models import UserWebSession
+from library.catalog.serializers.books import book_cover_url
+from library.cover_objects import (
+    IMMUTABLE_COVER_CACHE_CONTROL,
+    is_canonical_cover_storage_name,
+    is_immutable_public_cover_path,
+)
 from library.cover_services import replace_book_cover
 from library.imports.covers import validate_cover_bytes
-from secondpass.urls import IMMUTABLE_COVER_CACHE_CONTROL
 from tests.testenv.filesystem import IsolatedMediaRootMixin
 from tests.utils.books import create_file_backed_book
 
@@ -87,6 +93,9 @@ class DirectServerCoverServingTest(IsolatedMediaRootMixin, TestCase):
 
         response = self.client.get(book.cover_file.url)
 
+        self.assertTrue(is_canonical_cover_storage_name(book.cover_file.name))
+        self.assertTrue(is_immutable_public_cover_path(book.cover_file.url))
+        self.assertEqual(book_cover_url(book), book.cover_file.url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Cache-Control"], IMMUTABLE_COVER_CACHE_CONTROL)
         self.assertIn("Last-Modified", response)
@@ -138,14 +147,41 @@ class DirectServerCoverServingTest(IsolatedMediaRootMixin, TestCase):
         self.assertEqual(response.status_code, 304)
         self.assertEqual(response["Cache-Control"], IMMUTABLE_COVER_CACHE_CONTROL)
 
-    def test_non_hashed_cover_is_not_a_served_media_contract(self):
-        unsupported_cover = Path(self._media_root) / "covers" / "default.png"
-        unsupported_cover.parent.mkdir(parents=True, exist_ok=True)
-        unsupported_cover.write_bytes(self._png_bytes())
+    def test_noncanonical_covers_are_not_served_or_cached_as_immutable(self):
+        digest = "ab" * 32
+        paths = (
+            "default.png",
+            f"aa/ab/{digest}.png",
+            f"ab/ab/{digest[:-1]}.png",
+            f"ab/ab/{digest}.gif",
+            f"ab/ab/{'g' + digest[1:]}.png",
+            f"ab/ab/{digest}.png/extra",
+        )
 
-        response = self.client.get("/media/covers/default.png")
+        for path in paths:
+            with self.subTest(path=path):
+                response = self.client.get(f"/media/covers/{path}")
+                self.assertEqual(response.status_code, 404)
+                self.assertNotIn("Cache-Control", response)
 
-        self.assertEqual(response.status_code, 404)
+    def test_only_canonical_cover_paths_bypass_web_session_tracking(self):
+        book = create_file_backed_book(title="Middleware Cover").book
+        self._set_cover(book, self._png_bytes())
+        book.refresh_from_db()
+        get_user_model().objects.create_user(username="tracked-reader", password="pw")
+        self.assertTrue(self.client.login(username="tracked-reader", password="pw"))
+        UserWebSession.objects.all().delete()
+
+        cover_response = self.client.get(book.cover_file.url)
+        cover_response.close()
+        self.assertFalse(UserWebSession.objects.exists())
+
+        self.client.get("/media/covers/default.png")
+        self.assertTrue(UserWebSession.objects.exists())
+        UserWebSession.objects.all().delete()
+
+        self.client.get("/media/books/aa/bb/private.epub")
+        self.assertTrue(UserWebSession.objects.exists())
 
     async def test_non_debug_asgi_cover_uses_an_async_iterator(self):
         book = await sync_to_async(

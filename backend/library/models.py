@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-import re
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -11,10 +10,9 @@ from django.db.models import Q
 
 from core.models import TimeStampedModel
 from library.catalog.names import normalize_catalog_entity_name
+from library.cover_objects import canonical_cover_storage_name_from_filename
 from library.series_indexes import SERIES_INDEX_MIN_VALUE
 
-
-_COVER_FILENAME_RE = re.compile(r"^(?P<sha>[0-9a-f]{64})(?P<ext>\.[A-Za-z0-9]+)?$")
 
 BOOK_DATE_PRECISION_YEAR = "year"
 BOOK_DATE_PRECISION_MONTH = "month"
@@ -27,15 +25,7 @@ BOOK_DATE_PRECISION_CHOICES = [
 
 
 def book_cover_upload_path(instance: "Book", filename: str) -> str:
-    # Cover bytes own the URL: changing bytes must produce a new path so
-    # successful responses can be cached as immutable.
-    base = Path(filename).name
-    match = _COVER_FILENAME_RE.match(base)
-    if not match:
-        raise ValueError("Cover filename must be '<sha256>.<ext>' (sha256 hex).")
-    sha = match.group("sha")
-    ext = (match.group("ext") or "").lower()
-    return f"covers/{sha[:2]}/{sha[2:4]}/{sha}{ext}"
+    return canonical_cover_storage_name_from_filename(filename)
 
 
 def book_file_upload_path(instance: "Book", filename: str) -> str:

@@ -13,6 +13,7 @@ from core.operational_logging import (
     user_log_label,
     user_uuid,
 )
+from library.cover_objects import canonical_cover_storage_name
 from library.imports.covers import (
     ExtractedCover,
     MAX_COVER_IMAGE_BYTES,
@@ -53,10 +54,12 @@ def replace_book_cover(
     actor=None,
     log_success: bool = True,
 ) -> Book:
-    field = Book._meta.get_field("cover_file")
-    storage = field.storage
+    storage = Book._meta.get_field("cover_file").storage
     digest = hashlib.sha256(cover.data).hexdigest()
-    target_name = field.generate_filename(book, f"{digest}{cover.extension}")
+    target_name = canonical_cover_storage_name(
+        digest=digest,
+        extension=cover.extension,
+    )
     stored_name = target_name
     created_file = False
 

@@ -6,6 +6,7 @@ from urllib.parse import urlsplit
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import transaction
 from django.test import TestCase
@@ -231,6 +232,21 @@ class BookCoverApiTests(IsolatedMediaRootMixin, TestCase):
         self.assertIn(f"actor_profile_id={self.manager.profile.pk}", warning)
         self.assertNotIn(old_name, warning)
         self.assertNotIn("covers/", warning)
+
+    def test_noncanonical_cover_reference_is_not_projected_as_a_public_url(self):
+        storage = self.book.cover_file.storage
+        name = storage.save(
+            "covers/not-content-addressed.png",
+            ContentFile(image_bytes("PNG")),
+        )
+        self.book.cover_file = name
+        self.book.save(update_fields=["cover_file", "updated_at"])
+        self._login("manager")
+
+        response = self.client.get(f"/api/v1/library/books/{self.book.id}/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNone(response.json()["cover_url"])
 
     def test_primary_cover_storage_failures_return_bounded_503(self):
         self._login("manager")
