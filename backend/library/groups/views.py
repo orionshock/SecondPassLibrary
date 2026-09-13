@@ -4,18 +4,17 @@ from functools import cached_property
 
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import status
-from rest_framework.exceptions import PermissionDenied
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.response import Response
 
-from accounts.roles import is_manager
 from library.api_access import LibraryBearerReadMixin
 from library.catalog.preview_books import parse_preview_book_limit
 from library.groups.api_access import (
-    require_group_creation_available,
-    require_group_mutation_available,
+    authorize_group_creation,
+    authorize_group_deletion,
+    authorize_group_metadata_mutation,
+    normal_mutation_group_or_404,
 )
-from library.groups.public_group import is_public_group
 from library.groups.querysets import (
     apply_group_ordering,
     apply_group_search,
@@ -33,7 +32,6 @@ from library.groups.services import (
     update_library_group,
 )
 from library.queries import visible_books_for_group, visible_groups_for_user
-from library.roles import is_curator
 
 
 def _attach_group_preview_books(*, groups, user, limit: int) -> None:
@@ -83,9 +81,7 @@ class LibraryGroupListView(LibraryBearerReadMixin, GroupPreviewBooksMixin, ListA
         return Response(serializer.data)
 
     def post(self, request, *args, **kwargs):
-        require_group_creation_available()
-        if not is_manager(request.user):
-            raise PermissionDenied("Not allowed to create library groups.")
+        authorize_group_creation(actor=request.user)
 
         serializer = LibraryGroupCreateSerializer(data=request.data or {})
         serializer.is_valid(raise_exception=True)
@@ -115,24 +111,21 @@ class LibraryGroupDetailView(LibraryBearerReadMixin, GroupPreviewBooksMixin, Ret
         return Response(self.get_serializer(group).data)
 
     def patch(self, request, *args, **kwargs):
-        group = self.get_object()
-        require_group_mutation_available(group)
-        if is_public_group(group):
-            raise PermissionDenied(
-                "Public group identity is managed through Server Settings."
-            )
+        group = normal_mutation_group_or_404(
+            actor=request.user,
+            group_id=self.kwargs[self.lookup_url_kwarg],
+        )
+        access = authorize_group_metadata_mutation(actor=request.user, group=group)
         serializer = LibraryGroupPatchSerializer(
             group,
             data=request.data or {},
             partial=True,
         )
         serializer.is_valid(raise_exception=True)
-        if serializer.changes_field("name") and not is_manager(request.user):
-            raise PermissionDenied("Not allowed to rename this library group.")
-        if serializer.changes_field("description") and not is_curator(
-            request.user, group
-        ):
-            raise PermissionDenied("Not allowed to update this library group description.")
+        access.authorize_patch(
+            changes_name=serializer.changes_field("name"),
+            changes_description=serializer.changes_field("description"),
+        )
         try:
             group = update_library_group(
                 group=group,
@@ -145,12 +138,11 @@ class LibraryGroupDetailView(LibraryBearerReadMixin, GroupPreviewBooksMixin, Ret
         return Response(out.data)
 
     def delete(self, request, *args, **kwargs):
-        group = self.get_object()
-        require_group_mutation_available(group)
-        if is_public_group(group):
-            raise _drf_validation_error("Public/Common Room group cannot be deleted.")
-        if not is_manager(request.user):
-            raise PermissionDenied("Not allowed to delete this library group.")
+        group = normal_mutation_group_or_404(
+            actor=request.user,
+            group_id=self.kwargs[self.lookup_url_kwarg],
+        )
+        authorize_group_deletion(actor=request.user, group=group)
 
         try:
             delete_library_group(group=group, actor=request.user)

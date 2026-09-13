@@ -1,15 +1,17 @@
 from __future__ import annotations
 
-from django.http import Http404
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.http import Http404
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.generics import GenericAPIView
 from rest_framework.response import Response
 
-from accounts.models import UserProfile
-from accounts.roles import is_librarian, is_manager
-from library.groups.api_access import require_group_mutation_available
+from accounts.roles import is_librarian
+from library.groups.api_access import (
+    authorize_membership_mutation,
+    normal_mutation_group_or_404,
+)
 from library.groups.membership_serializers import (
     LibraryGroupMembershipSerializer,
     MembershipCreateSerializer,
@@ -55,19 +57,20 @@ class LibraryGroupMembershipListView(GenericAPIView):
         return self.get_paginated_response(serializer.data)
 
     def post(self, request, *args, **kwargs):
-        group = self.get_group()
-        require_group_mutation_available(group)
-        if not is_manager(request.user):
-            raise PermissionDenied("Not allowed to manage group memberships.")
+        group = normal_mutation_group_or_404(
+            actor=request.user,
+            group_id=self.kwargs[self.group_url_kwarg],
+        )
+        access = authorize_membership_mutation(actor=request.user, group=group)
 
         serializer = MembershipCreateSerializer(data=request.data or {})
         serializer.is_valid(raise_exception=True)
-        profile = UserProfile.objects.select_related("user").get(
-            pk=serializer.validated_data["user_id"]
+        target_user = access.target_user_or_404(
+            profile_id=serializer.validated_data["user_id"]
         )
         try:
             membership = add_user_to_group(
-                user=profile.user,
+                user=target_user,
                 group=group,
                 is_curator=serializer.validated_data.get("is_curator", False),
                 actor=request.user,
@@ -85,36 +88,17 @@ class LibraryGroupMembershipDetailView(GenericAPIView):
     user_url_kwarg = "user_id"
 
     def get_group(self):
-        group = visible_groups_for_user(self.request.user).filter(
-            pk=self.kwargs[self.group_url_kwarg]
-        ).first()
-        if group is None:
-            raise Http404
-        return group
-
-    def get_membership(self):
-        group = self.get_group()
-        try:
-            profile = UserProfile.objects.select_related("user").get(
-                pk=self.kwargs[self.user_url_kwarg]
-            )
-        except UserProfile.DoesNotExist as exc:
-            raise Http404 from exc
-        membership = (
-            LibraryGroupMembership.objects.filter(group=group, user=profile.user)
-            .select_related("user", "user__profile", "group")
-            .first()
+        return normal_mutation_group_or_404(
+            actor=self.request.user,
+            group_id=self.kwargs[self.group_url_kwarg],
         )
-        if membership is None:
-            raise Http404
-        return membership
 
     def patch(self, request, *args, **kwargs):
         group = self.get_group()
-        require_group_mutation_available(group)
-        if not is_manager(request.user):
-            raise PermissionDenied("Not allowed to manage group memberships.")
-        membership = self.get_membership()
+        access = authorize_membership_mutation(actor=request.user, group=group)
+        membership = access.membership_for_update(
+            profile_id=self.kwargs[self.user_url_kwarg]
+        )
         serializer = MembershipPatchSerializer(data=request.data or {}, partial=True)
         serializer.is_valid(raise_exception=True)
 
@@ -133,17 +117,13 @@ class LibraryGroupMembershipDetailView(GenericAPIView):
 
     def delete(self, request, *args, **kwargs):
         group = self.get_group()
-        require_group_mutation_available(group)
-        if not is_manager(request.user):
-            raise PermissionDenied("Not allowed to manage group memberships.")
-        try:
-            profile = UserProfile.objects.select_related("user").get(
-                pk=self.kwargs[self.user_url_kwarg]
-            )
-        except UserProfile.DoesNotExist as exc:
-            raise Http404 from exc
-        remove_user_from_group(user=profile.user, group=group, actor=request.user)
+        access = authorize_membership_mutation(actor=request.user, group=group)
+        target_user = access.target_user_or_404(
+            profile_id=self.kwargs[self.user_url_kwarg]
+        )
+        remove_user_from_group(user=target_user, group=group, actor=request.user)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
 
 def _membership_validation_error(exc: DjangoValidationError) -> ValidationError:
     detail = exc.message_dict if hasattr(exc, "message_dict") else exc.messages
