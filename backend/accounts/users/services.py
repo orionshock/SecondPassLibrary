@@ -12,6 +12,7 @@ from accounts.models import UserProfile
 from accounts.operational_logging import logger, user_log_label
 from accounts.profiles import get_or_create_profile
 from accounts.roles import RoleRank, effective_role_rank, is_manager, is_owner
+from core.operational_logging import info_on_commit
 from library.groups.memberships import ensure_user_public_membership
 
 
@@ -189,6 +190,7 @@ def update_user_via_management_api(
     profile = get_or_create_profile(user=target_user)
     was_active = bool(getattr(target_user, "is_active", True))
     old_role = profile.role
+    disable_requested = is_active is not None and not bool(is_active)
 
     user_updates: dict[str, Any] = {}
     profile_updates: dict[str, Any] = {}
@@ -240,7 +242,7 @@ def update_user_via_management_api(
         if bool(profile.must_change_password) != bool(must_change_password):
             profile_updates["must_change_password"] = bool(must_change_password)
 
-    if not user_updates and not profile_updates:
+    if not user_updates and not profile_updates and not disable_requested:
         return UserUpdateResult(user=target_user, profile=profile)
 
     for key, value in user_updates.items():
@@ -248,7 +250,6 @@ def update_user_via_management_api(
     for key, value in profile_updates.items():
         setattr(profile, key, value)
 
-    disable_after_save = False
     with transaction.atomic():
         target_user.full_clean()
         profile.full_clean()
@@ -256,37 +257,33 @@ def update_user_via_management_api(
             target_user.save(update_fields=[*user_updates.keys()])
         if profile_updates:
             profile.save(update_fields=[*profile_updates.keys(), "updated_at"])
-        if (
-            "is_active" in user_updates
-            and user_updates.get("is_active") is False
-            and was_active is True
-        ):
-            disable_after_save = True
+        if disable_requested:
+            from accounts import session_control
 
-    if disable_after_save:
-        from accounts import session_control
+            counts = session_control.disable_user(target_user, actor=actor)
+            info_on_commit(
+                logger,
+                "Managed user disabled: actor=%s target=%s revoked_web_sessions=%d "
+                "revoked_client_sessions=%d",
+                user_log_label(actor),
+                user_log_label(target_user),
+                counts.web_sessions,
+                counts.client_sessions,
+            )
 
-        counts = session_control.disable_user(target_user, actor=actor)
-        logger.info(
-            "Managed user disabled: actor=%s target=%s revoked_web_sessions=%d "
-            "revoked_client_sessions=%d",
-            user_log_label(actor),
-            user_log_label(target_user),
-            counts.web_sessions,
-            counts.client_sessions,
-        )
-
-    changed_fields = sorted([*user_updates.keys(), *profile_updates.keys()])
-    logger.info(
-        "Managed user updated: actor=%s target=%s changed_fields=%s role_old=%s "
-        "role_new=%s active_old=%s active_new=%s",
-        user_log_label(actor),
-        user_log_label(target_user),
-        ",".join(changed_fields),
-        old_role,
-        profile.role,
-        was_active,
-        bool(target_user.is_active),
-    )
+        changed_fields = sorted([*user_updates.keys(), *profile_updates.keys()])
+        if changed_fields:
+            info_on_commit(
+                logger,
+                "Managed user updated: actor=%s target=%s changed_fields=%s role_old=%s "
+                "role_new=%s active_old=%s active_new=%s",
+                user_log_label(actor),
+                user_log_label(target_user),
+                ",".join(changed_fields),
+                old_role,
+                profile.role,
+                was_active,
+                bool(target_user.is_active),
+            )
 
     return UserUpdateResult(user=target_user, profile=profile)

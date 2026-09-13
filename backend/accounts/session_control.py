@@ -54,6 +54,7 @@ def revoke_other_web_sessions(
     actor=None,
     reason: str = "manual_revoke",
     log_event: bool = True,
+    log_failure: bool = True,
 ) -> int:
     """
     Revoke all tracked Django web sessions for the given user except the current session.
@@ -73,13 +74,14 @@ def revoke_other_web_sessions(
                 current_session[WEB_SESSION_GENERATION_KEY] = generation
                 current_session.save()
     except Exception as exc:
-        logger.error(
-            "Web session revocation failed: actor=%s target=%s reason=%s exception=%s",
-            user_uuid(actor),
-            user_uuid(user),
-            reason,
-            type(exc).__name__,
-        )
+        if log_failure:
+            logger.error(
+                "Web session revocation failed: actor=%s target=%s reason=%s exception=%s",
+                user_uuid(actor),
+                user_uuid(user),
+                reason,
+                type(exc).__name__,
+            )
         raise
     if log_event:
         logger.info(
@@ -98,6 +100,7 @@ def revoke_all_api_sessions(
     actor=None,
     reason: str = "manual_revoke",
     log_event: bool = True,
+    log_failure: bool = True,
 ) -> int:
     """
     Revoke all Client API bearer sessions for the given user.
@@ -111,13 +114,14 @@ def revoke_all_api_sessions(
             user=user, revoked_at__isnull=True
         ).update(revoked_at=now, updated_at=now)
     except Exception as exc:
-        logger.error(
-            "Client session revocation failed: actor=%s target=%s reason=%s exception=%s",
-            user_uuid(actor),
-            user_uuid(user),
-            reason,
-            type(exc).__name__,
-        )
+        if log_failure:
+            logger.error(
+                "Client session revocation failed: actor=%s target=%s reason=%s exception=%s",
+                user_uuid(actor),
+                user_uuid(user),
+                reason,
+                type(exc).__name__,
+            )
         raise
     if log_event:
         logger.info(
@@ -183,18 +187,51 @@ def admin_reset_user_password(user, *, actor=None) -> SessionRevocationCounts:
 
 
 def disable_user(user, *, actor=None) -> SessionRevocationCounts:
-    web_count = revoke_other_web_sessions(
-        user,
-        None,
-        actor=actor,
-        reason="user_disabled",
-        log_event=True,
-    )
-    client_count = revoke_all_api_sessions(
-        user,
-        actor=actor,
-        reason="user_disabled",
-        log_event=True,
+    try:
+        web_count = revoke_other_web_sessions(
+            user,
+            None,
+            actor=actor,
+            reason="user_disabled",
+            log_event=False,
+            log_failure=False,
+        )
+    except Exception as exc:
+        logger.error(
+            "Managed user disable failed: operation=managed_user_disable "
+            "actor=%s target=%s lifecycle_stage=web_session_revocation "
+            "transaction=rolled_back retryable=true exception=%s",
+            user_uuid(actor),
+            user_uuid(user),
+            type(exc).__name__,
+        )
+        raise
+    try:
+        client_count = revoke_all_api_sessions(
+            user,
+            actor=actor,
+            reason="user_disabled",
+            log_event=False,
+            log_failure=False,
+        )
+    except Exception as exc:
+        logger.error(
+            "Managed user disable failed: operation=managed_user_disable "
+            "actor=%s target=%s lifecycle_stage=client_session_revocation "
+            "transaction=rolled_back retryable=true exception=%s",
+            user_uuid(actor),
+            user_uuid(user),
+            type(exc).__name__,
+        )
+        raise
+    info_on_commit(
+        logger,
+        "Sessions revoked: actor=%s target=%s reason=user_disabled "
+        "web_sessions=%d client_sessions=%d",
+        user_uuid(actor),
+        user_uuid(user),
+        web_count,
+        client_count,
     )
     return SessionRevocationCounts(web_sessions=web_count, client_sessions=client_count)
 

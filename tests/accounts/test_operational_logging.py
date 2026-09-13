@@ -64,17 +64,18 @@ class AccountOperationalLoggingTests(APITestCase):
         self.client.login(username="manager", password="pw")
 
         with self.assertLogs("accounts.operational_logging", level="INFO") as logs:
-            response = assert_response(
-                self.client.patch(
-                    f"/api/v1/accounts/users/{self.reader.profile.id}/",
-                    data={
-                        "first_name": "Same",
-                        "last_name": "Changed",
-                        "role": "librarian",
-                    },
-                    format="json",
+            with self.captureOnCommitCallbacks(execute=True):
+                response = assert_response(
+                    self.client.patch(
+                        f"/api/v1/accounts/users/{self.reader.profile.id}/",
+                        data={
+                            "first_name": "Same",
+                            "last_name": "Changed",
+                            "role": "librarian",
+                        },
+                        format="json",
+                    )
                 )
-            )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         message = self._one_message_containing(logs.output, "Managed user updated")
@@ -92,13 +93,14 @@ class AccountOperationalLoggingTests(APITestCase):
         self.client.login(username="manager", password="pw")
 
         with self.assertLogs("accounts.operational_logging", level="INFO") as logs:
-            response = assert_response(
-                self.client.patch(
-                    f"/api/v1/accounts/users/{self.reader.profile.id}/",
-                    data={"is_active": False},
-                    format="json",
+            with self.captureOnCommitCallbacks(execute=True):
+                response = assert_response(
+                    self.client.patch(
+                        f"/api/v1/accounts/users/{self.reader.profile.id}/",
+                        data={"is_active": False},
+                        format="json",
+                    )
                 )
-            )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         joined = "\n".join(logs.output)
@@ -109,8 +111,10 @@ class AccountOperationalLoggingTests(APITestCase):
         self.assertIn("Managed user updated", joined)
         self.assertIn("active_old=True", joined)
         self.assertIn("active_new=False", joined)
-        self.assertIn("reason=user_disabled count=2", joined)
-        self.assertIn("reason=user_disabled count=1", joined)
+        self.assertIn(
+            "reason=user_disabled web_sessions=2 client_sessions=1",
+            joined,
+        )
 
     def test_self_password_change_logs_event_and_revocation_counts(self):
         self._make_web_sessions(self.reader, username="reader")

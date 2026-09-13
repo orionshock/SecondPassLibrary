@@ -5,7 +5,8 @@ from django.contrib.sessions.models import Session
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
-from accounts.models import UserProfile, UserWebSession
+from accounts.client_sessions.services import hash_client_secret
+from accounts.models import UserClientSession, UserProfile, UserWebSession
 from tests.accounts.web_sessions.helpers import authenticated_tracked_client
 from tests.utils.responses import assert_response
 
@@ -79,3 +80,54 @@ class ManagedResetAndDisableSessionRevocationTests(APITestCase):
         self.assertFalse(Session.objects.filter(session_key=key1).exists())
         self.assertFalse(Session.objects.filter(session_key=key2).exists())
         self.assertEqual(UserWebSession.objects.filter(user=self.target).count(), 0)
+
+    def test_reenable_does_not_restore_pre_disable_credentials(self):
+        target_client, web_session_key = authenticated_tracked_client(
+            self,
+            username="target",
+        )
+        bearer_token = "pre-disable-bearer-token"
+        client_session = UserClientSession.objects.create(
+            user=self.target,
+            name="Reader",
+            client_type="reader",
+            token_hash=hash_client_secret(bearer_token),
+        )
+        actor = APIClient()
+        self.assertTrue(actor.login(username="manager", password="pw"))
+
+        disabled = assert_response(
+            actor.patch(
+                f"/api/v1/accounts/users/{self.target.profile.id}/",
+                data={"is_active": False},
+                format="json",
+            )
+        )
+        self.assertEqual(disabled.status_code, status.HTTP_200_OK)
+
+        enabled = assert_response(
+            actor.patch(
+                f"/api/v1/accounts/users/{self.target.profile.id}/",
+                data={"is_active": True},
+                format="json",
+            )
+        )
+        self.assertEqual(enabled.status_code, status.HTTP_200_OK)
+
+        self.target.refresh_from_db()
+        client_session.refresh_from_db()
+        self.assertTrue(self.target.is_active)
+        self.assertIsNotNone(client_session.revoked_at)
+        self.assertFalse(Session.objects.filter(session_key=web_session_key).exists())
+        self.assertIn(
+            target_client.get("/api/v1/accounts/me/").status_code,
+            (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
+        )
+        bearer_client = APIClient()
+        self.assertIn(
+            bearer_client.get(
+                "/api/v1/accounts/me/",
+                HTTP_AUTHORIZATION=f"Bearer {bearer_token}",
+            ).status_code,
+            (status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN),
+        )
