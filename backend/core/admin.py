@@ -25,6 +25,7 @@ from library.groups.consolidation import (
 from . import server_settings
 from .admin_menu import install_admin_menu
 from .models import ServerSetting
+from .server_configuration import update_owner_server_configuration
 
 
 class ServerIdentityAdminForm(forms.ModelForm):
@@ -430,15 +431,23 @@ class ServerSettingAdmin(admin.ModelAdmin):
 
     def save_model(self, request, obj, form, change):
         if self._is_server_identity_setting(obj):
-            server_settings.set_server_identity(
-                name=form.cleaned_data["server_name"],
-                description=form.cleaned_data["server_description"],
-                banner_message=form.cleaned_data["server_banner_message"],
+            update_owner_server_configuration(
+                patch={
+                    "server_name": form.cleaned_data["server_name"],
+                    "server_description": form.cleaned_data["server_description"],
+                    "server_banner_message": form.cleaned_data[
+                        "server_banner_message"
+                    ],
+                },
+                actor=request.user,
             )
             return
         if obj.key == server_settings.SECOND_PASS_READER_WEB_CLIENT_URL_SETTING:
             if not server_settings.second_pass_reader_web_client_url_locked():
-                server_settings.set_second_pass_reader_web_client_url(obj.value)
+                update_owner_server_configuration(
+                    patch={"second_pass_reader_web_client_url": obj.value},
+                    actor=request.user,
+                )
             return
         if self._is_public_group_setting(obj):
             try:

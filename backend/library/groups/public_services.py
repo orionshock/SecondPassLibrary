@@ -42,8 +42,10 @@ class PublicGroupRepairResult:
 def configure_public_group(*, name: str, description: str = "") -> LibraryGroup:
     with transaction.atomic():
         group = get_public_group()
-        normalized_name = _public_group_name(name)
-        normalized_description = _public_group_description(description)
+        normalized_name, normalized_description = normalize_public_group_configuration(
+            name=name,
+            description=description,
+        )
         update_fields: list[str] = []
         if group.name != normalized_name:
             group.name = normalized_name
@@ -204,12 +206,12 @@ def _store_public_group_id(group: LibraryGroup) -> None:
     )
 
 
-def _public_group_name(name: str | None) -> str:
-    value = str(name or "").strip()
-    return value or DEFAULT_PUBLIC_GROUP_NAME
-
-
-def _public_group_description(description: str | None) -> str:
-    return sanitize_descriptive_prose(
-        description, field_name="description"
+def normalize_public_group_configuration(
+    *, name: str | None, description: str | None
+) -> tuple[str, str]:
+    normalized_name = str(name or "").strip() or DEFAULT_PUBLIC_GROUP_NAME
+    normalized_description = sanitize_descriptive_prose(
+        description,
+        field_name="description",
     )
+    return normalized_name, normalized_description

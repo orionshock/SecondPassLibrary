@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -17,6 +19,10 @@ from .models import ServerSetting
 
 
 logger = logging.getLogger(__name__)
+_CACHE_INVALIDATION_DEFERRED: ContextVar[bool] = ContextVar(
+    "server_settings_cache_invalidation_deferred",
+    default=False,
+)
 SERVER_SETTINGS_CACHE_KEY = "core:server_settings:v1"
 APPLICATION_LOG_LEVEL_CACHE_KEY = "core:application_log_level:v1"
 SERVER_NAME_SETTING = "server_name"
@@ -100,6 +106,18 @@ def clear_server_settings_cache() -> None:
     cache.delete(APPLICATION_LOG_LEVEL_CACHE_KEY)
 
 
+@contextmanager
+def batch_server_setting_writes():
+    already_deferred = _CACHE_INVALIDATION_DEFERRED.get()
+    token = _CACHE_INVALIDATION_DEFERRED.set(True)
+    try:
+        yield
+    finally:
+        _CACHE_INVALIDATION_DEFERRED.reset(token)
+        if not already_deferred:
+            transaction.on_commit(clear_server_settings_cache)
+
+
 def get_server_settings_map() -> dict[str, Any]:
     cached = cache.get(SERVER_SETTINGS_CACHE_KEY)
     if isinstance(cached, dict):
@@ -140,7 +158,8 @@ def set_server_setting(*, key: str, value: Any, description: str = "") -> Server
                 setattr(obj, k, v)
             obj.save(update_fields=[*updates.keys(), "updated_at"])
         changed_fields = sorted(updates.keys())
-    clear_server_settings_cache()
+    if not _CACHE_INVALIDATION_DEFERRED.get():
+        clear_server_settings_cache()
     if key == APPLICATION_LOG_LEVEL_SETTING:
         apply_application_log_level(value)
     if (was_created or changed_fields) and not state_change_logging_suppressed():
@@ -231,7 +250,7 @@ def get_server_name() -> str:
     return DEFAULT_SERVER_NAME
 
 
-def _normalized_server_name(value: str) -> str:
+def normalize_server_name(value: str) -> str:
     normalized = _normalize_str(value)
     if not normalized:
         raise ValueError("Server name is required.")
@@ -243,7 +262,7 @@ def _normalized_server_name(value: str) -> str:
 
 
 def set_server_name(value: str) -> None:
-    normalized = _normalized_server_name(value)
+    normalized = normalize_server_name(value)
     set_server_setting(
         key=SERVER_NAME_SETTING,
         value=normalized,
@@ -261,7 +280,7 @@ def get_server_description() -> str:
 
 
 def set_server_description(value: str) -> None:
-    normalized = _normalized_server_description(value)
+    normalized = normalize_server_description(value)
     set_server_setting(
         key=SERVER_DESCRIPTION_SETTING,
         value=normalized,
@@ -269,7 +288,7 @@ def set_server_description(value: str) -> None:
     )
 
 
-def _normalized_server_description(value: str) -> str:
+def normalize_server_description(value: str) -> str:
     normalized = sanitize_limited_html(value).strip()
     if len(normalized) > SERVER_DESCRIPTION_MAX_LEN:
         raise ValueError(
@@ -288,7 +307,7 @@ def get_server_banner_message() -> str:
 
 
 def set_server_banner_message(value: str) -> None:
-    normalized = _normalized_server_banner_message(value)
+    normalized = normalize_server_banner_message(value)
     set_server_setting(
         key=SERVER_BANNER_MESSAGE_SETTING,
         value=normalized,
@@ -296,7 +315,7 @@ def set_server_banner_message(value: str) -> None:
     )
 
 
-def _normalized_server_banner_message(value: str) -> str:
+def normalize_server_banner_message(value: str) -> str:
     normalized = sanitize_limited_html(value).strip()
     if len(normalized) > SERVER_BANNER_MESSAGE_MAX_LEN:
         raise ValueError(
@@ -309,10 +328,10 @@ def set_server_identity(*, name: str, description: str, banner_message: str) -> 
     values: dict[str, str] = {}
     errors: dict[str, list[str]] = {}
     normalizers = {
-        SERVER_NAME_SETTING: (_normalized_server_name, name),
-        SERVER_DESCRIPTION_SETTING: (_normalized_server_description, description),
+        SERVER_NAME_SETTING: (normalize_server_name, name),
+        SERVER_DESCRIPTION_SETTING: (normalize_server_description, description),
         SERVER_BANNER_MESSAGE_SETTING: (
-            _normalized_server_banner_message,
+            normalize_server_banner_message,
             banner_message,
         ),
     }

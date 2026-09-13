@@ -9,14 +9,15 @@ from django.core.exceptions import ValidationError
 from django.db import IntegrityError, OperationalError, connection, transaction
 
 from core.models import ServerSetting
+from core.server_configuration import (
+    ServerConfigurationPatchError,
+    update_owner_server_configuration,
+)
 from core.server_settings import (
     clear_server_settings_cache,
     set_advanced_library_groups_enabled,
-    set_server_description,
-    set_server_name,
 )
 from library.groups.memberships import ensure_user_public_membership
-from library.groups.public_services import configure_public_group
 
 from .models import UserProfile
 from .profiles import get_or_create_profile
@@ -124,11 +125,13 @@ def _create_first_owner_once(
     user.full_clean()
 
     try:
-        set_server_name(server_name)
-        set_server_description(server_description)
-        configure_public_group(
-            name=public_group_name,
-            description=public_group_description,
+        update_owner_server_configuration(
+            patch={
+                "server_name": server_name,
+                "server_description": server_description,
+                "public_group_name": public_group_name,
+                "public_group_description": public_group_description,
+            }
         )
         set_advanced_library_groups_enabled(advanced_library_groups_enabled)
         user.save()
@@ -136,6 +139,8 @@ def _create_first_owner_once(
         raise ValidationError(
             {"username": "A user with that username already exists."}
         ) from exc
+    except ServerConfigurationPatchError as exc:
+        raise ValidationError(exc.errors) from exc
 
     profile = get_or_create_profile(user=user)
     profile.role = UserProfile.ROLE_MANAGER
