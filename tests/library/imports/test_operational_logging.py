@@ -1,6 +1,8 @@
 from io import BytesIO
 from unittest.mock import patch
 
+from django.db import IntegrityError
+
 from library.imports.archives import ZipImportCandidate, ZipImportPlan, plan_zip_import
 from library.imports.batches import import_zip_file
 from library.imports.epub import import_epub_file
@@ -218,6 +220,75 @@ class ImportOperationalLoggingTests(
         self.assertIn("retryable=false", logs.output[0])
         self.assertIn("exception=RuntimeError", logs.output[0])
         self.assertNotIn("C:\\private", logs.output[0])
+
+    def test_persistence_failure_logs_actual_storage_cleanup_disposition(self):
+        original_save = Book.save
+
+        def fail_attachment_save(instance, *args, **kwargs):
+            if kwargs.get("update_fields") == ["book_file", "updated_at"]:
+                raise RuntimeError("attachment failed")
+            return original_save(instance, *args, **kwargs)
+
+        with (
+            patch.object(Book, "save", new=fail_attachment_save),
+            self.assertLogs("library.imports.epub", level="ERROR") as logs,
+        ):
+            result = import_epub_file(
+                BytesIO(minimal_epub_bytes(metadata_xml="""
+                    <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+                      <dc:title>Attachment Rollback Logging</dc:title>
+                    </metadata>
+                """)),
+                source_filename=r"C:\private\secret.epub",
+                source_label="safe.epub",
+                source_method="tree",
+            )
+
+        self.assertEqual(result.status, "failed")
+        self.assertEqual(len(logs.output), 1)
+        self.assertIn("source_method=tree", logs.output[0])
+        self.assertIn("source=safe.epub", logs.output[0])
+        self.assertIn("category=unexpected", logs.output[0])
+        self.assertIn("transaction=rolled_back", logs.output[0])
+        self.assertIn("storage_cleanup=complete", logs.output[0])
+        self.assertIn("retryable=false", logs.output[0])
+        self.assertIn("exception=RuntimeError", logs.output[0])
+        self.assertNotIn("C:\\private", logs.output[0])
+
+    def test_cleanup_failure_is_logged_without_masking_persistence_failure(self):
+        storage = Book._meta.get_field("book_file").storage
+        data = minimal_epub_bytes(metadata_xml="""
+            <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+              <dc:title>Cleanup Failure Logging</dc:title>
+            </metadata>
+        """)
+
+        with (
+            patch(
+                "library.imports.services._persist_authors",
+                side_effect=IntegrityError("relationship failed"),
+            ),
+            patch.object(
+                storage,
+                "delete",
+                side_effect=OSError(r"C:\private\stored.epub"),
+            ),
+            self.assertLogs("library.imports", level="WARNING") as logs,
+        ):
+            result = import_epub_file(
+                BytesIO(data),
+                source_filename="source.epub",
+                source_label="safe.epub",
+                source_method="tree",
+            )
+
+        message = " ".join(logs.output)
+        self.assertEqual(result.status, "failed")
+        self.assertIn("action=new_epub_rollback_cleanup", message)
+        self.assertIn("transaction=rolled_back", message)
+        self.assertIn("storage_cleanup=failed", message)
+        self.assertIn("exception=IntegrityError", message)
+        self.assertNotIn("C:\\private", message)
 
     def test_unexpected_zip_batch_failure_emits_one_safe_error(self):
         candidate = ZipImportCandidate(

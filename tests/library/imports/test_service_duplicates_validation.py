@@ -10,7 +10,10 @@ from django.test import TestCase
 
 from library.catalog.tag_services import resolve_catalog_tag
 from library.imports.dto import ImportAuthor, ImportTag
-from library.imports.services import IMPORT_STATUS_DUPLICATE, persist_imported_book
+from library.imports.services import (
+    IMPORT_STATUS_DUPLICATE,
+    persist_imported_book,
+)
 from library.models import Author, Book, BookCatalogTag
 from tests.library.imports.helpers import ImportPersistenceFixtureMixin, sample_metadata
 from tests.testenv.filesystem import IsolatedMediaRootMixin
@@ -70,6 +73,33 @@ class ImportPersistenceDuplicateValidationTests(
         self.assertFalse(Book.objects.filter(checksum="rollback123").exists())
         self.assertFalse(Author.objects.filter(name__in=["One", "Two"]).exists())
 
+    def test_attachment_save_failure_removes_acquired_epub(self):
+        checksum = "b" * 64
+        expected_name = f"books/bb/bb/{checksum}.epub"
+        original_save = Book.save
+
+        class AttachmentSaveFailure(RuntimeError):
+            pass
+
+        def fail_attachment_save(instance, *args, **kwargs):
+            if kwargs.get("update_fields") == ["book_file", "updated_at"]:
+                raise AttachmentSaveFailure
+            return original_save(instance, *args, **kwargs)
+
+        with (
+            patch.object(Book, "save", new=fail_attachment_save),
+            self.assertRaises(AttachmentSaveFailure),
+        ):
+            persist_imported_book(
+                metadata=sample_metadata(),
+                checksum=checksum,
+                book_file=ContentFile(b"epub bytes", name="upload.epub"),
+            )
+
+        storage = Book._meta.get_field("book_file").storage
+        self.assertFalse(Book.objects.filter(checksum=checksum).exists())
+        self.assertFalse(storage.exists(expected_name))
+
     def test_late_failure_removes_new_epub_as_database_state_rolls_back(self):
         checksum = "c" * 64
 
@@ -116,6 +146,51 @@ class ImportPersistenceDuplicateValidationTests(
         with storage.open(expected_name, "rb") as existing:
             self.assertEqual(existing.read(), b"existing bytes")
 
+    def test_late_failure_preserves_preexisting_unreferenced_storage_object(self):
+        checksum = "f" * 64
+        expected_name = f"books/ff/ff/{checksum}.epub"
+        storage = Book._meta.get_field("book_file").storage
+        storage.save(expected_name, ContentFile(b"existing bytes"))
+
+        with self.assertRaises(IntegrityError):
+            persist_imported_book(
+                metadata=sample_metadata(
+                    authors=[
+                        ImportAuthor(name="One", sort_name="One", position=0),
+                        ImportAuthor(name="Two", sort_name="Two", position=0),
+                    ]
+                ),
+                checksum=checksum,
+                book_file=ContentFile(b"replacement bytes", name="upload.epub"),
+            )
+
+        self.assertFalse(Book.objects.filter(checksum=checksum).exists())
+        self.assertTrue(storage.exists(expected_name))
+        with storage.open(expected_name, "rb") as existing:
+            self.assertEqual(existing.read(), b"existing bytes")
+
+    def test_new_epub_is_preserved_when_an_existing_book_references_its_name(self):
+        checksum = "1" * 64
+        expected_name = f"books/11/11/{checksum}.epub"
+        referenced = Book.objects.create(title="Referenced", checksum="referenced")
+        referenced.book_file.name = expected_name
+        referenced.save(update_fields=["book_file", "updated_at"])
+        storage = Book._meta.get_field("book_file").storage
+
+        with self.assertRaises(IntegrityError):
+            persist_imported_book(
+                metadata=sample_metadata(
+                    authors=[
+                        ImportAuthor(name="One", sort_name="One", position=0),
+                        ImportAuthor(name="Two", sort_name="Two", position=0),
+                    ]
+                ),
+                checksum=checksum,
+                book_file=ContentFile(b"epub bytes", name="upload.epub"),
+            )
+
+        self.assertTrue(storage.exists(expected_name))
+
     def test_cleanup_failure_does_not_mask_original_import_failure(self):
         checksum = "e" * 64
         storage = Book._meta.get_field("book_file").storage
@@ -140,8 +215,10 @@ class ImportPersistenceDuplicateValidationTests(
             )
 
         self.assertNotIn("private/storage/path", " ".join(logs.output))
-        self.assertTrue(
-            any("storage_cleanup=failed" in message for message in logs.output)
+        self.assertFalse(Book.objects.filter(checksum=checksum).exists())
+        self.assertIn(
+            "action=new_epub_rollback_cleanup",
+            " ".join(logs.output),
         )
         # Clean the deliberately orphaned test fixture without exercising product code.
         original_delete(f"books/ee/ee/{checksum}.epub")

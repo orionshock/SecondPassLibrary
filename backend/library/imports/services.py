@@ -35,6 +35,7 @@ IMPORT_STATUS_IMPORTED = "imported"
 IMPORT_STATUS_DUPLICATE = "duplicate"
 IMPORT_STATUS_CONFLICT = "conflict"
 logger = logging.getLogger(__name__)
+ROLLBACK_CLEANUP_DISPOSITION_ATTRIBUTE = "_import_rollback_cleanup_disposition"
 
 
 @dataclass(frozen=True)
@@ -124,7 +125,8 @@ def persist_imported_book(
                 file_size=file_size,
             )
             if book_file is not None:
-                stored_file = _attach_book_file(book=book, book_file=book_file)
+                stored_file = _acquire_book_file(book=book, book_file=book_file)
+                _attach_book_file(book=book, stored_file=stored_file)
             _persist_authors(
                 book=book,
                 metadata=metadata,
@@ -140,18 +142,20 @@ def persist_imported_book(
             add_book_to_group(book=book, group=get_public_group(), actor=actor)
     except Exception as exc:
         cleanup_status = "not_needed"
-        if stored_file is not None and stored_file.created:
+        if stored_file is not None and not stored_file.created:
+            cleanup_status = "preserved_reused"
+        elif stored_file is not None:
             # Cleanup is best effort so its failure cannot replace the persistence
             # error from the rolled-back import.
             cleanup_status = _cleanup_rolled_back_book_file(
                 stored_file=stored_file, book=book, actor=actor
             )
-        logger.error(
-            "Book import persistence failed: exception=%s transaction=rolled_back "
-            "storage_cleanup=%s retryable=false",
-            type(exc).__name__,
-            cleanup_status,
-        )
+        # Diagnostics must not become a new failure path. Some third-party
+        # exception types may reject arbitrary attributes.
+        try:
+            setattr(exc, ROLLBACK_CLEANUP_DISPOSITION_ATTRIBUTE, cleanup_status)
+        except Exception:
+            pass
         raise
 
     return ImportPersistenceResult(status=IMPORT_STATUS_IMPORTED, book=book)
@@ -167,7 +171,7 @@ def _ambiguous_entity_message(exc: AmbiguousCatalogEntityName) -> str:
     )
 
 
-def _attach_book_file(*, book: Book, book_file) -> _StoredBookFile:
+def _acquire_book_file(*, book: Book, book_file) -> _StoredBookFile:
     filename = f"{book.checksum}.{book.file_format}"
     field = Book._meta.get_field("book_file")
     storage = field.storage
@@ -175,30 +179,38 @@ def _attach_book_file(*, book: Book, book_file) -> _StoredBookFile:
     created = not storage.exists(target_name)
     stored_name = storage.save(target_name, book_file) if created else target_name
     stored_name = stored_name.replace("\\", "/")
-    book.book_file.name = stored_name
-    book.save(update_fields=["book_file", "updated_at"])
     return _StoredBookFile(storage=storage, name=stored_name, created=created)
+
+
+def _attach_book_file(*, book: Book, stored_file: _StoredBookFile) -> None:
+    book.book_file.name = stored_file.name
+    book.save(update_fields=["book_file", "updated_at"])
 
 
 def _cleanup_rolled_back_book_file(
     *, stored_file: _StoredBookFile, book: Book | None, actor=None
 ) -> str:
-    if Book.objects.filter(book_file=stored_file.name).exists():
-        return "preserved_reference"
     try:
+        if Book.objects.filter(book_file=stored_file.name).exists():
+            return "preserved_reference"
         if stored_file.storage.exists(stored_file.name):
             stored_file.storage.delete(stored_file.name)
         return "complete"
     except Exception as exc:
-        log_storage_issue(
-            logger,
-            action="new_epub_rollback_cleanup",
-            book_id=getattr(book, "pk", None),
-            actor=actor,
-            reason="delete-failed",
-            exc=exc,
-            storage_name=stored_file.name,
-        )
+        try:
+            log_storage_issue(
+                logger,
+                action="new_epub_rollback_cleanup",
+                book_id=getattr(book, "pk", None),
+                actor=actor,
+                reason="delete-failed",
+                exc=exc,
+                storage_name=stored_file.name,
+            )
+        except Exception:
+            # Rollback diagnostics are subordinate to the original persistence
+            # failure and must never replace it.
+            pass
         return "failed"
 
 

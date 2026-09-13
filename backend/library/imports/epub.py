@@ -25,7 +25,10 @@ from library.imports.results import (
     IMPORT_STATUS_IMPORTED,
     ImportItemResult,
 )
-from library.imports.services import persist_imported_book
+from library.imports.services import (
+    ROLLBACK_CLEANUP_DISPOSITION_ATTRIBUTE,
+    persist_imported_book,
+)
 
 
 EPUB_IMPORT_ERROR_MESSAGE = INVALID_EPUB_MESSAGE
@@ -87,13 +90,24 @@ def import_epub_file(
         )
     except Exception as exc:
         error_category = "io_error" if isinstance(exc, OSError) else "unexpected"
+        persistence_rolled_back = hasattr(
+            exc,
+            ROLLBACK_CLEANUP_DISPOSITION_ATTRIBUTE,
+        )
+        cleanup_disposition = getattr(
+            exc,
+            ROLLBACK_CLEANUP_DISPOSITION_ATTRIBUTE,
+            "handled_if_needed",
+        )
         logger.error(
             "Unexpected EPUB import failure: source_method=%s source=%s "
-            "category=%s transaction=not_started_or_rolled_back "
-            "storage_cleanup=handled_if_needed retryable=%s exception=%s",
+            "category=%s transaction=%s "
+            "storage_cleanup=%s retryable=%s exception=%s",
             source_method,
             _bounded_log_source(source_label),
             error_category,
+            "rolled_back" if persistence_rolled_back else "not_started_or_rolled_back",
+            cleanup_disposition,
             str(isinstance(exc, OSError)).lower(),
             type(exc).__name__,
         )
