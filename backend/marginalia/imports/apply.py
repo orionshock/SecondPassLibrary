@@ -5,8 +5,6 @@ import json
 import logging
 import time
 
-from copy import deepcopy
-from dataclasses import dataclass
 from functools import partial
 
 from django.db import IntegrityError, OperationalError, transaction
@@ -18,7 +16,6 @@ from library.queries import visible_books_for_user
 from marginalia.archives import (
     ArchiveBookmark,
     ArchiveHighlight,
-    ArchiveReadingSession,
     ArchiveValidationError,
     MalformedArchiveError,
     UnsupportedArchiveProfileError,
@@ -26,6 +23,13 @@ from marginalia.archives import (
 )
 from marginalia.models import Annotation, ImportStage, ReadingSession
 
+from .plan import (
+    PlanSelection,
+    ResolvedSelection,
+    StagedImportPlan,
+    StagedImportPlanError,
+    StagedImportSelectionError,
+)
 from .staging import (
     ImportStageUnavailableError,
     claim_import_stage,
@@ -35,8 +39,6 @@ from .staging import (
 
 
 logger = logging.getLogger(__name__)
-UNTITLED_BOOK = "Untitled Book"
-
 # Preview validation, replay checks, and persistence stay together because they
 # form one staged-import transaction boundary.
 
@@ -55,18 +57,6 @@ class ImportReplayConflictError(ImportApplyError):
 
 class StagedArchiveInvalidError(ImportApplyError):
     pass
-
-
-@dataclass(frozen=True, slots=True)
-class _SelectedSession:
-    candidate_id: str
-    book_candidate_id: str
-    book_id: str
-    staged_book_title: object
-    source: ArchiveReadingSession
-    name: str
-    notes: str
-    possible_duplicate: bool
 
 
 def apply_import(*, user, import_token: str, reading_sessions: list[dict]) -> dict:
@@ -92,12 +82,16 @@ def _apply_import_once(
     *, user, import_token: str, reading_sessions: list[dict]
 ) -> dict:
     stage = claim_import_stage(user=user, token=import_token)
-    preview_candidates = _preview_candidates(stage.preview)
-    selections = _normalize_selections(
-        reading_sessions,
-        preview_candidates,
-        allow_applied_inaccessible=stage.state == ImportStage.STATE_APPLIED,
-    )
+    try:
+        plan = StagedImportPlan.decode(stage.preview)
+        selections = plan.normalize_selections(
+            reading_sessions,
+            allow_applied_inaccessible=stage.state == ImportStage.STATE_APPLIED,
+        )
+    except StagedImportSelectionError as exc:
+        raise ImportCandidateError from exc
+    except StagedImportPlanError as exc:
+        raise StagedArchiveInvalidError from exc
     fingerprint = _request_fingerprint(selections)
 
     if stage.state == ImportStage.STATE_APPLIED:
@@ -118,11 +112,14 @@ def _apply_import_once(
     ) as exc:
         raise StagedArchiveInvalidError from exc
 
-    selected = _resolve_selected_sessions(
-        archive=archive,
-        selections=selections,
-        preview_candidates=preview_candidates,
-    )
+    try:
+        selected = plan.resolve_selections(
+            archive=archive,
+            selections=selections,
+            include_empty_sessions=stage.include_empty_sessions,
+        )
+    except StagedImportPlanError as exc:
+        raise StagedArchiveInvalidError from exc
 
     _validate_local_books(selected)
     accessible, inaccessible = _partition_current_book_access(
@@ -134,18 +131,20 @@ def _apply_import_once(
     except (IntegrityError, ValueError) as exc:
         raise StagedArchiveInvalidError from exc
 
-    updated_preview = _preview_with_inaccessible_candidates(
-        preview=stage.preview,
-        inaccessible=inaccessible,
-    )
+    try:
+        updated_plan = plan.with_access_lost(
+            {item.candidate_id for item in inaccessible}
+        )
+    except StagedImportPlanError as exc:
+        raise StagedArchiveInvalidError from exc
     result = _result(
         imported,
-        preview=updated_preview,
+        plan=updated_plan,
     )
     applied_at = timezone.now()
     stage.state = ImportStage.STATE_APPLIED
     stage.request_fingerprint = fingerprint
-    stage.preview = updated_preview
+    stage.preview = updated_plan.encode()
     stage.result = result
     stage.applied_at = applied_at
     stage.save(
@@ -177,58 +176,16 @@ def _apply_import_once(
     return result
 
 
-def _preview_candidates(preview: dict) -> dict[str, dict]:
-    candidates = {}
-    try:
-        for book in preview["books"]:
-            match = book["match"]
-            for session in book["reading_sessions"]:
-                candidates[session["candidate_id"]] = {
-                    **session,
-                    "book_candidate_id": book["candidate_id"],
-                    "book_id": match.get("book_id"),
-                    "staged_book_title": book.get("title"),
-                    "matched": match["status"] == "matched",
-                }
-    except (KeyError, TypeError) as exc:
-        raise StagedArchiveInvalidError from exc
-    return candidates
-
-
-def _normalize_selections(
-    reading_sessions: list[dict],
-    preview_candidates: dict[str, dict],
-    *,
-    allow_applied_inaccessible: bool,
-) -> tuple[dict, ...]:
-    normalized = []
-    for requested in reading_sessions:
-        candidate = preview_candidates.get(requested["candidate_id"])
-        if (
-            candidate is None
-            or not candidate["matched"]
-            or (
-                not candidate["will_import"]
-                and not (
-                    allow_applied_inaccessible
-                    and candidate.get("unmatched_reason") == "book_inaccessible"
-                )
-            )
-        ):
-            raise ImportCandidateError
-        normalized.append(
-            {
-                "candidate_id": requested["candidate_id"],
-                "name": requested.get("name", candidate["name"]),
-                "notes": requested.get("notes", candidate["notes"]),
-            }
-        )
-    return tuple(sorted(normalized, key=lambda item: item["candidate_id"]))
-
-
-def _request_fingerprint(selections: tuple[dict, ...]) -> str:
+def _request_fingerprint(selections: tuple[PlanSelection, ...]) -> str:
     normalized = json.dumps(
-        selections,
+        [
+            {
+                "candidate_id": selection.candidate_id,
+                "name": selection.name,
+                "notes": selection.notes,
+            }
+            for selection in selections
+        ],
         ensure_ascii=False,
         allow_nan=False,
         sort_keys=True,
@@ -237,44 +194,15 @@ def _request_fingerprint(selections: tuple[dict, ...]) -> str:
     return hashlib.sha256(normalized).hexdigest()
 
 
-def _resolve_selected_sessions(
-    *, archive, selections: tuple[dict, ...], preview_candidates: dict[str, dict]
-) -> tuple[_SelectedSession, ...]:
-    source_sessions = {
-        session.source_reading_session_id: session
-        for book in archive.books
-        for session in book.reading_sessions
-    }
-    selected = []
-    for selection in selections:
-        candidate = preview_candidates[selection["candidate_id"]]
-        source = source_sessions.get(candidate["source_reading_session_id"])
-        if source is None or not candidate["book_id"]:
-            raise StagedArchiveInvalidError
-        selected.append(
-            _SelectedSession(
-                candidate_id=selection["candidate_id"],
-                book_candidate_id=candidate["book_candidate_id"],
-                book_id=candidate["book_id"],
-                staged_book_title=candidate["staged_book_title"],
-                source=source,
-                name=selection["name"],
-                notes=selection["notes"],
-                possible_duplicate=bool(candidate.get("possible_duplicate")),
-            )
-        )
-    return tuple(selected)
-
-
-def _validate_local_books(selected: tuple[_SelectedSession, ...]) -> None:
+def _validate_local_books(selected: tuple[ResolvedSelection, ...]) -> None:
     book_ids = {item.book_id for item in selected}
     if Book.objects.filter(pk__in=book_ids).count() != len(book_ids):
         raise StagedArchiveInvalidError
 
 
 def _create_sessions(
-    *, user, selected: tuple[_SelectedSession, ...]
-) -> list[tuple[_SelectedSession, ReadingSession]]:
+    *, user, selected: tuple[ResolvedSelection, ...]
+) -> list[tuple[ResolvedSelection, ReadingSession]]:
     pairs = []
     for item in selected:
         source = item.source
@@ -317,8 +245,8 @@ def _create_sessions(
 
 
 def _partition_current_book_access(
-    *, user, selected: tuple[_SelectedSession, ...]
-) -> tuple[tuple[_SelectedSession, ...], tuple[_SelectedSession, ...]]:
+    *, user, selected: tuple[ResolvedSelection, ...]
+) -> tuple[tuple[ResolvedSelection, ...], tuple[ResolvedSelection, ...]]:
     """Recheck uncached Library authority at the import mutation boundary."""
     book_ids = {item.book_id for item in selected}
     visible_ids = {
@@ -331,39 +259,6 @@ def _partition_current_book_access(
         tuple(item for item in selected if item.book_id in visible_ids),
         tuple(item for item in selected if item.book_id not in visible_ids),
     )
-
-
-def _normalized_staged_book_title(value: object) -> str:
-    if not isinstance(value, str):
-        return UNTITLED_BOOK
-    normalized = " ".join(value.split())
-    if not normalized:
-        return UNTITLED_BOOK
-    return normalized
-
-
-def _preview_with_inaccessible_candidates(
-    *, preview: dict, inaccessible: tuple[_SelectedSession, ...]
-) -> dict:
-    updated = deepcopy(preview)
-    inaccessible_ids = {item.candidate_id for item in inaccessible}
-    if not inaccessible_ids:
-        return updated
-
-    affected_books = set()
-    for book in updated["books"]:
-        for candidate in book["reading_sessions"]:
-            if candidate["candidate_id"] not in inaccessible_ids:
-                continue
-            candidate["will_import"] = False
-            candidate["unmatched_reason"] = "book_inaccessible"
-            affected_books.add(book["candidate_id"])
-    if len(inaccessible_ids) != len(inaccessible):
-        raise StagedArchiveInvalidError
-    updated["unmatched_book_count"] += len(affected_books)
-    updated["unmatched_reading_session_count"] += len(inaccessible)
-    updated["unmatched_downloadable_reading_session_count"] += len(inaccessible)
-    return updated
 
 
 def _log_partial_apply_summary(
@@ -386,7 +281,7 @@ def _log_partial_apply_summary(
 
 
 def _create_annotations(
-    pairs: list[tuple[_SelectedSession, ReadingSession]],
+    pairs: list[tuple[ResolvedSelection, ReadingSession]],
 ) -> None:
     annotations = []
     timestamp_pairs = []
@@ -423,9 +318,9 @@ def _create_annotations(
 
 
 def _result(
-    imported: list[tuple[_SelectedSession, ReadingSession]],
+    imported: list[tuple[ResolvedSelection, ReadingSession]],
     *,
-    preview: dict,
+    plan: StagedImportPlan,
 ) -> dict:
     rows = [
         {
@@ -446,36 +341,15 @@ def _result(
         for item, _session in imported
         if item.possible_duplicate
     ]
-    unmatched_books = []
-    for book in preview["books"]:
-        match = book["match"]
-        reasons = {
-            candidate.get("unmatched_reason")
-            for candidate in book["reading_sessions"]
-            if candidate.get("unmatched_reason")
-        }
-        reason = (
-            match.get("reason")
-            if match["status"] == "unmatched"
-            else ("book_inaccessible" if "book_inaccessible" in reasons else None)
-        )
-        if reason is not None:
-            unmatched_books.append(
-                {
-                    "candidate_id": book["candidate_id"],
-                    "title": _normalized_staged_book_title(book.get("title")),
-                    "reason": reason,
-                }
-            )
-    unmatched_count = preview["unmatched_reading_session_count"]
-    downloadable_count = preview["unmatched_downloadable_reading_session_count"]
+    unmatched_count = plan.unmatched_session_count
+    downloadable_count = plan.unmatched_session_count
     return {
         "imported_reading_session_count": len(rows),
         "imported_annotation_count": sum(row["annotation_count"] for row in rows),
         "unmatched_reading_session_count": unmatched_count,
         "unmatched_downloadable_reading_session_count": downloadable_count,
         "unmatched_download_available": downloadable_count > 0,
-        "unmatched_books": unmatched_books,
+        "unmatched_books": plan.unmatched_summaries(),
         "reading_sessions": rows,
         "warnings": warnings,
     }

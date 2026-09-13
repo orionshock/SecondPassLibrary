@@ -24,6 +24,7 @@ from library.models import (
 from library.queries import visible_books_for_user
 from marginalia.models import Annotation, ImportStage, ReadingSession
 from marginalia.imports.apply import apply_import
+from marginalia.imports.plan import BOOK_INACCESSIBLE, StagedImportPlan
 from marginalia.imports.services import preview_import
 from marginalia.imports.staging import stage_file_path
 from tests.marginalia.import_helpers import (
@@ -338,10 +339,9 @@ class MarginaliaImportApplyAPITests(IsolatedUserdataMixin, APITestCase):
         self.assertFalse(detail.data["context"]["book"]["can_open"])
         stage.refresh_from_db()
         self.assertEqual(stage.state, ImportStage.STATE_APPLIED)
-        self.assertEqual(
-            stage.preview["books"][0]["reading_sessions"][0]["unmatched_reason"],
-            "book_inaccessible",
-        )
+        staged_plan = StagedImportPlan.decode(stage.preview)
+        candidate = staged_plan.encode()["books"][0]["reading_sessions"][0]
+        self.assertEqual(candidate["unmatched_reason"], BOOK_INACCESSIBLE)
         self.assertTrue(path.exists())
         replay = self.apply(preview["import_token"], list(reversed(selections)))
         self.assertEqual(replay.data, response.data)
@@ -408,6 +408,23 @@ class MarginaliaImportApplyAPITests(IsolatedUserdataMixin, APITestCase):
         self.assertFalse(
             ImportStage.objects.exclude(state=ImportStage.STATE_READY).exists()
         )
+
+    def test_corrupt_persisted_plan_fails_through_bounded_apply_contract(self):
+        preview = self.preview(archive_payload(file_hash=f"sha256:{'a' * 64}"))
+        stage = ImportStage.objects.get()
+        stage.preview["summary"]["reading_session_count"] = 99
+        stage.save(update_fields=["preview"])
+
+        response = self.apply(
+            preview["import_token"],
+            [{"candidate_id": "reading-session-000001"}],
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_409_CONFLICT)
+        self.assertEqual(response.data["error"]["code"], "INVALID_REQUEST")
+        stage.refresh_from_db()
+        self.assertEqual(stage.state, ImportStage.STATE_READY)
+        self.assertEqual(ReadingSession.objects.count(), 0)
 
     def test_replay_is_order_independent_and_works_after_stage_file_deletion(self):
         sessions = [archive_session(source_id="one"), archive_session(source_id="two")]

@@ -17,12 +17,12 @@ from marginalia.archives import (
     render_archive_json,
 )
 
+from .plan import StagedImportPlan, StagedImportPlanError
 from .staging import read_import_stage, read_staged_archive
 
 
 logger = logging.getLogger(__name__)
 ZIP_FILENAME = "secondpass-marginalia-sessions.zip"
-UNMATCHED_REASONS = {"not_found", "ambiguous_match", "book_inaccessible"}
 _FIXED_ZIP_TIME = (1980, 1, 1, 0, 0, 0)
 _RESERVED_KEYS = {
     "con",
@@ -49,22 +49,17 @@ class UnmatchedZipAssemblyError(Exception):
 def unmatched_archive_zip(*, user, import_token: str) -> bytes:
     stage = read_import_stage(user=user, token=import_token)
     try:
+        plan = StagedImportPlan.decode(stage.preview)
         archive = parse_archive(read_staged_archive(stage))
-        books = _unmatched_books(
-            preview=stage.preview,
+        books = plan.unmatched_archive_books(
             archive=archive,
             include_empty_sessions=stage.include_empty_sessions,
         )
-    except UnmatchedStageIntegrityError:
-        logger.error("Marginalia unmatched download found inconsistent staged data.")
-        raise
     except (
         ArchiveValidationError,
         MalformedArchiveError,
+        StagedImportPlanError,
         UnsupportedArchiveProfileError,
-        KeyError,
-        TypeError,
-        ValueError,
     ) as exc:
         logger.error("Marginalia unmatched download found inconsistent staged data.")
         raise UnmatchedStageIntegrityError from exc
@@ -76,76 +71,6 @@ def unmatched_archive_zip(*, user, import_token: str) -> bytes:
     except Exception as exc:
         logger.error("Marginalia unmatched ZIP assembly failed.")
         raise UnmatchedZipAssemblyError from exc
-
-
-def _unmatched_books(
-    *, preview: dict, archive: MarginaliaArchive, include_empty_sessions: bool
-) -> tuple[tuple[ArchiveBook, tuple], ...]:
-    archive_books = [
-        book
-        for book in archive.books
-        if any(
-            include_empty_sessions or session.annotations
-            for session in book.reading_sessions
-        )
-    ]
-    if len(archive_books) != len(preview["books"]):
-        raise UnmatchedStageIntegrityError
-    results = []
-    candidate_ids = set()
-    downloadable_count = 0
-    for preview_book, source_book in zip(
-        preview["books"], archive_books, strict=True
-    ):
-        match_status = preview_book["match"]["status"]
-        if match_status not in {"matched", "unmatched"}:
-            raise UnmatchedStageIntegrityError
-        if match_status == "unmatched" and preview_book["match"].get("reason") not in UNMATCHED_REASONS:
-            raise UnmatchedStageIntegrityError
-        if source_book.file_hash != preview_book["file_hash"]:
-            raise UnmatchedStageIntegrityError
-        source_sessions = {
-            session.source_reading_session_id: session
-            for session in source_book.reading_sessions
-        }
-        expected_ids = [
-            session.source_reading_session_id
-            for session in source_book.reading_sessions
-            if include_empty_sessions or session.annotations
-        ]
-        preview_ids = []
-        downloadable = []
-        for candidate in preview_book["reading_sessions"]:
-            candidate_id = candidate["candidate_id"]
-            if candidate_id in candidate_ids:
-                raise UnmatchedStageIntegrityError
-            candidate_ids.add(candidate_id)
-            source_id = candidate["source_reading_session_id"]
-            source_session = source_sessions.get(source_id)
-            candidate_reason = candidate.get("unmatched_reason")
-            if candidate_reason is not None and candidate_reason not in UNMATCHED_REASONS:
-                raise UnmatchedStageIntegrityError
-            is_unmatched = match_status == "unmatched" or candidate_reason is not None
-            if (
-                source_session is None
-                or candidate["source_status"] != source_session.status
-                or candidate["annotation_count"] != len(source_session.annotations)
-                or (not include_empty_sessions and not source_session.annotations)
-                or candidate["will_import"] != (not is_unmatched)
-            ):
-                raise UnmatchedStageIntegrityError
-            preview_ids.append(source_id)
-            if is_unmatched:
-                downloadable.append(source_session)
-        if preview_ids != expected_ids:
-            raise UnmatchedStageIntegrityError
-        if downloadable:
-            results.append((source_book, tuple(downloadable)))
-            downloadable_count += len(downloadable)
-
-    if downloadable_count != preview["unmatched_downloadable_reading_session_count"]:
-        raise UnmatchedStageIntegrityError
-    return tuple(results)
 
 
 def _render_zip(

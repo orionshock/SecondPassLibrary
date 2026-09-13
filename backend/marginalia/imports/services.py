@@ -13,6 +13,7 @@ from library.queries import visible_books_for_user
 from marginalia.archives import MarginaliaArchive, parse_archive
 from marginalia.models import ReadingSession
 
+from .plan import StagedImportPlan
 from .staging import create_import_stage
 
 
@@ -36,7 +37,7 @@ class NoImportCandidatesError(ImportPreviewError):
 def preview_import(*, user, file, include_empty_sessions: bool = False) -> dict:
     raw = _read_upload(file)
     archive = parse_archive(raw)
-    preview = _build_preview(
+    plan = _build_preview(
         user=user,
         archive=archive,
         include_empty_sessions=include_empty_sessions,
@@ -45,12 +46,12 @@ def preview_import(*, user, file, include_empty_sessions: bool = False) -> dict:
         user=user,
         raw=raw,
         include_empty_sessions=include_empty_sessions,
-        preview=preview,
+        plan=plan,
     )
     return {
         "import_token": token,
         "include_empty_sessions": stage.include_empty_sessions,
-        **preview,
+        **plan.encode(),
     }
 
 
@@ -66,14 +67,8 @@ def _read_upload(uploaded_file) -> bytes:
 
 def _build_preview(
     *, user, archive: MarginaliaArchive, include_empty_sessions: bool
-) -> dict:
-    books = []
-    session_number = 0
-    annotation_count = 0
-    matched_book_count = 0
-    unmatched_book_count = 0
-    unmatched_session_count = 0
-    warnings = []
+) -> StagedImportPlan:
+    plan = StagedImportPlan()
 
     surviving_books = [
         (
@@ -116,82 +111,39 @@ def _build_preview(
         matched_book = (
             cast(Book, match["book"]) if match["status"] == "matched" else None
         )
-        matched = matched_book is not None
-        matched_book_count += int(matched)
-        unmatched_book_count += int(not matched)
-        session_rows = []
+        book_candidate_id = plan.add_book(
+            file_hash=book.file_hash,
+            title=book.title,
+            authors=book.authors,
+            book_id=matched_book.pk if matched_book is not None else None,
+            cover_url=(book_cover_url(matched_book) if matched_book is not None else None),
+            unmatched_reason=(None if matched_book is not None else match["reason"]),
+        )
         for source_session in sessions:
-            session_number += 1
             count = len(source_session.annotations)
-            annotation_count += count
             possible_duplicate = bool(
                 matched_book is not None
                 and _duplicate_key(matched_book.pk, source_session) in duplicates
             )
-            if possible_duplicate:
-                warnings.append(
-                    {
-                        "code": "POSSIBLE_DUPLICATE_SESSION",
-                        "message": "A similar Reading Session already exists.",
-                        "candidate_id": f"reading-session-{session_number:06d}",
-                    }
-                )
-            will_import = matched
-            if not matched:
-                unmatched_session_count += 1
-            session_rows.append(
-                {
-                    "candidate_id": f"reading-session-{session_number:06d}",
-                    "source_reading_session_id": source_session.source_reading_session_id,
-                    "name": source_session.name,
-                    "notes": source_session.notes,
-                    "source_status": source_session.status,
-                    "will_import_as_status": ReadingSession.STATUS_CLOSED,
-                    "started_at": source_session.started_at,
-                    "closed_at": source_session.closed_at,
-                    "annotation_count": count,
-                    "will_import": will_import,
-                    "possible_duplicate": possible_duplicate,
-                }
+            candidate_id = plan.add_session(
+                book_candidate_id=book_candidate_id,
+                source_reading_session_id=source_session.source_reading_session_id,
+                name=source_session.name,
+                notes=source_session.notes,
+                source_status=source_session.status,
+                started_at=source_session.started_at,
+                closed_at=source_session.closed_at,
+                annotation_count=count,
+                possible_duplicate=possible_duplicate,
             )
-        books.append(
-            {
-                "candidate_id": f"book-{book_number:06d}",
-                "file_hash": book.file_hash,
-                "title": book.title,
-                "authors": list(book.authors),
-                "match": (
-                    {
-                        "status": "matched",
-                        "book_id": str(matched_book.pk),
-                        "cover_url": book_cover_url(matched_book),
-                    }
-                    if matched_book is not None
-                    else {"status": "unmatched", "reason": match["reason"]}
-                ),
-                "reading_sessions": session_rows,
-            }
-        )
+            if possible_duplicate:
+                plan.add_warning(
+                    code="POSSIBLE_DUPLICATE_SESSION",
+                    message="A similar Reading Session already exists.",
+                    candidate_id=candidate_id,
+                )
 
-    session_count = sum(len(book["reading_sessions"]) for book in books)
-    return {
-        "can_apply": any(
-            session["will_import"]
-            for book in books
-            for session in book["reading_sessions"]
-        ),
-        "summary": {
-            "book_count": len(books),
-            "reading_session_count": session_count,
-            "annotation_count": annotation_count,
-        },
-        "matched_book_count": matched_book_count,
-        "unmatched_book_count": unmatched_book_count,
-        "unmatched_reading_session_count": unmatched_session_count,
-        "unmatched_downloadable_reading_session_count": unmatched_session_count,
-        "warnings": warnings,
-        "books": books,
-    }
+    return plan
 
 
 def _book_matches(*, user, file_hashes: list[str]) -> dict[str, dict]:

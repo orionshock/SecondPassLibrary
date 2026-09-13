@@ -17,6 +17,8 @@ from django.utils import timezone
 
 from marginalia.models import ImportStage
 
+from .plan import StagedImportPlan
+
 
 IMPORT_STAGE_LIFETIME = timedelta(hours=2)
 TOKEN_PATTERN = re.compile(r"^[A-Za-z0-9_-]{32,128}$")
@@ -42,7 +44,7 @@ class CleanupResult:
 
 
 def create_import_stage(
-    *, user, raw: bytes, include_empty_sessions: bool, preview: dict
+    *, user, raw: bytes, include_empty_sessions: bool, plan: StagedImportPlan
 ):
     token = secrets.token_urlsafe(32)
     digest = _token_digest(token)
@@ -70,7 +72,7 @@ def create_import_stage(
                 expires_at=timezone.now() + IMPORT_STAGE_LIFETIME,
                 include_empty_sessions=include_empty_sessions,
                 storage_name=storage_name,
-                preview=preview,
+                preview=plan.encode(),
             )
             os.replace(temporary_path, path)
             temporary_path = None
