@@ -7,7 +7,7 @@ import sys
 from unittest.mock import patch
 
 from django.conf import settings
-from django.core.checks import Tags, run_checks
+from django.core.checks import Error, Tags, Warning, run_checks
 from django.test import SimpleTestCase
 
 from secondpass.settings import (
@@ -190,14 +190,69 @@ class DjangoSettingsContractTests(SimpleTestCase):
 
         self.assertEqual(result.returncode, 0, result.stderr)
 
-    def test_deploy_check_warns_for_wildcard_allowed_hosts_in_production(self):
+    def test_deploy_check_rejects_debug_mode(self):
+        with self.settings(DEBUG=True):
+            messages = run_checks(
+                tags=[Tags.security],
+                include_deployment_checks=True,
+            )
+
+        message = next(item for item in messages if item.id == "secondpass.E003")
+        self.assertIsInstance(message, Error)
+        self.assertTrue(message.hint)
+
+    def test_deploy_check_rejects_wildcard_allowed_hosts_in_production(self):
         with self.settings(DEBUG=False, ALLOWED_HOSTS=["*"]):
             messages = run_checks(
                 tags=[Tags.security],
                 include_deployment_checks=True,
             )
 
-        self.assertIn("secondpass.W001", {message.id for message in messages})
+        message = next(item for item in messages if item.id == "secondpass.E004")
+        self.assertIsInstance(message, Error)
+        self.assertTrue(message.hint)
+
+    def test_deploy_check_rejects_empty_placeholder_and_malformed_hosts(self):
+        cases = (
+            ([], "secondpass.E005"),
+            (["your-hostname-or-domain"], "secondpass.E006"),
+            (["https://books.example.com"], "secondpass.E007"),
+        )
+        for allowed_hosts, expected_id in cases:
+            with (
+                self.subTest(allowed_hosts=allowed_hosts),
+                self.settings(DEBUG=False, ALLOWED_HOSTS=allowed_hosts),
+            ):
+                messages = run_checks(
+                    tags=[Tags.security],
+                    include_deployment_checks=True,
+                )
+
+            message = next(item for item in messages if item.id == expected_id)
+            self.assertIsInstance(message, Error)
+            self.assertTrue(message.hint)
+
+    def test_deploy_check_allows_local_and_internal_hosts(self):
+        with self.settings(
+            DEBUG=False,
+            ALLOWED_HOSTS=["localhost", "127.0.0.1", "[::1]", "server"],
+        ):
+            messages = run_checks(
+                tags=[Tags.security],
+                include_deployment_checks=True,
+            )
+
+        ids = {message.id for message in messages}
+        self.assertTrue(
+            ids.isdisjoint(
+                {
+                    "secondpass.E004",
+                    "secondpass.E005",
+                    "secondpass.E006",
+                    "secondpass.E007",
+                }
+            )
+        )
 
     def test_deploy_check_rejects_trusted_https_proxy_without_secure_cookies(self):
         for session_secure, csrf_secure in (
@@ -242,3 +297,100 @@ class DjangoSettingsContractTests(SimpleTestCase):
             messages = run_checks(tags=[Tags.security], include_deployment_checks=True)
 
         self.assertNotIn("secondpass.E002", {message.id for message in messages})
+
+    def test_trusted_proxy_check_rejects_malformed_missing_and_trust_all_entries(self):
+        cases = (
+            (["not-an-address"], False, "secondpass.E008"),
+            ([], True, "secondpass.E009"),
+            (["0.0.0.0/0"], True, "secondpass.E010"),
+            (["::/0"], True, "secondpass.E010"),
+            (["0.0.0.0/1", "128.0.0.0/1"], True, "secondpass.E010"),
+        )
+        for trusted_proxies, trust_forwarded_for, expected_id in cases:
+            with (
+                self.subTest(
+                    trusted_proxies=trusted_proxies,
+                    trust_forwarded_for=trust_forwarded_for,
+                ),
+                self.settings(
+                    TRUSTED_PROXY_IPS=trusted_proxies,
+                    TRUST_X_FORWARDED_FOR=trust_forwarded_for,
+                ),
+            ):
+                messages = run_checks(tags=[Tags.security])
+
+            message = next(item for item in messages if item.id == expected_id)
+            self.assertIsInstance(message, Error)
+            self.assertTrue(message.hint)
+
+    def test_trusted_proxy_check_allows_exact_and_bounded_networks(self):
+        with self.settings(
+            TRUSTED_PROXY_IPS=["127.0.0.1", "10.20.0.0/16", "2001:db8::/64"],
+            TRUST_X_FORWARDED_FOR=True,
+        ):
+            messages = run_checks(tags=[Tags.security])
+
+        self.assertTrue(
+            {message.id for message in messages}.isdisjoint(
+                {"secondpass.E008", "secondpass.E009", "secondpass.E010"}
+            )
+        )
+
+    def test_trusted_proxy_check_warns_for_duplicate_networks(self):
+        with self.settings(
+            TRUSTED_PROXY_IPS=["10.20.0.1", "10.20.0.1/32"],
+            TRUST_X_FORWARDED_FOR=True,
+        ):
+            messages = run_checks(tags=[Tags.security])
+
+        message = next(item for item in messages if item.id == "secondpass.W002")
+        self.assertIsInstance(message, Warning)
+        self.assertTrue(message.hint)
+
+    def test_deploy_check_warns_for_forwarded_host_trust(self):
+        with self.settings(
+            DEBUG=False,
+            ALLOWED_HOSTS=["books.example.com"],
+            USE_X_FORWARDED_HOST=True,
+        ):
+            messages = run_checks(
+                tags=[Tags.security],
+                include_deployment_checks=True,
+            )
+
+        message = next(item for item in messages if item.id == "secondpass.W003")
+        self.assertIsInstance(message, Warning)
+        self.assertTrue(message.hint)
+
+    def test_storage_check_rejects_static_media_path_overlap(self):
+        root = ROOT / "test-storage-overlap"
+        with self.settings(MEDIA_ROOT=root, STATIC_ROOT=root / "static"):
+            messages = run_checks(tags=[Tags.security])
+
+        message = next(item for item in messages if item.id == "secondpass.E011")
+        self.assertIsInstance(message, Error)
+        self.assertTrue(message.hint)
+
+    def test_deploy_check_allows_proxy_owned_redirect_and_hsts(self):
+        with self.settings(
+            DEBUG=False,
+            ALLOWED_HOSTS=["books.example.com"],
+            SECURE_HSTS_SECONDS=0,
+            SECURE_SSL_REDIRECT=False,
+            SECURE_PROXY_SSL_HEADER=("HTTP_X_FORWARDED_PROTO", "https"),
+            SESSION_COOKIE_SECURE=True,
+            CSRF_COOKIE_SECURE=True,
+            USE_X_FORWARDED_HOST=False,
+        ):
+            messages = run_checks(
+                tags=[Tags.security],
+                include_deployment_checks=True,
+            )
+
+        self.assertFalse(
+            [
+                message
+                for message in messages
+                if message.id.startswith("secondpass.E")
+            ]
+        )

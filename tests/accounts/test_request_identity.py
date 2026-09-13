@@ -36,6 +36,18 @@ class ClientIpResolutionTests(SimpleTestCase):
 
         self.assertEqual(get_client_ip(request), "203.0.113.10")
 
+    @override_settings(
+        TRUST_X_FORWARDED_FOR=True,
+        TRUSTED_PROXY_IPS=["10.20.0.0/16"],
+    )
+    def test_trusted_forwarding_accepts_peer_in_configured_cidr(self):
+        request = self._request(
+            remote_addr="10.20.4.8",
+            forwarded_for="203.0.113.10",
+        )
+
+        self.assertEqual(get_client_ip(request), "203.0.113.10")
+
     @override_settings(TRUST_X_FORWARDED_FOR=True, TRUSTED_PROXY_IPS=[trusted_proxy])
     def test_invalid_forwarded_value_falls_back_to_remote_address(self):
         request = self._request(

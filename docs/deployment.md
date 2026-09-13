@@ -6,9 +6,10 @@ collects static assets, applies migrations at web-container startup, and runs
 one Uvicorn web process plus one Huey maintenance worker as the non-root
 `secondpass` user.
 
-Run the application on a loopback or private address behind a reverse proxy.
-Do not expose the Uvicorn port directly to the internet. The operator's proxy
-handles HTTPS, HTTP-to-HTTPS redirects, HSTS, and public access.
+Run the application behind a reverse proxy connected to the Compose network.
+Do not publish the Uvicorn port on the host or expose it directly to the
+internet. The operator's proxy handles HTTPS, HTTP-to-HTTPS redirects, HSTS,
+and public access.
 
 See [Operations](operations.md) for backups, cleanup, Admin repair, maintenance,
 and troubleshooting.
@@ -29,9 +30,10 @@ complete, mutually consistent database and userdata backup.
 
 The Compose project is `secondpasslibrary`. Its web service is `server`;
 `worker` is its separate background-maintenance consumer. Both mount the named volume
-`secondpass_userdata` at `/app/userdata`. Only the web service publishes
-`127.0.0.1:8000:8000`. Do not scale the service or increase its worker count
-while it uses SQLite.
+`secondpass_userdata` at `/app/userdata`. The web service exposes port `8000`
+only to containers on its Compose network; it does not publish a host port. The
+reverse proxy should connect to `http://server:8000` on that network. Do not
+scale the service or increase its worker count while it uses SQLite.
 
 The multi-stage image builds only `frontend/`, copies `backend/` into the
 runtime tree, places the React artifact at `web/product_ui/`, and runs
@@ -50,7 +52,7 @@ Before starting, replace the secret and hostname placeholders:
 
 ```text
 DJANGO_SECRET_KEY=<generated-secret>
-DJANGO_ALLOWED_HOSTS=<exact-hostnames-or-lan-ips>
+DJANGO_ALLOWED_HOSTS=<library-server-hostnames-or-ips>
 ```
 
 Keep `docker/.env` readable only by the deployment account. Apply similarly
@@ -79,6 +81,14 @@ this SQLite-first deployment.
 The container healthcheck calls `/api/v1/health/` with the first allowed host.
 Readiness requires the database, built Product UI index, and writable userdata
 directories. Startup refuses a missing/default production secret.
+
+The deploy check also refuses `DJANGO_DEBUG=1`, an empty or wildcard
+`DJANGO_ALLOWED_HOSTS`, the packaged hostname placeholder, malformed host
+entries, and overlapping static/media roots. Host entries are hostnames or IP
+addresses used to reach the Second Pass Library server, not addresses belonging
+to connecting client devices. They are not URLs: omit schemes, paths, and ports.
+Localhost, loopback addresses, private addresses, and Docker service names
+remain valid server addresses.
 
 Complete first-owner setup through a local or otherwise trusted connection
 before enabling remote proxy exposure. The setup wizard configures application
@@ -124,17 +134,21 @@ through is unsafe. Forwarded host trust is normally unnecessary, so
 
 Pairing and browser-login throttling use the direct ASGI peer by default and
 ignore `X-Forwarded-For`. If the application should distinguish client IPs,
-enable Django's interpretation and list the exact direct proxy peers:
+enable Django's interpretation and list the direct proxy peers as exact IP
+addresses or bounded CIDR networks:
 
 ```text
 DJANGO_TRUST_X_FORWARDED_FOR=1
 DJANGO_TRUSTED_PROXY_IPS=127.0.0.1,::1
 ```
 
-For a request received from an exact trusted peer, the application uses the
-first address in `X-Forwarded-For`. The proxy must replace that header rather
-than append to an untrusted client-supplied value. Do not enable this for an
-untrusted, shared, or pass-through proxy.
+For a request received from a trusted peer, the application uses the first
+address in `X-Forwarded-For`. Invalid entries, an enabled trust setting with no
+trusted peers, and trust-all networks fail the configuration check. Duplicate
+networks produce a warning. Broad but bounded networks remain an operator
+choice; prefer the narrowest range that describes the direct proxy peers. The
+proxy must replace the header rather than append to an untrusted client-supplied
+value. Do not enable this for an untrusted, shared, or pass-through proxy.
 
 The reverse proxy should also:
 
@@ -158,6 +172,9 @@ legitimately report `security.W004` (`SECURE_HSTS_SECONDS`) and `security.W008`
 checks. Second Pass Library raises a deploy-check error when forwarded HTTPS
 trust is enabled without secure session and CSRF cookies. Local direct HTTP
 remains supported because that check applies only to forwarded HTTPS trust.
+Forwarded host trust remains available for proxies that replace
+`X-Forwarded-Host`, but produces an advisory warning because the normal and
+safer deployment leaves `DJANGO_USE_X_FORWARDED_HOST=0`.
 
 A VPN such as Tailscale can provide a private route to the proxy, but it does
 not replace Second Pass Library authentication.

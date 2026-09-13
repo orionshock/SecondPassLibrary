@@ -231,8 +231,10 @@ docker compose -f docker/compose.yml logs --tail 200 server
 - **Restore mismatch:** missing EPUBs/covers after restore usually means the
   database and media came from different snapshots. Restore one consistent
   backup unit.
-- **Proxy symptoms:** `400` host failures indicate `ALLOWED_HOSTS`; CSRF
-  failures indicate the public origin or forwarded scheme; redirect loops
+- **Proxy symptoms:** `400` host failures indicate that `ALLOWED_HOSTS` does not
+  include the Second Pass Library server name or IP from the request URL; it does
+  not list connecting client addresses. CSRF failures indicate the public origin
+  or forwarded scheme; redirect loops
   indicate incorrect forwarded-protocol replacement/trust. Unexpected shared
   login/pairing throttling usually means client-IP forwarding was not configured
   according to [Deployment](deployment.md#reverse-proxy-contract).
