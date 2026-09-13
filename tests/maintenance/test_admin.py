@@ -319,6 +319,130 @@ class MaintenanceAdminTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(MaintenanceTaskRun.objects.count(), 1)
 
+    def test_confirmed_recovery_marks_running_run_interrupted_without_rerun(self):
+        run = MaintenanceTaskRun.objects.create(
+            configuration=self.configuration,
+            task_key=self.configuration.task_key,
+            trigger=MaintenanceTaskRun.Trigger.ADMIN,
+            requested_by=self.superuser,
+            status=MaintenanceTaskRun.Status.RUNNING,
+            started_at=timezone.now(),
+        )
+        self.client.force_login(self.superuser)
+        run_url = reverse(
+            "admin:maintenance_maintenancetaskrun_change",
+            args=(run.pk,),
+        )
+        recovery_url = reverse(
+            "admin:maintenance_task_run_recover_abandoned",
+            args=(run.pk,),
+        )
+
+        run_page = self.client.get(run_url)
+        confirmation = self.client.get(recovery_url)
+
+        self.assertContains(run_page, recovery_url)
+        self.assertEqual(confirmation.status_code, 200)
+        self.assertEqual(confirmation.context["run"].pk, run.pk)
+        self.assertContains(confirmation, 'name="confirm_worker_stopped"')
+
+        missing_confirmation = self.client.post(recovery_url, {})
+        self.assertEqual(missing_confirmation.status_code, 200)
+        self.assertTrue(missing_confirmation.context["confirmation_error"])
+        run.refresh_from_db()
+        self.assertEqual(run.status, MaintenanceTaskRun.Status.RUNNING)
+
+        with (
+            patch("maintenance.tasks.execute_maintenance_run") as executor,
+            self.assertLogs("maintenance.services", level="WARNING") as logs,
+            self.captureOnCommitCallbacks(execute=True),
+        ):
+            recovered = self.client.post(
+                recovery_url,
+                {"confirm_worker_stopped": "on"},
+            )
+
+        self.assertRedirects(recovered, run_url)
+        run.refresh_from_db()
+        self.assertEqual(run.status, MaintenanceTaskRun.Status.INTERRUPTED)
+        self.assertIn("previous_status=running", logs.output[0])
+        self.assertIn(str(self.superuser.pk), logs.output[0])
+        executor.assert_not_called()
+
+        with (
+            patch("maintenance.services.enqueue_run") as enqueue,
+            self.captureOnCommitCallbacks(execute=True),
+        ):
+            replacement_response = self.client.post(
+                reverse(
+                    "admin:maintenance_task_run_now",
+                    args=(self.configuration.pk,),
+                )
+            )
+
+        replacement = MaintenanceTaskRun.objects.get(
+            task_key=self.configuration.task_key,
+            status=MaintenanceTaskRun.Status.QUEUED,
+        )
+        self.assertRedirects(
+            replacement_response,
+            reverse(
+                "admin:maintenance_maintenancetaskrun_change",
+                args=(replacement.pk,),
+            ),
+        )
+        enqueue.assert_called_once_with(replacement.pk)
+
+    def test_confirmed_recovery_handles_queued_but_not_enqueued_run(self):
+        run = MaintenanceTaskRun.objects.create(
+            configuration=self.configuration,
+            task_key=self.configuration.task_key,
+            trigger=MaintenanceTaskRun.Trigger.SCHEDULED,
+        )
+        self.client.force_login(self.superuser)
+        recovery_url = reverse(
+            "admin:maintenance_task_run_recover_abandoned",
+            args=(run.pk,),
+        )
+
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                recovery_url,
+                {"confirm_worker_stopped": "on"},
+            )
+
+        self.assertEqual(response.status_code, 302)
+        run.refresh_from_db()
+        self.assertEqual(run.status, MaintenanceTaskRun.Status.INTERRUPTED)
+
+    def test_recovery_endpoint_is_superuser_only(self):
+        run = MaintenanceTaskRun.objects.create(
+            configuration=self.configuration,
+            task_key=self.configuration.task_key,
+            trigger=MaintenanceTaskRun.Trigger.SCHEDULED,
+        )
+        staff = get_user_model().objects.create_user(
+            username="maintenance-staff",
+            password="testpass",
+            is_staff=True,
+        )
+        self.client.force_login(staff)
+        recovery_url = reverse(
+            "admin:maintenance_task_run_recover_abandoned",
+            args=(run.pk,),
+        )
+
+        self.assertEqual(self.client.get(recovery_url).status_code, 404)
+        self.assertEqual(
+            self.client.post(
+                recovery_url,
+                {"confirm_worker_stopped": "on"},
+            ).status_code,
+            404,
+        )
+        run.refresh_from_db()
+        self.assertEqual(run.status, MaintenanceTaskRun.Status.QUEUED)
+
     def test_retired_key_is_visible_but_cannot_be_run(self):
         retired = MaintenanceTaskConfig.objects.create(
             task_key="arbitrary.module.callable",
@@ -401,7 +525,6 @@ class MaintenanceAdminTests(TestCase):
         confirmation = self.client.get(prune_url)
 
         self.assertContains(changelist, "90-day rolling history")
-        self.assertContains(changelist, "Queued and running runs")
         self.assertContains(changelist, "Prune to last 7 days")
         self.assertContains(changelist, "Delete completed history")
         self.assertContains(confirmation, "older than 7 days")

@@ -18,10 +18,12 @@ from .registry import get_task_definition
 from .results import result_count_label
 from .services import (
     ActiveMaintenanceRunError,
+    MaintenanceRunRecoveryError,
     UnknownMaintenanceTaskError,
     create_admin_run,
     delete_completed_run_history,
     prune_completed_runs,
+    recover_abandoned_run,
 )
 
 
@@ -296,6 +298,11 @@ class MaintenanceTaskRunAdmin(SuperuserMaintenanceAdminMixin, admin.ModelAdmin):
     def get_urls(self):
         return [
             path(
+                "<path:object_id>/recover-abandoned/",
+                self.admin_site.admin_view(self.recover_abandoned_view),
+                name="maintenance_task_run_recover_abandoned",
+            ),
+            path(
                 "prune-history/",
                 self.admin_site.admin_view(self.prune_history_view),
                 name="maintenance_task_run_prune_history",
@@ -306,6 +313,68 @@ class MaintenanceTaskRunAdmin(SuperuserMaintenanceAdminMixin, admin.ModelAdmin):
                 name="maintenance_task_run_delete_history",
             ),
         ] + super().get_urls()
+
+    def recover_abandoned_view(self, request, object_id):
+        run = self.get_object(request, object_id)
+        if run is None or not self.has_view_permission(request, run):
+            raise Http404
+        if run.status not in (
+            MaintenanceTaskRun.Status.QUEUED,
+            MaintenanceTaskRun.Status.RUNNING,
+        ):
+            self.message_user(
+                request,
+                "Only a queued or running maintenance run can be recovered.",
+                level=messages.WARNING,
+            )
+            return redirect(
+                "admin:maintenance_maintenancetaskrun_change",
+                run.pk,
+            )
+        confirmation_error = False
+        if request.method == "POST":
+            confirmed = request.POST.get("confirm_worker_stopped") == "on"
+            if confirmed:
+                try:
+                    recover_abandoned_run(
+                        run_id=run.pk,
+                        actor=request.user,
+                        ownership_confirmed=True,
+                    )
+                except MaintenanceRunRecoveryError:
+                    self.message_user(
+                        request,
+                        "This run is no longer active and was not changed.",
+                        level=messages.WARNING,
+                    )
+                else:
+                    self.message_user(
+                        request,
+                        "The run was marked interrupted. Its active slot is free; "
+                        "the task was not run again.",
+                        level=messages.SUCCESS,
+                    )
+                return redirect(
+                    "admin:maintenance_maintenancetaskrun_change",
+                    run.pk,
+                )
+            confirmation_error = True
+        definition = get_task_definition(run.task_key)
+        context = {
+            **self.admin_site.each_context(request),
+            "title": "Recover abandoned maintenance run",
+            "opts": self.model._meta,
+            "run": run,
+            "run_task_name": (
+                definition.name if definition else f"Retired task: {run.task_key}"
+            ),
+            "confirmation_error": confirmation_error,
+        }
+        return TemplateResponse(
+            request,
+            "admin/maintenance/maintenancetaskrun/recover_abandoned.html",
+            context,
+        )
 
     def prune_history_view(self, request):
         if not self.has_view_permission(request):
@@ -372,6 +441,11 @@ class MaintenanceTaskRunAdmin(SuperuserMaintenanceAdminMixin, admin.ModelAdmin):
                     ),
                     "run_source": self._run_source(run),
                     "run_duration": self._run_duration(run),
+                    "can_recover_run": run.status
+                    in (
+                        MaintenanceTaskRun.Status.QUEUED,
+                        MaintenanceTaskRun.Status.RUNNING,
+                    ),
                     "run_result_rows": [
                         (
                             result_count_label(key),

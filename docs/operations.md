@@ -134,8 +134,18 @@ name, description, and executable are fixed in code. Admin controls only
 enabled state and one bounded frequency: Manual only, Hourly, Every 6 hours,
 Every 12 hours, Daily, Weekly, or Monthly. Definitions initially synchronize as
 enabled; a superuser may still use **Run now** as an explicit override. The run page shows
-queued, running, succeeded, or failed state and a bounded result; application
+queued, running, succeeded, failed, or interrupted state and a bounded result; application
 logs remain the diagnostic record.
+
+If a process exits after a run is queued or while it is running, the active run
+may remain after the worker is gone. A superuser can open that run and choose
+**Recover abandoned run**. Recovery requires explicit confirmation that every
+Huey worker which could own the run has been stopped and the task is no longer
+executing. It marks the run interrupted and frees the task's active slot; it
+does not rerun the task or undo partial task work. Run age alone is never used
+for recovery. Because the deployment has separate web and worker processes and
+no cross-process ownership lease, verifying that the worker is gone remains an
+intentional operator responsibility.
 
 No arbitrary command, callable, argument, or schedule expression can be
 submitted. Library/Book import and development fixture commands are excluded.

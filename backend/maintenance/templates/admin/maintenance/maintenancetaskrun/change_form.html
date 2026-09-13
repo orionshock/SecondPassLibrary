@@ -23,6 +23,9 @@
 <div id="content-main" class="maintenance-run">
   <ul class="object-tools">
     <li><a href="{{ request.path }}">Refresh</a></li>
+    {% if can_recover_run %}
+    <li><a href="{% url 'admin:maintenance_task_run_recover_abandoned' original.pk %}" class="deletelink">Recover abandoned run</a></li>
+    {% endif %}
   </ul>
 
   <header class="maintenance-run__header">
@@ -63,8 +66,8 @@
   </section>
 
   <section class="module maintenance-run__section">
-    <h2>{% if original.status == 'failed' %}Failure{% else %}Results{% endif %}</h2>
-    {% if original.status == 'failed' %}
+    <h2>{% if original.status == 'failed' %}Failure{% elif original.status == 'interrupted' %}Interruption{% else %}Results{% endif %}</h2>
+    {% if original.status == 'failed' or original.status == 'interrupted' %}
       <p class="errornote">{{ original.failure_summary|default:'Task failed. Review application logs for details.' }}</p>
     {% elif run_result_rows %}
       <dl class="maintenance-run__results">

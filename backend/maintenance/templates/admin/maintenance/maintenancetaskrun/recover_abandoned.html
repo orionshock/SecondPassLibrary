@@ -1,0 +1,45 @@
+{% extends "admin/base_site.html" %}
+{% load i18n admin_urls %}
+
+{% block breadcrumbs %}
+<div class="breadcrumbs">
+  <a href="{% url 'admin:index' %}">{% translate 'Home' %}</a>
+  &rsaquo; <a href="{% url 'admin:app_list' app_label=opts.app_label %}">Maintenance</a>
+  &rsaquo; <a href="{% url opts|admin_urlname:'changelist' %}">Task Runs</a>
+  &rsaquo; <a href="{% url opts|admin_urlname:'change' run.pk %}">{{ run_task_name }}</a>
+  &rsaquo; Recover abandoned run
+</div>
+{% endblock %}
+
+{% block content %}
+<div id="content-main">
+  <form method="post">
+    {% csrf_token %}
+    <div>
+      <h1>Recover abandoned maintenance run</h1>
+      <p><strong>{{ run_task_name }}</strong> is currently {{ run.get_status_display|lower }}.</p>
+      <p>
+        Recovery marks this run as interrupted and frees the task's active slot.
+        It does not rerun the task or undo work the task may already have performed.
+      </p>
+      <p class="warning">
+        Stop every Huey worker that could own this run and verify that the task is
+        no longer executing. Elapsed time alone does not prove that a run is abandoned.
+      </p>
+      {% if confirmation_error %}
+      <p class="errornote">Confirm that the worker is stopped before recovering this run.</p>
+      {% endif %}
+      <p>
+        <label>
+          <input type="checkbox" name="confirm_worker_stopped" required>
+          I have verified that no worker is executing this run.
+        </label>
+      </p>
+      <div class="submit-row">
+        <input type="submit" value="Mark interrupted and free slot" class="deletelink">
+        <a href="{% url opts|admin_urlname:'change' run.pk %}" class="button cancel-link">Cancel</a>
+      </div>
+    </div>
+  </form>
+</div>
+{% endblock %}

@@ -6,7 +6,14 @@ from django.test import TestCase
 from maintenance.models import MaintenanceTaskConfig, MaintenanceTaskRun
 from maintenance.registry import TASK_REGISTRY
 from maintenance.results import MaintenanceOperationError, MaintenanceResult
-from maintenance.services import enqueue_run, execute_run
+from maintenance.services import (
+    ActiveMaintenanceRunError,
+    MaintenanceRunRecoveryError,
+    create_admin_run,
+    enqueue_run,
+    execute_run,
+    recover_abandoned_run,
+)
 
 
 class MaintenanceExecutionTests(TestCase):
@@ -131,6 +138,27 @@ class MaintenanceExecutionTests(TestCase):
         self.assertEqual(queued.status, MaintenanceTaskRun.Status.FAILED)
         self.assertEqual(running.status, MaintenanceTaskRun.Status.RUNNING)
         self.assertNotIn("broker unavailable", queued.failure_summary)
+        replacement = self.create_run()
+        self.assertEqual(replacement.status, MaintenanceTaskRun.Status.QUEUED)
+
+    def test_post_commit_enqueue_failure_releases_active_slot(self):
+        with (
+            patch(
+                "maintenance.tasks.execute_maintenance_run",
+                side_effect=RuntimeError("broker unavailable"),
+            ),
+            self.assertLogs("maintenance.services", level="ERROR") as logs,
+            self.captureOnCommitCallbacks(execute=True),
+        ):
+            run = create_admin_run(configuration=self.configuration, user=None)
+
+        run.refresh_from_db()
+        self.assertEqual(run.status, MaintenanceTaskRun.Status.FAILED)
+        self.assertIsNotNone(run.completed_at)
+        self.assertIn("active_slot_released=true", logs.output[0])
+        self.assertNotIn("broker unavailable", logs.output[0])
+        replacement = self.create_run()
+        self.assertEqual(replacement.status, MaintenanceTaskRun.Status.QUEUED)
 
     def test_running_run_cannot_execute_twice(self):
         run = self.create_run()
@@ -145,5 +173,68 @@ class MaintenanceExecutionTests(TestCase):
             {run.task_key: replace(definition, execute=executor)},
         ):
             execute_run(run.pk)
+
+        executor.assert_not_called()
+
+    def test_interrupted_running_run_requires_confirmed_recovery_and_frees_slot(self):
+        run = self.create_run()
+        definition = TASK_REGISTRY[run.task_key]
+        executor = Mock(side_effect=SystemExit("worker stopped"))
+
+        with patch.dict(
+            TASK_REGISTRY,
+            {run.task_key: replace(definition, execute=executor)},
+        ):
+            with self.assertRaises(SystemExit):
+                execute_run(run.pk)
+
+        run.refresh_from_db()
+        self.assertEqual(run.status, MaintenanceTaskRun.Status.RUNNING)
+        with self.assertRaises(ActiveMaintenanceRunError):
+            create_admin_run(configuration=self.configuration, user=None)
+        with self.assertRaises(MaintenanceRunRecoveryError):
+            recover_abandoned_run(
+                run_id=run.pk,
+                actor=None,
+                ownership_confirmed=False,
+            )
+        run.refresh_from_db()
+        self.assertEqual(run.status, MaintenanceTaskRun.Status.RUNNING)
+
+        with (
+            self.assertLogs("maintenance.services", level="WARNING") as logs,
+            self.captureOnCommitCallbacks(execute=True),
+        ):
+            recover_abandoned_run(
+                run_id=run.pk,
+                actor=None,
+                ownership_confirmed=True,
+            )
+
+        run.refresh_from_db()
+        self.assertEqual(run.status, MaintenanceTaskRun.Status.INTERRUPTED)
+        self.assertIsNotNone(run.completed_at)
+        self.assertIn("active_slot_released=true", logs.output[0])
+        replacement = self.create_run()
+        self.assertEqual(replacement.status, MaintenanceTaskRun.Status.QUEUED)
+        executor.assert_called_once_with()
+
+    def test_terminal_runs_are_not_executed_on_redelivery(self):
+        definition = TASK_REGISTRY[self.configuration.task_key]
+        executor = Mock()
+
+        with patch.dict(
+            TASK_REGISTRY,
+            {self.configuration.task_key: replace(definition, execute=executor)},
+        ):
+            for status in (
+                MaintenanceTaskRun.Status.SUCCEEDED,
+                MaintenanceTaskRun.Status.FAILED,
+                MaintenanceTaskRun.Status.INTERRUPTED,
+            ):
+                with self.subTest(status=status):
+                    run = self.create_run()
+                    MaintenanceTaskRun.objects.filter(pk=run.pk).update(status=status)
+                    execute_run(run.pk)
 
         executor.assert_not_called()

@@ -30,6 +30,10 @@ class ActiveMaintenanceRunError(Exception):
     pass
 
 
+class MaintenanceRunRecoveryError(Exception):
+    pass
+
+
 def synchronize_task_configurations(*args, **kwargs) -> None:
     for definition in TASK_DEFINITIONS:
         MaintenanceTaskConfig.objects.get_or_create(
@@ -67,19 +71,37 @@ def _create_run(*, configuration, trigger, requested_by=None):
 
 
 def enqueue_run(run_id) -> None:
+    run_identity = MaintenanceTaskRun.objects.filter(pk=run_id).values(
+        "task_key",
+        "status",
+    ).first()
+    if (
+        run_identity is None
+        or run_identity["status"] != MaintenanceTaskRun.Status.QUEUED
+    ):
+        return
     try:
         from .tasks import execute_maintenance_run
 
         execute_maintenance_run(run_id)
-    except Exception:
-        logger.exception("Maintenance run enqueue failed: run_id=%s", run_id)
-        MaintenanceTaskRun.objects.filter(
+    except Exception as exc:
+        released = MaintenanceTaskRun.objects.filter(
             pk=run_id,
             status=MaintenanceTaskRun.Status.QUEUED,
         ).update(
             status=MaintenanceTaskRun.Status.FAILED,
             completed_at=timezone.now(),
             failure_summary="Task could not be queued. Review application logs.",
+        )
+        logger.error(
+            "Maintenance run enqueue failed: task_key=%s run_id=%s exception=%s "
+            "previous_status=queued new_status=%s active_slot_released=%s "
+            "retry_safety=safe_to_schedule_new_run",
+            run_identity["task_key"],
+            run_id,
+            type(exc).__name__,
+            MaintenanceTaskRun.Status.FAILED if released else "unchanged",
+            str(bool(released)).lower(),
         )
 
 
@@ -176,7 +198,10 @@ def execute_run(run_id) -> None:
         return
 
     duration_ms = int((monotonic() - started_clock) * 1000)
-    MaintenanceTaskRun.objects.filter(pk=run.pk).update(
+    MaintenanceTaskRun.objects.filter(
+        pk=run.pk,
+        status=MaintenanceTaskRun.Status.RUNNING,
+    ).update(
         status=MaintenanceTaskRun.Status.SUCCEEDED,
         completed_at=timezone.now(),
         result_summary=result.summary,
@@ -211,7 +236,10 @@ def _fail_run(run, summary, *, started_clock=None):
 
 
 def _store_failed_run(run, summary):
-    MaintenanceTaskRun.objects.filter(pk=run.pk).update(
+    MaintenanceTaskRun.objects.filter(
+        pk=run.pk,
+        status=MaintenanceTaskRun.Status.RUNNING,
+    ).update(
         status=MaintenanceTaskRun.Status.FAILED,
         completed_at=timezone.now(),
         failure_summary=" ".join(str(summary).split())[:1000],
@@ -242,6 +270,7 @@ def _delete_completed_runs_before(*, cutoff, limit: int) -> int:
             status__in=(
                 MaintenanceTaskRun.Status.SUCCEEDED,
                 MaintenanceTaskRun.Status.FAILED,
+                MaintenanceTaskRun.Status.INTERRUPTED,
             ),
             completed_at__lt=cutoff,
         ).values_list("pk", flat=True)[:limit]
@@ -260,6 +289,7 @@ def delete_completed_run_history(*, limit: int = 1000) -> int:
             status__in=(
                 MaintenanceTaskRun.Status.SUCCEEDED,
                 MaintenanceTaskRun.Status.FAILED,
+                MaintenanceTaskRun.Status.INTERRUPTED,
             )
         ).values_list("pk", flat=True)[:limit]
     )
@@ -269,3 +299,38 @@ def delete_completed_run_history(*, limit: int = 1000) -> int:
         pk__in=completed_ids
     ).delete()
     return deleted
+
+
+def recover_abandoned_run(*, run_id, actor, ownership_confirmed: bool):
+    if not ownership_confirmed:
+        raise MaintenanceRunRecoveryError("Worker shutdown must be confirmed.")
+
+    completed_at = timezone.now()
+    with transaction.atomic():
+        run = MaintenanceTaskRun.objects.select_for_update().filter(pk=run_id).first()
+        if run is None or run.status not in ACTIVE_STATUSES:
+            raise MaintenanceRunRecoveryError("Only an active run can be recovered.")
+        previous_status = run.status
+        run.status = MaintenanceTaskRun.Status.INTERRUPTED
+        run.completed_at = completed_at
+        run.failure_summary = (
+            "Run was marked interrupted after an operator confirmed that no worker "
+            "was still executing it. The task was not run again."
+        )
+        run.save(update_fields=("status", "completed_at", "failure_summary"))
+        task_key = run.task_key
+        run_pk = run.pk
+        actor_id = getattr(actor, "pk", None)
+        transaction.on_commit(
+            lambda: logger.warning(
+                "Maintenance run recovered: task_key=%s run_id=%s "
+                "previous_status=%s new_status=interrupted actor_id=%s "
+                "reason=operator_confirmed_worker_gone "
+                "retry_safety=inspect_task_before_new_run active_slot_released=true",
+                task_key,
+                run_pk,
+                previous_status,
+                actor_id or "none",
+            )
+        )
+    return run

@@ -105,6 +105,7 @@ class MaintenanceTaskRun(models.Model):
         RUNNING = "running", "Running"
         SUCCEEDED = "succeeded", "Succeeded"
         FAILED = "failed", "Failed"
+        INTERRUPTED = "interrupted", "Interrupted"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     configuration = models.ForeignKey(
