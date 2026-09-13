@@ -247,6 +247,9 @@ class ShelfViewSet(
             )
 
         if item_view == "edit":
+            # Keep editor projection assembly here unless it gains another consumer
+            # or starts owning domain rules. Policies/queries own visibility, services
+            # own mutation invariants, and DRF owns pagination/response shaping.
             if not self._request_write_allowed_for_shelf(request=request, shelf=shelf):
                 raise PermissionDenied(self._write_denied_message(request=request, items=True))
             parse_ordering_param(
@@ -255,6 +258,8 @@ class ShelfViewSet(
                 default="position",
             )
             qs = editor_shelf_items(shelf=shelf)
+            # Editor reads retain unavailable personal Shelf items as placeholders;
+            # locked mutation services separately recheck current eligibility.
             visible_ids = visible_shelf_item_ids(user=request.user, shelf=shelf)
             total_count = qs.count()
             visible_count = len(visible_ids)
