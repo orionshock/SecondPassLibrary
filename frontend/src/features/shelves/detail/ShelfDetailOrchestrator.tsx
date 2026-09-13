@@ -1,9 +1,9 @@
-import { ApiError, getShelf, listShelfItems, type Page, type ShelfItem, type ShelfSummary } from "@second-pass/spl-api";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { ApiError, getShelf, listShelfItems, type ShelfSummary } from "@second-pass/spl-api";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useParams, useSearchParams } from "react-router";
 
 import { usePageBreadcrumbs } from "../../../app/navigation/usePageBreadcrumbs";
-import { loadPageWithRecovery } from "../../../app/routing/pageRecovery";
+import { useUrlCollectionLifecycle } from "../../../app/routing/useUrlCollectionLifecycle";
 import { ErrorPanel } from "../../../components/UiPrimitives";
 import { normalizeMutationError } from "../../../shared/feedback/mutationState";
 import { ProductPageShell } from "../../../shared/layout/ProductPageShell";
@@ -22,12 +22,6 @@ import {
 } from "../shelvesQuery";
 import "../Shelves.css";
 
-interface ItemsLoad {
-  page?: Page<ShelfItem>;
-  loading: boolean;
-  error?: Error;
-}
-
 type ShelfLoad =
   | { status: "loading" }
   | { status: "ready"; shelf: ShelfSummary }
@@ -45,10 +39,17 @@ export function ShelfDetailOrchestrator() {
   );
   const canonicalQuery = shelfDetailSearchParams(queryState).toString();
   const [detailRetry, setDetailRetry] = useState(0);
-  const [itemsRetry, setItemsRetry] = useState(0);
   const [detail, setDetail] = useState<ShelfLoad>({ status: "loading" });
-  const [items, setItems] = useState<ItemsLoad>({ loading: true });
-  const recoveredPageKeys = useRef(new Set<string>());
+  const sdkQuery = shelfItemsSdkQuery(queryState);
+  const items = useUrlCollectionLifecycle({
+    scope: `shelf:${shelfId}`,
+    canonicalQuery,
+    page: queryState.page,
+    pageSize: queryState.pageSize,
+    loadPage: (page) => listShelfItems(shelfId, { ...sdkQuery, page }),
+    queryForPage: (page) => shelfDetailSearchParams(withShelfDetailChange(queryState, { page }, false)).toString(),
+    locationState: location.state,
+  });
   const shelf = detail.status === "ready" ? detail.shelf : undefined;
   const scope = shelf ? shelfScopeFromSummary(shelf) : "personal";
   const breadcrumbs = useMemo(
@@ -58,11 +59,6 @@ export function ShelfDetailOrchestrator() {
   usePageBreadcrumbs(breadcrumbs, false, {
     locationState: shelf ? validBreadcrumbStateForShelf(location.state, shelf) : location.state,
   });
-
-  useEffect(() => {
-    if (queryKey === canonicalQuery) return;
-    setSearchParameters(new URLSearchParams(canonicalQuery), { replace: true, state: location.state });
-  }, [canonicalQuery, location.state, queryKey, setSearchParameters]);
 
   useEffect(() => {
     let active = true;
@@ -77,36 +73,6 @@ export function ShelfDetailOrchestrator() {
       });
     return () => { active = false; };
   }, [detailRetry, shelfId]);
-
-  useEffect(() => {
-    if (queryKey !== canonicalQuery) return;
-    let active = true;
-    setItems((current) => ({ page: current.page, loading: true }));
-    const sdkQuery = shelfItemsSdkQuery(queryState);
-    const locationState = location.state;
-    loadPageWithRecovery({
-      requestedPage: queryState.page,
-      pageSize: queryState.pageSize,
-      recoveryKey: `${shelfId}:${canonicalQuery}`,
-      recoveredKeys: recoveredPageKeys.current,
-      fetchPage: (page) => listShelfItems(shelfId, { ...sdkQuery, page }),
-      buildRecoveredLocation: (page) => shelfDetailSearchParams(withShelfDetailChange(queryState, { page }, false)).toString(),
-      replaceLocation: (location) => {
-        if (!active) return false;
-        setSearchParameters(new URLSearchParams(location), { replace: true, state: locationState });
-        return true;
-      },
-    })
-      .then(({ page, recovered }) => {
-        if (!active) return;
-        if (recovered) return;
-        setItems({ page, loading: false });
-      })
-      .catch((error: unknown) => {
-        if (active) setItems((current) => ({ page: current.page, loading: false, error: normalizeMutationError(error) }));
-      });
-    return () => { active = false; };
-  }, [canonicalQuery, itemsRetry, queryKey, queryState.ordering, queryState.page, queryState.pageSize, shelfId]);
 
   function changeQuery(
     changes: Parameters<typeof withShelfDetailChange>[1],
@@ -143,11 +109,11 @@ export function ShelfDetailOrchestrator() {
       pageSize={queryState.pageSize}
       ordering={queryState.ordering}
       loading={items.loading}
-      error={items.error}
+      error={items.error === undefined ? undefined : normalizeMutationError(items.error)}
       onOrderingChange={(ordering) => changeQuery({ ordering })}
       onPageChange={(page) => changeQuery({ page }, false)}
       onPageSizeChange={(pageSize) => changeQuery({ pageSize })}
-      onRetry={() => setItemsRetry((value) => value + 1)}
+      onRetry={items.retry}
     /> : null}
   </ProductPageShell>;
 }

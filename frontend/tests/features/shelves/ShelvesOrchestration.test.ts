@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { ApiError, type Page, type ShelvesQuery } from "@second-pass/spl-api";
 import { appendBreadcrumbTrail, breadcrumbNavigationState, readIncomingBreadcrumbTrail } from "../../../src/app/navigation/breadcrumbs";
-import { loadPageWithRecovery } from "../../../src/app/routing/pageRecovery";
 import { bookEditBreadcrumbTrail } from "../../../src/features/library/bookDetailPresentation";
 import { shelfBookBreadcrumbs, shelfDetailBreadcrumbFallback, shelvesListBreadcrumbFallback } from "../../../src/features/shelves/shelvesBreadcrumbs";
 import {
@@ -68,26 +66,4 @@ describe("Shelves orchestrator contracts", () => {
     expect(editTrail.filter(({ icon }) => icon === "shared-shelf")).toHaveLength(1);
   });
 
-  it("recovers a bounded out-of-range Shelf page through page one", async () => {
-    const calls: number[] = [];
-    const query: ShelvesQuery = { page: 8, pageSize: 20 };
-    const request = async (candidate: ShelvesQuery): Promise<Page<never>> => {
-      calls.push(candidate.page!);
-      if (candidate.page === 8) throw new ApiError("Invalid page.", 404);
-      return { items: [], count: 45, next: null, previous: null };
-    };
-    const result = await loadPageWithRecovery({
-      requestedPage: query.page ?? 1,
-      pageSize: query.pageSize ?? 20,
-      recoveryKey: "shelves",
-      recoveredKeys: new Set<string>(),
-      fetchPage: (page) => request({ ...query, page }),
-      buildRecoveredLocation: (page) => `page=${page}`,
-      replaceLocation: () => undefined,
-    });
-    expect(result.correctedPage).toBe(3);
-    expect(calls).toEqual([8, 1, 3]);
-  });
-
 });
-

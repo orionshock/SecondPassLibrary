@@ -4,18 +4,14 @@ import {
   listGroupBooks,
   listGroupMembers,
   listShelves,
-  type CompactBook,
-  type GroupMembership,
   type LibraryGroup,
-  type Page,
-  type ShelfSummary,
 } from "@second-pass/spl-api";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useOutletContext, useParams, useSearchParams } from "react-router";
 
 import type { AppOutletContext } from "../../../app/layout/AppOrchestrator";
 import { usePageBreadcrumbs } from "../../../app/navigation/usePageBreadcrumbs";
-import { loadPageWithRecovery } from "../../../app/routing/pageRecovery";
+import { useUrlCollectionLifecycle } from "../../../app/routing/useUrlCollectionLifecycle";
 import { ErrorPanel } from "../../../components/UiPrimitives";
 import { normalizeMutationError } from "../../../shared/feedback/mutationState";
 import { ProductPageShell } from "../../../shared/layout/ProductPageShell";
@@ -43,12 +39,6 @@ import { GroupMembersPageRegion } from "./GroupMembersPageRegion";
 import { GroupShelvesPageRegion } from "./GroupShelvesPageRegion";
 import "../Groups.css";
 
-interface PageLoad<Item> {
-  page?: Page<Item>;
-  loading: boolean;
-  error?: Error;
-}
-
 type GroupLoad =
   | { status: "loading" }
   | { status: "ready"; group: LibraryGroup }
@@ -68,22 +58,46 @@ export function GroupDetailOrchestrator() {
   const canonicalQuery = groupDetailSearchParams(queryState).toString();
   const [searchDraft, setSearchDraft] = useState(queryState.q);
   const [detailRetry, setDetailRetry] = useState(0);
-  const [pageRetry, setPageRetry] = useState(0);
   const [detail, setDetail] = useState<GroupLoad>({ status: "loading" });
-  const [books, setBooks] = useState<PageLoad<CompactBook>>({ loading: true });
-  const [members, setMembers] = useState<PageLoad<GroupMembership>>({ loading: true });
-  const [shelves, setShelves] = useState<PageLoad<ShelfSummary>>({ loading: true });
-  const recoveredPageKeys = useRef(new Set<string>());
+  const recoveredQuery = (page: number) => groupDetailSearchParams(withGroupDetailChange(queryState, { page }, false)).toString();
+  const booksQuery = groupBooksSdkQuery(queryState);
+  const membersQuery = groupMembersSdkQuery(queryState);
+  const shelvesQuery = groupShelvesSdkQuery(groupId, queryState);
+  const books = useUrlCollectionLifecycle({
+    scope: `group:${groupId}:books`,
+    canonicalQuery,
+    page: queryState.page,
+    pageSize: queryState.pageSize,
+    loadPage: (page) => listGroupBooks(groupId, { ...booksQuery, page }),
+    queryForPage: recoveredQuery,
+    locationState: location.state,
+    enabled: queryState.tab === "books",
+  });
+  const members = useUrlCollectionLifecycle({
+    scope: `group:${groupId}:members`,
+    canonicalQuery,
+    page: queryState.page,
+    pageSize: queryState.pageSize,
+    loadPage: (page) => listGroupMembers(groupId, { ...membersQuery, page }),
+    queryForPage: recoveredQuery,
+    locationState: location.state,
+    enabled: queryState.tab === "members",
+  });
+  const shelves = useUrlCollectionLifecycle({
+    scope: `group:${groupId}:shelves`,
+    canonicalQuery,
+    page: queryState.page,
+    pageSize: queryState.pageSize,
+    loadPage: (page) => listShelves({ ...shelvesQuery, page }),
+    queryForPage: recoveredQuery,
+    locationState: location.state,
+    enabled: queryState.tab === "shelves",
+  });
   const group = detail.status === "ready" ? detail.group : undefined;
   const breadcrumbs = useMemo(() => groupDetailBreadcrumbFallback(group?.name, group?.isPublicGroup), [group?.isPublicGroup, group?.name]);
   usePageBreadcrumbs(breadcrumbs);
 
   useEffect(() => setSearchDraft(queryState.q), [queryState.q]);
-
-  useEffect(() => {
-    if (queryKey === canonicalQuery) return;
-    setSearchParameters(new URLSearchParams(canonicalQuery), { replace: true, state: location.state });
-  }, [canonicalQuery, location.state, queryKey, setSearchParameters]);
 
   useEffect(() => {
     let active = true;
@@ -98,54 +112,6 @@ export function GroupDetailOrchestrator() {
       });
     return () => { active = false; };
   }, [detailRetry, groupId]);
-
-  useEffect(() => {
-    if (queryKey !== canonicalQuery) return;
-    let active = true;
-    const locationState = location.state;
-    const recoverPage = <Item,>(fetchPage: (page: number) => Promise<Page<Item>>) => loadPageWithRecovery({
-      requestedPage: queryState.page,
-      pageSize: queryState.pageSize,
-      recoveryKey: `${groupId}:${queryState.tab}:${canonicalQuery}`,
-      recoveredKeys: recoveredPageKeys.current,
-      fetchPage,
-      buildRecoveredLocation: (page) => groupDetailSearchParams(withGroupDetailChange(queryState, { page }, false)).toString(),
-      replaceLocation: (nextLocation) => {
-        if (!active) return false;
-        setSearchParameters(new URLSearchParams(nextLocation), { replace: true, state: locationState });
-        return true;
-      },
-    });
-    if (queryState.tab === "books") setBooks((current) => ({ page: current.page, loading: true }));
-    else if (queryState.tab === "members") setMembers((current) => ({ page: current.page, loading: true }));
-    else setShelves((current) => ({ page: current.page, loading: true }));
-
-    const request = (() => {
-      if (queryState.tab === "books") {
-        return recoverPage((page) => listGroupBooks(groupId, { ...groupBooksSdkQuery(queryState), page }));
-      }
-      if (queryState.tab === "members") {
-        return recoverPage((page) => listGroupMembers(groupId, { ...groupMembersSdkQuery(queryState), page }));
-      }
-      return recoverPage((page) => listShelves({ ...groupShelvesSdkQuery(groupId, queryState), page }));
-    })();
-    request
-      .then(({ page, recovered }) => {
-        if (!active) return;
-        if (recovered) return;
-        if (queryState.tab === "books") setBooks({ page: page as Page<CompactBook>, loading: false });
-        else if (queryState.tab === "members") setMembers({ page: page as Page<GroupMembership>, loading: false });
-        else setShelves({ page: page as Page<ShelfSummary>, loading: false });
-      })
-      .catch((error: unknown) => {
-        if (!active) return;
-        const normalized = normalizeMutationError(error);
-        if (queryState.tab === "books") setBooks((current) => ({ page: current.page, loading: false, error: normalized }));
-        else if (queryState.tab === "members") setMembers((current) => ({ page: current.page, loading: false, error: normalized }));
-        else setShelves((current) => ({ page: current.page, loading: false, error: normalized }));
-      });
-    return () => { active = false; };
-  }, [canonicalQuery, groupId, pageRetry, queryKey, queryState.ordering, queryState.page, queryState.pageSize, queryState.q, queryState.tab]);
 
   function changeQuery(
     changes: Parameters<typeof withGroupDetailChange>[1],
@@ -202,13 +168,13 @@ export function GroupDetailOrchestrator() {
       search={searchDraft}
       ordering={queryState.ordering}
       loading={books.loading}
-      error={books.error}
+      error={books.error === undefined ? undefined : normalizeMutationError(books.error)}
       onSearchChange={setSearchDraft}
       onSearch={() => changeQuery({ q: searchDraft.trim() })}
       onOrderingChange={(ordering) => changeQuery({ ordering })}
       onPageChange={(page) => changeQuery({ page }, false)}
       onPageSizeChange={(pageSize) => changeQuery({ pageSize })}
-      onRetry={() => setPageRetry((value) => value + 1)}
+      onRetry={books.retry}
     /></div> : null}
     {group && queryState.tab === "members" ? <div
       id={tabPanelId("group-detail", "members")}
@@ -219,10 +185,10 @@ export function GroupDetailOrchestrator() {
       pageNumber={queryState.page}
       pageSize={queryState.pageSize}
       loading={members.loading}
-      error={members.error}
+      error={members.error === undefined ? undefined : normalizeMutationError(members.error)}
       onPageChange={(page) => changeQuery({ page }, false)}
       onPageSizeChange={(pageSize) => changeQuery({ pageSize })}
-      onRetry={() => setPageRetry((value) => value + 1)}
+      onRetry={members.retry}
     /></div> : null}
     {group && queryState.tab === "shelves" ? <div
       id={tabPanelId("group-detail", "shelves")}
@@ -237,10 +203,10 @@ export function GroupDetailOrchestrator() {
       pageNumber={queryState.page}
       pageSize={queryState.pageSize}
       loading={shelves.loading}
-      error={shelves.error}
+      error={shelves.error === undefined ? undefined : normalizeMutationError(shelves.error)}
       onPageChange={(page) => changeQuery({ page }, false)}
       onPageSizeChange={(pageSize) => changeQuery({ pageSize })}
-      onRetry={() => setPageRetry((value) => value + 1)}
+      onRetry={shelves.retry}
     /></div> : null}
   </ProductPageShell>;
 }

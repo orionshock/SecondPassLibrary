@@ -1,9 +1,9 @@
-import { listShelves, type Page, type ShelfSummary } from "@second-pass/spl-api";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { listShelves } from "@second-pass/spl-api";
+import { useMemo } from "react";
 import { useSearchParams } from "react-router";
 
 import { usePageBreadcrumbs } from "../../../app/navigation/usePageBreadcrumbs";
-import { loadPageWithRecovery } from "../../../app/routing/pageRecovery";
+import { useUrlCollectionLifecycle } from "../../../app/routing/useUrlCollectionLifecycle";
 import { normalizeMutationError } from "../../../shared/feedback/mutationState";
 import { ProductPageShell } from "../../../shared/layout/ProductPageShell";
 import { ShelvesListPageRegion } from "./ShelvesListPageRegion";
@@ -16,12 +16,6 @@ import {
 } from "../shelvesQuery";
 import "../Shelves.css";
 
-interface ShelvesLoadState {
-  page?: Page<ShelfSummary>;
-  loading: boolean;
-  error?: Error;
-}
-
 export function ShelvesListOrchestrator() {
   usePageBreadcrumbs(shelvesListBreadcrumbFallback);
   const [searchParameters, setSearchParameters] = useSearchParams();
@@ -31,43 +25,15 @@ export function ShelvesListOrchestrator() {
     [queryKey],
   );
   const canonicalQuery = shelvesListSearchParams(queryState).toString();
-  const [retry, setRetry] = useState(0);
-  const [load, setLoad] = useState<ShelvesLoadState>({ loading: true });
-  const recoveredPageKeys = useRef(new Set<string>());
-
-  useEffect(() => {
-    if (queryKey === canonicalQuery) return;
-    setSearchParameters(new URLSearchParams(canonicalQuery), { replace: true, state: null });
-  }, [canonicalQuery, queryKey, setSearchParameters]);
-
-  useEffect(() => {
-    if (queryKey !== canonicalQuery) return;
-    let active = true;
-    setLoad((current) => ({ page: current.page, loading: true }));
-    const sdkQuery = shelvesListSdkQuery(queryState);
-    loadPageWithRecovery({
-      requestedPage: queryState.page,
-      pageSize: queryState.pageSize,
-      recoveryKey: `shelves:${canonicalQuery}`,
-      recoveredKeys: recoveredPageKeys.current,
-      fetchPage: (page) => listShelves({ ...sdkQuery, page }),
-      buildRecoveredLocation: (page) => shelvesListSearchParams(withShelvesListChange(queryState, { page }, false)).toString(),
-      replaceLocation: (location) => {
-        if (!active) return false;
-        setSearchParameters(new URLSearchParams(location), { replace: true, state: null });
-        return true;
-      },
-    })
-      .then(({ page, recovered }) => {
-        if (!active) return;
-        if (recovered) return;
-        setLoad({ page, loading: false });
-      })
-      .catch((error: unknown) => {
-        if (active) setLoad((current) => ({ page: current.page, loading: false, error: normalizeMutationError(error) }));
-      });
-    return () => { active = false; };
-  }, [canonicalQuery, queryKey, queryState.ordering, queryState.page, queryState.pageSize, queryState.scope, retry, setSearchParameters]);
+  const sdkQuery = shelvesListSdkQuery(queryState);
+  const load = useUrlCollectionLifecycle({
+    scope: "shelves",
+    canonicalQuery,
+    page: queryState.page,
+    pageSize: queryState.pageSize,
+    loadPage: (page) => listShelves({ ...sdkQuery, page }),
+    queryForPage: (page) => shelvesListSearchParams(withShelvesListChange(queryState, { page }, false)).toString(),
+  });
 
   function changeQuery(changes: Parameters<typeof withShelvesListChange>[1], resetPage = true) {
     setSearchParameters(shelvesListSearchParams(withShelvesListChange(queryState, changes, resetPage)), { state: null });
@@ -81,12 +47,12 @@ export function ShelvesListOrchestrator() {
       scope={queryState.scope}
       ordering={queryState.ordering}
       loading={load.loading}
-      error={load.error}
+      error={load.error === undefined ? undefined : normalizeMutationError(load.error)}
       onScopeChange={(scope) => changeQuery({ scope })}
       onOrderingChange={(ordering) => changeQuery({ ordering })}
       onPageChange={(page) => changeQuery({ page }, false)}
       onPageSizeChange={(pageSize) => changeQuery({ pageSize })}
-      onRetry={() => setRetry((value) => value + 1)}
+      onRetry={load.retry}
     />
   </ProductPageShell>;
 }
