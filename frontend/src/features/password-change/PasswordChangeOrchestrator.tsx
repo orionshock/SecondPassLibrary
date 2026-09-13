@@ -20,6 +20,7 @@ export function PasswordChangeOrchestrator() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (state.pending) return;
     const mismatch = passwordConfirmationError(draft);
     if (mismatch) { setState({ pending: false, error: mismatch }); return; }
     setState({ pending: true });
@@ -45,7 +46,7 @@ export function PasswordChangeOrchestrator() {
     state={state}
     mustChangePassword={currentUser.mustChangePassword}
     onSubmit={submit}
-    onChange={(field, value) => dispatch({ type: "change", field, value })}
+    onChange={(field, value) => { if (!state.pending) dispatch({ type: "change", field, value }); }}
     onCancel={cancel}
   />;
 }

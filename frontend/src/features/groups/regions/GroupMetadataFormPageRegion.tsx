@@ -28,13 +28,14 @@ export function GroupMetadataFormPageRegion({
   onCancel: () => void;
   disabled?: boolean;
 }) {
-  return <form className="group-metadata-form" onSubmit={onSubmit}>
+  const controlsDisabled = disabled || state.pending;
+  return <form className="group-metadata-form" aria-busy={state.pending} onSubmit={onSubmit}>
     <FormField label="Name" htmlFor="group-name" error={fieldError(state.error, "name")}>
       <input
         id="group-name"
         value={draft.name}
         maxLength={255}
-        disabled={disabled || !nameEditable}
+        disabled={controlsDisabled || !nameEditable}
         autoFocus={nameEditable}
         onChange={(event) => onChange("name", event.target.value)}
       />
@@ -43,7 +44,7 @@ export function GroupMetadataFormPageRegion({
       <LimitedRichTextEditor
         id="group-description"
         value={draft.description}
-        disabled={disabled}
+        disabled={controlsDisabled}
         maxLength={DESCRIPTIVE_PROSE_MAX_LENGTH}
         onChange={(value) => onChange("description", value)}
       />
@@ -52,7 +53,7 @@ export function GroupMetadataFormPageRegion({
       state={state}
       submitLabel={mode === "new" ? "Create Group" : "Save Group"}
       pendingLabel="Saving..."
-      disabled={disabled}
+      disabled={controlsDisabled}
       onCancel={onCancel}
     />
   </form>;

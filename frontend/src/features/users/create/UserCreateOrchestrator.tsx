@@ -24,7 +24,7 @@ export function UserCreateOrchestrator() {
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (roles.length === 0 || !roles.includes(draft.role)) return;
+    if (state.pending || roles.length === 0 || !roles.includes(draft.role)) return;
     setState({ pending: true });
     try {
       const created = await createUser(createUserInputFromDraft(draft));
@@ -43,7 +43,7 @@ export function UserCreateOrchestrator() {
           draft={draft}
           roles={roles}
           state={state}
-          onChange={(field, value) => dispatch({ type: "change", field, value })}
+          onChange={(field, value) => { if (!state.pending) dispatch({ type: "change", field, value }); }}
           onSubmit={submit}
         />}
   </ProductPageShell>;

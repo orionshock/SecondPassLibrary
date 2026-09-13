@@ -43,6 +43,7 @@ export function ProfileOrchestrator() {
   }, []);
 
   async function saveProfile(input: UpdateCurrentUserInput) {
+    if (profileState.pending) return;
     setProfileState({ pending: true });
     try {
       const updated = await updateCurrentUser(input);

@@ -133,7 +133,7 @@ export function BookCoverEditor({
   }
 
   function showMode(nextMode: "menu" | "file" | "clear") {
-    if (state.pending) return;
+    if (controlsDisabled) return;
     onFileChange(undefined);
     setMode(nextMode);
   }
@@ -148,7 +148,7 @@ export function BookCoverEditor({
   }
 
   function close() {
-    if (state.pending) return;
+    if (controlsDisabled) return;
     setOpen(false);
     setMode("menu");
     onFileChange(undefined);
@@ -175,7 +175,7 @@ export function BookCoverEditor({
       <div className="book-cover-dialog" role="dialog" aria-modal="true" aria-labelledby="book-cover-dialog-title" tabIndex={-1} onKeyDown={handleDialogKeyDown}>
         <header className="book-cover-dialog__header">
           <h2 id="book-cover-dialog-title">Change cover</h2>
-          <Button ref={closeButton} type="button" size="small" tone="secondary" disabled={state.pending} onClick={close}>Close</Button>
+          <Button ref={closeButton} type="button" size="small" tone="secondary" disabled={controlsDisabled} onClick={close}>Close</Button>
         </header>
         <div className="book-cover-dialog__body">
           <div className="book-cover-dialog__preview"><BookCoverPreview coverUrl={coverUrl} previewUrl={previewUrl} title={title} /></div>
@@ -196,7 +196,7 @@ export function BookCoverEditor({
                 {selectedFile ? <Button type="button" size="small" tone="secondary" disabled={controlsDisabled} onClick={clearSelection}>Clear selection</Button> : null}
               </div>
               <div className="book-cover-editor__actions">
-                <Button type="button" tone="secondary" disabled={state.pending} onClick={() => showMode("menu")}>Back</Button>
+                <Button type="button" tone="secondary" disabled={controlsDisabled} onClick={() => showMode("menu")}>Back</Button>
                 <Button type="button" className="book-cover-editor__accept" disabled={controlsDisabled || !selectedFile} onClick={replaceCover}>{pendingAction === "replace" ? "Saving…" : coverUrl ? "Replace cover" : "Set cover"}</Button>
               </div>
             </> : null}

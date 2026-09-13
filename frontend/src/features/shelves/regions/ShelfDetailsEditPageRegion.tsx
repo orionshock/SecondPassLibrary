@@ -44,16 +44,17 @@ export function ShelfDetailsEditPageRegion({
   onDelete: () => void;
 }) {
   const canChooseGroupOwner = mode === "new" && groups.length > 0;
+  const controlsDisabled = mutation.pending || deleteMutation.pending || Boolean(itemMutationPending);
   return <div className="shelf-lifecycle-surface">
-    <form className="shelf-lifecycle-form" onSubmit={onSubmit}>
+    <form className="shelf-lifecycle-form" aria-busy={mutation.pending} onSubmit={onSubmit}>
       {mode === "new" && canChooseGroupOwner ? <FormField label="Owner" htmlFor="shelf-owner-type" error={fieldError(mutation.error, "ownerType")}>
-        <select id="shelf-owner-type" value={draft.ownerType} onChange={(event) => onOwnerTypeChange(event.target.value as ShelfDraft["ownerType"])}>
+        <select id="shelf-owner-type" value={draft.ownerType} disabled={controlsDisabled} onChange={(event) => onOwnerTypeChange(event.target.value as ShelfDraft["ownerType"])}>
           <option value="user">Personal</option>
           <option value="group">Library Group</option>
         </select>
       </FormField> : null}
       {mode === "new" && draft.ownerType === "group" ? <FormField label="Library Group" htmlFor="shelf-owner-group" error={fieldError(mutation.error, "ownerGroupId")}>
-        <select id="shelf-owner-group" value={draft.ownerGroupId} onChange={(event) => onChange("ownerGroupId", event.target.value)}>
+        <select id="shelf-owner-group" value={draft.ownerGroupId} disabled={controlsDisabled} onChange={(event) => onChange("ownerGroupId", event.target.value)}>
           <option value="">Choose a group</option>
           {groups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
         </select>
@@ -65,13 +66,13 @@ export function ShelfDetailsEditPageRegion({
       {mode === "new" && groupsLoading ? <p className="muted shelf-group-picker-note" aria-live="polite">Loading group choices...</p> : null}
       {mode === "new" && groupsError ? <div className="shelf-group-picker-error"><ErrorPanel>{groupsError.message}</ErrorPanel><p className="muted">You can still create a personal shelf.</p></div> : null}
       <FormField label="Name" htmlFor="shelf-name" error={fieldError(mutation.error, "name")}>
-        <input id="shelf-name" value={draft.name} maxLength={255} autoFocus onChange={(event) => onChange("name", event.target.value)} />
+        <input id="shelf-name" value={draft.name} maxLength={255} disabled={controlsDisabled} autoFocus onChange={(event) => onChange("name", event.target.value)} />
       </FormField>
       <FormField label="Description" htmlFor="shelf-description" error={fieldError(mutation.error, "description")}>
-        <LimitedRichTextEditor id="shelf-description" value={draft.description} maxLength={DESCRIPTIVE_PROSE_MAX_LENGTH} onChange={(value) => onChange("description", value)} />
+        <LimitedRichTextEditor id="shelf-description" value={draft.description} disabled={controlsDisabled} maxLength={DESCRIPTIVE_PROSE_MAX_LENGTH} onChange={(value) => onChange("description", value)} />
       </FormField>
       {draft.ownerType === "user" ? <FormField label="Visibility" htmlFor="shelf-visibility" error={fieldError(mutation.error, "visibility")}>
-        <select id="shelf-visibility" value={draft.visibility} onChange={(event) => onChange("visibility", event.target.value as ShelfDraft["visibility"])}>
+        <select id="shelf-visibility" value={draft.visibility} disabled={controlsDisabled} onChange={(event) => onChange("visibility", event.target.value as ShelfDraft["visibility"])}>
           <option value="private">Private</option>
           <option value="listed">Listed</option>
         </select>
@@ -80,7 +81,7 @@ export function ShelfDetailsEditPageRegion({
         state={mutation}
         submitLabel={mode === "new" ? "Create Shelf" : "Save Shelf"}
         pendingLabel="Saving..."
-        disabled={deleteMutation.pending || itemMutationPending}
+        disabled={controlsDisabled}
         onCancel={onCancel}
       />
     </form>

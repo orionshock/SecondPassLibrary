@@ -115,23 +115,35 @@ describe("ShelfEditOrchestrator metadata and deletion", () => {
       name: "Favorites", description: "<p>Edited <strong>description</strong></p>", visibility: "listed",
     });
     expect(container.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(true);
+    const nameInput = container.querySelector<HTMLInputElement>("#shelf-name")!;
+    expect(nameInput.disabled).toBe(true);
+    await act(async () => setControlValue(nameInput, "Newer Shelf"));
+    expect(nameInput.value).toBe("Favorites");
+    act(() => submit(container.querySelector("form")!));
     buttonNamed(container, "Saving...").click();
     expect(sdk.updateShelf).toHaveBeenCalledOnce();
 
     await act(async () => pending.resolve({ ...shelf, description: "<p>Saved description</p>" }));
     expect(container.querySelector<HTMLTextAreaElement>("textarea#shelf-description")?.value).toBe("<p>Saved description</p>");
+    expect(container.querySelector<HTMLInputElement>("#shelf-name")?.disabled).toBe(false);
   });
 
   it("keeps the edited Shelf draft after save failure", async () => {
     arrangeDependencies();
-    sdk.updateShelf.mockRejectedValue(new Error("Shelf save failed."));
+    const failedSave = deferred<ShelfSummary>();
+    sdk.updateShelf.mockReturnValueOnce(failedSave.promise).mockResolvedValueOnce({ ...shelf, name: "Unsaved Shelf" });
     const { container } = await mount();
 
     await act(async () => setControlValue(container.querySelector<HTMLInputElement>("#shelf-name")!, "Unsaved Shelf"));
-    await act(async () => submit(container.querySelector("form")!));
+    act(() => submit(container.querySelector("form")!));
+    expect(container.querySelector<HTMLInputElement>("#shelf-name")?.disabled).toBe(true);
+    await act(async () => failedSave.reject(new Error("Shelf save failed.")));
 
     expect(container.querySelector<HTMLInputElement>("#shelf-name")?.value).toBe("Unsaved Shelf");
+    expect(container.querySelector<HTMLInputElement>("#shelf-name")?.disabled).toBe(false);
     expect(container.querySelector("[role=\"alert\"]")).not.toBeNull();
+    await act(async () => submit(container.querySelector("form")!));
+    expect(sdk.updateShelf).toHaveBeenCalledTimes(2);
   });
 
   it("deletes only after confirmation and navigates after server success", async () => {

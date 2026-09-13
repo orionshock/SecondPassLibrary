@@ -78,6 +78,32 @@ async function mount(path: string, currentUser: CurrentUser = manager) {
 }
 
 describe("GroupEditOrchestrator Book assignments", () => {
+  it("freezes Group metadata during save and preserves the submitted draft after failure", async () => {
+    sdk.getGroup.mockResolvedValue(group);
+    const pending = deferred<LibraryGroup>();
+    sdk.updateGroup.mockReturnValueOnce(pending.promise).mockResolvedValueOnce({ ...group, name: "Edited Readers" });
+    const container = await mount("/groups/group%2Fid/edit");
+    const nameInput = container.querySelector<HTMLInputElement>("#group-name")!;
+
+    await act(async () => setControlValue(nameInput, "Edited Readers"));
+    act(() => submit(container.querySelector<HTMLFormElement>(".group-metadata-form")!));
+
+    expect(nameInput.disabled).toBe(true);
+    expect(buttonNamed(container, "Saving...").disabled).toBe(true);
+    await act(async () => setControlValue(nameInput, "Newer Readers"));
+    expect(nameInput.value).toBe("Edited Readers");
+    act(() => submit(container.querySelector<HTMLFormElement>(".group-metadata-form")!));
+    expect(sdk.updateGroup).toHaveBeenCalledOnce();
+
+    await act(async () => pending.reject(new Error("Group save failed.")));
+    expect(nameInput.disabled).toBe(false);
+    expect(nameInput.value).toBe("Edited Readers");
+    expect(container.querySelector("[role=\"alert\"]")).not.toBeNull();
+
+    await act(async () => submit(container.querySelector<HTMLFormElement>(".group-metadata-form")!));
+    expect(sdk.updateGroup).toHaveBeenCalledTimes(2);
+  });
+
   it("removes a confirmed Book, locks conflicting actions, and refreshes the assigned list", async () => {
     sdk.getGroup.mockResolvedValue(group);
     sdk.listBooks.mockResolvedValueOnce(page([assignedBook])).mockResolvedValueOnce(page([]));

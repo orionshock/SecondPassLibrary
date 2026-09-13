@@ -12,7 +12,7 @@ export function ExternalServicesPageRegion({ settings, draft, editing, state, on
   onChange: (value: string) => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
-  return <form id="server-settings-external-services-form" className="server-settings-form" onSubmit={onSubmit}>
+  return <form id="server-settings-external-services-form" className="server-settings-form" aria-busy={state.pending} onSubmit={onSubmit}>
     <section className="server-settings-region" aria-labelledby="second-pass-reader-heading">
       <h2 id="second-pass-reader-heading">Second Pass Reader Web Client</h2>
       {editing ? <div className="form-grid">
@@ -22,7 +22,7 @@ export function ExternalServicesPageRegion({ settings, draft, editing, state, on
             type="url"
             maxLength={2048}
             placeholder="https://reader.example.com"
-            disabled={draft.secondPassReaderWebClientUrlLocked}
+            disabled={state.pending || draft.secondPassReaderWebClientUrlLocked}
             value={draft.secondPassReaderWebClientUrl}
             onChange={(event) => onChange(event.target.value)}
           />

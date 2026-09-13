@@ -105,26 +105,38 @@ describe("AuthorSeriesEditOrchestrator Author mutations", () => {
       name: "Ada Author", sortName: "Author, Ada", biography: "<p>Edited <strong>biography</strong></p>",
     });
     expect(container.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(true);
+    const sortNameInput = container.querySelector<HTMLInputElement>("#library-entity-sort-name")!;
+    expect(sortNameInput.disabled).toBe(true);
+    await act(async () => setControlValue(sortNameInput, "Newer sort name"));
+    expect(sortNameInput.value).toBe("Author, Ada");
+    act(() => submit(container.querySelector("form")!));
     buttonNamed(container, "Saving...").click();
     expect(sdk.updateAuthor).toHaveBeenCalledOnce();
 
     await act(async () => pending.resolve({ ...author, biography: "<p>Saved biography</p>" }));
     expect(container.querySelector<HTMLTextAreaElement>("textarea#library-entity-prose")?.value).toBe("<p>Saved biography</p>");
+    expect(container.querySelector<HTMLInputElement>("#library-entity-sort-name")?.disabled).toBe(false);
   });
 
   it("keeps the Author draft after save failure and retries a failed initial load", async () => {
     arrangeDependencies();
     sdk.getAuthor.mockRejectedValueOnce(new Error("Author unavailable."));
-    sdk.updateAuthor.mockRejectedValueOnce(new Error("Author save failed."));
+    const failedSave = deferred<LibraryAuthor>();
+    sdk.updateAuthor.mockReturnValueOnce(failedSave.promise).mockResolvedValueOnce({ ...author, biography: "<p>Unsaved biography</p>" });
     const { container } = await mount("author");
 
     await act(async () => buttonNamed(container, "Retry").click());
     await setProse(container, "<p>Unsaved biography</p>");
-    await act(async () => submit(container.querySelector("form")!));
+    act(() => submit(container.querySelector("form")!));
+    expect(container.querySelector<HTMLInputElement>("#library-entity-name")?.disabled).toBe(true);
+    await act(async () => failedSave.reject(new Error("Author save failed.")));
 
     expect(sdk.getAuthor).toHaveBeenCalledTimes(2);
     expect(container.querySelector<HTMLTextAreaElement>("textarea#library-entity-prose")?.value).toBe("<p>Unsaved biography</p>");
+    expect(container.querySelector<HTMLInputElement>("#library-entity-name")?.disabled).toBe(false);
     expect(container.querySelector("[role=\"alert\"]")).not.toBeNull();
+    await act(async () => submit(container.querySelector("form")!));
+    expect(sdk.updateAuthor).toHaveBeenCalledTimes(2);
   });
 
   it("deletes an unattached Author only after confirmation and navigates to its axis", async () => {

@@ -7,9 +7,10 @@ import { fieldError } from "../../../shared/feedback/mutationState";
 import { bookIdentifierLabel } from "../bookDetailPresentation";
 import { bookIdentifierSchemeOptions, type BookEditDraft } from "./bookEditDraft";
 
-export function BookEditIdentifiersPageRegion({ draft, error, onChange }: {
+export function BookEditIdentifiersPageRegion({ draft, error, disabled = false, onChange }: {
   draft: BookEditDraft;
   error?: Error;
+  disabled?: boolean;
   onChange: <K extends keyof BookEditDraft>(field: K, value: BookEditDraft[K]) => void;
 }) {
   const nextKey = useRef(1);
@@ -34,6 +35,7 @@ export function BookEditIdentifiersPageRegion({ draft, error, onChange }: {
         <select
           id={`book-edit-identifier-scheme-${index}`}
           aria-label={`Identifier ${index + 1} scheme`}
+          disabled={disabled}
           value={identifier.scheme}
           onChange={(event) => updateIdentifier(index, "scheme", event.target.value as BookIdentifierScheme)}
         >
@@ -47,6 +49,7 @@ export function BookEditIdentifiersPageRegion({ draft, error, onChange }: {
           id={`book-edit-identifier-value-${index}`}
           aria-label={`Identifier ${index + 1} value`}
           maxLength={512}
+          disabled={disabled}
           value={identifier.value}
           onChange={(event) => updateIdentifier(index, "value", event.target.value)}
         />
@@ -55,10 +58,11 @@ export function BookEditIdentifiersPageRegion({ draft, error, onChange }: {
       <RemoveIconButton
         type="button"
         label={`Remove ${bookIdentifierLabel(identifier.scheme)} identifier`}
+        disabled={disabled}
         onClick={() => onChange("identifiers", draft.identifiers.filter((_, currentIndex) => currentIndex !== index))}
       />
     </div>)}
     {fieldError(error, "identifiers") ? <span className="field-error">{fieldError(error, "identifiers")}</span> : null}
-    <div className="book-edit-identifier-add"><AddIconButton type="button" label="Add identifier" onClick={addIdentifier} /><span>Add identifier</span></div>
+    <div className="book-edit-identifier-add"><AddIconButton type="button" label="Add identifier" disabled={disabled} onClick={addIdentifier} /><span>Add identifier</span></div>
   </section>;
 }

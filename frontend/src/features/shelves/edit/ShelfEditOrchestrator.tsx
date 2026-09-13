@@ -17,7 +17,7 @@ import {
   type ShelfSummary,
 } from "@second-pass/spl-api";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { Link, useBlocker, useLocation, useNavigate, useParams } from "react-router";
+import { Link, useLocation, useNavigate, useParams } from "react-router";
 
 import { usePageBreadcrumbs } from "../../../app/navigation/usePageBreadcrumbs";
 import { Button, ErrorPanel } from "../../../components/UiPrimitives";
@@ -27,6 +27,7 @@ import {
   type MutationState,
 } from "../../../shared/feedback/mutationState";
 import { useAutoDismissMutationMessage } from "../../../shared/feedback/useAutoDismissMutationMessage";
+import { useFormSaveLifecycle } from "../../../shared/forms/useFormSaveLifecycle";
 import { ProductPageShell } from "../../../shared/layout/ProductPageShell";
 import { shelfDetailPathForId } from "../../../shared/shelves/shelfNavigation";
 import { tabButtonId, tabPanelId } from "../../../shared/tabs/TabList";
@@ -86,14 +87,15 @@ export function ShelfEditOrchestrator() {
   const navigate = useNavigate();
   const [retry, setRetry] = useState(0);
   const [load, setLoad] = useState<ShelfLoad>({ status: "loading" });
-  const [draft, setDraft] = useState<ShelfDraft>({ ...emptyShelfDraft });
-  const [baseline, setBaseline] = useState<ShelfDraft>({ ...emptyShelfDraft });
-  const [mutation, setMutation] = useState<MutationState>(() => ({
-    ...idleMutationState,
-    ...(readShelfLifecycleSuccessMessage(location.state)
+  const lifecycle = useFormSaveLifecycle({
+    initialDraft: { ...emptyShelfDraft },
+    draftsEqual: shelfDraftsEqual,
+    discardMessage: "Discard unsaved Shelf changes?",
+    initialFeedback: readShelfLifecycleSuccessMessage(location.state)
       ? { message: readShelfLifecycleSuccessMessage(location.state) }
-      : {}),
-  }));
+      : {},
+  });
+  const { draft, mutation } = lifecycle;
   const [deleteMutation, setDeleteMutation] = useState<MutationState>(idleMutationState);
   const requestedEditState = useMemo(
     () => shelfEditStateFromSearchParams(new URLSearchParams(location.search)),
@@ -104,7 +106,6 @@ export function ShelfEditOrchestrator() {
   const [candidatesLoad, setCandidatesLoad] = useState<PageLoad<CompactBook>>({ loading: false });
   const [itemMutation, setItemMutation] = useState<RowMutation>({});
   const [candidateMutation, setCandidateMutation] = useState<RowMutation>({});
-  useAutoDismissMutationMessage(mutation, setMutation);
   useAutoDismissMutationMessage(itemMutation, setItemMutation);
   useAutoDismissMutationMessage(candidateMutation, setCandidateMutation);
   const [itemsVersion, setItemsVersion] = useState(0);
@@ -117,13 +118,8 @@ export function ShelfEditOrchestrator() {
     stableEditState.current,
     immediateItemMutationPending,
   );
-  const allowNavigation = useRef(false);
   const shelf = load.status === "ready" || load.status === "not-allowed" ? load.shelf : undefined;
   const scope = shelf ? shelfScopeFromSummary(shelf) : "personal";
-  const dirty = !shelfDraftsEqual(draft, baseline);
-  const blocker = useBlocker(({ currentLocation, nextLocation }) => (
-    !allowNavigation.current && dirty && currentLocation.pathname !== nextLocation.pathname
-  ));
   const breadcrumbs = useMemo(
     () => shelfEditBreadcrumbs(shelfId, shelf?.name, scope),
     [scope, shelf?.name, shelfId],
@@ -142,19 +138,7 @@ export function ShelfEditOrchestrator() {
   useEffect(() => { setSearchDraft(editState.q); }, [editState.q]);
 
   useEffect(() => {
-    const preventUnload = (event: BeforeUnloadEvent) => { if (dirty) event.preventDefault(); };
-    window.addEventListener("beforeunload", preventUnload);
-    return () => window.removeEventListener("beforeunload", preventUnload);
-  }, [dirty]);
-
-  useEffect(() => {
-    if (blocker.state !== "blocked") return;
-    if (window.confirm("Discard unsaved Shelf changes?")) blocker.proceed();
-    else blocker.reset();
-  }, [blocker]);
-
-  useEffect(() => {
-    allowNavigation.current = false;
+    lifecycle.protectNavigation();
     if (!shelfId) {
       setLoad({ status: "unavailable" });
       return;
@@ -165,8 +149,7 @@ export function ShelfEditOrchestrator() {
       .then((loadedShelf) => {
         if (!active) return;
         const next = shelfDraftFromSummary(loadedShelf);
-        setDraft(next);
-        setBaseline(next);
+        lifecycle.loadDraft(next);
         setLoad(loadedShelf.canEdit
           ? { status: "ready", shelf: loadedShelf }
           : { status: "not-allowed", shelf: loadedShelf });
@@ -234,8 +217,7 @@ export function ShelfEditOrchestrator() {
   ]);
 
   function change<K extends keyof ShelfDraft>(field: K, value: ShelfDraft[K]) {
-    setDraft((current) => ({ ...current, [field]: value }));
-    setMutation(idleMutationState);
+    lifecycle.changeDraft((current) => ({ ...current, [field]: value }));
   }
 
   async function save(event: FormEvent<HTMLFormElement>) {
@@ -243,25 +225,22 @@ export function ShelfEditOrchestrator() {
     try {
       validateShelfDraft(draft);
     } catch (error: unknown) {
-      setMutation({ pending: false, error: normalizeMutationError(error) });
+      lifecycle.setError(normalizeMutationError(error));
       return;
     }
-    setMutation({ pending: true });
+    if (!lifecycle.beginSave()) return;
     try {
       const saved = await updateShelf(shelfId, updateShelfInputFromDraft(draft));
       const next = shelfDraftFromSummary(saved);
       setLoad({ status: "ready", shelf: saved });
-      setDraft(next);
-      setBaseline(next);
-      setMutation({ pending: false, message: "Shelf saved." });
+      lifecycle.saveSucceeded(next, "Shelf saved.");
     } catch (error: unknown) {
-      setMutation({ pending: false, error: normalizeMutationError(error) });
+      lifecycle.saveFailed(normalizeMutationError(error));
     }
   }
 
   function cancel() {
-    if (dirty && !window.confirm("Discard unsaved Shelf changes?")) return;
-    allowNavigation.current = true;
+    if (!lifecycle.confirmDiscard()) return;
     if (shelf) {
       navigate(shelfDetailPathForId(shelf.id), {
         state: shelfDetailNavigationStateFromEdit(location.state, shelf),
@@ -274,7 +253,7 @@ export function ShelfEditOrchestrator() {
     setDeleteMutation({ pending: true });
     try {
       await deleteShelf(shelf.id);
-      allowNavigation.current = true;
+      lifecycle.permitNavigation();
       navigate("/shelves", { replace: true, state: null });
     } catch (error: unknown) {
       setDeleteMutation({ pending: false, error: normalizeMutationError(error) });

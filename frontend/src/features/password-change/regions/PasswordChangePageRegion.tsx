@@ -16,7 +16,7 @@ export function PasswordChangePageRegion({ draft, state, mustChangePassword, onS
 }) {
   return <ProductPageShell className="account-page" title="Change password">
     {mustChangePassword ? <p className="required-notice">You must change your password before continuing.</p> : null}
-    <form className="form-grid" onSubmit={onSubmit}>
+    <form className="form-grid" aria-busy={state.pending} onSubmit={onSubmit}>
       <PasswordField id="current-password" label="Current password" field="currentPassword" value={draft.currentPassword} state={state} onChange={onChange} autoComplete="current-password" />
       <PasswordField id="new-password" label="New password" field="newPassword" value={draft.newPassword} state={state} onChange={onChange} autoComplete="new-password" />
       <PasswordField id="confirm-password" label="Confirm password" field="confirmPassword" value={draft.confirmPassword} state={state} onChange={onChange} autoComplete="new-password" />
@@ -37,5 +37,5 @@ function PasswordField({ id, label, field, value, state, onChange, autoComplete 
   onChange: (field: keyof PasswordDraft, value: string) => void;
   autoComplete: string;
 }) {
-  return <FormField label={label} htmlFor={id} error={fieldError(state.error, field)}><input id={id} type="password" required value={value} autoComplete={autoComplete} onChange={(event) => onChange(field, event.target.value)} /></FormField>;
+  return <FormField label={label} htmlFor={id} error={fieldError(state.error, field)}><input id={id} type="password" required value={value} disabled={state.pending} autoComplete={autoComplete} onChange={(event) => onChange(field, event.target.value)} /></FormField>;
 }

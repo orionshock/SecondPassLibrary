@@ -86,10 +86,12 @@ export function ServerSettingsOrchestrator() {
   }, [tab]);
 
   function selectTab(nextTab: typeof tab) {
+    if (state.pending) return;
     setSearchParameters(serverSettingsSearchParams(searchParameters, nextTab), { state: location.state });
   }
 
   function cancel() {
+    if (state.pending) return;
     if (load.settings) {
       setGeneralDraft(load.settings.general);
       setPublicDraft(load.settings.publicLibrary);
@@ -100,6 +102,7 @@ export function ServerSettingsOrchestrator() {
 
   async function saveServerIdentity(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (state.pending) return;
     setState({ pending: true });
     try {
       const settings = await updateServerIdentity(generalDraft);
@@ -113,7 +116,7 @@ export function ServerSettingsOrchestrator() {
 
   async function saveExternalServices(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (generalDraft.secondPassReaderWebClientUrlLocked) return;
+    if (state.pending || generalDraft.secondPassReaderWebClientUrlLocked) return;
     setState({ pending: true });
     try {
       const settings = await updateExternalServicesSettings(generalDraft.secondPassReaderWebClientUrl);
@@ -127,6 +130,7 @@ export function ServerSettingsOrchestrator() {
 
   async function savePublicLibrary(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (state.pending) return;
     setState({ pending: true });
     try {
       const settings = await updatePublicLibrarySettings(publicDraft);
@@ -165,7 +169,7 @@ export function ServerSettingsOrchestrator() {
 
   return <ProductPageShell className="server-settings-page" title="Server Settings" actions={<DjangoAdminAction enabled={currentUser.canAccessDjangoAdmin} />}>
     <div className="server-settings-tabs">
-      <TabList tabs={serverSettingsTabs} activeTab={tab} onChange={selectTab} ariaLabel="Server settings sections" idPrefix="server-settings" />
+      <TabList tabs={serverSettingsTabs} activeTab={tab} onChange={selectTab} ariaLabel="Server settings sections" disabled={state.pending} idPrefix="server-settings" />
       <div className="server-settings-tab-actions">{headerActions}</div>
     </div>
     <div id={tabPanelId("server-settings", tab)} role="tabpanel" aria-labelledby={tabButtonId("server-settings", tab)}>
@@ -174,7 +178,7 @@ export function ServerSettingsOrchestrator() {
       draft={generalDraft}
       editing={editing}
       state={state}
-      onChange={(field, value) => setGeneralDraft((draft) => ({ ...draft, [field]: value }))}
+      onChange={(field, value) => { if (!state.pending) setGeneralDraft((draft) => ({ ...draft, [field]: value })); }}
       onSubmit={(event) => void saveServerIdentity(event)}
     /> : null}
     {tab === "public-library" ? <PublicLibraryPageRegion
@@ -182,7 +186,7 @@ export function ServerSettingsOrchestrator() {
       draft={publicDraft}
       editing={editing}
       state={state}
-      onChange={(field, value) => setPublicDraft((draft) => ({ ...draft, [field]: value }))}
+      onChange={(field, value) => { if (!state.pending) setPublicDraft((draft) => ({ ...draft, [field]: value })); }}
       onSubmit={(event) => void savePublicLibrary(event)}
     /> : null}
     {tab === "external-services" ? <ExternalServicesPageRegion
@@ -190,7 +194,7 @@ export function ServerSettingsOrchestrator() {
       draft={generalDraft}
       editing={editing}
       state={state}
-      onChange={(value) => setGeneralDraft((draft) => ({ ...draft, secondPassReaderWebClientUrl: value }))}
+      onChange={(value) => { if (!state.pending) setGeneralDraft((draft) => ({ ...draft, secondPassReaderWebClientUrl: value })); }}
       onSubmit={(event) => void saveExternalServices(event)}
     /> : null}
     {tab === "library-groups" ? <LibraryGroupsPageRegion settings={settings.libraryGroups} editing={editing} state={state} onEnable={() => void enableGroups()} /> : null}

@@ -3,16 +3,13 @@ import {
   listAllLibraryGroups,
   type LibraryGroup,
 } from "@second-pass/spl-api";
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { useBlocker, useLocation, useNavigate, useOutletContext } from "react-router";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useLocation, useNavigate, useOutletContext } from "react-router";
 
 import type { AppOutletContext } from "../../app/layout/AppOrchestrator";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
-import {
-  idleMutationState,
-  normalizeMutationError,
-  type MutationState,
-} from "../../shared/feedback/mutationState";
+import { idleMutationState, normalizeMutationError } from "../../shared/feedback/mutationState";
+import { useFormSaveLifecycle } from "../../shared/forms/useFormSaveLifecycle";
 import { ProductPageShell } from "../../shared/layout/ProductPageShell";
 import {
   authorizedShelfCreateGroupContext,
@@ -85,37 +82,21 @@ export function ShelfCreateOrchestrator() {
     loading: shouldLoadAllShelfGroups(currentUser, serverInfo.advancedLibraryGroupsEnabled),
     items: initialGroups,
   }));
-  const [draft, setDraft] = useState<ShelfDraft>(initialDraft);
-  const [baseline, setBaseline] = useState<ShelfDraft>(initialDraft);
-  const [mutation, setMutation] = useState<MutationState>(() => ({
-    ...idleMutationState,
-    ...(readShelfLifecycleSuccessMessage(location.state)
+  const lifecycle = useFormSaveLifecycle({
+    initialDraft,
+    draftsEqual: shelfDraftsEqual,
+    discardMessage: "Discard unsaved Shelf changes?",
+    initialFeedback: readShelfLifecycleSuccessMessage(location.state)
       ? { message: readShelfLifecycleSuccessMessage(location.state) }
-      : {}),
-  }));
-  const allowNavigation = useRef(false);
-  const dirty = !shelfDraftsEqual(draft, baseline);
-  const blocker = useBlocker(({ currentLocation, nextLocation }) => (
-    !allowNavigation.current && dirty && currentLocation.pathname !== nextLocation.pathname
-  ));
+      : {},
+  });
+  const { draft, mutation } = lifecycle;
   const originatingScope = useMemo(
     () => shelfScopeFromBreadcrumbState(location.state) ?? "personal",
     [location.state],
   );
   const breadcrumbs = useMemo(() => shelfNewBreadcrumbs(originatingScope), [originatingScope]);
   usePageBreadcrumbs(breadcrumbs);
-
-  useEffect(() => {
-    const preventUnload = (event: BeforeUnloadEvent) => { if (dirty) event.preventDefault(); };
-    window.addEventListener("beforeunload", preventUnload);
-    return () => window.removeEventListener("beforeunload", preventUnload);
-  }, [dirty]);
-
-  useEffect(() => {
-    if (blocker.state !== "blocked") return;
-    if (window.confirm("Discard unsaved Shelf changes?")) blocker.proceed();
-    else blocker.reset();
-  }, [blocker]);
 
   useEffect(() => {
     if (!shouldLoadAllShelfGroups(currentUser, serverInfo.advancedLibraryGroupsEnabled)) {
@@ -138,13 +119,11 @@ export function ShelfCreateOrchestrator() {
   }, [contextGroupChoice, currentUser, serverInfo.advancedLibraryGroupsEnabled]);
 
   function change<K extends keyof ShelfDraft>(field: K, value: ShelfDraft[K]) {
-    setDraft((current) => ({ ...current, [field]: value }));
-    setMutation(idleMutationState);
+    lifecycle.changeDraft((current) => ({ ...current, [field]: value }));
   }
 
   function changeOwnerType(ownerType: ShelfDraft["ownerType"]) {
-    setDraft((current) => withShelfOwnerType(current, ownerType));
-    setMutation(idleMutationState);
+    lifecycle.changeDraft((current) => withShelfOwnerType(current, ownerType));
   }
 
   async function save(event: FormEvent<HTMLFormElement>) {
@@ -152,17 +131,15 @@ export function ShelfCreateOrchestrator() {
     try {
       validateShelfDraft(draft, groups.items.map(({ id }) => id));
     } catch (error: unknown) {
-      setMutation({ pending: false, error: normalizeMutationError(error) });
+      lifecycle.setError(normalizeMutationError(error));
       return;
     }
-    setMutation({ pending: true });
+    if (!lifecycle.beginSave()) return;
     try {
       const saved = await createShelf(createShelfInputFromDraft(draft));
       const next = shelfDraftFromSummary(saved);
-      setDraft(next);
-      setBaseline(next);
-      setMutation({ pending: false, message: "Shelf saved." });
-      allowNavigation.current = true;
+      lifecycle.saveSucceeded(next, "Shelf saved.");
+      lifecycle.permitNavigation();
       navigate(shelfEditPath(saved.id), {
         replace: true,
         state: groupContext
@@ -176,13 +153,12 @@ export function ShelfCreateOrchestrator() {
           ),
       });
     } catch (error: unknown) {
-      setMutation({ pending: false, error: normalizeMutationError(error) });
+      lifecycle.saveFailed(normalizeMutationError(error));
     }
   }
 
   function cancel() {
-    if (dirty && !window.confirm("Discard unsaved Shelf changes?")) return;
-    allowNavigation.current = true;
+    if (!lifecycle.confirmDiscard()) return;
     if (groupContext) {
       navigate(groupContext.returnTo, { state: shelfCreateGroupReturnNavigationState(groupContext) });
       return;

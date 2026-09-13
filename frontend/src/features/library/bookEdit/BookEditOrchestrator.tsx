@@ -20,7 +20,7 @@ import {
   type ShelfSummary,
 } from "@second-pass/spl-api";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { useBlocker, useLocation, useNavigate, useOutletContext, useParams } from "react-router";
+import { useLocation, useNavigate, useOutletContext, useParams } from "react-router";
 
 import type { AppOutletContext } from "../../../app/layout/AppOrchestrator";
 import { breadcrumbNavigationState, readIncomingBreadcrumbTrail, resolveBreadcrumbTrail } from "../../../app/navigation/breadcrumbs";
@@ -29,6 +29,7 @@ import { BookCover } from "../../../shared/books/BookCover";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../../shared/feedback/mutationState";
 import { useAutoDismissMutationMessage } from "../../../shared/feedback/useAutoDismissMutationMessage";
 import { SaveCancelActionRow } from "../../../shared/forms/ActionRow";
+import { useFormSaveLifecycle } from "../../../shared/forms/useFormSaveLifecycle";
 import { ProductPageShell } from "../../../shared/layout/ProductPageShell";
 import { tabButtonId, tabPanelId } from "../../../shared/tabs/TabList";
 import { bookDetailBreadcrumbFallback, bookEditBreadcrumbTrail, bookEditRelatedBreadcrumbTrail } from "../bookDetailPresentation";
@@ -77,22 +78,26 @@ export function BookEditOrchestrator() {
   const [tags, setTags] = useState<PickerLoad<CatalogTag>>({ loading: true, items: [] });
   const [groups, setGroups] = useState<PickerLoad<LibraryGroup>>({ loading: false, items: [] });
   const [groupShelves, setGroupShelves] = useState<GroupShelvesLoad>({ status: "idle" });
-  const [draft, setDraft] = useState<BookEditDraft>();
-  const [baseline, setBaseline] = useState<BookEditDraft>();
-  const [mutation, setMutation] = useState<MutationState>(idleMutationState);
+  const lifecycle = useFormSaveLifecycle<BookEditDraft | undefined>({
+    initialDraft: undefined,
+    draftsEqual: (current, baseline) => (
+      current === undefined || baseline === undefined
+        ? current === baseline
+        : bookEditDraftsEqual(current, baseline)
+    ),
+    discardMessage: "Discard unsaved Book changes?",
+  });
+  const { draft, mutation } = lifecycle;
   const [coverMutation, setCoverMutation] = useState<MutationState>(idleMutationState);
   const [coverPendingAction, setCoverPendingAction] = useState<"replace" | "clear">();
   const [selectedCoverFile, setSelectedCoverFile] = useState<File>();
   const [coverInputResetKey, setCoverInputResetKey] = useState(0);
   const [groupMutation, setGroupMutation] = useState<MutationState>(idleMutationState);
   const [groupShelfMutation, setGroupShelfMutation] = useState<MutationState>(idleMutationState);
-  useAutoDismissMutationMessage(mutation, setMutation);
   useAutoDismissMutationMessage(coverMutation, setCoverMutation);
   useAutoDismissMutationMessage(groupMutation, setGroupMutation);
   useAutoDismissMutationMessage(groupShelfMutation, setGroupShelfMutation);
-  const allowNavigation = useRef(false);
   const book = load.status === "ready" ? load.book : undefined;
-  const dirty = Boolean(draft && baseline && !bookEditDraftsEqual(draft, baseline));
   const canEditGroups = canEditBookGroups(currentUser, serverInfo.advancedLibraryGroupsEnabled);
   const immediateMutationPending = groupMutation.pending || groupShelfMutation.pending;
   const requestedEditQuery = useMemo(
@@ -107,7 +112,6 @@ export function BookEditOrchestrator() {
     immediateMutationPending,
   );
   const tab = editQuery.tab;
-  const blocker = useBlocker(({ currentLocation, nextLocation }) => !allowNavigation.current && dirty && currentLocation.pathname !== nextLocation.pathname);
   const fallback = useMemo(() => bookEditBreadcrumbTrail(bookDetailBreadcrumbFallback(book?.title ?? "Book"), bookId, book?.title ?? "Book"), [book?.title, bookId]);
   const breadcrumbTrail = resolveBreadcrumbTrail(location.state, fallback);
   usePageBreadcrumbs(fallback);
@@ -122,18 +126,6 @@ export function BookEditOrchestrator() {
   }, [editQuery.query, location.pathname, location.search, location.state, navigate]);
 
   useEffect(() => {
-    const preventUnload = (event: BeforeUnloadEvent) => { if (dirty) event.preventDefault(); };
-    window.addEventListener("beforeunload", preventUnload);
-    return () => window.removeEventListener("beforeunload", preventUnload);
-  }, [dirty]);
-
-  useEffect(() => {
-    if (blocker.state !== "blocked") return;
-    if (window.confirm("Discard unsaved Book changes?")) blocker.proceed();
-    else blocker.reset();
-  }, [blocker]);
-
-  useEffect(() => {
     if (!bookId) { setLoad({ status: "not-found" }); return; }
     let active = true;
     setLoad({ status: "loading" });
@@ -144,7 +136,7 @@ export function BookEditOrchestrator() {
     getBook(bookId).then((value) => {
       if (!active) return;
       const next = bookEditDraftFromBook(value);
-      setLoad({ status: "ready", book: value }); setDraft(next); setBaseline(next);
+      setLoad({ status: "ready", book: value }); lifecycle.loadDraft(next);
     }).catch((error: unknown) => {
       if (!active) return;
       setLoad(error instanceof ApiError && error.status === 404 ? { status: "not-found" } : { status: "error", error: normalizeMutationError(error) });
@@ -174,8 +166,7 @@ export function BookEditOrchestrator() {
     return () => { active = false; };
   }, [bookId, groupShelfRetry, tab]);
   function change<K extends keyof BookEditDraft>(field: K, value: BookEditDraft[K]) {
-    setDraft((current) => current ? { ...current, [field]: value } : current);
-    setMutation(idleMutationState);
+    lifecycle.changeDraft((current) => current ? { ...current, [field]: value } : current);
   }
 
   function selectCoverFile(file: File | undefined) {
@@ -227,23 +218,22 @@ export function BookEditOrchestrator() {
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!draft || !bookId || immediateMutationPending) return;
+    if (!draft || !bookId || coverMutation.pending || immediateMutationPending) return;
     try {
       validateBookEditDraft(draft);
     } catch (error: unknown) {
-      setMutation({ pending: false, error: normalizeMutationError(error) });
+      lifecycle.setError(normalizeMutationError(error));
       return;
     }
-    setMutation({ pending: true });
+    if (!lifecycle.beginSave()) return;
     try {
       const updated = await updateBook(bookId, bookEditInputFromDraft(draft));
       const next = bookEditDraftFromBook(updated);
-      setLoad({ status: "ready", book: updated }); setDraft(next); setBaseline(next);
-      setMutation({ pending: false, message: "Book saved." });
+      setLoad({ status: "ready", book: updated }); lifecycle.saveSucceeded(next, "Book saved.");
       const currentTrail = resolveBreadcrumbTrail(location.state, fallback);
       navigate({ pathname: location.pathname, search: location.search }, { replace: true, state: breadcrumbNavigationState(bookEditBreadcrumbTrail(currentTrail, bookId, updated.title)) });
     } catch (error: unknown) {
-      setMutation({ pending: false, error: normalizeMutationError(error) });
+      lifecycle.saveFailed(normalizeMutationError(error));
     }
   }
 
@@ -304,8 +294,7 @@ export function BookEditOrchestrator() {
   }
 
   function cancel() {
-    if (dirty && !window.confirm("Discard unsaved Book changes?")) return;
-    allowNavigation.current = true;
+    if (!lifecycle.confirmDiscard()) return;
     const incoming = readIncomingBreadcrumbTrail(location.state);
     const detailTrail = incoming?.at(-1)?.label === "Edit" ? incoming.slice(0, -1) : bookDetailBreadcrumbFallback(book?.title ?? "Book");
     navigate(`/library/books/${encodeURIComponent(bookId)}`, { state: breadcrumbNavigationState(detailTrail) });
@@ -323,7 +312,7 @@ export function BookEditOrchestrator() {
   if (load.status === "loading" || !draft) return <ProductPageShell><BookDetailStatePageRegion state="loading" /></ProductPageShell>;
   const readyBook = load.book;
 
-  return <ProductPageShell><form className="book-edit-page" onSubmit={save}>
+  return <ProductPageShell><form className="book-edit-page" aria-busy={mutation.pending} onSubmit={save}>
     <aside className="book-edit-cover">
       <BookCover coverUrl={readyBook.coverUrl} title={readyBook.title} />
       <BookCoverEditor
@@ -346,12 +335,12 @@ export function BookEditOrchestrator() {
         <p className="book-edit-context">{readyBook.authors.length ? `Authors: ${readyBook.authors.map(({ name }) => name).join(", ")}` : "No assigned Authors"}</p>
         {readyBook.series ? <p className="book-edit-context">Series: {readyBook.series.name}{readyBook.series.seriesIndex ? ` ${readyBook.series.seriesIndex}` : ""}</p> : null}
       </div>
-      <BookEditTabsPageRegion active={tab} showGroups={canEditGroups} disabled={immediateMutationPending} onChange={changeTab} />
+      <BookEditTabsPageRegion active={tab} showGroups={canEditGroups} disabled={mutation.pending || immediateMutationPending} onChange={changeTab} />
       <div id={tabPanelId("book-edit", tab)} role="tabpanel" aria-labelledby={tabButtonId("book-edit", tab)}>
-      {tab === "book" ? <BookEditBookPageRegion draft={draft} error={mutation.error} onChange={change} /> : null}
-      {tab === "catalog" ? <BookEditCatalogPageRegion draft={draft} error={mutation.error} tags={tags.items} tagsLoading={tags.loading} tagsError={tags.error} onRetryTags={() => setTagRetry((value) => value + 1)} onChange={change} /> : null}
-      {tab === "authors-series" ? <BookEditAuthorsSeriesPageRegion draft={draft} error={mutation.error} authors={authors.items} series={series.items} authorsLoading={authors.loading} seriesLoading={series.loading} authorsError={authors.error} seriesError={series.error} breadcrumbTrail={breadcrumbTrail} returnTo={`${location.pathname}${location.search}`} onRetryAuthors={() => setAuthorRetry((value) => value + 1)} onRetrySeries={() => setSeriesRetry((value) => value + 1)} onChange={change} /> : null}
-      {tab === "identifiers" ? <BookEditIdentifiersPageRegion draft={draft} error={mutation.error} onChange={change} /> : null}
+      {tab === "book" ? <BookEditBookPageRegion draft={draft} error={mutation.error} disabled={mutation.pending} onChange={change} /> : null}
+      {tab === "catalog" ? <BookEditCatalogPageRegion draft={draft} error={mutation.error} tags={tags.items} tagsLoading={tags.loading} tagsError={tags.error} disabled={mutation.pending} onRetryTags={() => setTagRetry((value) => value + 1)} onChange={change} /> : null}
+      {tab === "authors-series" ? <BookEditAuthorsSeriesPageRegion draft={draft} error={mutation.error} authors={authors.items} series={series.items} authorsLoading={authors.loading} seriesLoading={series.loading} authorsError={authors.error} seriesError={series.error} breadcrumbTrail={breadcrumbTrail} returnTo={`${location.pathname}${location.search}`} disabled={mutation.pending} onRetryAuthors={() => setAuthorRetry((value) => value + 1)} onRetrySeries={() => setSeriesRetry((value) => value + 1)} onChange={change} /> : null}
+      {tab === "identifiers" ? <BookEditIdentifiersPageRegion draft={draft} error={mutation.error} disabled={mutation.pending} onChange={change} /> : null}
       {tab === "groups" && canEditGroups ? <BookEditGroupsPageRegion
         currentGroups={readyBook.groups}
         availableGroups={groups.items}
@@ -384,7 +373,7 @@ export function BookEditOrchestrator() {
         onRemove={(shelf) => void removeGroupShelf(shelf)}
       /> : null}
       </div>
-      <SaveCancelActionRow state={mutation} submitLabel="Save Book" pendingLabel="Saving..." disabled={immediateMutationPending} onCancel={cancel} />
+      <SaveCancelActionRow state={mutation} submitLabel="Save Book" pendingLabel="Saving..." disabled={coverMutation.pending || immediateMutationPending} onCancel={cancel} />
     </div>
   </form></ProductPageShell>;
 }

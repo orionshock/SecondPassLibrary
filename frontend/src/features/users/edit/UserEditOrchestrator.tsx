@@ -77,6 +77,7 @@ export function UserEditOrchestrator() {
   }
 
   async function saveDetails(input: UpdateManagedUserInput) {
+    if (detailsState.pending) return;
     setDetailsState({ pending: true });
     try {
       const updated = await updateManagedUser(profileId, input);

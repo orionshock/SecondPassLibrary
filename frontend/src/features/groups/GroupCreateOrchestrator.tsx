@@ -1,15 +1,12 @@
 import { createGroup } from "@second-pass/spl-api";
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { useBlocker, useLocation, useNavigate, useOutletContext } from "react-router";
+import { useMemo, type FormEvent } from "react";
+import { useLocation, useNavigate, useOutletContext } from "react-router";
 
 import type { AppOutletContext } from "../../app/layout/AppOrchestrator";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
 import { ErrorPanel } from "../../components/UiPrimitives";
-import {
-  idleMutationState,
-  normalizeMutationError,
-  type MutationState,
-} from "../../shared/feedback/mutationState";
+import { normalizeMutationError } from "../../shared/feedback/mutationState";
+import { useFormSaveLifecycle } from "../../shared/forms/useFormSaveLifecycle";
 import { ProductPageShell } from "../../shared/layout/ProductPageShell";
 import {
   createGroupInputFromDraft,
@@ -32,32 +29,17 @@ export function GroupCreateOrchestrator() {
   const { currentUser, serverInfo } = useOutletContext<AppOutletContext>();
   const location = useLocation();
   const navigate = useNavigate();
-  const [draft, setDraft] = useState<GroupDraft>({ ...emptyGroupDraft });
-  const [baseline, setBaseline] = useState<GroupDraft>({ ...emptyGroupDraft });
-  const [mutation, setMutation] = useState<MutationState>(idleMutationState);
-  const allowNavigation = useRef(false);
-  const dirty = !groupDraftsEqual(draft, baseline);
-  const blocker = useBlocker(({ currentLocation, nextLocation }) => (
-    !allowNavigation.current && dirty && currentLocation.pathname !== nextLocation.pathname
-  ));
+  const lifecycle = useFormSaveLifecycle({
+    initialDraft: { ...emptyGroupDraft },
+    draftsEqual: groupDraftsEqual,
+    discardMessage: "Discard unsaved Group changes?",
+  });
+  const { draft, mutation } = lifecycle;
   const breadcrumbs = useMemo(() => groupNewBreadcrumbs(), []);
   usePageBreadcrumbs(breadcrumbs);
 
-  useEffect(() => {
-    const preventUnload = (event: BeforeUnloadEvent) => { if (dirty) event.preventDefault(); };
-    window.addEventListener("beforeunload", preventUnload);
-    return () => window.removeEventListener("beforeunload", preventUnload);
-  }, [dirty]);
-
-  useEffect(() => {
-    if (blocker.state !== "blocked") return;
-    if (window.confirm("Discard unsaved Group changes?")) blocker.proceed();
-    else blocker.reset();
-  }, [blocker]);
-
   function change<K extends keyof GroupDraft>(field: K, value: GroupDraft[K]) {
-    setDraft((current) => ({ ...current, [field]: value }));
-    setMutation(idleMutationState);
+    lifecycle.changeDraft((current) => ({ ...current, [field]: value }));
   }
 
   async function save(event: FormEvent<HTMLFormElement>) {
@@ -65,28 +47,26 @@ export function GroupCreateOrchestrator() {
     try {
       validateGroupDraft(draft);
     } catch (error: unknown) {
-      setMutation({ pending: false, error: normalizeMutationError(error) });
+      lifecycle.setError(normalizeMutationError(error));
       return;
     }
-    setMutation({ pending: true });
+    if (!lifecycle.beginSave()) return;
     try {
       const saved = await createGroup(createGroupInputFromDraft(draft));
       const next = groupDraftFromGroup(saved);
-      setDraft(next);
-      setBaseline(next);
-      allowNavigation.current = true;
+      lifecycle.saveSucceeded(next);
+      lifecycle.permitNavigation();
       navigate(groupEditPath(saved.id), {
         replace: true,
         state: groupEditNavigationState(location.state, saved, "Group created."),
       });
     } catch (error: unknown) {
-      setMutation({ pending: false, error: normalizeMutationError(error) });
+      lifecycle.saveFailed(normalizeMutationError(error));
     }
   }
 
   function cancel() {
-    if (dirty && !window.confirm("Discard unsaved Group changes?")) return;
-    allowNavigation.current = true;
+    if (!lifecycle.confirmDiscard()) return;
     navigate("/groups", { state: null });
   }
 

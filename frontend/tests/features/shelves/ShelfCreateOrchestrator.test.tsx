@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { CurrentUser, ServerInfo } from "@second-pass/spl-api";
 import type { AppOutletContext } from "../../../src/app/layout/AppOrchestrator";
+import { buttonNamed, deferred, setControlValue, submit } from "../../support/domInteraction";
 
 const sdk = vi.hoisted(() => ({ createShelf: vi.fn(), listGroups: vi.fn() }));
 vi.mock("@second-pass/spl-api", async (importOriginal) => ({
@@ -57,13 +58,26 @@ function enterName(container: HTMLElement, value: string) {
 
 describe("ShelfCreateOrchestrator", () => {
   it("creates a personal Shelf and navigates to its edit surface", async () => {
-    sdk.createShelf.mockResolvedValue({ id: "shelf/id", name: "Favorites", description: "", ownerType: "user", ownerUser: { username: "reader" }, ownerGroup: null, visibility: "private", itemCount: 0, previewBooks: [] });
+    const pending = deferred<{
+      id: string; name: string; description: string; ownerType: "user"; ownerUser: { username: string };
+      ownerGroup: null; visibility: "private"; itemCount: number; previewBooks: never[];
+    }>();
+    sdk.createShelf.mockReturnValue(pending.promise);
     const container = await mountCreate();
 
     await act(async () => enterName(container, "  Favorites  "));
-    await act(async () => container.querySelector("form")?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })));
+    act(() => submit(container.querySelector("form")!));
 
     expect(sdk.createShelf).toHaveBeenCalledWith({ name: "Favorites", description: "", ownerType: "user", visibility: "private" });
+    const nameInput = container.querySelector<HTMLInputElement>("#shelf-name")!;
+    expect(nameInput.disabled).toBe(true);
+    expect(buttonNamed(container, "Saving...").disabled).toBe(true);
+    await act(async () => setControlValue(nameInput, "Newer Shelf"));
+    expect(nameInput.value).toBe("  Favorites  ");
+    act(() => submit(container.querySelector("form")!));
+    expect(sdk.createShelf).toHaveBeenCalledOnce();
+
+    await act(async () => pending.resolve({ id: "shelf/id", name: "Favorites", description: "", ownerType: "user", ownerUser: { username: "reader" }, ownerGroup: null, visibility: "private", itemCount: 0, previewBooks: [] }));
     expect(sdk.listGroups).not.toHaveBeenCalled();
     expect(container.querySelector("[data-destination='/shelves/shelf%2Fid/edit']")).not.toBeNull();
   });

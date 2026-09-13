@@ -30,6 +30,7 @@ export function AuthorSeriesNameCombobox({
   kind,
   value,
   enabled,
+  disabled = false,
   candidates,
   pending,
   error,
@@ -39,6 +40,7 @@ export function AuthorSeriesNameCombobox({
   kind: LibraryEntityKind;
   value: string;
   enabled: boolean;
+  disabled?: boolean;
   candidates: readonly DuplicateAdvisoryCandidate[];
   pending: boolean;
   error?: Error;
@@ -112,6 +114,7 @@ export function AuthorSeriesNameCombobox({
       aria-controls={enabled ? listboxId : undefined}
       aria-activedescendant={expanded ? activeOptionId : undefined}
       value={value}
+      disabled={disabled}
       maxLength={255}
       autoComplete="off"
       onChange={(event) => {

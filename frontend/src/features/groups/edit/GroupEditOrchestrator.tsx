@@ -12,7 +12,7 @@ import {
   type Page,
 } from "@second-pass/spl-api";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { Link, useBlocker, useLocation, useNavigate, useOutletContext, useParams } from "react-router";
+import { Link, useLocation, useNavigate, useOutletContext, useParams } from "react-router";
 
 import type { AppOutletContext } from "../../../app/layout/AppOrchestrator";
 import { usePageBreadcrumbs } from "../../../app/navigation/usePageBreadcrumbs";
@@ -23,6 +23,7 @@ import {
   type MutationState,
 } from "../../../shared/feedback/mutationState";
 import { useAutoDismissMutationMessage } from "../../../shared/feedback/useAutoDismissMutationMessage";
+import { useFormSaveLifecycle } from "../../../shared/forms/useFormSaveLifecycle";
 import { ProductPageShell } from "../../../shared/layout/ProductPageShell";
 import { tabButtonId, tabPanelId } from "../../../shared/tabs/TabList";
 import {
@@ -83,14 +84,15 @@ export function GroupEditOrchestrator() {
   const navigate = useNavigate();
   const [retry, setRetry] = useState(0);
   const [load, setLoad] = useState<GroupLoad>({ status: "loading" });
-  const [draft, setDraft] = useState<GroupDraft>({ ...emptyGroupDraft });
-  const [baseline, setBaseline] = useState<GroupDraft>({ ...emptyGroupDraft });
-  const [mutation, setMutation] = useState<MutationState>(() => ({
-    ...idleMutationState,
-    ...(readGroupLifecycleSuccessMessage(location.state)
+  const lifecycle = useFormSaveLifecycle({
+    initialDraft: { ...emptyGroupDraft },
+    draftsEqual: groupDraftsEqual,
+    discardMessage: "Discard unsaved Group changes?",
+    initialFeedback: readGroupLifecycleSuccessMessage(location.state)
       ? { message: readGroupLifecycleSuccessMessage(location.state) }
-      : {}),
-  }));
+      : {},
+  });
+  const { draft, mutation } = lifecycle;
   const [deleteMutation, setDeleteMutation] = useState<MutationState>(idleMutationState);
   const requestedEditQuery = useMemo(
     () => groupEditQueryFromSearchParams(new URLSearchParams(location.search)),
@@ -108,7 +110,6 @@ export function GroupEditOrchestrator() {
   const [candidatesLoad, setCandidatesLoad] = useState<BookPageLoad>({ loading: false });
   const [candidatesVersion, setCandidatesVersion] = useState(0);
   const [candidateMutation, setCandidateMutation] = useState<BookMutation>({});
-  useAutoDismissMutationMessage(mutation, setMutation);
   useAutoDismissMutationMessage(bookMutation, setBookMutation);
   useAutoDismissMutationMessage(candidateMutation, setCandidateMutation);
   const [memberMutationPending, setMemberMutationPending] = useState(false);
@@ -122,12 +123,7 @@ export function GroupEditOrchestrator() {
     immediateMutationPending,
   );
   const activeTab = editQuery.tab;
-  const allowNavigation = useRef(false);
   const group = load.status === "ready" ? load.group : undefined;
-  const dirty = !groupDraftsEqual(draft, baseline);
-  const blocker = useBlocker(({ currentLocation, nextLocation }) => (
-    !allowNavigation.current && dirty && currentLocation.pathname !== nextLocation.pathname
-  ));
   const breadcrumbs = useMemo(
     () => groupEditBreadcrumbFallback(groupId, group?.name, group?.isPublicGroup),
     [group?.isPublicGroup, group?.name, groupId],
@@ -144,19 +140,7 @@ export function GroupEditOrchestrator() {
   }, [editQuery.query, location.pathname, location.search, location.state, navigate]);
 
   useEffect(() => {
-    const preventUnload = (event: BeforeUnloadEvent) => { if (dirty) event.preventDefault(); };
-    window.addEventListener("beforeunload", preventUnload);
-    return () => window.removeEventListener("beforeunload", preventUnload);
-  }, [dirty]);
-
-  useEffect(() => {
-    if (blocker.state !== "blocked") return;
-    if (window.confirm("Discard unsaved Group changes?")) blocker.proceed();
-    else blocker.reset();
-  }, [blocker]);
-
-  useEffect(() => {
-    allowNavigation.current = false;
+    lifecycle.protectNavigation();
     if (!groupId) {
       setLoad({ status: "unavailable" });
       return;
@@ -168,8 +152,7 @@ export function GroupEditOrchestrator() {
         if (!active) return;
         const next = groupDraftFromGroup(loadedGroup);
         setLoad({ status: "ready", group: loadedGroup });
-        setDraft(next);
-        setBaseline(next);
+        lifecycle.loadDraft(next);
       })
       .catch((error: unknown) => {
         if (!active) return;
@@ -218,8 +201,7 @@ export function GroupEditOrchestrator() {
   }, [activeTab, bookMutationAllowed, candidatePage, candidatePageSize, candidateQuery, candidatesVersion, group]);
 
   function change<K extends keyof GroupDraft>(field: K, value: GroupDraft[K]) {
-    setDraft((current) => ({ ...current, [field]: value }));
-    setMutation(idleMutationState);
+    lifecycle.changeDraft((current) => ({ ...current, [field]: value }));
   }
 
   async function save(event: FormEvent<HTMLFormElement>) {
@@ -227,30 +209,27 @@ export function GroupEditOrchestrator() {
     try {
       validateGroupDraft(draft);
     } catch (error: unknown) {
-      setMutation({ pending: false, error: normalizeMutationError(error) });
+      lifecycle.setError(normalizeMutationError(error));
       return;
     }
-    setMutation({ pending: true });
+    if (!lifecycle.beginSave()) return;
     try {
       const saved = await updateGroup(groupId, updateGroupInputFromDraft(draft));
       const next = groupDraftFromGroup(saved);
       setLoad({ status: "ready", group: saved });
-      setDraft(next);
-      setBaseline(next);
-      setMutation({ pending: false, message: "Group saved." });
+      lifecycle.saveSucceeded(next, "Group saved.");
       navigate({ pathname: location.pathname, search: location.search }, {
         replace: true,
         state: groupEditNavigationState(location.state, saved),
       });
     } catch (error: unknown) {
-      setMutation({ pending: false, error: normalizeMutationError(error) });
+      lifecycle.saveFailed(normalizeMutationError(error));
     }
   }
 
   function cancel() {
     if (!group) return;
-    if (dirty && !window.confirm("Discard unsaved Group changes?")) return;
-    allowNavigation.current = true;
+    if (!lifecycle.confirmDiscard()) return;
     navigate(groupDetailPath(group.id), {
       state: groupDetailNavigationStateFromEdit(location.state, group),
     });
@@ -299,7 +278,7 @@ export function GroupEditOrchestrator() {
     setDeleteMutation({ pending: true });
     try {
       await deleteGroup(group.id);
-      allowNavigation.current = true;
+      lifecycle.permitNavigation();
       navigate("/groups", { replace: true, state: null });
     } catch (error: unknown) {
       setDeleteMutation({ pending: false, error: normalizeMutationError(error) });

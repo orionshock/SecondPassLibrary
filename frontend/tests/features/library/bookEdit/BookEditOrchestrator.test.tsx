@@ -158,7 +158,7 @@ describe("BookEditOrchestrator", () => {
     } satisfies BookDetail;
     const pendingSave = deferred<BookDetail>();
     sdk.updateBook.mockReturnValue(pendingSave.promise);
-    const { container } = await mount();
+    const { container, router } = await mount();
 
     await act(async () => setControlValue(container.querySelector<HTMLInputElement>("#book-edit-title")!, "Edited Book"));
     await setRawRichText(container, "book-edit-description", "<p>Edited <strong>description</strong></p>");
@@ -181,23 +181,47 @@ describe("BookEditOrchestrator", () => {
       catalogTagNames: ["Fantasy", "Mystery"],
     }));
     expect(container.querySelector<HTMLButtonElement>('button[type="submit"]')?.disabled).toBe(true);
+    const publisherInput = container.querySelector<HTMLInputElement>("#book-edit-publisher")!;
+    expect(publisherInput.disabled).toBe(true);
+    await act(async () => setControlValue(publisherInput, "Newer Press"));
+    expect(publisherInput.value).toBe("Press");
+    act(() => submit(container.querySelector("form")!));
     buttonNamed(container, "Saving...").click();
     expect(sdk.updateBook).toHaveBeenCalledOnce();
 
     await act(async () => pendingSave.resolve(saved));
     expect(container.querySelector("h1")?.textContent).toBe("Edited Book");
+    expect(container.querySelector<HTMLInputElement>("#book-edit-publisher")?.disabled).toBe(false);
+    const confirm = vi.fn(() => true);
+    vi.stubGlobal("confirm", confirm);
+    await act(async () => router.navigate("/library/books/book%2Fid"));
+    expect(confirm).not.toHaveBeenCalled();
   });
 
   it("keeps the edited draft recoverable when save fails", async () => {
     arrangeDependencies();
-    sdk.updateBook.mockRejectedValue(new Error("Book save failed."));
-    const { container } = await mount();
+    const failedSave = deferred<BookDetail>();
+    sdk.updateBook.mockReturnValueOnce(failedSave.promise).mockResolvedValueOnce({ ...book, title: "Unsaved Book" });
+    const { container, router } = await mount();
+    const confirm = vi.fn(() => false);
+    vi.stubGlobal("confirm", confirm);
 
     await act(async () => setControlValue(container.querySelector<HTMLInputElement>("#book-edit-title")!, "Unsaved Book"));
-    await act(async () => submit(container.querySelector("form")!));
+    act(() => submit(container.querySelector("form")!));
+    expect(container.querySelector<HTMLInputElement>("#book-edit-title")?.disabled).toBe(true);
+    await act(async () => router.navigate("/library/books/book%2Fid"));
+    expect(router.state.location.pathname).toContain("/edit");
+    expect(confirm).not.toHaveBeenCalled();
+    await act(async () => failedSave.reject(new Error("Book save failed.")));
 
     expect(container.querySelector<HTMLInputElement>("#book-edit-title")?.value).toBe("Unsaved Book");
+    expect(container.querySelector<HTMLInputElement>("#book-edit-title")?.disabled).toBe(false);
     expect(container.querySelector("[role=\"alert\"]")).not.toBeNull();
+    await act(async () => router.navigate("/library/books/book%2Fid"));
+    expect(confirm).toHaveBeenCalledWith("Discard unsaved Book changes?");
+    expect(router.state.location.pathname).toContain("/edit");
+    await act(async () => submit(container.querySelector("form")!));
+    expect(sdk.updateBook).toHaveBeenCalledTimes(2);
   });
 
   it("ignores a superseded Book load after navigation selects a newer Book", async () => {

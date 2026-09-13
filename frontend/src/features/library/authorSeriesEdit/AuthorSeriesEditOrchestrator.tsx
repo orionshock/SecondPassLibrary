@@ -16,12 +16,13 @@ import {
   type BookPreview,
 } from "@second-pass/spl-api";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { Link, useBlocker, useLocation, useNavigate, useParams } from "react-router";
+import { Link, useLocation, useNavigate, useParams } from "react-router";
 
 import { breadcrumbNavigationState, resolveBreadcrumbTrail } from "../../../app/navigation/breadcrumbs";
 import { usePageBreadcrumbs } from "../../../app/navigation/usePageBreadcrumbs";
 import { Button, ErrorPanel } from "../../../components/UiPrimitives";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../../shared/feedback/mutationState";
+import { useFormSaveLifecycle } from "../../../shared/forms/useFormSaveLifecycle";
 import { ProductPageShell } from "../../../shared/layout/ProductPageShell";
 import {
   libraryEntityAxisPath,
@@ -98,12 +99,15 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
   const navigate = useNavigate();
   const [retry, setRetry] = useState(0);
   const [load, setLoad] = useState<LoadState>(mode === "new" ? { status: "ready" } : { status: "loading" });
-  const [draft, setDraft] = useState<AuthorSeriesEditDraft>({ ...emptyAuthorSeriesEditDraft });
-  const [baseline, setBaseline] = useState<AuthorSeriesEditDraft>({ ...emptyAuthorSeriesEditDraft });
-  const [mutation, setMutation] = useState<MutationState>(() => ({
-    ...idleMutationState,
-    ...(readLibraryEntitySuccessMessage(location.state) ? { message: readLibraryEntitySuccessMessage(location.state) } : {}),
-  }));
+  const lifecycle = useFormSaveLifecycle({
+    initialDraft: { ...emptyAuthorSeriesEditDraft },
+    draftsEqual: authorSeriesEditDraftsEqual,
+    discardMessage: `Discard unsaved ${titleKind(kind)} changes?`,
+    initialFeedback: readLibraryEntitySuccessMessage(location.state)
+      ? { message: readLibraryEntitySuccessMessage(location.state) }
+      : {},
+  });
+  const { draft, mutation } = lifecycle;
   const [deleteMutation, setDeleteMutation] = useState<MutationState>(idleMutationState);
   const [attachedBooks, setAttachedBooks] = useState<AttachedBooksState>(emptyAttachedBooksState);
   const [duplicateAdvisory, setDuplicateAdvisory] = useState<DuplicateAdvisoryState>({
@@ -114,12 +118,7 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
   const attachedBooksRequests = useRef(new AttachedBooksRequestGate());
   const duplicateAdvisoryRequests = useRef(new DuplicateAdvisoryRequestGate());
   const deletePending = useRef(false);
-  const allowNavigation = useRef(false);
   const entity = load.status === "ready" ? load.entity : undefined;
-  const dirty = !authorSeriesEditDraftsEqual(draft, baseline);
-  const blocker = useBlocker(({ currentLocation, nextLocation }) => (
-    !allowNavigation.current && dirty && currentLocation.pathname !== nextLocation.pathname
-  ));
   const breadcrumbs = useMemo(
     () => libraryEntityBreadcrumbs(kind, mode, entity?.name, entityId),
     [entity?.name, entityId, kind, mode],
@@ -131,24 +130,11 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
   usePageBreadcrumbs(breadcrumbs);
 
   useEffect(() => {
-    const preventUnload = (event: BeforeUnloadEvent) => { if (dirty) event.preventDefault(); };
-    window.addEventListener("beforeunload", preventUnload);
-    return () => window.removeEventListener("beforeunload", preventUnload);
-  }, [dirty]);
-
-  useEffect(() => {
-    if (blocker.state !== "blocked") return;
-    if (window.confirm(`Discard unsaved ${titleKind(kind)} changes?`)) blocker.proceed();
-    else blocker.reset();
-  }, [blocker, kind]);
-
-  useEffect(() => {
-    allowNavigation.current = false;
+    lifecycle.protectNavigation();
     if (mode === "new") {
       const empty = { ...emptyAuthorSeriesEditDraft };
       setLoad({ status: "ready" });
-      setDraft(empty);
-      setBaseline(empty);
+      lifecycle.loadDraft(empty);
       return;
     }
     if (!entityId) {
@@ -164,8 +150,7 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
         ? authorEditDraft(loaded as LibraryAuthor)
         : seriesEditDraft(loaded as LibrarySeries);
       setLoad({ status: "ready", entity: loaded });
-      setDraft(next);
-      setBaseline(next);
+      lifecycle.loadDraft(next);
     }).catch((error: unknown) => {
       if (!active) return;
       setLoad(error instanceof ApiError && error.status === 404
@@ -255,8 +240,7 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
   }
 
   function change<K extends keyof AuthorSeriesEditDraft>(field: K, value: AuthorSeriesEditDraft[K]) {
-    setDraft((current) => ({ ...current, [field]: value }));
-    setMutation(idleMutationState);
+    lifecycle.changeDraft((current) => ({ ...current, [field]: value }));
   }
 
   async function save(event: FormEvent<HTMLFormElement>) {
@@ -264,19 +248,18 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
     try {
       validateAuthorSeriesEditDraft(draft);
     } catch (error: unknown) {
-      setMutation({ pending: false, error: normalizeMutationError(error) });
+      lifecycle.setError(normalizeMutationError(error));
       return;
     }
-    setMutation({ pending: true });
+    if (!lifecycle.beginSave()) return;
     try {
       const saved = await saveEntity(kind, mode, entityId, draft);
       const next = kind === "author"
         ? authorEditDraft(saved as LibraryAuthor)
         : seriesEditDraft(saved as LibrarySeries);
       setLoad({ status: "ready", entity: saved });
-      setDraft(next);
-      setBaseline(next);
       const message = `${titleKind(kind)} saved.`;
+      lifecycle.saveSucceeded(next, message);
       const savedBreadcrumbs = libraryEntitySavedBreadcrumbs(
         resolveBreadcrumbTrail(location.state, breadcrumbs),
         kind,
@@ -284,8 +267,7 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
         saved.id,
       );
       if (mode === "new") {
-        setMutation({ pending: false, message });
-        allowNavigation.current = true;
+        lifecycle.permitNavigation();
         const target = libraryEntityEditPath(kind, saved.id);
         navigate(target, {
           replace: true,
@@ -296,7 +278,6 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
           }),
         });
       } else {
-        setMutation({ pending: false, message });
         navigate(location.pathname, {
           replace: true,
           state: libraryEntityNavigationState({
@@ -306,13 +287,12 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
         });
       }
     } catch (error: unknown) {
-      setMutation({ pending: false, error: normalizeMutationError(error) });
+      lifecycle.saveFailed(normalizeMutationError(error));
     }
   }
 
   function cancel() {
-    if (dirty && !window.confirm(`Discard unsaved ${titleKind(kind)} changes?`)) return;
-    allowNavigation.current = true;
+    if (!lifecycle.confirmDiscard()) return;
     const returnTo = readLibraryEntityReturnTo(location.state) ?? libraryEntityAxisPath(kind);
     const parentBreadcrumbs = libraryEntityParentBreadcrumbs(
       resolveBreadcrumbTrail(location.state, breadcrumbs),
@@ -323,7 +303,7 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
   }
 
   function selectDuplicateCandidate(candidate: DuplicateAdvisoryCandidate) {
-    allowNavigation.current = true;
+    lifecycle.permitNavigation();
     const target = duplicateCandidateEditNavigation(
       kind,
       candidate,
@@ -340,7 +320,7 @@ export function AuthorSeriesEditOrchestrator({ kind, mode }: {
     try {
       if (kind === "author") await deleteAuthor(entityId);
       else await deleteSeries(entityId);
-      allowNavigation.current = true;
+      lifecycle.permitNavigation();
       navigate(libraryEntityAxisPath(kind), { replace: true, state: null });
     } catch (error: unknown) {
       deletePending.current = false;

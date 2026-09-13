@@ -38,12 +38,13 @@ export function AuthorSeriesEditFormPageRegion({
   const entity = titleKind(kind);
   const proseField = kind === "author" ? "biography" : "summary";
   const proseLabel = kind === "author" ? "Biography" : "Summary";
-  return <form className="author-series-edit-form" autoComplete="off" onSubmit={onSubmit}>
+  return <form className="author-series-edit-form" autoComplete="off" aria-busy={state.pending} onSubmit={onSubmit}>
     <FormField label="Name" htmlFor="library-entity-name" error={fieldError(state.error, "name")}>
       <AuthorSeriesNameCombobox
         kind={kind}
         value={draft.name}
-        enabled={advisory.enabled}
+        enabled={advisory.enabled && !state.pending}
+        disabled={state.pending}
         candidates={advisory.candidates}
         pending={advisory.pending}
         error={advisory.error}
@@ -52,10 +53,10 @@ export function AuthorSeriesEditFormPageRegion({
       />
     </FormField>
     <FormField label="Sort name" htmlFor="library-entity-sort-name" error={fieldError(state.error, "sortName")}>
-      <input id="library-entity-sort-name" value={draft.sortName} maxLength={255} autoComplete="off" onChange={(event) => onChange("sortName", event.target.value)} />
+      <input id="library-entity-sort-name" value={draft.sortName} maxLength={255} disabled={state.pending} autoComplete="off" onChange={(event) => onChange("sortName", event.target.value)} />
     </FormField>
     <FormField label={proseLabel} htmlFor="library-entity-prose" error={fieldError(state.error, proseField)}>
-      <LimitedRichTextEditor id="library-entity-prose" value={draft.prose} maxLength={DESCRIPTIVE_PROSE_MAX_LENGTH} onChange={(value) => onChange("prose", value)} />
+      <LimitedRichTextEditor id="library-entity-prose" value={draft.prose} disabled={state.pending} maxLength={DESCRIPTIVE_PROSE_MAX_LENGTH} onChange={(value) => onChange("prose", value)} />
     </FormField>
     <SaveCancelActionRow
       state={state}
