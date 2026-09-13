@@ -3,14 +3,17 @@ from __future__ import annotations
 from typing import Any
 
 from django.contrib.auth import get_user_model
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.test import APITestCase
 
 from library.groups.memberships import ensure_user_public_membership
 from library.groups.book_assignments import add_book_to_group, ensure_book_public_assignment
-from library.models import LibraryGroup
+from library.models import LibraryGroup, LibraryGroupMembership
 from library.queries import invalidate_visible_books_cache
+from shelves.item_queries import attach_shelf_preview_books
 from shelves.models import Shelf, ShelfItem
 from tests.testenv.filesystem import IsolatedMediaRootMixin
 from tests.utils.books import create_file_backed_book
@@ -135,6 +138,142 @@ class ShelfPreviewBooksAPITest(IsolatedMediaRootMixin, APITestCase):
             self.assertEqual(set(row.keys()), {"id", "title", "cover_url"})
             self.assertIsNone(row["cover_url"])
             self.assertNotIn("download_url", row)
+
+    def test_shelf_preview_query_count_is_bounded_across_parent_count(self):
+        shelves = [self.shelf]
+        for index in range(4):
+            shelf = Shelf.objects.create(
+                name=f"Additional {index}",
+                owner_type=Shelf.OWNER_TYPE_USER,
+                owner_user=self.reader,
+                visibility=Shelf.VISIBILITY_PRIVATE,
+                created_by=self.reader,
+            )
+            ShelfItem.objects.create(
+                shelf=shelf,
+                book=self.visible_books[index],
+                position=0,
+                added_by=self.reader,
+            )
+            shelves.append(shelf)
+
+        with CaptureQueriesContext(connection) as one_shelf_queries:
+            attach_shelf_preview_books(
+                shelves=shelves[:1],
+                user=self.reader,
+                limit=6,
+            )
+        with CaptureQueriesContext(connection) as five_shelf_queries:
+            attach_shelf_preview_books(
+                shelves=shelves,
+                user=self.reader,
+                limit=6,
+            )
+
+        self.assertLessEqual(len(five_shelf_queries), len(one_shelf_queries) + 1)
+
+    def test_batched_shelf_previews_apply_order_and_limit_per_shelf(self):
+        second_shelf = Shelf.objects.create(
+            name="Second Preview Shelf",
+            owner_type=Shelf.OWNER_TYPE_USER,
+            owner_user=self.reader,
+            visibility=Shelf.VISIBILITY_PRIVATE,
+            created_by=self.reader,
+        )
+        for position, book in enumerate(reversed(self.visible_books[6:14])):
+            ShelfItem.objects.create(
+                shelf=second_shelf,
+                book=book,
+                position=position,
+                added_by=self.reader,
+            )
+        empty_shelf = Shelf.objects.create(
+            name="Empty Preview Shelf",
+            owner_type=Shelf.OWNER_TYPE_USER,
+            owner_user=self.reader,
+            visibility=Shelf.VISIBILITY_PRIVATE,
+            created_by=self.reader,
+        )
+
+        self.client.login(username="reader", password="pw")
+        response = assert_response(
+            self.client.get("/api/v1/shelves/", {"preview_limit": "6"})
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        rows = {row["id"]: row for row in self._results(response)}
+
+        self.assertEqual(
+            [book["title"] for book in rows[str(self.shelf.id)]["preview_books"]],
+            [f"Visible {index:02d}" for index in range(6)],
+        )
+        self.assertEqual(
+            [book["title"] for book in rows[str(second_shelf.id)]["preview_books"]],
+            [f"Visible {index:02d}" for index in range(13, 7, -1)],
+        )
+        self.assertEqual(rows[str(empty_shelf.id)]["preview_books"], [])
+
+    def test_mixed_personal_and_group_previews_keep_exact_group_eligibility(self):
+        exact_group = LibraryGroup.objects.create(name="Exact Preview Group")
+        other_group = LibraryGroup.objects.create(name="Other Visible Group")
+        LibraryGroupMembership.objects.create(user=self.reader, group=exact_group)
+        LibraryGroupMembership.objects.create(user=self.reader, group=other_group)
+
+        exact_book = create_file_backed_book(
+            title="Exact Group Book", assign_public=False
+        ).book
+        other_group_book = create_file_backed_book(
+            title="Visible Through Other Group", assign_public=False
+        ).book
+        add_book_to_group(actor=self.owner, book=exact_book, group=exact_group)
+        add_book_to_group(actor=self.owner, book=other_group_book, group=other_group)
+
+        group_shelf = Shelf.objects.create(
+            name="Exact Group Shelf",
+            owner_type=Shelf.OWNER_TYPE_GROUP,
+            owner_group=exact_group,
+            created_by=self.owner,
+        )
+        ShelfItem.objects.create(
+            shelf=group_shelf,
+            book=other_group_book,
+            position=0,
+            added_by=self.owner,
+        )
+        ShelfItem.objects.create(
+            shelf=group_shelf,
+            book=exact_book,
+            position=1,
+            added_by=self.owner,
+        )
+        personal_shelf = Shelf.objects.create(
+            name="Other Group Personal Shelf",
+            owner_type=Shelf.OWNER_TYPE_USER,
+            owner_user=self.reader,
+            created_by=self.reader,
+        )
+        ShelfItem.objects.create(
+            shelf=personal_shelf,
+            book=other_group_book,
+            position=0,
+            added_by=self.reader,
+        )
+        invalidate_visible_books_cache()
+
+        self.client.login(username="reader", password="pw")
+        response = assert_response(
+            self.client.get("/api/v1/shelves/", {"include_preview_books": "true"})
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        rows = {row["id"]: row for row in self._results(response)}
+
+        self.assertEqual(
+            [book["title"] for book in rows[str(group_shelf.id)]["preview_books"]],
+            [exact_book.title],
+        )
+        self.assertEqual(
+            [book["title"] for book in rows[str(personal_shelf.id)]["preview_books"]],
+            [other_group_book.title],
+        )
 
     def test_shelf_preview_limit_contract_applies_to_list_and_detail(self):
         self.client.login(username="reader", password="pw")

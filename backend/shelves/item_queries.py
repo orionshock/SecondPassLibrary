@@ -1,13 +1,63 @@
 from __future__ import annotations
 
 from django.core.exceptions import PermissionDenied
-from django.db.models import Prefetch, QuerySet
+from django.db.models import F, Prefetch, Q, QuerySet, Window
+from django.db.models.functions import RowNumber
 
+from library.catalog.preview_books import attach_preview_books_from_queryset
 from library.models import BookAuthor, BookCatalogTag
+from library.queries import visible_books_for_user
 
 from .models import Shelf, ShelfItem
 from .policies import visible_books_for_shelf
 from .querysets import visible_shelf_filter
+
+
+def attach_shelf_preview_books(*, shelves, user, limit: int) -> None:
+    shelf_list = list(shelves)
+    if not shelf_list:
+        return
+
+    visible_books = visible_books_for_user(user, cached=False)
+    readable_shelves = Shelf.objects.filter(visible_shelf_filter(user))
+    rows = (
+        ShelfItem.objects.filter(
+            shelf_id__in=[shelf.id for shelf in shelf_list],
+            shelf__in=readable_shelves,
+            book__in=visible_books,
+        )
+        .filter(
+            Q(shelf__owner_type=Shelf.OWNER_TYPE_USER)
+            | Q(
+                shelf__owner_type=Shelf.OWNER_TYPE_GROUP,
+                book__group_assignments__group_id=F("shelf__owner_group_id"),
+            )
+        )
+        .select_related("book")
+        .only(
+            "id",
+            "shelf_id",
+            "position",
+            "book__id",
+            "book__title",
+            "book__cover_file",
+        )
+        .annotate(
+            _preview_parent_id=F("shelf_id"),
+            _preview_rank=Window(
+                expression=RowNumber(),
+                partition_by=[F("shelf_id")],
+                order_by=[F("position").asc(), F("id").asc()],
+            ),
+        )
+        .filter(_preview_rank__lte=limit)
+        .order_by("shelf_id", "_preview_rank")
+    )
+    attach_preview_books_from_queryset(
+        parents=shelf_list,
+        queryset=rows,
+        get_book=lambda row: row.book,
+    )
 
 
 def shelf_items_with_books(*, shelf: Shelf) -> QuerySet[ShelfItem]:

@@ -30,6 +30,7 @@ from .serializers import (
     ShelfSerializer,
 )
 from .item_queries import (
+    attach_shelf_preview_books,
     editor_shelf_items,
     visible_shelf_item_ids,
     visible_shelf_items_for_user,
@@ -53,22 +54,6 @@ from .querysets import (
     filter_readable_shelves,
     with_visible_item_count,
 )
-
-
-def _attach_shelf_preview_books(*, shelves, user, limit: int) -> None:
-    shelf_list = list(shelves)
-    shelf_ids = [shelf.id for shelf in shelf_list]
-    if not shelf_ids:
-        return
-
-    for shelf in shelf_list:
-        shelf._preview_books = [
-            item.book
-            for item in visible_shelf_items_for_user(user, shelf).order_by("position", "id")[
-                :limit
-            ]
-        ]
-
 
 class ShelfViewSet(
     mixins.ListModelMixin,
@@ -174,7 +159,7 @@ class ShelfViewSet(
         shelves = list(page) if page is not None else list(queryset)
 
         if self.preview_book_limit is not None:
-            _attach_shelf_preview_books(
+            attach_shelf_preview_books(
                 shelves=shelves,
                 user=request.user,
                 limit=self.preview_book_limit,
@@ -188,7 +173,7 @@ class ShelfViewSet(
     def retrieve(self, request, *args, **kwargs):
         instance = self.get_object()
         if self.preview_book_limit is not None:
-            _attach_shelf_preview_books(
+            attach_shelf_preview_books(
                 shelves=[instance],
                 user=request.user,
                 limit=self.preview_book_limit,
