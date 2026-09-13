@@ -46,6 +46,7 @@ Repository files, current tests, and observed runtime behavior are authoritative
 
 - Log meaningful lifecycle success, conflict, retry, cleanup failure, and unexpected failure at appropriate levels with bounded context. Never log passwords, tokens, session identifiers, payload contents, or unnecessary personal data. Avoid noisy per-request or per-poll logging.
 - Give touched modules and files descriptive purpose/role names. Avoid unrelated broad rename sweeps. Do not introduce a general abstraction merely because similar code might exist later. An abstraction should earn its place by serving multiple current callers/responsibilities, protecting an established boundary, or isolating an external dependency that genuinely needs substitution. Do not add compatibility layers unless a current supported caller or contract requires them.
+- Apply the delete test to helpers and abstractions: mentally remove the abstraction and inline its behavior into callers. Keep it when inlining would duplicate domain knowledge, scatter an implementation detail, obscure callers, or create several places that must change together. Delete it when inlining makes the code clearer with little meaningful duplication. Judge semantic complexity, not call-site count or lines changed: a one-use boundary can be deep and valuable, while a widely used trivial wrapper can still be needless indirection. Repetition alone does not justify extraction before a stable concept or boundary is evident.
 
 ## Read when relevant
 

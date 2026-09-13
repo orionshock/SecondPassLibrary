@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+# Intentionally cohesive despite its size: this is the sole owner of the staged
+# plan's construction, persisted schema, validation, transitions, and projections.
+# Splitting those responsibilities would recreate the distributed internal protocol
+# this boundary exists to prevent.
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any, Mapping, Sequence
 
 from marginalia.archives import ArchiveBook, ArchiveReadingSession, MarginaliaArchive
-
 
 MATCHED = "matched"
 UNMATCHED = "unmatched"
@@ -28,6 +31,7 @@ class PlanSelection:
     candidate_id: str
     name: str
     notes: str
+
 
 @dataclass(frozen=True, slots=True)
 class ResolvedSelection:
@@ -108,10 +112,10 @@ class StagedImportPlan:
         book = self._book(book_candidate_id)
         if source_reading_session_id in {
             row["source_reading_session_id"]
-            for row in self._candidate_rows().values()
+            for _book, row in self._candidates().values()
         }:
             raise StagedImportPlanError
-        candidate_id = f"reading-session-{len(self._candidate_rows()) + 1:06d}"
+        candidate_id = f"reading-session-{len(self._candidates()) + 1:06d}"
         row = {
             "candidate_id": candidate_id,
             "source_reading_session_id": source_reading_session_id,
@@ -133,31 +137,29 @@ class StagedImportPlan:
     def add_warning(self, *, code: str, message: str, candidate_id: str) -> None:
         _text(code)
         _text(message)
-        if candidate_id not in self._candidate_rows():
+        if candidate_id not in self._candidates():
             raise StagedImportPlanError
         self._warnings.append(
             {"code": code, "message": message, "candidate_id": candidate_id}
         )
 
     @property
-    def can_apply(self) -> bool:
-        return any(row["will_import"] for row in self._candidate_rows().values())
-
-    @property
     def unmatched_session_count(self) -> int:
-        return sum(not row["will_import"] for row in self._candidate_rows().values())
+        return sum(not row["will_import"] for _book, row in self._candidates().values())
 
     def encode(self) -> dict:
         candidate_ids = _validate_books(self._books)
         _validate_warnings(self._warnings, candidate_ids=candidate_ids)
-        sessions = self._candidate_rows()
+        candidates = self._candidates()
         unmatched_count = self.unmatched_session_count
         return {
-            "can_apply": self.can_apply,
+            "can_apply": any(row["will_import"] for _book, row in candidates.values()),
             "summary": {
                 "book_count": len(self._books),
-                "reading_session_count": len(sessions),
-                "annotation_count": sum(row["annotation_count"] for row in sessions.values()),
+                "reading_session_count": len(candidates),
+                "annotation_count": sum(
+                    row["annotation_count"] for _book, row in candidates.values()
+                ),
             },
             "matched_book_count": sum(
                 book["match"]["status"] == MATCHED for book in self._books
@@ -207,17 +209,17 @@ class StagedImportPlan:
         *,
         allow_applied_inaccessible: bool,
     ) -> tuple[PlanSelection, ...]:
-        candidates = self._candidate_rows()
+        candidates = self._candidates()
         normalized = []
         seen = set()
         try:
             for raw in requested:
                 candidate_id = _text(raw["candidate_id"])
-                candidate = candidates.get(candidate_id)
-                if candidate_id in seen or candidate is None:
+                context = candidates.get(candidate_id)
+                if candidate_id in seen or context is None:
                     raise StagedImportSelectionError
                 seen.add(candidate_id)
-                book = self._book_for_candidate(candidate_id)
+                book, candidate = context
                 eligible = book["match"]["status"] == MATCHED and (
                     candidate["will_import"]
                     or (
@@ -230,8 +232,12 @@ class StagedImportPlan:
                 normalized.append(
                     PlanSelection(
                         candidate_id=candidate_id,
-                        name=_text(raw.get("name", candidate["name"]), allow_blank=True),
-                        notes=_text(raw.get("notes", candidate["notes"]), allow_blank=True),
+                        name=_text(
+                            raw.get("name", candidate["name"]), allow_blank=True
+                        ),
+                        notes=_text(
+                            raw.get("notes", candidate["notes"]), allow_blank=True
+                        ),
                     )
                 )
         except StagedImportSelectionError:
@@ -256,11 +262,10 @@ class StagedImportPlan:
             for book, _source_book, source_sessions in aligned
             for row in book["reading_sessions"]
         }
-        candidates = self._candidate_rows()
+        candidates = self._candidates()
         resolved = []
         for selection in selections:
-            row = candidates[selection.candidate_id]
-            book = self._book_for_candidate(selection.candidate_id)
+            book, row = candidates[selection.candidate_id]
             book_id = book["match"].get("book_id")
             if not book_id:
                 raise StagedImportPlanError
@@ -280,12 +285,13 @@ class StagedImportPlan:
 
     def with_access_lost(self, candidate_ids: set[str]) -> StagedImportPlan:
         updated = StagedImportPlan.decode(self.encode())
-        candidates = updated._candidate_rows()
+        candidates = updated._candidates()
         if not candidate_ids.issubset(candidates):
             raise StagedImportPlanError
         for candidate_id in candidate_ids:
-            candidates[candidate_id]["will_import"] = False
-            candidates[candidate_id]["unmatched_reason"] = BOOK_INACCESSIBLE
+            _book, candidate = candidates[candidate_id]
+            candidate["will_import"] = False
+            candidate["unmatched_reason"] = BOOK_INACCESSIBLE
         return updated
 
     def unmatched_summaries(self) -> list[dict]:
@@ -325,7 +331,10 @@ class StagedImportPlan:
             )
             if sessions:
                 results.append((source_book, sessions))
-        if sum(len(sessions) for _book, sessions in results) != self.unmatched_session_count:
+        if (
+            sum(len(sessions) for _book, sessions in results)
+            != self.unmatched_session_count
+        ):
             raise StagedImportPlanError
         return tuple(results)
 
@@ -333,14 +342,18 @@ class StagedImportPlan:
         archive_books = tuple(
             book
             for book in archive.books
-            if any(include_empty_sessions or row.annotations for row in book.reading_sessions)
+            if any(
+                include_empty_sessions or row.annotations
+                for row in book.reading_sessions
+            )
         )
         if len(archive_books) != len(self._books):
             raise StagedImportPlanError
         aligned = []
         for book, source_book in zip(self._books, archive_books, strict=True):
             sources = {
-                row.source_reading_session_id: row for row in source_book.reading_sessions
+                row.source_reading_session_id: row
+                for row in source_book.reading_sessions
             }
             expected_ids = tuple(
                 row.source_reading_session_id
@@ -348,9 +361,11 @@ class StagedImportPlan:
                 if include_empty_sessions or row.annotations
             )
             rows = book["reading_sessions"]
-            if source_book.file_hash != book["file_hash"] or tuple(
-                row["source_reading_session_id"] for row in rows
-            ) != expected_ids:
+            if (
+                source_book.file_hash != book["file_hash"]
+                or tuple(row["source_reading_session_id"] for row in rows)
+                != expected_ids
+            ):
                 raise StagedImportPlanError
             if any(
                 row["source_status"] != sources[row["source_reading_session_id"]].status
@@ -362,9 +377,9 @@ class StagedImportPlan:
             aligned.append((book, source_book, sources))
         return tuple(aligned)
 
-    def _candidate_rows(self) -> dict[str, dict]:
+    def _candidates(self) -> dict[str, tuple[dict, dict]]:
         return {
-            row["candidate_id"]: row
+            row["candidate_id"]: (book, row)
             for book in self._books
             for row in book["reading_sessions"]
         }
@@ -372,12 +387,6 @@ class StagedImportPlan:
     def _book(self, candidate_id: str) -> dict:
         for book in self._books:
             if book["candidate_id"] == candidate_id:
-                return book
-        raise StagedImportPlanError
-
-    def _book_for_candidate(self, candidate_id: str) -> dict:
-        for book in self._books:
-            if any(row["candidate_id"] == candidate_id for row in book["reading_sessions"]):
                 return book
         raise StagedImportPlanError
 
@@ -403,7 +412,9 @@ def _validate_books(books: list) -> set[str]:
             _text(match["book_id"])
             if match.get("reason") is not None:
                 raise StagedImportPlanError
-            if match.get("cover_url") is not None and not isinstance(match["cover_url"], str):
+            if match.get("cover_url") is not None and not isinstance(
+                match["cover_url"], str
+            ):
                 raise StagedImportPlanError
         elif (
             status != UNMATCHED
@@ -439,7 +450,9 @@ def _validate_session(row: Mapping, *, matched: bool) -> None:
     count = row["annotation_count"]
     if not isinstance(count, int) or isinstance(count, bool) or count < 0:
         raise StagedImportPlanError
-    if not isinstance(row["will_import"], bool) or not isinstance(row["possible_duplicate"], bool):
+    if not isinstance(row["will_import"], bool) or not isinstance(
+        row["possible_duplicate"], bool
+    ):
         raise StagedImportPlanError
     reason = row.get("unmatched_reason")
     if reason is not None and reason not in UNMATCHED_REASONS:
