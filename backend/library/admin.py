@@ -2,6 +2,7 @@ from django import forms
 from django.contrib import admin, messages
 from django.contrib.admin.helpers import ACTION_CHECKBOX_NAME
 from django.contrib.admin.widgets import FilteredSelectMultiple, RelatedFieldWidgetWrapper
+from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.http import Http404, HttpResponseRedirect
 from django.db.models import Count, Prefetch
@@ -12,6 +13,10 @@ from django.template.response import TemplateResponse
 from django.urls import path, reverse
 
 from core import server_settings
+from core.admin_widgets import (
+    RelatedViewOnlyControlsMixin,
+    keep_only_view_related_controls,
+)
 from core.rich_text import sanitize_descriptive_prose
 from library.file_repair import (
     ChecksumChangeConfirmationRequired,
@@ -53,29 +58,6 @@ from .models import (
     LibraryGroupMembership,
     Series,
 )
-
-
-def _install_view_only_related_widget_controls():
-    if hasattr(RelatedFieldWidgetWrapper, "_secondpass_original_get_context"):
-        return
-
-    RelatedFieldWidgetWrapper._secondpass_original_get_context = (
-        RelatedFieldWidgetWrapper.get_context
-    )
-
-    def get_context(self, name, value, attrs):
-        context = self._secondpass_original_get_context(name, value, attrs)
-        context["can_add_related"] = False
-        context["can_change_related"] = False
-        context["can_delete_related"] = False
-        return context
-
-    RelatedFieldWidgetWrapper.get_context = get_context
-
-
-_install_view_only_related_widget_controls()
-
-
 class StoredEpubRepairAdminForm(forms.Form):
     replacement_epub = forms.FileField(label="Replacement EPUB")
     replace_existing = forms.BooleanField(
@@ -135,13 +117,15 @@ class BookAdminForm(forms.ModelForm):
                 ("selected_catalog_tags", "catalog_tags"),
             ):
                 relation = Book._meta.get_field(model_field_name).remote_field
-                self.fields[field_name].widget = RelatedFieldWidgetWrapper(
-                    self.fields[field_name].widget,
-                    relation,
-                    admin_site,
-                    can_add_related=True,
-                    can_change_related=True,
-                    can_view_related=True,
+                self.fields[field_name].widget = keep_only_view_related_controls(
+                    RelatedFieldWidgetWrapper(
+                        self.fields[field_name].widget,
+                        relation,
+                        admin_site,
+                        can_add_related=True,
+                        can_change_related=True,
+                        can_view_related=True,
+                    )
                 )
 
     def _save_m2m(self):
@@ -225,8 +209,9 @@ class BookAdminForm(forms.ModelForm):
         )
 
 
-class BookSeriesInline(admin.StackedInline):
+class BookSeriesInline(RelatedViewOnlyControlsMixin, admin.StackedInline):
     model = BookSeries
+    related_view_only_models = {Series}
     fields = ["series", "series_index"]
     extra = 1
     max_num = 1
@@ -241,8 +226,9 @@ class BookIdentifierInline(admin.TabularInline):
     verbose_name_plural = "Book Identifiers"
 
 
-class BookGroupAssignmentInline(admin.TabularInline):
+class BookGroupAssignmentInline(RelatedViewOnlyControlsMixin, admin.TabularInline):
     model = BookGroupAssignment
+    related_view_only_models = {LibraryGroup, get_user_model()}
     fields = ["group", "added_by", "created_at", "updated_at"]
     readonly_fields = ["created_at", "updated_at"]
     extra = 1

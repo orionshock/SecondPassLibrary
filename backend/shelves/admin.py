@@ -3,6 +3,7 @@ from __future__ import annotations
 from django import forms
 from django.contrib import admin
 from django.contrib.admin import DateFieldListFilter
+from django.contrib.auth import get_user_model
 from django.contrib.admin.utils import quote
 from django.db.models import Count
 from django.forms.models import BaseInlineFormSet
@@ -11,8 +12,7 @@ from django.urls import reverse
 from django.utils.html import format_html
 
 from core.admin_widgets import (
-    UserRelatedViewOnlyControlsMixin,
-    keep_only_view_related_control_for_models,
+    RelatedViewOnlyControlsMixin,
 )
 from core.rich_text import sanitize_descriptive_prose
 from library.models import LibraryGroup
@@ -70,16 +70,6 @@ class ShelfAdminForm(forms.ModelForm):
             self.add_error("owner_type", "Invalid owner type.")
 
         return cleaned_data
-
-
-class LibraryGroupRelatedViewOnlyControlsMixin:
-    def formfield_for_dbfield(self, db_field, request, **kwargs):
-        formfield = super().formfield_for_dbfield(db_field, request, **kwargs)
-        return keep_only_view_related_control_for_models(
-            formfield,
-            db_field,
-            {LibraryGroup},
-        )
 
 
 class ShelfItemInlineFormSet(BaseInlineFormSet):
@@ -143,10 +133,10 @@ class ShelfItemInline(admin.TabularInline):
 
 @admin.register(Shelf)
 class ShelfAdmin(
-    LibraryGroupRelatedViewOnlyControlsMixin,
-    UserRelatedViewOnlyControlsMixin,
+    RelatedViewOnlyControlsMixin,
     admin.ModelAdmin,
 ):
+    related_view_only_models = {get_user_model(), LibraryGroup}
     form = ShelfAdminForm
     list_display = [
         "id",
