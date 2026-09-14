@@ -7,12 +7,13 @@ from django.http import JsonResponse
 from django.shortcuts import redirect
 from django.utils import timezone
 
+from accounts.browser_account_facts import get_browser_account_facts
 from accounts.operational_logging import logger, user_uuid
 from accounts.request_identity import get_client_ip
 from accounts.session_control import WEB_SESSION_GENERATION_KEY
 from library.cover_objects import is_immutable_public_cover_path
 
-from .models import UserProfile, UserWebSession
+from .models import UserWebSession
 
 
 PASSWORD_CHANGE_REQUIRED_CODE = "password_change_required"
@@ -51,9 +52,9 @@ class WebSessionGenerationMiddleware:
         session = getattr(request, "session", None)
         if user and not getattr(user, "is_anonymous", True) and session is not None:
             try:
-                generation = UserProfile.objects.values_list(
-                    "web_session_generation", flat=True
-                ).get(user=user)
+                facts = get_browser_account_facts(request)
+                if facts is None:
+                    raise RuntimeError("Authenticated browser account facts unavailable.")
             except Exception:
                 if _is_api_path(request.path_info):
                     return JsonResponse(
@@ -62,10 +63,10 @@ class WebSessionGenerationMiddleware:
                 return redirect("/login/")
 
             stored_generation = session.get(WEB_SESSION_GENERATION_KEY, 0)
-            if stored_generation != generation:
+            if stored_generation != facts.web_session_generation:
                 logout(request)
             elif WEB_SESSION_GENERATION_KEY not in session:
-                session[WEB_SESSION_GENERATION_KEY] = generation
+                session[WEB_SESSION_GENERATION_KEY] = facts.web_session_generation
 
         return self.get_response(request)
 
@@ -100,10 +101,10 @@ class MustChangePasswordMiddleware:
 
         path_info = request.path_info
         try:
-            required = UserProfile.objects.filter(
-                user_id=user.pk,
-                must_change_password=True,
-            ).exists()
+            facts = get_browser_account_facts(request)
+            if facts is None:
+                raise RuntimeError("Authenticated browser account facts unavailable.")
+            required = facts.must_change_password
         except Exception as exc:
             logger.error(
                 "Password-change enforcement failed: exception=%s",
@@ -199,11 +200,19 @@ class UserWebSessionMiddleware:
                 # Avoid creating sessions unnecessarily.
                 return response
 
+            facts = get_browser_account_facts(request)
+            if facts is None:
+                return response
+
             user_agent = (request.META.get("HTTP_USER_AGENT") or "")[:4000]
             ip_address = get_client_ip(request)
 
             now = timezone.now()
-            defaults = {"user": user, "user_agent": user_agent, "ip_address": ip_address}
+            defaults = {
+                "user_id": facts.user_id,
+                "user_agent": user_agent,
+                "ip_address": ip_address,
+            }
 
             obj, created = UserWebSession.objects.get_or_create(
                 session_key=session_key,
@@ -217,9 +226,8 @@ class UserWebSessionMiddleware:
             needs_save = False
             update_fields: list[str] = []
 
-            # Avoid relying on implicit Django `<fk>_id` attributes for type-checkers.
-            if obj.user.pk != user.pk:
-                obj.user = user
+            if obj.user_id != facts.user_id:
+                obj.user_id = facts.user_id
                 needs_save = True
                 update_fields.append("user")
 
