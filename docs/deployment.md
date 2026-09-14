@@ -45,6 +45,13 @@ metadata, migrations, templates, translations, and schemas remain available.
 The final script, dependency, and application copies use independent BuildKit
 layers so changes to one do not invalidate the others.
 
+`docker/rebuild-deployment.sh` derives the image version with
+`git describe --tags --always --dirty` and its release date with
+`git log -1 --format=%cs`, then passes both into the Compose build. The build
+replaces `secondpass/version.py` only in the image staging tree before running
+`collectstatic`; it does not modify the checkout or require Git at runtime.
+Direct Compose builds default to `live-dev-env` and the current UTC build date.
+
 From the repository root:
 
 ```powershell

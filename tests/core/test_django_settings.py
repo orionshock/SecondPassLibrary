@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import importlib
 import os
+from datetime import date, datetime, timezone
 from pathlib import Path
 import subprocess
 import sys
@@ -10,6 +12,7 @@ from django.conf import settings
 from django.core.checks import Error, Tags, Warning, run_checks
 from django.test import SimpleTestCase
 
+from secondpass import version as version_module
 from secondpass.settings import (
     INSECURE_FALLBACK_SECRET_KEY,
     PLACEHOLDER_SECRET_KEYS,
@@ -44,6 +47,18 @@ class DjangoSettingsContractTests(SimpleTestCase):
         self.assertIs(settings.DEBUG, False)
         self.assertEqual(settings.ALLOWED_HOSTS[:3], ["localhost", "127.0.0.1", "[::1]"])
         self.assertNotIn("*", settings.ALLOWED_HOSTS)
+
+    def test_source_tree_version_uses_live_development_metadata(self):
+        before_import = datetime.now(timezone.utc).date().isoformat()
+        metadata = importlib.reload(version_module)
+        after_import = datetime.now(timezone.utc).date().isoformat()
+
+        self.assertEqual(metadata.SERVER_VERSION, "live-dev-env")
+        self.assertEqual(
+            date.fromisoformat(metadata.SERVER_RELEASE_DATE).isoformat(),
+            metadata.SERVER_RELEASE_DATE,
+        )
+        self.assertIn(metadata.SERVER_RELEASE_DATE, {before_import, after_import})
 
     def test_csv_env_parsing_handles_hosts_and_wildcard(self):
         with patch.dict(

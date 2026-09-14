@@ -77,6 +77,7 @@ _PATH_MARKERS: dict[str, tuple[str, ...]] = {
         "tests/core/product_ui/test_react_app_routes.py",
         "tests/core/test_health.py",
         "tests/core/test_media_serving.py",
+        "tests/core/test_release_metadata.py",
         "tests/core/test_static_files.py",
         "tests/library/catalog/test_book_covers.py",
         "tests/library/catalog/test_book_download.py",

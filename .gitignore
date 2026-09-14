@@ -17,7 +17,6 @@ out/
 build/
 dist/
 *.egg-info/
-backend/secondpass/version.py
 
 # Python cache
 __pycache__/

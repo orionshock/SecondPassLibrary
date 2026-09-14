@@ -46,6 +46,9 @@ RUN --mount=type=cache,target=/root/.cache/pip \
 
 FROM python-runtime-dependencies AS static-collection
 
+ARG SERVER_VERSION=live-dev-env
+ARG SERVER_RELEASE_DATE=
+
 ENV DJANGO_SETTINGS_MODULE=secondpass.settings \
     DJANGO_DEBUG=0 \
     DJANGO_SECRET_KEY=static-collection-build-only-secret \
@@ -55,9 +58,15 @@ ENV DJANGO_SETTINGS_MODULE=secondpass.settings \
 WORKDIR /runtime
 
 COPY backend/ ./
+COPY docker/write_image_version.py /tmp/write_image_version.py
 COPY --from=frontend-build /build/product_ui/ web/product_ui/
 
-RUN python manage.py collectstatic --noinput --clear \
+RUN python /tmp/write_image_version.py \
+        secondpass/version.py \
+        "$SERVER_VERSION" \
+        "$SERVER_RELEASE_DATE" \
+    && rm /tmp/write_image_version.py \
+    && python manage.py collectstatic --noinput --clear \
     && find var/static -type f -name '*.map' -delete \
     && rm -rf web/product_ui/assets web/static
 
