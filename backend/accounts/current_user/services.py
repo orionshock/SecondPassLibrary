@@ -5,8 +5,7 @@ from typing import Any
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 
-from accounts.profiles import get_or_create_profile
-from accounts.roles import is_owner
+from accounts.request_actor import RequestActorContext
 from library.groups.public_group import is_public_group
 from library.models import LibraryGroupMembership
 
@@ -44,9 +43,10 @@ def update_current_user_via_me_api(
     user.full_clean()
     user.save(update_fields=[*updates.keys()])
 
-def build_current_user_me_payload(*, user) -> dict[str, Any]:
-    profile = get_or_create_profile(user=user)
 
+def build_current_user_me_payload(
+    *, user, actor: RequestActorContext
+) -> dict[str, Any]:
     memberships = list(
         LibraryGroupMembership.objects.select_related("group")
         .filter(user=user)
@@ -71,12 +71,12 @@ def build_current_user_me_payload(*, user) -> dict[str, Any]:
         "email": user.email or "",
         "first_name": user.first_name or "",
         "last_name": user.last_name or "",
-        "profile_id": profile.id,
-        "role": profile.role,
+        "profile_id": actor.profile_id,
+        "role": actor.role,
         "groups": groups,
     }
-    owner = is_owner(user)
-    if profile.must_change_password:
+    owner = bool(user.is_active and user.is_superuser)
+    if actor.must_change_password:
         payload["must_change_password"] = True
     if owner:
         payload["is_owner"] = True

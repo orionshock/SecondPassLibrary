@@ -11,8 +11,8 @@ from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
 from accounts.client_sessions.services import hash_client_secret
-from accounts.browser_account_facts import BrowserAccountFacts
 from accounts.models import UserClientSession, UserProfile, UserWebSession
+from accounts.request_actor import RequestActorContext
 from tests.accounts.helpers import create_account_role_users
 from tests.accounts.web_sessions.helpers import authenticated_tracked_client
 from tests.utils.library_visibility import ensure_public_membership
@@ -153,7 +153,7 @@ class MustChangePasswordEnforcementTests(APITestCase):
             token_hash=hash_client_secret(token),
         )
 
-        with patch("accounts.middleware.get_browser_account_facts") as acquire:
+        with patch("accounts.middleware.get_request_actor_context") as acquire:
             response = APIClient().get(
                 "/api/v1/library/books/",
                 HTTP_AUTHORIZATION=f"Bearer {token}",
@@ -207,16 +207,21 @@ class MustChangePasswordEnforcementTests(APITestCase):
 
     def test_api_policy_lookup_failure_is_bounded_json_and_stops_dispatch(self):
         self._flag_and_login(self.reader)
-        facts = BrowserAccountFacts(
+        actor = RequestActorContext(
             user_id=self.reader.pk,
+            username=self.reader.username,
+            first_name=self.reader.first_name,
+            last_name=self.reader.last_name,
+            profile_id=self.reader.profile.id,
+            role=self.reader.profile.role,
             web_session_generation=self.reader.profile.web_session_generation,
             must_change_password=True,
         )
 
         with (
             patch(
-                "accounts.middleware.get_browser_account_facts",
-                side_effect=[facts, RuntimeError("secret policy failure")],
+                "accounts.middleware.get_request_actor_context",
+                side_effect=[actor, RuntimeError("secret policy failure")],
             ),
             patch("library.catalog.views.BookListView.get_queryset") as dispatched,
             self.assertLogs("accounts.operational_logging", level="ERROR") as logs,
@@ -237,16 +242,21 @@ class MustChangePasswordEnforcementTests(APITestCase):
 
     def test_browser_policy_lookup_failure_uses_normal_error_boundary(self):
         self._flag_and_login(self.reader)
-        facts = BrowserAccountFacts(
+        actor = RequestActorContext(
             user_id=self.reader.pk,
+            username=self.reader.username,
+            first_name=self.reader.first_name,
+            last_name=self.reader.last_name,
+            profile_id=self.reader.profile.id,
+            role=self.reader.profile.role,
             web_session_generation=self.reader.profile.web_session_generation,
             must_change_password=True,
         )
 
         with (
             patch(
-                "accounts.middleware.get_browser_account_facts",
-                side_effect=[facts, RuntimeError("secret browser failure")],
+                "accounts.middleware.get_request_actor_context",
+                side_effect=[actor, RuntimeError("secret browser failure")],
             ),
             self.assertLogs("accounts.operational_logging", level="ERROR") as logs,
         ):

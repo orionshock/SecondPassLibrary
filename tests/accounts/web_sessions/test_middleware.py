@@ -18,13 +18,13 @@ User = get_user_model()
 
 
 class UserWebSessionMiddlewareTests(APITestCase):
-    def test_authenticated_existing_session_has_one_account_facts_query(self):
+    def test_authenticated_me_request_has_one_account_facts_query(self):
         user = User.objects.create_user(username="query-user", password="pw")
         self.client.login(username="query-user", password="pw")
         self.client.get("/api/v1/health/")
 
         with CaptureQueriesContext(connection) as captured:
-            response = self.client.get("/api/v1/health/")
+            response = self.client.get("/api/v1/accounts/me/")
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         account_selects = [
@@ -177,7 +177,7 @@ class UserWebSessionMiddlewareTests(APITestCase):
         self.assertEqual(tracked.ip_address, "2001:db8::1")
 
     def test_anonymous_request_does_not_track_user_web_session(self):
-        with patch("accounts.middleware.get_browser_account_facts") as acquire:
+        with patch("accounts.middleware.get_request_actor_context") as acquire:
             response = assert_response(self.client.get("/api/v1/accounts/me/"))
 
         self.assertIn(
@@ -192,7 +192,7 @@ class UserWebSessionMiddlewareTests(APITestCase):
         self.client.login(username="u", password="pw")
 
         with patch(
-            "accounts.browser_account_facts.UserProfile.objects.values",
+            "accounts.request_actor.UserProfile.objects.values",
             side_effect=RuntimeError("database detail"),
         ):
             response = self.client.get("/api/v1/accounts/me/")

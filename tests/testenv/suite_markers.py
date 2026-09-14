@@ -20,6 +20,7 @@ _PATH_MARKERS: dict[str, tuple[str, ...]] = {
         "tests/accounts/client_sessions/test_api.py",
         "tests/accounts/test_first_run_setup.py",
         "tests/accounts/test_first_run_setup_concurrency.py",
+        "tests/accounts/test_request_actor.py",
         "tests/core/test_admin_advanced_groups_recovery.py",
         "tests/core/test_admin_url_gating.py",
         "tests/core/test_api_route_errors.py",

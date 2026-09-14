@@ -8,6 +8,7 @@ from rest_framework.views import APIView
 
 from accounts.client_sessions.authentication import ClientBearerAuthentication
 from accounts.models import UserClientSession, UserProfile
+from accounts.request_actor import RequestActorContext, get_request_actor_context
 
 from .serializers import CurrentUserPatchSerializer, CurrentUserSerializer, UserProfileSerializer
 from .services import build_current_user_me_payload, update_current_user_via_me_api
@@ -34,7 +35,8 @@ class CurrentUserView(APIView):
     ]
 
     def get(self, request):
-        payload = build_current_user_me_payload(user=request.user)
+        actor = cast(RequestActorContext, get_request_actor_context(request))
+        payload = build_current_user_me_payload(user=request.user, actor=actor)
         serializer = CurrentUserSerializer(payload)
         return Response(serializer.data)
 
@@ -54,7 +56,7 @@ class CurrentUserView(APIView):
             last_name=data.get("last_name"),
         )
 
-        payload = build_current_user_me_payload(user=request.user)
+        actor = cast(RequestActorContext, get_request_actor_context(request))
+        payload = build_current_user_me_payload(user=request.user, actor=actor)
         serializer = CurrentUserSerializer(payload)
         return Response(serializer.data, status=status.HTTP_200_OK)
-
