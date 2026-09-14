@@ -7,7 +7,7 @@ import {
   updateMarginaliaSession,
   type MarginaliaSessionEnvelope,
 } from "@second-pass/spl-api";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 
 import { usePageBreadcrumbs } from "../../../app/navigation/usePageBreadcrumbs";
@@ -20,6 +20,7 @@ import { marginaliaSessionDisplayName } from "../../../shared/marginaliaSessionD
 import "../Marginalia.css";
 import { marginaliaSessionBreadcrumbFallback } from "../marginaliaBreadcrumbs";
 import { MarginaliaSessionDetailPageRegion, type MarginaliaAnnotationsLoadState } from "./MarginaliaSessionDetailPageRegion";
+import { MarginaliaSessionDetailMutationLifecycle } from "./MarginaliaSessionDetailMutationLifecycle";
 import { MarginaliaSessionNoteEditor } from "./MarginaliaSessionNoteEditor";
 import { MarginaliaSessionTitleEditor } from "./MarginaliaSessionTitleEditor";
 
@@ -92,8 +93,11 @@ export function MarginaliaSessionDetailOrchestrator() {
   const [closeState, setCloseState] = useState<MutationState>(idleMutationState);
   const [deleteState, setDeleteState] = useState<MutationState>(idleMutationState);
   const [exportState, setExportState] = useState<MutationState>(idleMutationState);
-  const deletePending = useRef(false);
-  const exportPending = useRef(false);
+  const mutationLifecycleRef = useRef<MarginaliaSessionDetailMutationLifecycle | null>(null);
+  if (mutationLifecycleRef.current === null) {
+    mutationLifecycleRef.current = new MarginaliaSessionDetailMutationLifecycle();
+  }
+  const mutationLifecycle = mutationLifecycleRef.current;
   const loadedSessionId = sessionLoad.status === "ready" ? sessionLoad.detail.session.id : undefined;
   const breadcrumbFallback = useMemo(
     () => marginaliaSessionBreadcrumbFallback(sessionLoad.status === "ready" ? sessionLoad.detail.session : undefined),
@@ -103,6 +107,11 @@ export function MarginaliaSessionDetailOrchestrator() {
   useAutoDismissMutationMessage(renameState, setRenameState);
   useAutoDismissMutationMessage(noteState, setNoteState);
   useAutoDismissMutationMessage(closeState, setCloseState);
+
+  useLayoutEffect(() => {
+    mutationLifecycle.activate(sessionId);
+    return () => mutationLifecycle.invalidate(sessionId);
+  }, [mutationLifecycle, sessionId, sessionRetry]);
 
   useEffect(() => {
     let active = true;
@@ -115,8 +124,6 @@ export function MarginaliaSessionDetailOrchestrator() {
     setCloseState(idleMutationState);
     setDeleteState(idleMutationState);
     setExportState(idleMutationState);
-    deletePending.current = false;
-    exportPending.current = false;
     setSessionLoad({ status: "loading" });
     setAnnotationsLoad({ loading: true });
     getMarginaliaSession(sessionId).then((detail) => {
@@ -155,14 +162,28 @@ export function MarginaliaSessionDetailOrchestrator() {
 
   async function saveName() {
     if (sessionLoad.status !== "ready" || sessionLoad.detail.session.status !== "active" || renameState.pending) return;
+    const token = mutationLifecycle.begin(sessionLoad.detail.session.id, "name");
+    if (!token) return;
     setRenameState({ pending: true });
     try {
       const { detail, changed } = await renameMarginaliaSession(sessionLoad.detail, nameDraft);
-      setSessionLoad({ status: "ready", detail });
+      const settlement = mutationLifecycle.settle(token);
+      if (settlement === "expired") return;
+      if (settlement === "discard") {
+        setRenameState(idleMutationState);
+        return;
+      }
+      if (changed) publishMetadataField("name", detail);
       setNameDraft(detail.session.name);
       setEditingName(false);
       setRenameState(changed ? { pending: false, message: "Reading Session name saved." } : idleMutationState);
     } catch (error: unknown) {
+      const settlement = mutationLifecycle.settle(token);
+      if (settlement === "expired") return;
+      if (settlement === "discard") {
+        setRenameState(idleMutationState);
+        return;
+      }
       setRenameState({ pending: false, error: normalizeMutationError(error) });
     }
   }
@@ -183,60 +204,96 @@ export function MarginaliaSessionDetailOrchestrator() {
 
   async function saveNote() {
     if (sessionLoad.status !== "ready" || sessionLoad.detail.session.status !== "active" || noteState.pending) return;
+    const token = mutationLifecycle.begin(sessionLoad.detail.session.id, "note");
+    if (!token) return;
     setNoteState({ pending: true });
     try {
       const { detail, changed } = await updateMarginaliaSessionNote(sessionLoad.detail, noteDraft);
-      setSessionLoad({ status: "ready", detail });
+      const settlement = mutationLifecycle.settle(token);
+      if (settlement === "expired") return;
+      if (settlement === "discard") {
+        setNoteState(idleMutationState);
+        return;
+      }
+      if (changed) publishMetadataField("notes", detail);
       setNoteDraft(detail.session.notes);
       setEditingNote(false);
       setNoteState(changed ? { pending: false, message: "Reading Session note saved." } : idleMutationState);
     } catch (error: unknown) {
+      const settlement = mutationLifecycle.settle(token);
+      if (settlement === "expired") return;
+      if (settlement === "discard") {
+        setNoteState(idleMutationState);
+        return;
+      }
       setNoteState({ pending: false, error: normalizeMutationError(error) });
     }
   }
 
   async function closeSession() {
-    if (sessionLoad.status !== "ready" || sessionLoad.detail.session.status !== "active" || closeState.pending || deletePending.current) return;
+    if (sessionLoad.status !== "ready" || sessionLoad.detail.session.status !== "active") return;
+    const token = mutationLifecycle.begin(sessionLoad.detail.session.id, "close");
+    if (!token) return;
     setCloseState({ pending: true });
     try {
       const detail = await closeMarginaliaSessionFromProductUi(sessionLoad.detail);
+      if (mutationLifecycle.settle(token) !== "publish") return;
       setSessionLoad({ status: "ready", detail });
-      setEditingName(false);
-      setEditingNote(false);
       setCloseState({ pending: false, message: "Reading Session closed." });
     } catch (error: unknown) {
+      if (mutationLifecycle.settle(token) !== "publish") return;
       setCloseState({ pending: false, error: normalizeMutationError(error) });
     }
   }
 
   async function deleteSession() {
-    if (sessionLoad.status !== "ready" || closeState.pending || deletePending.current || exportPending.current) return;
-    deletePending.current = true;
+    if (sessionLoad.status !== "ready") return;
+    const token = mutationLifecycle.begin(sessionLoad.detail.session.id, "delete");
+    if (!token) return;
     setDeleteState({ pending: true });
     try {
       await deleteMarginaliaSessionFromProductUi(
         sessionLoad.detail.session.id,
-        navigate,
+        (to, options) => {
+          if (mutationLifecycle.settle(token) === "publish") navigate(to, options);
+        },
         deleteMarginaliaSession,
       );
     } catch (error: unknown) {
-      deletePending.current = false;
+      if (mutationLifecycle.settle(token) !== "publish") return;
       setDeleteState({ pending: false, error: normalizeMutationError(error) });
     }
   }
 
   async function exportSession() {
-    if (sessionLoad.status !== "ready" || deletePending.current || exportPending.current) return;
-    exportPending.current = true;
+    if (sessionLoad.status !== "ready") return;
+    const token = mutationLifecycle.begin(sessionLoad.detail.session.id, "export");
+    if (!token) return;
     setExportState({ pending: true });
     try {
       await exportMarginaliaSessionFromProductUi(sessionLoad.detail.session.id);
-      exportPending.current = false;
+      if (mutationLifecycle.settle(token) !== "publish") return;
       setExportState(idleMutationState);
     } catch (error: unknown) {
-      exportPending.current = false;
+      if (mutationLifecycle.settle(token) !== "publish") return;
       setExportState({ pending: false, error: normalizeMutationError(error) });
     }
+  }
+
+  function publishMetadataField(
+    field: "name" | "notes",
+    detail: MarginaliaSessionEnvelope,
+  ) {
+    setSessionLoad((current) => {
+      if (current.status !== "ready" || current.detail.session.id !== detail.session.id) return current;
+      return {
+        status: "ready",
+        detail: {
+          ...current.detail,
+          session: { ...current.detail.session, [field]: detail.session[field] },
+        },
+      };
+    });
   }
 
   const title = sessionLoad.status === "ready" ? marginaliaSessionDisplayName(sessionLoad.detail.session) : "Reading Session";
@@ -245,7 +302,7 @@ export function MarginaliaSessionDetailOrchestrator() {
 
   const renameFeedback = mutationFeedback(renameState);
   const noteFeedback = mutationFeedback(noteState);
-  const editable = sessionLoad.detail.session.status === "active" && !closeState.pending;
+  const editable = sessionLoad.detail.session.status === "active" && !closeState.pending && !deleteState.pending;
   const titleEditor = <MarginaliaSessionTitleEditor
     displayName={title}
     editable={editable}
