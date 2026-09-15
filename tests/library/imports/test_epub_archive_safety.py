@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from contextlib import nullcontext
+from dataclasses import replace
 from io import BytesIO
 from pathlib import Path
 import zipfile
@@ -10,6 +11,7 @@ from django.test import TestCase
 
 from library.imports.batches import import_zip_file
 from library.imports.epub import import_epub_file
+from library.imports.epub_validation import WEB_EPUB_LIMITS
 from library.imports.results import IMPORT_STATUS_FAILED, IMPORT_STATUS_IMPORTED
 from library.models import Book
 from tests.library.imports.helpers import (
@@ -112,6 +114,26 @@ class EpubArchivePreflightTests(
         self.assertEqual(result.items[0].status, IMPORT_STATUS_FAILED)
         read_epub.assert_not_called()
         self._assert_no_persistent_import_artifacts()
+
+    def test_web_limit_policy_does_not_replace_trusted_local_defaults(self):
+        data = minimal_epub_bytes()
+
+        web_result = import_epub_file(
+            data,
+            source_filename="web.epub",
+            actor=self.actor,
+            archive_limits=replace(WEB_EPUB_LIMITS, members=3),
+            source_method="web",
+        )
+        trusted_result = import_epub_file(
+            data,
+            source_filename="trusted.epub",
+            actor=self.actor,
+            source_method="cli",
+        )
+
+        self.assertEqual(web_result.status, IMPORT_STATUS_FAILED)
+        self.assertEqual(trusted_result.status, IMPORT_STATUS_IMPORTED)
 
     def _assert_rejected_before_ebooklib(
         self,
