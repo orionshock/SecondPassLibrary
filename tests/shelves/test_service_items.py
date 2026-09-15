@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
@@ -31,6 +32,70 @@ User = get_user_model()
 
 
 class ShelfServiceItemTests(ShelfServiceFixtureMixin, TestCase):
+    def _curated_shelf_with_two_items(self) -> tuple[Shelf, ShelfItem, ShelfItem]:
+        shelf = create_shelf(
+            self.curator,
+            name="Curated order",
+            owner_type=Shelf.OWNER_TYPE_GROUP,
+            owner_group=self.curated_group,
+        )
+        first_book = create_file_backed_book(
+            title="First curated Book",
+            assign_public=False,
+        ).book
+        second_book = create_file_backed_book(
+            title="Second curated Book",
+            assign_public=False,
+        ).book
+        BookGroupAssignment.objects.create(book=first_book, group=self.curated_group)
+        BookGroupAssignment.objects.create(book=second_book, group=self.curated_group)
+        first = add_book_to_shelf(self.curator, shelf=shelf, book=first_book)
+        second = add_book_to_shelf(self.curator, shelf=shelf, book=second_book)
+        return shelf, first, second
+
+    def _assert_curatorship_loss_blocks_reorder(
+        self,
+        mutation: Callable[[Shelf, ShelfItem], object],
+    ) -> None:
+        shelf, first, second = self._curated_shelf_with_two_items()
+        policy = item_services.can_edit_shelf
+        first_check = True
+
+        def remove_curatorship_after_precheck(*, user, shelf):
+            nonlocal first_check
+            allowed = policy(user=user, shelf=shelf)
+            if first_check:
+                first_check = False
+                LibraryGroupMembership.objects.filter(
+                    user=self.curator,
+                    group=self.curated_group,
+                ).update(is_curator=False)
+            return allowed
+
+        with patch(
+            "shelves.item_services.can_edit_shelf",
+            side_effect=remove_curatorship_after_precheck,
+        ):
+            with self.assertRaises(PermissionDenied):
+                mutation(shelf, first)
+
+        self.assertTrue(
+            LibraryGroupMembership.objects.filter(
+                user=self.curator,
+                group=self.curated_group,
+                is_curator=False,
+            ).exists()
+        )
+        self.assertEqual(
+            list(
+                ShelfItem.objects.filter(shelf=shelf)
+                .order_by("position")
+                .values_list("id", "position")
+            ),
+            [(first.id, 0), (second.id, 1)],
+        )
+        self.assertEqual(visible_shelf_items_for_user(self.curator, shelf).count(), 2)
+
     def test_group_shelf_only_allows_books_assigned_to_group(self):
         shelf = create_shelf(
             self.owner,
@@ -146,6 +211,26 @@ class ShelfServiceItemTests(ShelfServiceFixtureMixin, TestCase):
                 add_book_to_shelf(self.curator, shelf=shelf, book=book)
 
         self.assertFalse(ShelfItem.objects.filter(shelf=shelf).exists())
+
+    def test_set_position_rechecks_curatorship_inside_transaction(self):
+        self._assert_curatorship_loss_blocks_reorder(
+            lambda shelf, item: set_shelf_item_position(
+                self.curator,
+                shelf=shelf,
+                item=item,
+                position=1,
+            )
+        )
+
+    def test_move_rechecks_curatorship_inside_transaction(self):
+        self._assert_curatorship_loss_blocks_reorder(
+            lambda shelf, item: move_shelf_item(
+                self.curator,
+                shelf=shelf,
+                item=item,
+                direction="down",
+            )
+        )
 
 
 class ShelfPositionServiceTests(IsolatedMediaRootMixin, TestCase):

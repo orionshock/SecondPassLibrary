@@ -171,6 +171,8 @@ def set_shelf_item_position(
 
     with transaction.atomic():
         locked_shelf, items = _lock_shelf_and_items(shelf)
+        if not can_edit_shelf(user=actor, shelf=locked_shelf):
+            raise PermissionDenied("Not allowed.")
         ordered = _canonicalize_locked_items(items)
         visible_ids = _visible_item_ids(actor=actor, shelf=locked_shelf, items=ordered)
         if item.id not in visible_ids:
@@ -207,6 +209,8 @@ def move_shelf_item(
 
     with transaction.atomic():
         locked_shelf, items = _lock_shelf_and_items(shelf)
+        if not can_edit_shelf(user=actor, shelf=locked_shelf):
+            raise PermissionDenied("Not allowed.")
         ordered = _canonicalize_locked_items(items)
         visible_ids = _visible_item_ids(actor=actor, shelf=locked_shelf, items=ordered)
         if item.id not in visible_ids:
