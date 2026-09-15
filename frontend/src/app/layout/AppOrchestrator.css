@@ -195,6 +195,10 @@
   flex: 1;
 }
 
+.app-session-feedback {
+  padding-top: 1rem;
+}
+
 .app-breadcrumb-slot {
   min-height: calc(clamp(1.25rem, 3vw, 2rem) + var(--breadcrumb-line-height));
   padding-top: clamp(1.25rem, 3vw, 2rem);

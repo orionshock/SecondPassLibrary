@@ -12,6 +12,7 @@ import { Link, Outlet, useLocation } from "react-router";
 import { BreadcrumbsComponent } from "../navigation/BreadcrumbsComponent";
 import type { BreadcrumbItem } from "../navigation/breadcrumbs";
 import { MaterialIcon } from "../../components/icons/MaterialIcon";
+import { ErrorPanel } from "../../components/UiPrimitives";
 import { RouteModuleBoundary, RouteModuleLoading } from "../routing/RouteModuleBoundary";
 import { AppMenuComponent, type AppMenuItem } from "./AppMenuComponent";
 import "./AppOrchestrator.css";
@@ -88,6 +89,7 @@ export function AppOrchestrator({
 }) {
   const location = useLocation();
   const mainRef = useRef<HTMLElement>(null);
+  const [logoutError, setLogoutError] = useState<string>();
   const [breadcrumbRegistration, setBreadcrumbRegistration] = useState<{ pathname: string; items: readonly BreadcrumbItem[] }>();
   const setBreadcrumbs = useCallback((pathname: string, items: readonly BreadcrumbItem[]) => {
     setBreadcrumbRegistration({ pathname, items });
@@ -106,9 +108,15 @@ export function AppOrchestrator({
   }));
   const accountActive = navigationDestinationOwnsPath("/profile", location.pathname);
   const logout = useCallback(() => {
+    setLogoutError(undefined);
     void logoutCurrentWebSession()
       .then(() => window.location.assign("/login/"))
-      .catch(() => undefined);
+      .catch((error: unknown) => {
+        console.warn("Logout failed; the browser session may still be active.", {
+          failureClass: error instanceof Error ? error.name : typeof error,
+        });
+        setLogoutError("Log out failed. Your session may still be active. Try again.");
+      });
   }, []);
 
   useEffect(() => {
@@ -162,6 +170,8 @@ export function AppOrchestrator({
           active={accountActive}
         />
       </header>
+
+      {logoutError ? <div className="app-session-feedback"><ErrorPanel>{logoutError}</ErrorPanel></div> : null}
 
       <div className="app-breadcrumb-slot">
         <BreadcrumbsComponent items={breadcrumbs} />

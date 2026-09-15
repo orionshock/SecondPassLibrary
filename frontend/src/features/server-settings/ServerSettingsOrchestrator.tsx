@@ -49,6 +49,7 @@ export function ServerSettingsOrchestrator() {
   const [load, setLoad] = useState<SettingsLoadState>({ loading: canAccessServerSettings(currentUser.isOwner), forbidden: !canAccessServerSettings(currentUser.isOwner) });
   const [editing, setEditing] = useState(false);
   const [state, setState] = useState<MutationState>(idleMutationState);
+  const [shellRefreshWarning, setShellRefreshWarning] = useState<string>();
   useAutoDismissMutationMessage(state, setState);
   const [generalDraft, setGeneralDraft] = useState<GeneralServerSettings>({ name: "", description: "", bannerText: "", secondPassReaderWebClientUrl: "", secondPassReaderWebClientUrlLocked: false });
   const [publicDraft, setPublicDraft] = useState<PublicLibrarySettings>({ name: "", description: "" });
@@ -100,6 +101,18 @@ export function ServerSettingsOrchestrator() {
     setEditing(false);
   }
 
+  function refreshShellAfterSave() {
+    setShellRefreshWarning(undefined);
+    void refreshServerInfo().catch((error: unknown) => {
+      console.warn("Server settings were saved, but the application shell refresh failed.", {
+        failureClass: error instanceof Error ? error.name : typeof error,
+      });
+      setShellRefreshWarning(
+        "Settings were saved, but the application shell could not be refreshed. Reload the page to update navigation and server details.",
+      );
+    });
+  }
+
   async function saveServerIdentity(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (state.pending) return;
@@ -108,7 +121,7 @@ export function ServerSettingsOrchestrator() {
       const settings = await updateServerIdentity(generalDraft);
       setLoad({ loading: false, settings });
       setGeneralDraft(settings.general);
-      void refreshServerInfo().catch(() => undefined);
+      refreshShellAfterSave();
       setEditing(false);
       setState({ pending: false, message: "Server identity saved." });
     } catch (error: unknown) { setState({ pending: false, error: normalizeMutationError(error) }); }
@@ -122,7 +135,7 @@ export function ServerSettingsOrchestrator() {
       const settings = await updateExternalServicesSettings(generalDraft.secondPassReaderWebClientUrl);
       setLoad({ loading: false, settings });
       setGeneralDraft(settings.general);
-      void refreshServerInfo().catch(() => undefined);
+      refreshShellAfterSave();
       setEditing(false);
       setState({ pending: false, message: "External services saved." });
     } catch (error: unknown) { setState({ pending: false, error: normalizeMutationError(error) }); }
@@ -136,7 +149,7 @@ export function ServerSettingsOrchestrator() {
       const settings = await updatePublicLibrarySettings(publicDraft);
       setLoad({ loading: false, settings });
       setPublicDraft(settings.publicLibrary);
-      void refreshServerInfo().catch(() => undefined);
+      refreshShellAfterSave();
       setEditing(false);
       setState({ pending: false, message: "Public Library saved." });
     } catch (error: unknown) { setState({ pending: false, error: normalizeMutationError(error) }); }
@@ -148,7 +161,7 @@ export function ServerSettingsOrchestrator() {
     try {
       const settings = await enableAdvancedGroups();
       setLoad({ loading: false, settings });
-      void refreshServerInfo().catch(() => undefined);
+      refreshShellAfterSave();
       setEditing(false);
       setState({ pending: false, message: "Advanced library groups enabled." });
     } catch (error: unknown) { setState({ pending: false, error: normalizeMutationError(error) }); }
@@ -168,6 +181,7 @@ export function ServerSettingsOrchestrator() {
   </ActionRow>;
 
   return <ProductPageShell className="server-settings-page" title="Server Settings" actions={<DjangoAdminAction enabled={currentUser.canAccessDjangoAdmin} />}>
+    {shellRefreshWarning ? <p className="server-settings-refresh-warning" role="status">{shellRefreshWarning}</p> : null}
     <div className="server-settings-tabs">
       <TabList tabs={serverSettingsTabs} activeTab={tab} onChange={selectTab} ariaLabel="Server settings sections" disabled={state.pending} idPrefix="server-settings" />
       <div className="server-settings-tab-actions">{headerActions}</div>

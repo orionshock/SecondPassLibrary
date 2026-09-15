@@ -150,13 +150,6 @@ def clear_book_cover(*, book: Book, actor=None) -> Book:
     return book
 
 
-def set_book_cover_from_bytes(*, book: Book, data: bytes, source: str = "") -> Book:
-    """Low-level fixture/import compatibility helper; mutations use validated covers."""
-    digest = hashlib.sha256(data).hexdigest()
-    book.cover_file.save(f"{digest}.png", ContentFile(data), save=True)
-    return book
-
-
 def _cleanup_old_cover(
     *,
     name: str,

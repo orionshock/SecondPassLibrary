@@ -117,6 +117,15 @@
   background: rgb(251 113 133 / 10%);
 }
 
+.server-settings-refresh-warning {
+  margin: 0;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid rgb(250 204 21 / 55%);
+  border-radius: 0.625rem;
+  color: var(--warning, #facc15);
+  background: rgb(250 204 21 / 8%);
+}
+
 .server-settings-groups .form-action-row {
   width: min(100%, 48rem);
   grid-template-columns: 1fr;

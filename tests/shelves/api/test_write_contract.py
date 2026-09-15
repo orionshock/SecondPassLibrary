@@ -5,7 +5,6 @@ from uuid import uuid4
 import pytest
 from rest_framework import status
 
-from library.cover_services import set_book_cover_from_bytes
 from library.models import (
     Author,
     BookAuthor,
@@ -18,6 +17,7 @@ from library.models import (
 from marginalia.models import Annotation, ReadingSession
 from shelves.models import Shelf, ShelfItem
 from tests.shelves.helpers import BaseShelvesAPITest
+from tests.utils.books import attach_test_cover
 from tests.utils.responses import assert_response, response_data_dict, response_data_list
 
 
@@ -351,10 +351,9 @@ class ShelfWriteContractTests(BaseShelvesAPITest):
 
     def test_delete_removes_only_shelf_and_items(self):
         self.client.login(username="owner", password="pw")
-        set_book_cover_from_bytes(
+        attach_test_cover(
             book=self.book_in_group,
             data=self._png_bytes(),
-            source="manual",
         )
         self.book_in_group.refresh_from_db()
         book_file_name = self.book_in_group.book_file.name

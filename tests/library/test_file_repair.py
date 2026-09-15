@@ -7,7 +7,6 @@ from django.db import IntegrityError
 from django.test import TestCase
 from django.utils import timezone
 
-from library.cover_services import set_book_cover_from_bytes
 from library.file_repair import (
     ChecksumChangeConfirmationRequired,
     ChecksumCollisionError,
@@ -30,7 +29,7 @@ from marginalia.models import Annotation, ReadingSession
 from shelves.models import Shelf, ShelfItem
 from tests.library.imports.helpers import minimal_epub_bytes
 from tests.testenv.filesystem import IsolatedMediaRootMixin
-from tests.utils.books import create_file_backed_book
+from tests.utils.books import attach_test_cover, create_file_backed_book
 
 
 def epub_bytes(title: str) -> bytes:
@@ -162,7 +161,7 @@ class StoredEpubRepairTests(IsolatedMediaRootMixin, TestCase):
         self.assertTrue(self.book.book_file.storage.exists(self.book.book_file.name))
 
     def test_cover_catalog_and_reading_relationships_remain_unchanged(self):
-        set_book_cover_from_bytes(book=self.book, data=b"cover")
+        attach_test_cover(book=self.book)
         author = Author.objects.create(name="Author")
         series = Series.objects.create(name="Series")
         tag = CatalogTag.objects.create(

@@ -273,6 +273,22 @@ def set_marginalia_active_session_tombstone_retention_days(value: int) -> None:
     )
 
 
+def set_marginalia_tombstone_retention_days(
+    *, active_days: int, closed_days: int
+) -> None:
+    _nonnegative_integer_value(
+        MARGINALIA_ACTIVE_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING,
+        active_days,
+    )
+    _nonnegative_integer_value(
+        MARGINALIA_CLOSED_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING,
+        closed_days,
+    )
+    with transaction.atomic(), batch_server_setting_writes():
+        set_marginalia_active_session_tombstone_retention_days(active_days)
+        set_marginalia_closed_session_tombstone_retention_days(closed_days)
+
+
 def get_marginalia_tombstone_retention_days() -> tuple[int, int]:
     keys = {
         MARGINALIA_ACTIVE_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING,

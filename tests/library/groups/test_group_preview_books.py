@@ -2,13 +2,12 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 
 from core.server_settings import set_advanced_library_groups_enabled
-from library.cover_services import set_book_cover_from_bytes
 from library.groups.memberships import add_user_to_group
 from library.groups.book_assignments import add_book_to_group
 from library.models import Book, LibraryGroup
 from library.queries import invalidate_visible_books_cache
 from tests.testenv.filesystem import IsolatedMediaRootMixin
-from tests.utils.books import create_file_backed_book
+from tests.utils.books import attach_test_cover, create_file_backed_book
 
 
 class LibraryGroupPreviewBooksTests(IsolatedMediaRootMixin, TestCase):
@@ -26,7 +25,7 @@ class LibraryGroupPreviewBooksTests(IsolatedMediaRootMixin, TestCase):
             title="Visible Book",
             assign_public=False,
         ).book
-        set_book_cover_from_bytes(book=self.visible_book, data=b"cover")
+        attach_test_cover(book=self.visible_book)
         add_book_to_group(book=self.visible_book, group=self.visible_group)
 
         hidden_book = create_file_backed_book(

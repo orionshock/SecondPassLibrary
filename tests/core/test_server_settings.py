@@ -29,6 +29,7 @@ from core.server_settings import (
     set_server_description,
     set_second_pass_reader_web_client_url,
     set_server_setting,
+    set_marginalia_tombstone_retention_days,
     synchronize_deployment_server_settings,
 )
 from library.models import LibraryGroup
@@ -195,6 +196,24 @@ class ServerSettingsServiceTests(TestCase):
             )
             with self.subTest(invalid=invalid), self.assertRaises(ValueError):
                 get_marginalia_active_session_tombstone_retention_days()
+
+    def test_paired_annotation_retention_write_publishes_effects_once(self):
+        with (
+            patch("core.server_settings.clear_server_settings_cache") as clear_cache,
+            self.captureOnCommitCallbacks(execute=True),
+        ):
+            set_marginalia_tombstone_retention_days(
+                active_days=35,
+                closed_days=9,
+            )
+
+        self.assertEqual(
+            get_marginalia_active_session_tombstone_retention_days(), 35
+        )
+        self.assertEqual(
+            get_marginalia_closed_session_tombstone_retention_days(), 9
+        )
+        clear_cache.assert_called_once_with()
 
     def test_advanced_library_groups_are_disabled_by_default(self):
         self.assertFalse(advanced_library_groups_enabled())

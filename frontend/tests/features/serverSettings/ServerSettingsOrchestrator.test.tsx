@@ -44,11 +44,10 @@ afterEach(async () => {
   vi.clearAllMocks();
 });
 
-async function mountSettings() {
+async function mountSettings(refreshServerInfo = vi.fn(async () => serverInfo)) {
   const container = document.createElement("div");
   document.body.append(container);
   root = createRoot(container);
-  const refreshServerInfo = vi.fn(async () => serverInfo);
   const context = { currentUser, serverInfo, refreshServerInfo, refreshCurrentUser: vi.fn(), onCurrentUserChange: vi.fn(), setBreadcrumbs: vi.fn() } satisfies AppOutletContext;
   await act(async () => root?.render(
     <MemoryRouter initialEntries={["/server"]}>
@@ -97,6 +96,26 @@ describe("ServerSettingsOrchestrator", () => {
     expect(container.textContent).toContain("Settings could not be saved.");
     expect(container.textContent).not.toContain("Server identity saved.");
     expect(refreshServerInfo).not.toHaveBeenCalled();
+  });
+
+  it("reports a shell refresh failure without reporting the committed write as failed", async () => {
+    sdk.getSettings.mockResolvedValue(settings);
+    sdk.updateIdentity.mockResolvedValue({ ...settings, general: { ...settings.general, name: "Updated Library" } });
+    const refreshServerInfo = vi.fn(async () => { throw new Error("Refresh failed."); });
+    const consoleWarning = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const { container } = await mountSettings(refreshServerInfo);
+
+    await act(async () => button(container, "Edit")?.click());
+    await act(async () => changeInput(container.querySelector<HTMLInputElement>("#server-settings-name")!, "Updated Library"));
+    await act(async () => button(container, "Save")?.click());
+
+    expect(container.textContent).toContain("Server identity saved.");
+    expect(container.textContent).toContain("Settings were saved, but the application shell could not be refreshed.");
+    expect(container.textContent).not.toContain("Refresh failed.");
+    expect(consoleWarning).toHaveBeenCalledWith(
+      "Server settings were saved, but the application shell refresh failed.",
+      { failureClass: "Error" },
+    );
   });
 
   it("disables the grouped save while the identity mutation is pending", async () => {

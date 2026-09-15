@@ -3,11 +3,10 @@ from __future__ import annotations
 import pytest
 from rest_framework import status
 
-from library.cover_services import set_book_cover_from_bytes
 from library.models import Author, BookAuthor
 from shelves.models import Shelf, ShelfItem
 from tests.shelves.helpers import BaseShelvesAPITest
-from tests.utils.books import create_file_backed_book
+from tests.utils.books import attach_test_cover, create_file_backed_book
 from tests.utils.responses import (
     assert_response,
     payload_dict,
@@ -68,9 +67,7 @@ class ShelfItemTests(BaseShelvesAPITest):
         self.assertEqual(create.status_code, status.HTTP_201_CREATED)
         shelf_id = response_data_dict(create)["id"]
 
-        set_book_cover_from_bytes(
-            book=self.book_in_group, data=self._png_bytes(), source="manual"
-        )
+        attach_test_cover(book=self.book_in_group, data=self._png_bytes())
 
         add_ok = assert_response(
             self.client.post(

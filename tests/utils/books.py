@@ -63,3 +63,10 @@ def create_fileless_book_for_integrity_edge_case(
     if assign_public:
         ensure_book_public_assignment(book=book, added_by=None)
     return book
+
+
+def attach_test_cover(*, book: Book, data: bytes = b"cover") -> Book:
+    """Attach deterministic cover bytes without exercising upload validation."""
+    digest = hashlib.sha256(data).hexdigest()
+    book.cover_file.save(f"{digest}.png", ContentFile(data), save=True)
+    return book

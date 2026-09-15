@@ -9,8 +9,7 @@ from django.utils.html import format_html
 from core.server_settings import (
     get_marginalia_active_session_tombstone_retention_days,
     get_marginalia_closed_session_tombstone_retention_days,
-    set_marginalia_active_session_tombstone_retention_days,
-    set_marginalia_closed_session_tombstone_retention_days,
+    set_marginalia_tombstone_retention_days,
 )
 
 from .models import MaintenanceTaskConfig, MaintenanceTaskRun
@@ -164,11 +163,9 @@ class MaintenanceTaskConfigAdmin(SuperuserMaintenanceAdminMixin, admin.ModelAdmi
             "closed_retention_days",
         }.issubset(form.cleaned_data):
             return
-        set_marginalia_active_session_tombstone_retention_days(
-            form.cleaned_data["active_retention_days"]
-        )
-        set_marginalia_closed_session_tombstone_retention_days(
-            form.cleaned_data["closed_retention_days"]
+        set_marginalia_tombstone_retention_days(
+            active_days=form.cleaned_data["active_retention_days"],
+            closed_days=form.cleaned_data["closed_retention_days"],
         )
 
     @admin.display(description="Name", ordering="task_key")
