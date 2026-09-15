@@ -3,9 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 
 from django.conf import settings
+from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage
 from django.test import SimpleTestCase
 
-from .filesystem import RuntimePathIsolation
+from .filesystem import IsolatedMediaRootMixin, RuntimePathIsolation
 
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -42,3 +44,19 @@ class RuntimePathIsolationTests(SimpleTestCase):
         isolation.disable()
 
         self.assertFalse(root.exists())
+
+
+class MediaRootPerTestIsolationTests(IsolatedMediaRootMixin, SimpleTestCase):
+    storage_name = "covers/reused-name.png"
+
+    def setUp(self):
+        self.saved_name = default_storage.save(
+            self.storage_name,
+            ContentFile(b"same cover bytes"),
+        )
+
+    def test_first_write_keeps_requested_name(self):
+        self.assertEqual(self.saved_name, self.storage_name)
+
+    def test_later_write_does_not_see_previous_test_file(self):
+        self.assertEqual(self.saved_name, self.storage_name)

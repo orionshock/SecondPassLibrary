@@ -87,92 +87,69 @@ class RuntimePathIsolation:
             self._temporary_directory = None
 
 
-class IsolatedMediaRootMixin:
-    """
-    Ensure FileField writes during tests go to a temp MEDIA_ROOT.
-    """
+class _RuntimePathIsolationMixin:
+    runtime_path_options: dict[str, bool] = {}
 
     @classmethod
-    def setUpClass(cls):
-        parent_set_up = getattr(super(), "setUpClass", None)
-        if callable(parent_set_up):
-            parent_set_up()
+    def _pre_setup(cls):
+        isolation = RuntimePathIsolation(**cls.runtime_path_options)
+        isolation.enable()
+        cls._runtime_paths = isolation
+        cls._expose_runtime_paths(isolation)
+        try:
+            super()._pre_setup()
+        except Exception:
+            isolation.disable()
+            cls._runtime_paths = None
+            raise
 
-        cls._media_runtime_paths_owned = False
-        if getattr(cls, "_runtime_paths", None) is None:
-            cls._runtime_paths = RuntimePathIsolation(media=True)
-            cls._runtime_paths.enable()
-            cls._media_runtime_paths_owned = True
-        cls._media_root = str(cls._runtime_paths.media_root)
-
-    @classmethod
-    def tearDownClass(cls):
-        if getattr(cls, "_media_runtime_paths_owned", False):
-            cls._runtime_paths.disable()
-        cls._media_runtime_paths_owned = False
-        parent_tear_down = getattr(super(), "tearDownClass", None)
-        if callable(parent_tear_down):
-            parent_tear_down()
-
-
-class IsolatedImportsMixin:
-    """
-    Isolate library import staging and media writes in OS temp directories.
-    """
+    def _post_teardown(self):
+        isolation = self._runtime_paths
+        try:
+            super()._post_teardown()
+        finally:
+            isolation.disable()
+            type(self)._runtime_paths = None
 
     @classmethod
-    def setUpClass(cls):
-        parent_set_up = getattr(super(), "setUpClass", None)
-        if callable(parent_set_up):
-            parent_set_up()
-        cls._imports_runtime_paths_owned = False
-        if getattr(cls, "_runtime_paths", None) is None:
-            cls._runtime_paths = RuntimePathIsolation(media=True, imports=True)
-            cls._runtime_paths.enable()
-            cls._imports_runtime_paths_owned = True
-        cls._imports_root = str(cls._runtime_paths.imports_dir)
-        cls._media_root = str(cls._runtime_paths.media_root)
+    def _expose_runtime_paths(cls, isolation: RuntimePathIsolation) -> None:
+        raise NotImplementedError
+
+
+class IsolatedMediaRootMixin(_RuntimePathIsolationMixin):
+    """Ensure each test's FileField writes use a fresh temporary MEDIA_ROOT."""
+
+    runtime_path_options = {"media": True}
 
     @classmethod
-    def tearDownClass(cls):
-        if getattr(cls, "_imports_runtime_paths_owned", False):
-            cls._runtime_paths.disable()
-        cls._imports_runtime_paths_owned = False
-        parent_tear_down = getattr(super(), "tearDownClass", None)
-        if callable(parent_tear_down):
-            parent_tear_down()
+    def _expose_runtime_paths(cls, isolation: RuntimePathIsolation) -> None:
+        cls._media_root = str(isolation.media_root)
 
 
-class IsolatedUserdataMixin:
-    """
-    Keep tests from touching real userdata/, media, imports, or static output.
-    """
+class IsolatedImportsMixin(_RuntimePathIsolationMixin):
+    """Isolate each test's import staging and media writes."""
+
+    runtime_path_options = {"media": True, "imports": True}
 
     @classmethod
-    def setUpClass(cls):
-        parent_set_up = getattr(super(), "setUpClass", None)
-        if callable(parent_set_up):
-            parent_set_up()
-        cls._userdata_runtime_paths_owned = False
-        if getattr(cls, "_runtime_paths", None) is None:
-            cls._runtime_paths = RuntimePathIsolation(
-                userdata=True,
-                media=True,
-                imports=True,
-                static=True,
-            )
-            cls._runtime_paths.enable()
-            cls._userdata_runtime_paths_owned = True
-        cls._userdata_root = cls._runtime_paths.userdata_root
-        cls._media_root = str(cls._runtime_paths.media_root)
-        cls._imports_root = str(cls._runtime_paths.imports_dir)
-        cls._static_root = str(cls._runtime_paths.static_root)
+    def _expose_runtime_paths(cls, isolation: RuntimePathIsolation) -> None:
+        cls._imports_root = str(isolation.imports_dir)
+        cls._media_root = str(isolation.media_root)
+
+
+class IsolatedUserdataMixin(_RuntimePathIsolationMixin):
+    """Keep each test's userdata, media, imports, and static output isolated."""
+
+    runtime_path_options = {
+        "userdata": True,
+        "media": True,
+        "imports": True,
+        "static": True,
+    }
 
     @classmethod
-    def tearDownClass(cls):
-        if getattr(cls, "_userdata_runtime_paths_owned", False):
-            cls._runtime_paths.disable()
-        cls._userdata_runtime_paths_owned = False
-        parent_tear_down = getattr(super(), "tearDownClass", None)
-        if callable(parent_tear_down):
-            parent_tear_down()
+    def _expose_runtime_paths(cls, isolation: RuntimePathIsolation) -> None:
+        cls._userdata_root = isolation.userdata_root
+        cls._media_root = str(isolation.media_root)
+        cls._imports_root = str(isolation.imports_dir)
+        cls._static_root = str(isolation.static_root)
