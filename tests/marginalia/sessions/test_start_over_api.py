@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from unittest import mock
+
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import status
@@ -104,6 +106,28 @@ class MarginaliaStartOverBootstrapTests(APITestCase):
         self.assertEqual(
             IdempotencyRecord.objects.filter(user=self.user, key="start-over-1").count(),
             1,
+        )
+
+    @mock.patch(
+        "marginalia.sessions.start_over.bootstrap_envelope",
+        side_effect=RuntimeError("envelope failed"),
+    )
+    def test_envelope_failure_rolls_back_lifecycle_and_replay_record(self, _envelope):
+        with self.assertRaisesRegex(RuntimeError, "envelope failed"):
+            self.post()
+
+        self.active.refresh_from_db()
+        self.assertEqual(self.active.status, ReadingSession.STATUS_ACTIVE)
+        self.assertIsNone(self.active.closed_at)
+        self.assertEqual(
+            ReadingSession.objects.filter(user=self.user, book=self.book).count(),
+            1,
+        )
+        self.assertFalse(
+            IdempotencyRecord.objects.filter(
+                user=self.user,
+                key="start-over-1",
+            ).exists()
         )
 
     def test_same_key_with_different_normalized_request_conflicts(self):

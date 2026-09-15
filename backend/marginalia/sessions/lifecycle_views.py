@@ -20,21 +20,18 @@ from .envelopes import bootstrap_envelope, session_detail_envelope
 from .idempotency import (
     IdempotencyConflictError,
     IdempotencyInProgressError,
-    execute_idempotent,
-    normalized_request_hash,
-    validate_idempotency_key,
 )
 from .opening import (
     FinalizationWithoutActiveSessionError,
     active_session_for_accessible_book,
     open_or_create_session,
-    start_over_session,
 )
 from .serializers import (
     MarginaliaOpenSerializer,
     MarginaliaSessionCloseSerializer,
     MarginaliaStartOverSerializer,
 )
+from .start_over import execute_start_over
 
 
 class MarginaliaSessionCloseView(MarginaliaReadMixin, APIView):
@@ -108,38 +105,15 @@ class MarginaliaBookStartOverView(MarginaliaReadMixin, APIView):
         serializer = MarginaliaStartOverSerializer(data=request.data or {})
         serializer.is_valid(raise_exception=True)
         try:
-            key = validate_idempotency_key(request.headers.get("Idempotency-Key"))
+            payload = execute_start_over(
+                request=request,
+                book_id=book_id,
+                finalization=serializer.validated_data,
+                idempotency_key=request.headers.get("Idempotency-Key"),
+            )
         except ValueError:
             return invalid_request_response(
                 message="A valid Idempotency-Key header is required."
-            )
-        request_hash = normalized_request_hash(
-            method=request.method,
-            path=request.path,
-            data=serializer.validated_data,
-        )
-
-        def operation():
-            session = start_over_session(
-                user=request.user,
-                book_id=book_id,
-                finalization=serializer.validated_data,
-            )
-            return bootstrap_envelope(
-                request=request,
-                book_id=book_id,
-                session_id=session.pk,
-                created=True,
-            )
-
-        try:
-            payload = execute_idempotent(
-                user=request.user,
-                key=key,
-                method=request.method,
-                path=request.path,
-                request_hash=request_hash,
-                operation=operation,
             )
         except (BookAccessRequiredError, Book.DoesNotExist) as exc:
             raise NotFound from exc
