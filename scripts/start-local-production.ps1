@@ -1,10 +1,10 @@
 $ErrorActionPreference = "Stop"
 
-$PythonExecutable = "python"
 $NpmExecutable = "npm.cmd"
 $UvicornHost = "127.0.0.1"
 $UvicornPort = 8000
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
+$PythonExecutable = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
 $BackendRoot = Join-Path $ProjectRoot "backend"
 $FrontendRoot = Join-Path $ProjectRoot "frontend"
 $ManagePy = Join-Path $BackendRoot "manage.py"

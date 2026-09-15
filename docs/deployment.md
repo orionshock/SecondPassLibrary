@@ -53,6 +53,17 @@ replaces `secondpass/version.py` only in the image staging tree before running
 `collectstatic`; it does not modify the checkout or require Git at runtime.
 Direct Compose builds default to `live-dev-env` and the current UTC build date.
 
+The canonical homelab deployment runs from a clean, already-pushed local
+commit and lets the server pull and rebuild its checkout:
+
+```powershell
+ssh NewCaprica "cd ~/projects/SecondPassLibrary/ && git pull && ./docker/rebuild-deployment.sh"
+```
+
+VS Code exposes this exact command as `Deploy: Homelab`. It does not commit,
+push, or modify the local checkout. `Deploy: Homelab Status` is the read-only
+post-deployment status check; it runs Compose `ps` in the same remote checkout.
+
 From the repository root:
 
 ```powershell

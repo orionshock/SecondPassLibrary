@@ -278,6 +278,23 @@ Practical notes:
 
 ## Run Checks And Tests
 
+Use the smallest workflow that matches the change:
+
+| Work | Canonical command |
+| --- | --- |
+| Run the development stack | `.\scripts\start-dev.ps1` |
+| Focused backend test | `.\.venv\Scripts\python.exe -m pytest <test-path> -q` |
+| Focused frontend test | `npm.cmd --prefix frontend run test:vitest -- --run <test-path>` |
+| Normal cross-project check | `.\.venv\Scripts\python.exe tools\verify.py --lane fast` |
+| Backend release confidence | `.\.venv\Scripts\python.exe tools\verify.py --lane backend` |
+| Frontend release confidence | `.\.venv\Scripts\python.exe tools\verify.py --lane frontend` |
+| Complete release confidence | `.\.venv\Scripts\python.exe tools\verify.py --lane all` |
+
+VS Code exposes these common workflows as `Develop: Full Stack`, the three
+`Verify` scope tasks, and `Verify: All`. Coverage remains available through the
+explicit command-line lanes below; it is intentionally absent from the short
+task list because it is not an every-change workflow.
+
 Run the complete project-owned verification entry point with the active Python
 environment:
 
@@ -285,8 +302,8 @@ environment:
 .\.venv\Scripts\python.exe tools\verify.py
 ```
 
-On Linux, use `.venv/bin/python tools/verify.py`. The VS Code tasks invoke the
-same script. Select a narrower supported lane with `--lane`:
+On Linux, use `.venv/bin/python tools/verify.py`. Select a narrower supported
+lane with `--lane`:
 
 - `fast`: lint, Django checks, non-slow backend tests, Product UI/SDK tests,
   and static hygiene;

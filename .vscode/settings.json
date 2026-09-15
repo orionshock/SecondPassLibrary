@@ -1,24 +1,19 @@
 {
-  "explorer.excludeGitIgnore": false,
   "files.exclude": {
-    "**/.agents": true,
-    "**/.env": true,
-    "**/.git": true,
     "**/.pytest_cache": true,
     "**/.ruff_cache": true,
     "**/.venv": true,
     "**/__pycache__": true,
-    "**/*.egg-info": true,
     "**/*.py[cod]": true,
     "**/*.tsbuildinfo": true,
-    "**/build": true,
-    "**/dist": true,
     "**/node_modules": true,
-    "**/out": true,
-    "**/var": true
+    "backend/var": true,
+    "backend/web/product_ui": true,
+    "test-results": true,
+    "userdata": true
   },
   "python.analysis.diagnosticMode": "workspace",
-  "python.envFile": "${workspaceFolder}/.env",
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv",
   "python.terminal.activateEnvironment": true,
   "python.testing.autoTestDiscoverOnSaveEnabled": true,
   "python.testing.cwd": "${workspaceFolder}",
@@ -34,33 +29,10 @@
       "packageManager": "ms-python.python:pip"
     }
   ],
-  "repoStats.excludePatterns": [
-    "**/__pycache__/**",
-    "**/__tests__/**",
-    "**/migrations/**",
-    "backend/web/product_ui/**",
-    "backend/var/**",
-    "**/*.png"
-  ],
   "ruff.configurationPreference": "filesystemFirst",
   "ruff.nativeServer": "on",
-  "sqltools.connections": [
-    {
-      "previewLimit": 50,
-      "driver": "SQLite",
-      "database": "${workspaceFolder}/userdata/db/db.sqlite3",
-      "name": "SPL userdata db"
-    }
-  ],
-  "sqltools.useNodeRuntime": true,
-  "terminal.integrated.cwd": "${workspaceFolder}",
   "vitest.rootConfig": "frontend/vite.config.ts",
   "[python]": {
-    "editor.defaultFormatter": "charliermarsh.ruff",
-    "editor.formatOnSave": true,
-    "editor.codeActionsOnSave": {
-      "source.fixAll.ruff": "explicit",
-      "source.organizeImports.ruff": "explicit"
-    }
+    "editor.defaultFormatter": "charliermarsh.ruff"
   }
 }

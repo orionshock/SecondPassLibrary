@@ -2,7 +2,24 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Verify: fast",
+      "label": "Develop: Full Stack",
+      "type": "process",
+      "command": "powershell",
+      "args": [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-File",
+        "${workspaceFolder}\\scripts\\start-dev.ps1"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Verify: Fast",
       "type": "process",
       "command": "${workspaceFolder}/.venv/bin/python",
       "windows": { "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe" },
@@ -11,7 +28,7 @@
       "problemMatcher": []
     },
     {
-      "label": "Test: backend full",
+      "label": "Verify: Backend",
       "type": "process",
       "command": "${workspaceFolder}/.venv/bin/python",
       "windows": { "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe" },
@@ -20,16 +37,7 @@
       "problemMatcher": []
     },
     {
-      "label": "Coverage: Python",
-      "type": "process",
-      "command": "${workspaceFolder}/.venv/bin/python",
-      "windows": { "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe" },
-      "args": ["tools/verify.py", "--lane", "backend-coverage"],
-      "group": "test",
-      "problemMatcher": []
-    },
-    {
-      "label": "Verify: frontend",
+      "label": "Verify: Frontend",
       "type": "process",
       "command": "${workspaceFolder}/.venv/bin/python",
       "windows": { "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe" },
@@ -38,16 +46,7 @@
       "problemMatcher": []
     },
     {
-      "label": "Coverage: frontend",
-      "type": "process",
-      "command": "${workspaceFolder}/.venv/bin/python",
-      "windows": { "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe" },
-      "args": ["tools/verify.py", "--lane", "frontend-coverage"],
-      "group": "test",
-      "problemMatcher": []
-    },
-    {
-      "label": "Security: dependency advisories",
+      "label": "Security: Dependency Advisories",
       "type": "process",
       "command": "${workspaceFolder}/.venv/bin/python",
       "windows": { "command": "${workspaceFolder}\\.venv\\Scripts\\python.exe" },
@@ -56,7 +55,7 @@
       "problemMatcher": []
     },
     {
-      "label": "Verify: all",
+      "label": "Verify: All",
       "type": "process",
       "command": "${workspaceFolder}/.venv/bin/python",
       "windows": {
@@ -72,6 +71,34 @@
         "isDefault": true
       },
       "problemMatcher": []
+    },
+    {
+      "label": "Deploy: Homelab",
+      "type": "process",
+      "command": "ssh",
+      "args": [
+        "NewCaprica",
+        "cd ~/projects/SecondPassLibrary/ && git pull && ./docker/rebuild-deployment.sh"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Deploy: Homelab Status",
+      "type": "process",
+      "command": "ssh",
+      "args": [
+        "NewCaprica",
+        "cd ~/projects/SecondPassLibrary/ && docker compose -f docker/compose.yml ps"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated"
+      }
     }
   ]
 }

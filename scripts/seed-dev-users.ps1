@@ -1,7 +1,7 @@
 $ErrorActionPreference = "Stop"
 
-$PythonExecutable = "python"
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
+$PythonExecutable = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
 $ManagePy = Join-Path $ProjectRoot "backend\manage.py"
 $SeedArgs = @("seed_dev_users")
 $PythonRuntimeCheck = Join-Path $ProjectRoot "tools\python_runtime.py"

@@ -2,13 +2,9 @@
   "recommendations": [
     "ms-python.python",
     "ms-python.vscode-pylance",
-    "ms-python.debugpy",
     "ms-python.vscode-python-envs",
     "charliermarsh.ruff",
     "vitest.explorer",
-    "mhutchie.git-graph",
-    "openai.chatgpt",
-    "guwidoe.vscode-repo-stats",
     "ms-azuretools.vscode-docker",
     "redhat.vscode-yaml"
   ]

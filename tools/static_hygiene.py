@@ -7,14 +7,14 @@ from dataclasses import dataclass
 from pathlib import Path
 
 try:
-    from tools.fix_mojibake import (
+    from tools.text_normalization import (
         TEXT_EXTS,
         decode_best_effort,
         fix_mojibake_text,
         has_mojibake_marker,
     )
 except ModuleNotFoundError:
-    from fix_mojibake import (
+    from text_normalization import (
         TEXT_EXTS,
         decode_best_effort,
         fix_mojibake_text,
