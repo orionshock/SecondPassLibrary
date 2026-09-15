@@ -5,35 +5,16 @@ from django.http import Http404
 from rest_framework.generics import ListAPIView
 
 from library.api_access import LibraryBearerReadMixin
-from library.catalog.filters import apply_broad_book_search, apply_catalog_tag_filter
-from library.catalog.ordering import apply_book_ordering, parse_ordering_param
+from library.catalog.book_list_response import CatalogTagAggregateBookListMixin
+from library.catalog.book_queries import book_search_queryset
+from library.catalog.ordering import BOOK_SEARCH_ORDERINGS, parse_ordering_param
 from library.catalog.serializers.books import BookListSerializer
-from library.catalog.views import CatalogTagAggregateBookListMixin, book_row_queryset
 from library.models import LibraryGroup
 from library.queries import group_is_visible_to_user, visible_books_for_user
 from library.roles import is_curator
 from shelves.models import Shelf
 from shelves.querysets import visible_shelf_filter
 from shelves.policies import can_edit_shelf
-
-
-SEARCH_ORDERINGS = {"title", "-title", "author", "-author", "series", "-series"}
-
-
-def book_search_queryset(queryset, request):
-    term = str(request.query_params.get("q") or "").strip()
-    if not term:
-        queryset = queryset.none()
-    else:
-        queryset = apply_broad_book_search(queryset, term)
-        queryset = apply_catalog_tag_filter(queryset, request.query_params)
-    queryset = book_row_queryset(queryset)
-    ordering = parse_ordering_param(
-        request,
-        allowed=SEARCH_ORDERINGS,
-        default="title",
-    )
-    return apply_book_ordering(queryset, ordering)
 
 
 class UserBookVerseSearchView(
@@ -53,7 +34,16 @@ class UserBookVerseSearchView(
             user=self.request.user,
             raw_group_id=self.request.query_params.get("exclude_group", ""),
         )
-        return book_search_queryset(queryset, self.request)
+        return book_search_queryset(
+            queryset,
+            term=str(self.request.query_params.get("q") or "").strip(),
+            query_params=self.request.query_params,
+            ordering=parse_ordering_param(
+                self.request,
+                allowed=BOOK_SEARCH_ORDERINGS,
+                default="title",
+            ),
+        )
 
 
 def _exclude_shelf_books(queryset, *, user, raw_shelf_id: str):

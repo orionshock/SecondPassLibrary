@@ -1,14 +1,17 @@
 from __future__ import annotations
 
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 
 from core.server_settings import (
     set_advanced_library_groups_enabled,
     set_server_setting,
 )
 from library.groups.public_group import PUBLIC_GROUP_ID_SETTING
-from library.catalog.views import book_detail_queryset, book_row_queryset
-from library.models import Book, LibraryGroupMembership
+from library.catalog.book_queries import book_row_queryset
+from library.catalog.serializers.books import BookListSerializer
+from library.models import Book, BookAuthor, BookCatalogTag, LibraryGroupMembership
 from tests.library.helpers import LibraryCatalogApiFixtureMixin, response_titles
 
 
@@ -82,12 +85,36 @@ class LibraryCatalogBookViewTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertNotIn("tags", payload)
         self.assertNotIn("file_format", payload)
 
-    def test_row_and_detail_queryset_prefetch_only_required_relationships(self):
-        row_lookups = book_row_queryset(Book.objects.all())._prefetch_related_lookups
-        detail_lookups = book_detail_queryset(Book.objects.all())._prefetch_related_lookups
+    def test_book_row_relationship_projection_is_ordered_and_query_bounded(self):
+        BookAuthor.objects.create(
+            book=self.visible_one,
+            author=self.alpha,
+            position=1,
+        )
+        BookCatalogTag.objects.create(
+            book=self.visible_one,
+            catalog_tag=self.mystery,
+        )
 
-        self.assertNotIn("identifiers", row_lookups)
-        self.assertIn("identifiers", detail_lookups)
+        with CaptureQueriesContext(connection) as captured:
+            serialized = BookListSerializer(
+                book_row_queryset(Book.objects.all()),
+                many=True,
+            ).data
+
+        self.assertEqual(len(captured), 3)
+        rows = {row["title"]: row for row in serialized}
+        row = rows["Visible One"]
+        self.assertEqual(
+            [author["name"] for author in row["authors"]],
+            ["Beta Author", "Alpha Author"],
+        )
+        self.assertEqual(
+            [tag["name"] for tag in row["catalog_tags"]],
+            ["Fantasy", "Mystery"],
+        )
+        self.assertEqual(row["series"]["name"], "First Series")
+        self.assertEqual(row["series"]["series_index"], "2.00")
 
     def test_book_detail_includes_only_reader_visible_group_summaries(self):
         set_advanced_library_groups_enabled(True)

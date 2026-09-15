@@ -18,7 +18,14 @@ from library.catalog.axes import (
     visible_series_from_books,
     visible_tags_from_books,
 )
+from library.catalog.book_list_response import CatalogTagAggregateBookListMixin
+from library.catalog.book_queries import book_browse_queryset, book_search_queryset
 from library.catalog.filters import apply_catalog_tag_filter
+from library.catalog.ordering import (
+    BOOK_SEARCH_ORDERINGS,
+    parse_book_ordering,
+    parse_ordering_param,
+)
 from library.catalog.preview_books import (
     attach_author_preview_books,
     attach_series_preview_books,
@@ -31,8 +38,6 @@ from library.catalog.serializers.axes import (
 )
 from library.catalog.serializers.books import BookListSerializer
 from library.catalog.tag_aggregates import catalog_tag_aggregates
-from library.catalog.search_views import book_search_queryset
-from library.catalog.views import CatalogTagAggregateBookListMixin, book_browse_queryset
 from library.models import LibraryGroup
 from library.queries import group_is_visible_to_user, visible_books_for_group
 from shelves.models import Shelf
@@ -69,7 +74,11 @@ class GroupBookListView(
             group=group,
             raw_shelf_id=self.request.query_params.get("exclude_shelf"),
         )
-        return book_browse_queryset(queryset, self.request)
+        return book_browse_queryset(
+            queryset,
+            query_params=self.request.query_params,
+            ordering=parse_book_ordering(self.request),
+        )
 
 
 class GroupBookSearchView(
@@ -86,7 +95,16 @@ class GroupBookSearchView(
             group=group,
             raw_shelf_id=self.request.query_params.get("exclude_shelf"),
         )
-        return book_search_queryset(queryset, self.request)
+        return book_search_queryset(
+            queryset,
+            term=str(self.request.query_params.get("q") or "").strip(),
+            query_params=self.request.query_params,
+            ordering=parse_ordering_param(
+                self.request,
+                allowed=BOOK_SEARCH_ORDERINGS,
+                default="title",
+            ),
+        )
 
 
 def _exclude_group_shelf_books(queryset, *, user, group, raw_shelf_id):

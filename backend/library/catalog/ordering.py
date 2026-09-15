@@ -9,6 +9,7 @@ from library.models import BookAuthor
 
 BOOK_ORDERING_AXES = {"title", "author", "series", "series_index", "publisher"}
 BOOK_ORDERINGS = BOOK_ORDERING_AXES | {f"-{axis}" for axis in BOOK_ORDERING_AXES}
+BOOK_SEARCH_ORDERINGS = {"title", "-title", "author", "-author", "series", "-series"}
 
 
 def parse_ordering_param(request, *, allowed: set[str], default: str) -> str:

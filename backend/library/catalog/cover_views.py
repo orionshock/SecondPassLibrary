@@ -12,8 +12,11 @@ from rest_framework.views import APIView
 
 from accounts.roles import is_librarian
 from core.errors import ErrorCode, api_error_response
+from library.catalog.book_queries import (
+    attach_visible_groups_to_book,
+    book_detail_queryset,
+)
 from library.catalog.serializers.books import BookDetailSerializer
-from library.catalog.views import attach_visible_groups_to_book, book_detail_queryset
 from library.cover_services import (
     InvalidBookCover,
     clear_book_cover,

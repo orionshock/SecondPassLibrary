@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from django.core.exceptions import PermissionDenied
-from django.db.models import F, Prefetch, Q, QuerySet, Window
+from django.db.models import F, Q, QuerySet, Window
 from django.db.models.functions import RowNumber
 
+from library.catalog.book_queries import book_row_queryset
 from library.catalog.preview_books import attach_preview_books_from_queryset
-from library.models import BookAuthor, BookCatalogTag
 from library.queries import visible_books_for_user
 
 from .models import Shelf, ShelfItem
@@ -61,29 +61,9 @@ def attach_shelf_preview_books(*, shelves, user, limit: int) -> None:
 
 
 def shelf_items_with_books(*, shelf: Shelf) -> QuerySet[ShelfItem]:
-    return (
-        ShelfItem.objects.select_related(
-            "book",
-            "book__book_series__series",
-            "added_by",
-        )
-        .prefetch_related(
-            Prefetch(
-                "book__book_authors",
-                queryset=BookAuthor.objects.select_related("author").order_by(
-                    "position", "id"
-                ),
-            ),
-            Prefetch(
-                "book__book_catalog_tags",
-                queryset=BookCatalogTag.objects.select_related("catalog_tag").order_by(
-                    "catalog_tag__sort_name",
-                    "catalog_tag__name",
-                    "id",
-                ),
-            ),
-        )
-        .filter(shelf=shelf)
+    queryset = ShelfItem.objects.select_related("book", "added_by")
+    return book_row_queryset(queryset, book_path="book").filter(
+        shelf=shelf
     )
 
 
