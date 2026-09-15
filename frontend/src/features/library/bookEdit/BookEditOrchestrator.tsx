@@ -3,20 +3,12 @@ import {
   addBookToGroup,
   clearBookCover,
   getBook,
-  listAllAuthors,
-  listAllCatalogTags,
-  listAllLibraryGroups,
   listAllGroupShelvesForBook,
-  listAllSeries,
   removeBookFromGroup,
   removeShelfItem,
   replaceBookCover,
   updateBook,
   type BookDetail,
-  type CatalogTag,
-  type LibraryAuthor,
-  type LibraryGroup,
-  type LibrarySeries,
   type ShelfSummary,
 } from "@second-pass/spl-api";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
@@ -53,9 +45,9 @@ import {
   validateBookEditDraft,
   type BookEditDraft,
 } from "./bookEditDraft";
+import { useBookEditChoices } from "./useBookEditChoices";
 
 type BookLoad = { status: "loading" } | { status: "ready"; book: BookDetail } | { status: "not-found" } | { status: "error"; error: Error };
-type PickerLoad<T> = { loading: boolean; items: T[]; error?: Error };
 type GroupShelvesLoad =
   | { status: "idle" | "loading" }
   | { status: "ready"; shelves: ShelfSummary[] }
@@ -67,16 +59,8 @@ export function BookEditOrchestrator() {
   const location = useLocation();
   const navigate = useNavigate();
   const [bookRetry, setBookRetry] = useState(0);
-  const [authorRetry, setAuthorRetry] = useState(0);
-  const [seriesRetry, setSeriesRetry] = useState(0);
-  const [tagRetry, setTagRetry] = useState(0);
-  const [groupRetry, setGroupRetry] = useState(0);
   const [groupShelfRetry, setGroupShelfRetry] = useState(0);
   const [load, setLoad] = useState<BookLoad>({ status: "loading" });
-  const [authors, setAuthors] = useState<PickerLoad<LibraryAuthor>>({ loading: true, items: [] });
-  const [series, setSeries] = useState<PickerLoad<LibrarySeries>>({ loading: true, items: [] });
-  const [tags, setTags] = useState<PickerLoad<CatalogTag>>({ loading: true, items: [] });
-  const [groups, setGroups] = useState<PickerLoad<LibraryGroup>>({ loading: false, items: [] });
   const [groupShelves, setGroupShelves] = useState<GroupShelvesLoad>({ status: "idle" });
   const lifecycle = useFormSaveLifecycle<BookEditDraft | undefined>({
     initialDraft: undefined,
@@ -112,6 +96,13 @@ export function BookEditOrchestrator() {
     immediateMutationPending,
   );
   const tab = editQuery.tab;
+  const choices = useBookEditChoices({
+    book,
+    tab,
+    canEditGroups,
+    selectedAuthorIds: draft?.authorIds ?? [],
+    selectedSeriesId: draft?.seriesId ?? null,
+  });
   const fallback = useMemo(() => bookEditBreadcrumbTrail(bookDetailBreadcrumbFallback(book?.title ?? "Book"), bookId, book?.title ?? "Book"), [book?.title, bookId]);
   const breadcrumbTrail = resolveBreadcrumbTrail(location.state, fallback);
   usePageBreadcrumbs(fallback);
@@ -144,16 +135,6 @@ export function BookEditOrchestrator() {
     return () => { active = false; };
   }, [bookId, bookRetry]);
 
-  useEffect(() => loadPicker(listAllAuthors, setAuthors), [authorRetry]);
-  useEffect(() => loadPicker(listAllSeries, setSeries), [seriesRetry]);
-  useEffect(() => loadPicker(listAllCatalogTags, setTags), [tagRetry]);
-  useEffect(() => {
-    if (!canEditGroups) {
-      setGroups({ loading: false, items: [] });
-      return;
-    }
-    return loadPicker(listAllLibraryGroups, setGroups);
-  }, [canEditGroups, groupRetry]);
   useEffect(() => {
     if (tab !== "group-shelves" || !bookId) return;
     let active = true;
@@ -338,14 +319,15 @@ export function BookEditOrchestrator() {
       <BookEditTabsPageRegion active={tab} showGroups={canEditGroups} disabled={mutation.pending || immediateMutationPending} onChange={changeTab} />
       <div id={tabPanelId("book-edit", tab)} role="tabpanel" aria-labelledby={tabButtonId("book-edit", tab)}>
       {tab === "book" ? <BookEditBookPageRegion draft={draft} error={mutation.error} disabled={mutation.pending} onChange={change} /> : null}
-      {tab === "catalog" ? <BookEditCatalogPageRegion draft={draft} error={mutation.error} tags={tags.items} tagsLoading={tags.loading} tagsError={tags.error} disabled={mutation.pending} onRetryTags={() => setTagRetry((value) => value + 1)} onChange={change} /> : null}
-      {tab === "authors-series" ? <BookEditAuthorsSeriesPageRegion draft={draft} error={mutation.error} authors={authors.items} series={series.items} authorsLoading={authors.loading} seriesLoading={series.loading} authorsError={authors.error} seriesError={series.error} breadcrumbTrail={breadcrumbTrail} returnTo={`${location.pathname}${location.search}`} disabled={mutation.pending} onRetryAuthors={() => setAuthorRetry((value) => value + 1)} onRetrySeries={() => setSeriesRetry((value) => value + 1)} onChange={change} /> : null}
+      {tab === "catalog" ? <BookEditCatalogPageRegion draft={draft} error={mutation.error} tags={choices.tags.items} tagQuery={choices.tags.query} tagsLoading={choices.tags.loading} tagsError={choices.tags.error} disabled={mutation.pending} onTagQueryChange={choices.tags.setQuery} onRetryTags={choices.tags.retry} onChange={change} /> : null}
+      {tab === "authors-series" ? <BookEditAuthorsSeriesPageRegion draft={draft} error={mutation.error} authors={choices.authors.items} series={choices.series.items} authorQuery={choices.authors.query} seriesQuery={choices.series.query} authorsLoading={choices.authors.loading} seriesLoading={choices.series.loading} authorsError={choices.authors.error} seriesError={choices.series.error} breadcrumbTrail={breadcrumbTrail} returnTo={`${location.pathname}${location.search}`} disabled={mutation.pending} onAuthorQueryChange={choices.authors.setQuery} onSeriesQueryChange={choices.series.setQuery} onRetryAuthors={choices.authors.retry} onRetrySeries={choices.series.retry} onChange={change} /> : null}
       {tab === "identifiers" ? <BookEditIdentifiersPageRegion draft={draft} error={mutation.error} disabled={mutation.pending} onChange={change} /> : null}
       {tab === "groups" && canEditGroups ? <BookEditGroupsPageRegion
         currentGroups={readyBook.groups}
-        availableGroups={groups.items}
-        loading={groups.loading}
-        pickerError={groups.error}
+        availableGroups={choices.groups.items}
+        query={choices.groups.query}
+        loading={choices.groups.loading}
+        pickerError={choices.groups.error}
         mutation={groupMutation}
         disabled={mutation.pending || immediateMutationPending}
         groupNavigationState={(group) => breadcrumbNavigationState(bookEditRelatedBreadcrumbTrail(
@@ -353,7 +335,8 @@ export function BookEditOrchestrator() {
           `${location.pathname}${location.search}`,
           { label: group.name, icon: group.isPublicGroup ? "public-group" : "group" },
         ))}
-        onRetry={() => setGroupRetry((value) => value + 1)}
+        onQueryChange={choices.groups.setQuery}
+        onRetry={choices.groups.retry}
         onSelectionChange={() => setGroupMutation(idleMutationState)}
         onAdd={addGroup}
         onRemove={removeGroup}
@@ -383,11 +366,4 @@ function readyGroupsForRemoval(load: BookLoad, removedGroupId: string): boolean 
   return load.book.groups.length === 1
     && load.book.groups[0]?.id === removedGroupId
     && !load.book.groups[0].isPublicGroup;
-}
-
-function loadPicker<T>(request: () => Promise<T[]>, setState: (state: PickerLoad<T>) => void): () => void {
-  let active = true;
-  setState({ loading: true, items: [] });
-  request().then((items) => { if (active) setState({ loading: false, items }); }).catch((error: unknown) => { if (active) setState({ loading: false, items: [], error: normalizeMutationError(error) }); });
-  return () => { active = false; };
 }

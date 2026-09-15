@@ -1,4 +1,4 @@
-import type { BookGroupSummary, LibraryGroup } from "@second-pass/spl-api";
+import type { BookGroupSummary } from "@second-pass/spl-api";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router";
 
@@ -8,27 +8,32 @@ import { RemoveIconButton } from "../../../components/icons/RemoveIconButton";
 import { Button, ErrorPanel } from "../../../components/UiPrimitives";
 import { ActionFeedback } from "../../../shared/feedback/ActionFeedback";
 import type { MutationState } from "../../../shared/feedback/mutationState";
+import type { BookEditGroupChoice } from "./useBookEditChoices";
 
 export function BookEditGroupsPageRegion({
   currentGroups,
   availableGroups,
+  query,
   loading,
   pickerError,
   mutation,
   disabled,
   groupNavigationState,
+  onQueryChange,
   onRetry,
   onSelectionChange,
   onAdd,
   onRemove,
 }: {
   currentGroups: readonly BookGroupSummary[];
-  availableGroups: readonly LibraryGroup[];
+  availableGroups: readonly BookEditGroupChoice[];
+  query: string;
   loading: boolean;
   pickerError?: Error;
   mutation: MutationState;
   disabled: boolean;
   groupNavigationState?: (group: BookGroupSummary) => unknown;
+  onQueryChange: (query: string) => void;
   onRetry: () => void;
   onSelectionChange: () => void;
   onAdd: (groupId: string) => void;
@@ -67,16 +72,18 @@ export function BookEditGroupsPageRegion({
     </ul>
 
     <div className="book-edit-group-add">
-      <label htmlFor="book-edit-add-group">Add to group</label>
-      {loading ? <span className="book-edit-picker-status">Loading groups...</span> : null}
+      <label htmlFor="book-edit-group-search">Find group</label>
+      <input id="book-edit-group-search" type="search" value={query} disabled={disabled} onChange={(event) => onQueryChange(event.target.value)} />
+      {loading ? <span className="book-edit-picker-status" aria-live="polite">Loading groups...</span> : null}
       {pickerError ? <ErrorPanel><span>Groups could not be loaded.</span> <Button type="button" size="small" tone="secondary" onClick={onRetry}>Retry</Button></ErrorPanel> : null}
-      {!loading && !pickerError ? <div className="book-edit-inline-control">
-        <select id="book-edit-add-group" value={groupId} disabled={disabled || unassignedGroups.length === 0} onChange={(event) => { setGroupId(event.target.value); onSelectionChange(); }}>
+      <label htmlFor="book-edit-add-group">Add to group</label>
+      <div className="book-edit-inline-control">
+        <select id="book-edit-add-group" value={groupId} disabled={disabled || loading || Boolean(pickerError) || unassignedGroups.length === 0} onChange={(event) => { setGroupId(event.target.value); onSelectionChange(); }}>
           {unassignedGroups.length === 0 ? <option value="">No groups available</option> : null}
           {unassignedGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}
         </select>
-        <AddIconButton type="button" label="Add group" disabled={disabled || !groupId} onClick={() => onAdd(groupId)} />
-      </div> : null}
+        <AddIconButton type="button" label="Add group" disabled={disabled || loading || Boolean(pickerError) || !groupId} onClick={() => onAdd(groupId)} />
+      </div>
     </div>
     <ActionFeedback state={mutation} />
   </section>;

@@ -94,6 +94,8 @@
 .book-edit-author-list li > a { min-width: 0; overflow-wrap: anywhere; }
 .book-edit-author-actions { display: flex; gap: 0.22rem; }
 .book-edit-author-grid .icon-button { flex: 0 0 auto; }
+.book-edit-author-grid > .book-edit-picker-status,
+.book-edit-author-grid > .book-edit-picker-error { grid-column: 2; }
 .book-edit-series-fields { display: grid; align-content: start; gap: 0.65rem; }
 .book-edit-series-fields .book-edit-relationship-heading,
 .book-edit-series-fields .form-field,
@@ -163,6 +165,8 @@
   .book-edit-author-list li { grid-template-columns: minmax(0, 1fr) auto; }
   .book-edit-author-grid { grid-template-columns: minmax(0, 1fr); width: 100%; }
   .book-edit-author-grid > h2 { padding-top: 0; }
+  .book-edit-author-grid > .book-edit-picker-status,
+  .book-edit-author-grid > .book-edit-picker-error { grid-column: 1; }
   .book-edit-author-list { width: 100%; }
   .book-edit-group-list { width: 100%; margin-left: 0; }
   .book-edit-group-shelf-list { width: 100%; margin-left: 0; }

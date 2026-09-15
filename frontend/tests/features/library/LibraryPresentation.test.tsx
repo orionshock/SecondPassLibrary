@@ -55,9 +55,11 @@ describe("Library Books components", () => {
     const solePublic = renderToStaticMarkup(<MemoryRouter><BookEditGroupsPageRegion
       currentGroups={[publicGroup]}
       availableGroups={[publicGroup, { id: "custom", name: "Readers", description: "", isPublicGroup: false }]}
+      query=""
       loading={false}
       mutation={{ pending: false }}
       disabled={false}
+      onQueryChange={vi.fn()}
       onRetry={vi.fn()}
       onSelectionChange={vi.fn()}
       onAdd={vi.fn()}
@@ -305,6 +307,8 @@ describe("Library Author and Series components", () => {
       }}
       authors={[author]}
       series={[series]}
+      authorQuery=""
+      seriesQuery=""
       authorsLoading={false}
       seriesLoading={false}
       breadcrumbTrail={[
@@ -314,6 +318,8 @@ describe("Library Author and Series components", () => {
         { label: "Edit" },
       ]}
       returnTo="/library/books/book/edit"
+      onAuthorQueryChange={vi.fn()}
+      onSeriesQueryChange={vi.fn()}
       onRetryAuthors={vi.fn()}
       onRetrySeries={vi.fn()}
       onChange={vi.fn()}

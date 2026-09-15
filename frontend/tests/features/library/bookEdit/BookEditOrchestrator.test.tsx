@@ -27,10 +27,10 @@ const sdk = vi.hoisted(() => ({
 vi.mock("@second-pass/spl-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@second-pass/spl-api")>()),
   getBook: sdk.getBook,
-  listAllAuthors: sdk.listAuthors,
-  listAllSeries: sdk.listSeries,
-  listAllCatalogTags: sdk.listTags,
-  listAllLibraryGroups: sdk.listGroups,
+  listAuthors: sdk.listAuthors,
+  listSeries: sdk.listSeries,
+  listCatalogTags: sdk.listTags,
+  listGroups: sdk.listGroups,
   listAllGroupShelvesForBook: sdk.listGroupShelves,
   updateBook: sdk.updateBook,
   addBookToGroup: sdk.addBookToGroup,
@@ -90,11 +90,15 @@ afterEach(async () => {
 
 function arrangeDependencies() {
   sdk.getBook.mockResolvedValue(book);
-  sdk.listAuthors.mockResolvedValue(authors);
-  sdk.listSeries.mockResolvedValue(series);
-  sdk.listTags.mockResolvedValue([{ id: "tag-one", name: "Fantasy", slug: "fantasy", count: 1 }]);
-  sdk.listGroups.mockResolvedValue([]);
+  sdk.listAuthors.mockResolvedValue(page(authors));
+  sdk.listSeries.mockResolvedValue(page(series));
+  sdk.listTags.mockResolvedValue(page([{ id: "tag-one", name: "Fantasy", slug: "fantasy", bookCount: 1 }]));
+  sdk.listGroups.mockResolvedValue(page([]));
   sdk.listGroupShelves.mockResolvedValue([]);
+}
+
+function page<T>(items: T[]) {
+  return { items, count: items.length, next: null, previous: null, catalogTags: [] };
 }
 
 async function mount(path = "/library/books/book%2Fid/edit") {
@@ -122,16 +126,141 @@ async function setRawRichText(container: HTMLElement, id: string, value: string)
 }
 
 describe("BookEditOrchestrator", () => {
-  it("loads the Book and every required picker before exposing the draft", async () => {
+  it("exposes the Book draft without loading any selectable catalog", async () => {
     arrangeDependencies();
     const { container } = await mount();
 
     expect(sdk.getBook).toHaveBeenCalledWith("book/id");
-    expect(sdk.listAuthors).toHaveBeenCalledOnce();
-    expect(sdk.listSeries).toHaveBeenCalledOnce();
-    expect(sdk.listTags).toHaveBeenCalledOnce();
-    expect(sdk.listGroups).toHaveBeenCalledOnce();
+    expect(sdk.listAuthors).not.toHaveBeenCalled();
+    expect(sdk.listSeries).not.toHaveBeenCalled();
+    expect(sdk.listTags).not.toHaveBeenCalled();
+    expect(sdk.listGroups).not.toHaveBeenCalled();
     expect(container.querySelector<HTMLInputElement>("#book-edit-title")?.value).toBe("Original Book");
+  });
+
+  it("loads one bounded page only when each choice tab is opened", async () => {
+    arrangeDependencies();
+    const { container } = await mount();
+
+    await act(async () => buttonNamed(container, "Authors & Series").click());
+    expect(sdk.listAuthors).toHaveBeenCalledOnce();
+    expect(sdk.listAuthors).toHaveBeenCalledWith({ q: undefined, ordering: "name", pageSize: 25 });
+    expect(sdk.listSeries).toHaveBeenCalledOnce();
+    expect(sdk.listSeries).toHaveBeenCalledWith({ q: undefined, ordering: "name", pageSize: 25 });
+
+    await act(async () => buttonNamed(container, "Catalog").click());
+    expect(sdk.listTags).toHaveBeenCalledOnce();
+    expect(sdk.listTags).toHaveBeenCalledWith({ q: undefined, ordering: "name", pageSize: 25 });
+
+    await act(async () => buttonNamed(container, "Library Groups").click());
+    expect(sdk.listGroups).toHaveBeenCalledOnce();
+    expect(sdk.listGroups).toHaveBeenCalledWith({ q: undefined, ordering: "name", pageSize: 25 });
+  });
+
+  it("retains selected relationships when bounded results do not contain them", async () => {
+    arrangeDependencies();
+    sdk.getBook.mockResolvedValue({
+      ...book,
+      series: { id: "selected-series", name: "Selected Series", sortName: "Selected Series", seriesIndex: "2.00" },
+      groups: [{ id: "selected-group", name: "Selected Group", description: "", isPublicGroup: false }],
+    });
+    sdk.listAuthors.mockResolvedValue(page([authors[1]]));
+    sdk.listSeries.mockResolvedValue(page(series));
+    sdk.listTags.mockResolvedValue(page([{ id: "tag-two", name: "Mystery", slug: "mystery", bookCount: 1 }]));
+    sdk.listGroups.mockResolvedValue(page([{ id: "other-group", name: "Other Group", description: "", isPublicGroup: false }]));
+    const { container } = await mount("/library/books/book%2Fid/edit?tab=authors-series");
+
+    expect(container.textContent).toContain("Author One");
+    expect(container.querySelector<HTMLSelectElement>("#book-edit-series")?.value).toBe("selected-series");
+    expect(container.querySelector<HTMLInputElement>("#book-edit-series-index")?.value).toBe("2.00");
+
+    await act(async () => buttonNamed(container, "Catalog").click());
+    expect(container.textContent).toContain("Fantasy");
+    await act(async () => buttonNamed(container, "Library Groups").click());
+    expect(container.textContent).toContain("Selected Group");
+  });
+
+  it("keeps duplicate Author and Series names distinct by UUID", async () => {
+    arrangeDependencies();
+    const duplicateAuthors = [
+      { ...authors[0], id: "author-alex-1", name: "Alex Smith", sortName: "Smith, Alex" },
+      { ...authors[1], id: "author-alex-2", name: "Alex Smith", sortName: "Smith, Alex" },
+    ];
+    const duplicateSeries = [
+      { ...series[0], id: "series-chronicle-1", name: "Chronicle" },
+      { ...series[0], id: "series-chronicle-2", name: "Chronicle" },
+    ];
+    sdk.listAuthors.mockResolvedValue(page(duplicateAuthors));
+    sdk.listSeries.mockResolvedValue(page(duplicateSeries));
+    const { container } = await mount("/library/books/book%2Fid/edit?tab=authors-series");
+
+    const authorOptions = Array.from(container.querySelectorAll<HTMLOptionElement>("#book-edit-add-author option"));
+    expect(authorOptions.map(({ value }) => value)).toEqual(["", "author-alex-1", "author-alex-2"]);
+    expect(authorOptions[1]?.textContent).toContain("author-alex-1");
+    expect(authorOptions[2]?.textContent).toContain("author-alex-2");
+    const seriesOptions = Array.from(container.querySelectorAll<HTMLOptionElement>("#book-edit-series option"));
+    expect(seriesOptions.map(({ value }) => value)).toContain("series-chronicle-1");
+    expect(seriesOptions.map(({ value }) => value)).toContain("series-chronicle-2");
+
+    await act(async () => setControlValue(
+      container.querySelector<HTMLSelectElement>("#book-edit-add-author")!,
+      "author-alex-1",
+    ));
+    await act(async () => buttonNamed(container, "Add author").click());
+    await act(async () => setControlValue(
+      container.querySelector<HTMLSelectElement>("#book-edit-add-author")!,
+      "author-alex-2",
+    ));
+    await act(async () => buttonNamed(container, "Add author").click());
+    sdk.listAuthors.mockResolvedValueOnce(page([]));
+    await act(async () => setControlValue(
+      container.querySelector<HTMLInputElement>("#book-edit-author-search")!,
+      "no match",
+    ));
+    expect(container.textContent).toContain("author-alex-1");
+    expect(container.textContent).toContain("author-alex-2");
+  });
+
+  it("ignores an older Author search response after a newer query resolves", async () => {
+    arrangeDependencies();
+    const older = deferred<ReturnType<typeof page<(typeof authors)[number]>>>();
+    const newer = deferred<ReturnType<typeof page<(typeof authors)[number]>>>();
+    sdk.listAuthors
+      .mockResolvedValueOnce(page(authors))
+      .mockReturnValueOnce(older.promise)
+      .mockReturnValueOnce(newer.promise);
+    const { container } = await mount("/library/books/book%2Fid/edit?tab=authors-series");
+    const search = container.querySelector<HTMLInputElement>("#book-edit-author-search")!;
+
+    await act(async () => setControlValue(search, "mar"));
+    await act(async () => setControlValue(search, "mart"));
+    await act(async () => newer.resolve(page([{ ...authors[1], id: "newer", name: "Martha" }])));
+    expect(container.textContent).toContain("Martha");
+
+    await act(async () => older.resolve(page([{ ...authors[1], id: "older", name: "Marcus" }])));
+    expect(container.textContent).toContain("Martha");
+    expect(container.textContent).not.toContain("Marcus");
+
+    await act(async () => setControlValue(search, ""));
+    expect(sdk.listAuthors).toHaveBeenLastCalledWith({ q: undefined, ordering: "name", pageSize: 25 });
+    expect(container.textContent).toContain("Author Two");
+  });
+
+  it("isolates Author search failure and retains selected relationships for retry", async () => {
+    arrangeDependencies();
+    sdk.listAuthors
+      .mockRejectedValueOnce(new Error("Author choices unavailable."))
+      .mockResolvedValueOnce(page([authors[1]]));
+    const { container } = await mount("/library/books/book%2Fid/edit?tab=authors-series");
+
+    expect(container.textContent).toContain("Author One");
+    expect(container.textContent).toContain("Author choices unavailable.");
+    expect(container.querySelector<HTMLSelectElement>("#book-edit-series")).not.toBeNull();
+    await act(async () => buttonNamed(container, "Retry").click());
+
+    expect(sdk.listAuthors).toHaveBeenCalledTimes(2);
+    expect(container.textContent).toContain("Author Two");
+    expect(container.textContent).toContain("Author One");
   });
 
   it("retries a failed Book load through the owning SDK request", async () => {
