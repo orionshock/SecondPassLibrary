@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 import json
+from unittest.mock import patch
 
-from library.models import Book, BookGroupAssignment
+from library.groups.book_assignment_workflows import create_normal_book_assignment
+from library.models import Book, BookGroupAssignment, LibraryGroupMembership
+from library.queries import visible_books_for_user
+from library.roles import is_curator
 from tests.library.groups.book_assignment_helpers import (
     LibraryGroupBookAssignmentApiTestCase,
 )
@@ -69,6 +73,81 @@ class LibraryGroupBookAssignmentCreateTests(
         self.assertEqual(hidden.status_code, 404)
         self.assertFalse(
             BookGroupAssignment.objects.filter(book=self.hidden_book, group=self.club).exists()
+        )
+
+    def test_curatorship_removed_before_workflow_rejects_assignment(self):
+        self.assertTrue(self.client.login(username="curator", password="pw"))
+
+        def revoke_then_assign(**kwargs):
+            self.assertTrue(is_curator(self.curator, self.club))
+            LibraryGroupMembership.objects.filter(
+                user=self.curator,
+                group=self.club,
+            ).update(is_curator=False)
+            return create_normal_book_assignment(**kwargs)
+
+        with patch(
+            "library.groups.book_assignment_views.create_normal_book_assignment",
+            side_effect=revoke_then_assign,
+        ):
+            response = self.client.post(
+                self.group_books_url(),
+                json.dumps({"book_id": str(self.source_book.id)}),
+                content_type="application/json",
+            )
+
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(
+            LibraryGroupMembership.objects.filter(
+                user=self.curator,
+                group=self.club,
+                is_curator=False,
+            ).exists()
+        )
+        self.assertFalse(
+            BookGroupAssignment.objects.filter(
+                book=self.source_book,
+                group=self.club,
+            ).exists()
+        )
+
+    def test_book_visibility_lost_before_workflow_rejects_assignment(self):
+        self.assertTrue(self.client.login(username="curator", password="pw"))
+
+        def hide_then_assign(**kwargs):
+            self.assertTrue(
+                visible_books_for_user(self.curator, cached=False)
+                .filter(pk=self.source_book.pk)
+                .exists()
+            )
+            LibraryGroupMembership.objects.filter(
+                user=self.curator,
+                group=self.source,
+            ).delete()
+            return create_normal_book_assignment(**kwargs)
+
+        with patch(
+            "library.groups.book_assignment_views.create_normal_book_assignment",
+            side_effect=hide_then_assign,
+        ):
+            response = self.client.post(
+                self.group_books_url(),
+                json.dumps({"book_id": str(self.source_book.id)}),
+                content_type="application/json",
+            )
+
+        self.assertEqual(response.status_code, 404)
+        self.assertFalse(
+            LibraryGroupMembership.objects.filter(
+                user=self.curator,
+                group=self.source,
+            ).exists()
+        )
+        self.assertFalse(
+            BookGroupAssignment.objects.filter(
+                book=self.source_book,
+                group=self.club,
+            ).exists()
         )
 
     def test_reader_cannot_add_visible_book(self):

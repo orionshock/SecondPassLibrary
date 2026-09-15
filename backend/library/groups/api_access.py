@@ -6,11 +6,11 @@ from django.http import Http404
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from accounts.models import UserProfile
-from accounts.roles import is_librarian, is_manager
+from accounts.roles import is_manager
 from core.server_settings import advanced_library_groups_enabled
 from library.groups.public_group import is_public_group
-from library.models import Book, LibraryGroup, LibraryGroupMembership
-from library.queries import group_is_visible_to_user, visible_books_for_user
+from library.models import LibraryGroup, LibraryGroupMembership
+from library.queries import group_is_visible_to_user
 from library.roles import is_curator
 
 
@@ -95,40 +95,11 @@ def authorize_membership_mutation(
     return MembershipMutationAccess(group=group)
 
 
-@dataclass(frozen=True)
-class BookAssignmentMutationAccess:
-    actor: object
-    group: LibraryGroup
-
-    def book_for_add(self, *, book_id) -> Book:
-        book = self._visible_book_or_404(book_id)
-        if not is_librarian(self.actor) and not is_curator(self.actor, self.group):
-            raise PermissionDenied("Not allowed to add books to this group.")
-        return book
-
-    def book_for_removal(self, *, book_id) -> Book:
-        book = self._visible_book_or_404(book_id)
-        if not is_curator(self.actor, self.group):
-            raise PermissionDenied("Not allowed to remove books from this group.")
-        return book
-
-    def _visible_book_or_404(self, book_id) -> Book:
-        try:
-            book = Book.objects.get(pk=book_id)
-        except Book.DoesNotExist as exc:
-            raise Http404 from exc
-        if is_librarian(self.actor):
-            return book
-        if not visible_books_for_user(self.actor, cached=False).filter(pk=book.pk).exists():
-            raise Http404
-        return book
-
-
-def authorize_book_assignment_mutation(
-    *, actor, group: LibraryGroup
-) -> BookAssignmentMutationAccess:
+def normal_book_assignment_group_or_404(*, actor, group_id) -> LibraryGroup:
+    """Resolve a Group under the normal HTTP assignment mutation policy."""
+    group = normal_mutation_group_or_404(actor=actor, group_id=group_id)
     _require_group_mutation_mode(group)
-    return BookAssignmentMutationAccess(actor=actor, group=group)
+    return group
 
 
 def _require_group_mutation_mode(group: LibraryGroup) -> None:

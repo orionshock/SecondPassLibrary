@@ -11,12 +11,16 @@ from core.server_settings import (
     set_server_setting,
 )
 from library.groups.api_access import (
-    authorize_book_assignment_mutation,
     authorize_group_creation,
     authorize_group_deletion,
     authorize_group_metadata_mutation,
     authorize_membership_mutation,
+    normal_book_assignment_group_or_404,
     normal_mutation_group_or_404,
+)
+from library.groups.book_assignment_workflows import (
+    create_normal_book_assignment,
+    remove_normal_book_assignment,
 )
 from library.groups.book_assignments import add_book_to_group
 from library.groups.public_group import PUBLIC_GROUP_ID_SETTING
@@ -131,32 +135,41 @@ class NormalGroupMutationAccessTests(TestCase):
                         authorize_group_deletion(actor=actor, group=self.club)
 
     def test_book_assignment_uses_strict_visibility_and_exact_curatorship(self):
-        curator_access = authorize_book_assignment_mutation(
-            actor=self.curator, group=self.club
+        assignment = create_normal_book_assignment(
+            actor=self.curator,
+            group_id=self.club.id,
+            book_id=self.other_book.id,
         )
-        self.assertEqual(
-            curator_access.book_for_add(book_id=self.other_book.id), self.other_book
-        )
-        self.assertEqual(
-            curator_access.book_for_removal(book_id=self.club_book.id), self.club_book
+        self.assertEqual(assignment.book, self.other_book)
+        self.assertEqual(assignment.group, self.club)
+        with self.assertRaises(PermissionDenied):
+            create_normal_book_assignment(
+                actor=self.reader,
+                group_id=self.club.id,
+                book_id=self.club_book.id,
+            )
+        self.assertTrue(
+            remove_normal_book_assignment(
+                actor=self.curator,
+                group_id=self.club.id,
+                book_id=self.club_book.id,
+            )
         )
         with self.assertRaises(Http404):
-            curator_access.book_for_add(book_id=self.hidden_book.id)
-
-        unrelated_access = authorize_book_assignment_mutation(
-            actor=self.reader, group=self.other_group
-        )
-        with self.assertRaises(PermissionDenied):
-            unrelated_access.book_for_add(book_id=self.club_book.id)
+            create_normal_book_assignment(
+                actor=self.curator,
+                group_id=self.club.id,
+                book_id=self.hidden_book.id,
+            )
 
         for actor in (self.librarian, self.manager, self.owner):
             with self.subTest(actor=actor.username):
-                access = authorize_book_assignment_mutation(
-                    actor=actor, group=self.club
+                assignment = create_normal_book_assignment(
+                    actor=actor,
+                    group_id=self.club.id,
+                    book_id=self.hidden_book.id,
                 )
-                self.assertEqual(
-                    access.book_for_add(book_id=self.hidden_book.id), self.hidden_book
-                )
+                self.assertEqual(assignment.book, self.hidden_book)
 
     def test_group_and_book_anti_enumeration_converges_on_not_found(self):
         for group_id in (self.other_group.id, "00000000-0000-0000-0000-000000000001"):
@@ -164,13 +177,14 @@ class NormalGroupMutationAccessTests(TestCase):
                 with self.assertRaises(Http404):
                     normal_mutation_group_or_404(actor=self.reader, group_id=group_id)
 
-        access = authorize_book_assignment_mutation(
-            actor=self.curator, group=self.club
-        )
         for book_id in (self.hidden_book.id, "00000000-0000-0000-0000-000000000001"):
             with self.subTest(book_id=book_id):
                 with self.assertRaises(Http404):
-                    access.book_for_add(book_id=book_id)
+                    create_normal_book_assignment(
+                        actor=self.curator,
+                        group_id=self.club.id,
+                        book_id=book_id,
+                    )
 
     def test_public_and_simple_mode_matrix_preserves_special_cases(self):
         for actor in (self.owner, self.manager, self.librarian, self.curator):
@@ -181,7 +195,10 @@ class NormalGroupMutationAccessTests(TestCase):
         with self.assertRaises(ValidationError):
             authorize_group_deletion(actor=self.manager, group=self.public)
         authorize_membership_mutation(actor=self.manager, group=self.public)
-        authorize_book_assignment_mutation(actor=self.librarian, group=self.public)
+        normal_book_assignment_group_or_404(
+            actor=self.librarian,
+            group_id=self.public.id,
+        )
 
         set_advanced_library_groups_enabled(False)
         for operation in (
@@ -190,8 +207,9 @@ class NormalGroupMutationAccessTests(TestCase):
             ),
             lambda: authorize_group_deletion(actor=self.owner, group=self.club),
             lambda: authorize_membership_mutation(actor=self.owner, group=self.club),
-            lambda: authorize_book_assignment_mutation(
-                actor=self.owner, group=self.club
+            lambda: normal_book_assignment_group_or_404(
+                actor=self.owner,
+                group_id=self.club.id,
             ),
         ):
             with self.subTest(operation=operation):
@@ -199,7 +217,10 @@ class NormalGroupMutationAccessTests(TestCase):
                     operation()
 
         authorize_membership_mutation(actor=self.manager, group=self.public)
-        authorize_book_assignment_mutation(actor=self.librarian, group=self.public)
+        normal_book_assignment_group_or_404(
+            actor=self.librarian,
+            group_id=self.public.id,
+        )
 
     def test_low_level_assignment_service_remains_independent_of_http_mode(self):
         set_advanced_library_groups_enabled(False)

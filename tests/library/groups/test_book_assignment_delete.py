@@ -4,7 +4,9 @@ from unittest.mock import patch
 
 from django.core.exceptions import ImproperlyConfigured
 
+from library.groups.book_assignment_workflows import remove_normal_book_assignment
 from library.models import Book, BookGroupAssignment, LibraryGroupMembership
+from library.roles import is_curator
 from shelves.models import Shelf, ShelfItem
 from tests.library.groups.book_assignment_helpers import LibraryGroupBookAssignmentApiTestCase
 
@@ -34,6 +36,35 @@ class LibraryGroupBookAssignmentDeleteTests(
         response = self.client.delete(self.group_book_detail_url())
 
         self.assertEqual(response.status_code, 403)
+        self.assertTrue(
+            BookGroupAssignment.objects.filter(book=self.club_book, group=self.club).exists()
+        )
+
+    def test_curatorship_removed_before_workflow_rejects_removal(self):
+        self.assertTrue(self.client.login(username="curator", password="pw"))
+
+        def revoke_then_remove(**kwargs):
+            self.assertTrue(is_curator(self.curator, self.club))
+            LibraryGroupMembership.objects.filter(
+                user=self.curator,
+                group=self.club,
+            ).update(is_curator=False)
+            return remove_normal_book_assignment(**kwargs)
+
+        with patch(
+            "library.groups.book_assignment_views.remove_normal_book_assignment",
+            side_effect=revoke_then_remove,
+        ):
+            response = self.client.delete(self.group_book_detail_url())
+
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(
+            LibraryGroupMembership.objects.filter(
+                user=self.curator,
+                group=self.club,
+                is_curator=False,
+            ).exists()
+        )
         self.assertTrue(
             BookGroupAssignment.objects.filter(book=self.club_book, group=self.club).exists()
         )
