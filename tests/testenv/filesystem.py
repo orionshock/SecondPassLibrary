@@ -89,6 +89,7 @@ class RuntimePathIsolation:
 
 class _RuntimePathIsolationMixin:
     runtime_path_options: dict[str, bool] = {}
+    _runtime_paths: RuntimePathIsolation | None = None
 
     @classmethod
     def _pre_setup(cls):
@@ -105,6 +106,8 @@ class _RuntimePathIsolationMixin:
 
     def _post_teardown(self):
         isolation = self._runtime_paths
+        if isolation is None:
+            raise RuntimeError("Runtime path isolation was not initialized.")
         try:
             super()._post_teardown()
         finally:
