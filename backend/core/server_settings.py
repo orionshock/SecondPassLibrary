@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from contextlib import contextmanager
 from contextvars import ContextVar
+from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -19,12 +20,10 @@ from .models import ServerSetting
 
 
 logger = logging.getLogger(__name__)
-_CACHE_INVALIDATION_DEFERRED: ContextVar[bool] = ContextVar(
-    "server_settings_cache_invalidation_deferred",
-    default=False,
-)
 SERVER_SETTINGS_CACHE_KEY = "core:server_settings:v1"
 APPLICATION_LOG_LEVEL_CACHE_KEY = "core:application_log_level:v1"
+SERVER_SETTINGS_CACHE_SECONDS = 60
+APPLICATION_LOG_LEVEL_CACHE_SECONDS = 30
 SERVER_NAME_SETTING = "server_name"
 SERVER_DESCRIPTION_SETTING = "server_description"
 SERVER_BANNER_MESSAGE_SETTING = "server_banner_message"
@@ -54,6 +53,28 @@ APPLICATION_LOGGER_NAMES = (
     "marginalia",
     "shelves",
     "web",
+)
+_UNCHANGED_LOG_LEVEL = object()
+_DELETED_SETTING = object()
+
+
+@dataclass
+class _CommittedServerSettingEffects:
+    changed: bool = False
+    application_log_level: Any = _UNCHANGED_LOG_LEVEL
+
+    def record(self, application_log_level: Any) -> None:
+        self.changed = True
+        if application_log_level is not _UNCHANGED_LOG_LEVEL:
+            self.application_log_level = application_log_level
+
+    def publish(self) -> None:
+        if self.changed:
+            _publish_server_setting_effects(self.application_log_level)
+
+
+_SERVER_SETTING_EFFECT_BATCH: ContextVar[_CommittedServerSettingEffects | None] = (
+    ContextVar("server_setting_effect_batch", default=None)
 )
 
 EDITABLE_SERVER_SETTING_DEFAULTS = {
@@ -108,27 +129,63 @@ def clear_server_settings_cache() -> None:
 
 @contextmanager
 def batch_server_setting_writes():
-    already_deferred = _CACHE_INVALIDATION_DEFERRED.get()
-    token = _CACHE_INVALIDATION_DEFERRED.set(True)
+    existing = _SERVER_SETTING_EFFECT_BATCH.get()
+    if existing is not None:
+        yield
+        return
+
+    effects = _CommittedServerSettingEffects()
+    token = _SERVER_SETTING_EFFECT_BATCH.set(effects)
     try:
         yield
     finally:
-        _CACHE_INVALIDATION_DEFERRED.reset(token)
-        if not already_deferred:
-            transaction.on_commit(clear_server_settings_cache)
+        _SERVER_SETTING_EFFECT_BATCH.reset(token)
+        transaction.on_commit(effects.publish)
+
+
+def schedule_server_setting_effects(*, key: str, value: Any = _DELETED_SETTING) -> None:
+    application_log_level: Any = _UNCHANGED_LOG_LEVEL
+    if key == APPLICATION_LOG_LEVEL_SETTING:
+        application_log_level = (
+            DEFAULT_APPLICATION_LOG_LEVEL if value is _DELETED_SETTING else value
+        )
+
+    effects = _SERVER_SETTING_EFFECT_BATCH.get()
+    if effects is not None:
+        transaction.on_commit(lambda: effects.record(application_log_level))
+        return
+    transaction.on_commit(
+        lambda: _publish_server_setting_effects(application_log_level)
+    )
+
+
+def _publish_server_setting_effects(application_log_level: Any) -> None:
+    clear_server_settings_cache()
+    if application_log_level is not _UNCHANGED_LOG_LEVEL:
+        apply_application_log_level(application_log_level)
 
 
 def get_server_settings_map() -> dict[str, Any]:
+    if transaction.get_connection().in_atomic_block:
+        return _read_server_settings_map()
+
     cached = cache.get(SERVER_SETTINGS_CACHE_KEY)
     if isinstance(cached, dict):
         return cached
 
+    settings_map = _read_server_settings_map()
+    cache.set(
+        SERVER_SETTINGS_CACHE_KEY,
+        settings_map,
+        timeout=SERVER_SETTINGS_CACHE_SECONDS,
+    )
+    return settings_map
+
+
+def _read_server_settings_map() -> dict[str, Any]:
     settings_map: dict[str, Any] = {}
     for row in ServerSetting.objects.all().only("key", "value"):
         settings_map[row.key] = row.value
-
-    # Cache indefinitely; invalidated explicitly on writes.
-    cache.set(SERVER_SETTINGS_CACHE_KEY, settings_map, timeout=None)
     return settings_map
 
 
@@ -158,10 +215,6 @@ def set_server_setting(*, key: str, value: Any, description: str = "") -> Server
                 setattr(obj, k, v)
             obj.save(update_fields=[*updates.keys(), "updated_at"])
         changed_fields = sorted(updates.keys())
-    if not _CACHE_INVALIDATION_DEFERRED.get():
-        clear_server_settings_cache()
-    if key == APPLICATION_LOG_LEVEL_SETTING:
-        apply_application_log_level(value)
     if (was_created or changed_fields) and not state_change_logging_suppressed():
         scheduled_fields = list(changed_fields or ["value"])
         transaction.on_commit(
@@ -177,19 +230,15 @@ def set_server_setting(*, key: str, value: Any, description: str = "") -> Server
 
 
 def ensure_editable_server_settings() -> None:
-    created = False
-    with transaction.atomic():
+    with transaction.atomic(), batch_server_setting_writes():
         for key, defaults in EDITABLE_SERVER_SETTING_DEFAULTS.items():
-            _obj, was_created = ServerSetting.objects.get_or_create(
+            ServerSetting.objects.get_or_create(
                 key=key,
                 defaults={
                     "value": defaults["value"],
                     "description": defaults["description"],
                 },
             )
-            created = created or was_created
-    if created:
-        clear_server_settings_cache()
 
 
 def _normalize_str(value: Any) -> str:
@@ -197,14 +246,14 @@ def _normalize_str(value: Any) -> str:
 
 
 def get_marginalia_closed_session_tombstone_retention_days() -> int:
-    return _nonnegative_integer_setting(
+    return _fresh_nonnegative_integer_setting(
         MARGINALIA_CLOSED_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING,
         DEFAULT_MARGINALIA_CLOSED_SESSION_TOMBSTONE_RETENTION_DAYS,
     )
 
 
 def get_marginalia_active_session_tombstone_retention_days() -> int:
-    return _nonnegative_integer_setting(
+    return _fresh_nonnegative_integer_setting(
         MARGINALIA_ACTIVE_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING,
         DEFAULT_MARGINALIA_ACTIVE_SESSION_TOMBSTONE_RETENTION_DAYS,
     )
@@ -224,8 +273,38 @@ def set_marginalia_active_session_tombstone_retention_days(value: int) -> None:
     )
 
 
-def _nonnegative_integer_setting(key: str, default: int) -> int:
-    value = get_server_setting(key, default=default)
+def get_marginalia_tombstone_retention_days() -> tuple[int, int]:
+    keys = {
+        MARGINALIA_ACTIVE_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING,
+        MARGINALIA_CLOSED_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING,
+    }
+    values = dict(
+        ServerSetting.objects.filter(key__in=keys).values_list("key", "value")
+    )
+    return (
+        _nonnegative_integer_value(
+            MARGINALIA_ACTIVE_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING,
+            values.get(
+                MARGINALIA_ACTIVE_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING,
+                DEFAULT_MARGINALIA_ACTIVE_SESSION_TOMBSTONE_RETENTION_DAYS,
+            ),
+        ),
+        _nonnegative_integer_value(
+            MARGINALIA_CLOSED_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING,
+            values.get(
+                MARGINALIA_CLOSED_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING,
+                DEFAULT_MARGINALIA_CLOSED_SESSION_TOMBSTONE_RETENTION_DAYS,
+            ),
+        ),
+    )
+
+
+def _fresh_nonnegative_integer_setting(key: str, default: int) -> int:
+    row = ServerSetting.objects.filter(key=key).values_list("key", "value").first()
+    return _nonnegative_integer_value(key, default if row is None else row[1])
+
+
+def _nonnegative_integer_value(key: str, value: Any) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         raise ValueError(f"{key} must be a non-negative integer.")
     return value
@@ -343,7 +422,7 @@ def set_server_identity(*, name: str, description: str, banner_message: str) -> 
     if errors:
         raise ValidationError(errors)
 
-    with transaction.atomic():
+    with transaction.atomic(), batch_server_setting_writes():
         set_server_name(values[SERVER_NAME_SETTING])
         set_server_description(values[SERVER_DESCRIPTION_SETTING])
         set_server_banner_message(values[SERVER_BANNER_MESSAGE_SETTING])
@@ -483,14 +562,21 @@ def get_application_log_level() -> str:
     if cached in APPLICATION_LOG_LEVELS:
         return apply_application_log_level(cached)
     try:
-        value = get_server_setting(
-            APPLICATION_LOG_LEVEL_SETTING,
-            default=DEFAULT_APPLICATION_LOG_LEVEL,
+        value = (
+            ServerSetting.objects.filter(key=APPLICATION_LOG_LEVEL_SETTING)
+            .values_list("value", flat=True)
+            .first()
         )
     except DatabaseError:
         return apply_application_log_level(DEFAULT_APPLICATION_LOG_LEVEL)
+    if value is None:
+        value = DEFAULT_APPLICATION_LOG_LEVEL
     level_name = _normalized_application_log_level(value)
-    cache.set(APPLICATION_LOG_LEVEL_CACHE_KEY, level_name, timeout=None)
+    cache.set(
+        APPLICATION_LOG_LEVEL_CACHE_KEY,
+        level_name,
+        timeout=APPLICATION_LOG_LEVEL_CACHE_SECONDS,
+    )
     return apply_application_log_level(level_name)
 
 

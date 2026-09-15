@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import uuid
 from io import StringIO
+from unittest.mock import patch
 
 from django.core.cache import cache
 from django.core.management import call_command
-from django.test import TestCase, override_settings
+from django.test import TestCase, TransactionTestCase, override_settings
 
+from core import server_settings
 from core.checks import second_pass_reader_web_client_url_check
 from core.models import ServerSetting
 from core.server_settings import (
@@ -21,7 +23,6 @@ from core.server_settings import (
     get_marginalia_active_session_tombstone_retention_days,
     get_marginalia_closed_session_tombstone_retention_days,
     get_server_setting,
-    get_server_settings_map,
     ensure_editable_server_settings,
     set_advanced_library_groups_enabled,
     set_server_banner_message,
@@ -205,38 +206,42 @@ class ServerSettingsServiceTests(TestCase):
         set_advanced_library_groups_enabled(False)
         self.assertFalse(advanced_library_groups_enabled())
 
-    def test_settings_are_cached_until_cleared(self):
-        ServerSetting.objects.create(key="k", value="v1", description="")
-        self.assertEqual(get_server_setting("k", default=None), "v1")
-
-        # Direct DB update should not be visible until cache invalidation.
-        ServerSetting.objects.filter(key="k").update(value="v2")
-        self.assertEqual(get_server_setting("k", default=None), "v1")
-
-        clear_server_settings_cache()
-        self.assertEqual(get_server_setting("k", default=None), "v2")
-
     def test_set_invalidates_cache(self):
         ServerSetting.objects.create(key="k", value="v1", description="")
-        _ = get_server_settings_map()
 
-        set_server_setting(key="k", value="v2", description="")
-        self.assertEqual(get_server_setting("k", default=None), "v2")
+        with (
+            patch("core.server_settings.clear_server_settings_cache") as clear_cache,
+            self.captureOnCommitCallbacks(execute=True),
+        ):
+            set_server_setting(key="k", value="v2", description="")
+            clear_cache.assert_not_called()
+
+        clear_cache.assert_called_once_with()
 
     def test_direct_model_save_invalidates_cache(self):
         obj = ServerSetting.objects.create(key="k", value="v1", description="")
-        _ = get_server_settings_map()
 
         obj.value = "v2"
-        obj.save(update_fields=["value", "updated_at"])
-        self.assertEqual(get_server_setting("k", default=None), "v2")
+        with (
+            patch("core.server_settings.clear_server_settings_cache") as clear_cache,
+            self.captureOnCommitCallbacks(execute=True),
+        ):
+            obj.save(update_fields=["value", "updated_at"])
+            clear_cache.assert_not_called()
+
+        clear_cache.assert_called_once_with()
 
     def test_direct_model_delete_invalidates_cache(self):
         obj = ServerSetting.objects.create(key="k", value="v1", description="")
-        _ = get_server_settings_map()
 
-        obj.delete()
-        self.assertEqual(get_server_setting("k", default="missing"), "missing")
+        with (
+            patch("core.server_settings.clear_server_settings_cache") as clear_cache,
+            self.captureOnCommitCallbacks(execute=True),
+        ):
+            obj.delete()
+            clear_cache.assert_not_called()
+
+        clear_cache.assert_called_once_with()
 
     def test_get_public_group_missing_setting_creates_new_default_group(self):
         ordinary = LibraryGroup.objects.create(name="Existing Room")
@@ -395,3 +400,51 @@ class ServerSettingsServiceTests(TestCase):
         self.assertFalse(is_public_group(public))
         self.assertTrue(is_public_group(repaired))
         self.assertFalse(is_public_group(other))
+
+
+class ServerSettingsFreshnessTests(TransactionTestCase):
+    def setUp(self):
+        cache.clear()
+
+    def tearDown(self):
+        cache.clear()
+
+    def test_presentation_settings_cache_is_bounded(self):
+        ServerSetting.objects.create(key="k", value="v1", description="")
+
+        with patch("core.server_settings.cache.set", wraps=cache.set) as cache_set:
+            self.assertEqual(get_server_setting("k", default=None), "v1")
+
+        cache_set.assert_called_once_with(
+            server_settings.SERVER_SETTINGS_CACHE_KEY,
+            {"k": "v1"},
+            timeout=server_settings.SERVER_SETTINGS_CACHE_SECONDS,
+        )
+
+    def test_worker_sensitive_retention_read_bypasses_stale_process_cache(self):
+        ServerSetting.objects.create(
+            key=MARGINALIA_ACTIVE_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING,
+            value=28,
+        )
+        self.assertEqual(
+            get_server_setting(
+                MARGINALIA_ACTIVE_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING
+            ),
+            28,
+        )
+
+        # A commit in another process cannot invalidate this process's LocMemCache.
+        ServerSetting.objects.filter(
+            key=MARGINALIA_ACTIVE_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING
+        ).update(value=2)
+
+        self.assertEqual(
+            get_server_setting(
+                MARGINALIA_ACTIVE_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING
+            ),
+            28,
+        )
+        self.assertEqual(
+            get_marginalia_active_session_tombstone_retention_days(),
+            2,
+        )

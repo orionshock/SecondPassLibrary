@@ -5,13 +5,16 @@ from io import StringIO
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.core.management import call_command
 from django.test import TestCase
 from django.utils import timezone
 
+from core.models import ServerSetting
 from core.server_settings import (
     MARGINALIA_ACTIVE_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING,
     MARGINALIA_CLOSED_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING,
+    SERVER_SETTINGS_CACHE_KEY,
     clear_server_settings_cache,
     set_server_setting,
 )
@@ -118,6 +121,34 @@ class DeletedAnnotationCleanupTests(TestCase):
         rerun = execute_deleted_annotation_cleanup(limit=1, now=self.now)
         self.assertEqual(rerun.counts["total_deleted"], 0)
 
+    def test_each_cleanup_run_reads_current_committed_retention(self):
+        set_server_setting(
+            key=MARGINALIA_ACTIVE_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING,
+            value=28,
+        )
+        set_server_setting(
+            key=MARGINALIA_CLOSED_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING,
+            value=7,
+        )
+        cache.set(
+            SERVER_SETTINGS_CACHE_KEY,
+            {
+                MARGINALIA_ACTIVE_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING: 28,
+                MARGINALIA_CLOSED_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING: 7,
+            },
+            timeout=None,
+        )
+        tombstone = self._tombstone(self.active_session, "fresh-policy", days_old=3)
+
+        # Simulate the web process committing while this worker cache stays stale.
+        ServerSetting.objects.filter(
+            key=MARGINALIA_ACTIVE_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING
+        ).update(value=2)
+        result = execute_deleted_annotation_cleanup(now=self.now)
+
+        self.assertEqual(result.counts["active_retention_days"], 2)
+        self.assertFalse(Annotation.objects.filter(pk=tombstone.pk).exists())
+
     def test_invalid_policy_and_limit_are_rejected(self):
         for invalid in (-1, True, "7"):
             with self.subTest(invalid=invalid), self.assertRaises(ValueError):
@@ -127,6 +158,26 @@ class DeletedAnnotationCleanupTests(TestCase):
                 )
         with self.assertRaises(ValueError):
             execute_deleted_annotation_cleanup(now=self.now, limit=0)
+
+    def test_explicit_retention_overrides_do_not_read_overridden_storage(self):
+        set_server_setting(
+            key=MARGINALIA_ACTIVE_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING,
+            value="invalid",
+        )
+        set_server_setting(
+            key=MARGINALIA_CLOSED_SESSION_TOMBSTONE_RETENTION_DAYS_SETTING,
+            value="invalid",
+        )
+
+        result = execute_deleted_annotation_cleanup(
+            dry_run=True,
+            now=self.now,
+            active_retention_days=2,
+            closed_retention_days=3,
+        )
+
+        self.assertEqual(result.counts["active_retention_days"], 2)
+        self.assertEqual(result.counts["closed_retention_days"], 3)
 
     def test_soft_delete_sets_clock_once_and_normal_edits_do_not_change_it(self):
         annotation = self._annotation(self.active_session, "lifecycle")

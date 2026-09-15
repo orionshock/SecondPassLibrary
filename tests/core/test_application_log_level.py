@@ -3,7 +3,7 @@ from unittest.mock import patch
 
 from django.contrib import admin
 from django.contrib.auth import get_user_model
-from django.db import OperationalError
+from django.db import OperationalError, transaction
 from django.test import RequestFactory, TestCase
 
 from core import server_settings
@@ -43,7 +43,8 @@ class ApplicationLogLevelTests(TestCase):
 
         for level_name in server_settings.APPLICATION_LOG_LEVELS:
             with self.subTest(level=level_name):
-                server_settings.set_application_log_level(level_name)
+                with self.captureOnCommitCallbacks(execute=True):
+                    server_settings.set_application_log_level(level_name)
                 self.assertEqual(server_settings.get_application_log_level(), level_name)
                 self.assertEqual(logger.getEffectiveLevel(), getattr(logging, level_name))
 
@@ -53,13 +54,66 @@ class ApplicationLogLevelTests(TestCase):
         security_logger.setLevel(logging.ERROR)
         self.addCleanup(security_logger.setLevel, original_level)
 
-        server_settings.set_application_log_level("DEBUG")
+        with self.captureOnCommitCallbacks(execute=True):
+            server_settings.set_application_log_level("DEBUG")
 
         self.assertEqual(security_logger.getEffectiveLevel(), logging.ERROR)
 
-    @patch("core.server_settings.get_server_setting", side_effect=OperationalError("missing table"))
-    def test_database_unavailable_falls_back_without_crashing(self, get_setting):
+    @patch(
+        "core.server_settings.ServerSetting.objects.filter",
+        side_effect=OperationalError("missing table"),
+    )
+    def test_database_unavailable_falls_back_without_crashing(self, filter_settings):
         self.assertEqual(server_settings.get_application_log_level(), "INFO")
+
+    def test_other_process_log_level_is_observed_on_bounded_refresh(self):
+        ServerSetting.objects.update_or_create(
+            key=server_settings.APPLICATION_LOG_LEVEL_SETTING,
+            defaults={"value": "INFO"},
+        )
+        server_settings.clear_server_settings_cache()
+        self.assertEqual(server_settings.get_application_log_level(), "INFO")
+
+        # Simulate another process committing without touching this LocMemCache.
+        ServerSetting.objects.filter(
+            key=server_settings.APPLICATION_LOG_LEVEL_SETTING
+        ).update(value="ERROR")
+        self.assertEqual(server_settings.get_application_log_level(), "INFO")
+
+        cache = server_settings.cache
+        cache.delete(server_settings.APPLICATION_LOG_LEVEL_CACHE_KEY)
+        with patch("core.server_settings.cache.set", wraps=cache.set) as cache_set:
+            self.assertEqual(server_settings.get_application_log_level(), "ERROR")
+        cache_set.assert_called_once_with(
+            server_settings.APPLICATION_LOG_LEVEL_CACHE_KEY,
+            "ERROR",
+            timeout=server_settings.APPLICATION_LOG_LEVEL_CACHE_SECONDS,
+        )
+
+    def test_rolled_back_log_level_does_not_apply_or_invalidate(self):
+        server_settings.cache.set(
+            server_settings.APPLICATION_LOG_LEVEL_CACHE_KEY,
+            "INFO",
+            timeout=None,
+        )
+
+        with (
+            patch("core.server_settings.clear_server_settings_cache") as clear_cache,
+            patch("core.server_settings.apply_application_log_level") as apply_level,
+            self.assertRaises(RuntimeError),
+        ):
+            with transaction.atomic():
+                server_settings.set_application_log_level("DEBUG")
+                raise RuntimeError("rollback")
+
+        clear_cache.assert_not_called()
+        apply_level.assert_not_called()
+        self.assertEqual(
+            server_settings.cache.get(
+                server_settings.APPLICATION_LOG_LEVEL_CACHE_KEY
+            ),
+            "INFO",
+        )
 
 
 class ApplicationLogLevelAdminTests(TestCase):
@@ -100,7 +154,8 @@ class ApplicationLogLevelAdminTests(TestCase):
         self.assertTrue(form.is_valid(), form.errors)
         obj = form.save(commit=False)
 
-        self.model_admin.save_model(self.request, obj, form, change=True)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.model_admin.save_model(self.request, obj, form, change=True)
 
         self.assertEqual(server_settings.get_application_log_level(), "ERROR")
         self.assertEqual(

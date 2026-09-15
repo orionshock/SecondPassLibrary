@@ -5,7 +5,7 @@ class CoreConfig(AppConfig):
     name = "core"
 
     def ready(self) -> None:
-        # Ensure ServerSetting cache invalidates on save/delete even when settings
-        # are edited outside core.server_settings.set_server_setting().
+        # Model signals route every ServerSetting write through the same
+        # transaction-aware committed-effects owner.
         from . import checks  # noqa: F401
         from . import signals  # noqa: F401

@@ -29,7 +29,7 @@ class ServerSetting(TimeStampedModel):
 
     Notes:
     - This is not intended for secrets.
-    - Access should go through core.server_settings for caching.
+    - Access should go through core.server_settings for its freshness policy.
     """
 
     key = models.CharField(max_length=128, unique=True)

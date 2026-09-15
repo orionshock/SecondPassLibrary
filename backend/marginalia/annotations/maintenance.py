@@ -11,6 +11,7 @@ from django.utils import timezone
 from core.server_settings import (
     get_marginalia_active_session_tombstone_retention_days,
     get_marginalia_closed_session_tombstone_retention_days,
+    get_marginalia_tombstone_retention_days,
 )
 from maintenance.results import MaintenanceResult
 from marginalia.models import Annotation, ReadingSession
@@ -35,14 +36,18 @@ def execute_deleted_annotation_cleanup(
         raise ValueError(
             f"limit must be between 1 and {MAX_ANNOTATION_CLEANUP_LIMIT}."
         )
+    stored_active_days, stored_closed_days = _stored_retention_days(
+        active_retention_days,
+        closed_retention_days,
+    )
     active_days = _retention_days(
         active_retention_days,
-        get_marginalia_active_session_tombstone_retention_days,
+        stored_active_days,
         "active_retention_days",
     )
     closed_days = _retention_days(
         closed_retention_days,
-        get_marginalia_closed_session_tombstone_retention_days,
+        stored_closed_days,
         "closed_retention_days",
     )
     now = now or timezone.now()
@@ -132,8 +137,24 @@ def execute_deleted_annotation_cleanup(
     return result
 
 
-def _retention_days(value, default_getter, name: str) -> int:
-    resolved = default_getter() if value is None else value
+def _retention_days(value, stored_value: int, name: str) -> int:
+    resolved = stored_value if value is None else value
     if isinstance(resolved, bool) or not isinstance(resolved, int) or resolved < 0:
         raise ValueError(f"{name} must be a non-negative integer.")
     return resolved
+
+
+def _stored_retention_days(
+    active_retention_days: int | None,
+    closed_retention_days: int | None,
+) -> tuple[int, int]:
+    if active_retention_days is None and closed_retention_days is None:
+        return get_marginalia_tombstone_retention_days()
+    return (
+        get_marginalia_active_session_tombstone_retention_days()
+        if active_retention_days is None
+        else active_retention_days,
+        get_marginalia_closed_session_tombstone_retention_days()
+        if closed_retention_days is None
+        else closed_retention_days,
+    )

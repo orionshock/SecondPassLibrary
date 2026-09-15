@@ -102,6 +102,8 @@ rows. `--limit` bounds one run from 1 through 10,000 rows and defaults to 1,000.
 The registered Maintenance task defaults to Monthly and may also be run
 manually with **Run now** in Django Admin. Permanent cleanup deletes only
 eligible Annotation rows; it does not delete Reading Sessions or Books.
+Each cleanup run reads both retention values directly from the committed
+database state, so the separate worker does not rely on its presentation cache.
 
 ### Unavailable personal Shelf items
 
@@ -196,8 +198,11 @@ authority. Bulk and delete-all Session/history operations remain unsupported.
 
 The Admin **Application Log Level** setting controls Second Pass Library
 application namespaces. `INFO` is the normal level; use `DEBUG` temporarily
-and return it to `INFO` after diagnosis. It does not reduce Django security or
-error logging.
+and return it to `INFO` after diagnosis. A committed change applies immediately
+in the process handling the write. A separate process keeps its current level
+until its log-level reader next runs after the 30-second cache window, or until
+that process restarts; there is no cross-process invalidation channel. It does
+not reduce Django security or error logging.
 
 ## Routine maintenance
 
