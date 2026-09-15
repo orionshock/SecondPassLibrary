@@ -11,6 +11,12 @@ $ManagePy = Join-Path $BackendRoot "manage.py"
 $ProductUiAssets = Join-Path $BackendRoot "web\product_ui\assets"
 $ReactPackage = Join-Path $FrontendRoot "package.json"
 $ReactVitePackage = Join-Path $FrontendRoot "node_modules\vite\package.json"
+$PythonRuntimeCheck = Join-Path $ProjectRoot "tools\python_runtime.py"
+
+& $PythonExecutable $PythonRuntimeCheck
+if ($LASTEXITCODE -ne 0) {
+    exit $LASTEXITCODE
+}
 
 $env:DJANGO_SETTINGS_MODULE = "secondpass.settings"
 $env:DJANGO_DEBUG = "0"

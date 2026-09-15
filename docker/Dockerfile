@@ -19,7 +19,7 @@ RUN npm run build -- --outDir /build/product_ui \
     && ! find /build/product_ui -type f -name '*.map' -print -quit | grep -q .
 
 
-FROM python:3.13-slim AS python-runtime-dependencies
+FROM python:3.14-slim AS python-runtime-dependencies
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -71,7 +71,7 @@ RUN python /tmp/write_image_version.py \
     && rm -rf web/product_ui/assets web/static
 
 
-FROM python:3.13-slim AS runtime
+FROM python:3.14-slim AS runtime
 
 ARG APP_UID=1000
 ARG APP_GID=1000

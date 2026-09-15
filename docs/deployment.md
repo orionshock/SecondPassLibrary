@@ -35,10 +35,11 @@ only to containers on its Compose network; it does not publish a host port. The
 reverse proxy should connect to `http://server:8000` on that network. Do not
 scale the service or increase its worker count while it uses SQLite.
 
-The multi-stage image builds only `frontend/`, copies `backend/` into the
-runtime tree, places the React artifact at `web/product_ui/`, and runs
-`collectstatic`. The final image contains the prepared backend runtime and one
-collected static asset tree, not Node, frontend source, tests, docs, or tools.
+The multi-stage image uses Python 3.14, builds only `frontend/`, copies
+`backend/` into the runtime tree, places the React artifact at
+`web/product_ui/`, and runs `collectstatic`. The final image contains the
+prepared backend runtime and one collected static asset tree, not Node,
+frontend source, tests, docs, or tools.
 The image also omits dependency test suites and the virtualenv's pip and
 bytecode caches. The `seed_dev_users` command remains included. Runtime package
 metadata, migrations, templates, translations, and schemas remain available.

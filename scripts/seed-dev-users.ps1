@@ -4,6 +4,12 @@ $PythonExecutable = "python"
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 $ManagePy = Join-Path $ProjectRoot "backend\manage.py"
 $SeedArgs = @("seed_dev_users")
+$PythonRuntimeCheck = Join-Path $ProjectRoot "tools\python_runtime.py"
+
+& $PythonExecutable $PythonRuntimeCheck
+if ($LASTEXITCODE -ne 0) {
+    exit $LASTEXITCODE
+}
 
 $env:DJANGO_SETTINGS_MODULE = "secondpass.settings"
 $env:DJANGO_DEBUG = "1"

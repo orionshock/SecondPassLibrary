@@ -7,6 +7,8 @@ import shutil
 import subprocess
 import sys
 
+from python_runtime import require_supported_python
+
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
 
@@ -45,6 +47,7 @@ def parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
+    require_supported_python()
     lane = parser().parse_args().lane
     python = sys.executable
     django_environment = os.environ.copy()

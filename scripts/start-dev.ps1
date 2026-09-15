@@ -6,6 +6,12 @@ $BackendRoot = Join-Path $ProjectRoot "backend"
 $FrontendRoot = Join-Path $ProjectRoot "frontend"
 $ManagePy = Join-Path $BackendRoot "manage.py"
 $ViteEntrypoint = Join-Path $FrontendRoot "node_modules\vite\bin\vite.js"
+$PythonRuntimeCheck = Join-Path $ProjectRoot "tools\python_runtime.py"
+
+& $PythonExecutable $PythonRuntimeCheck
+if ($LASTEXITCODE -ne 0) {
+    exit $LASTEXITCODE
+}
 
 $env:DJANGO_SETTINGS_MODULE = "secondpass.settings"
 $env:DJANGO_DEBUG = "1"

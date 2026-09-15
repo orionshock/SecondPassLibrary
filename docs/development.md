@@ -5,9 +5,11 @@ commands are noted where they differ.
 
 ## Setup
 
-Use Python 3.12 through 3.14; `.python-version` selects the deployment-aligned
-Python 3.13 development default. The React workspace uses the Node.js version
-in `.node-version` and npm version declared by `frontend/package.json`.
+Second Pass Library targets Python 3.14.x for development and deployment.
+`.python-version` selects that minor version, and the local startup and
+verification scripts reject a different minor version. The React workspace uses
+the Node.js version in `.node-version` and npm version declared by
+`frontend/package.json`.
 
 ```powershell
 python -m venv .venv
