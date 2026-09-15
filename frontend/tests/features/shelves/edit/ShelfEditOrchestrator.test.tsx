@@ -5,7 +5,7 @@ import { createRoot } from "react-dom/client";
 import { createMemoryRouter, Outlet, RouterProvider } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { CompactBook, CurrentUser, ServerInfo, ShelfEditorItem, ShelfEditorItemsPage, ShelfSummary } from "@second-pass/spl-api";
+import { ApiError, type CompactBook, type CurrentUser, type ServerInfo, type ShelfEditorItem, type ShelfEditorItemsPage, type ShelfSummary } from "@second-pass/spl-api";
 import type { AppOutletContext } from "../../../../src/app/layout/AppOrchestrator";
 import { ShelfEditOrchestrator } from "../../../../src/features/shelves/edit/ShelfEditOrchestrator";
 import { buttonNamed, deferred, setControlValue, submit } from "../../../support/domInteraction";
@@ -238,6 +238,27 @@ describe("ShelfEditOrchestrator item mutations", () => {
     expect(container.textContent).not.toContain("Candidate Book");
   });
 
+  it("recovers candidate search URL state after adding the sole final-page result", async () => {
+    arrangeDependencies();
+    const candidate = book("candidate", "Candidate Book");
+    const recovered = { items: [], count: 30, next: null, previous: null };
+    sdk.searchLibrary
+      .mockResolvedValueOnce({ items: [candidate], count: 31, next: null, previous: "page-1" })
+      .mockRejectedValueOnce(new ApiError("Invalid page.", 404))
+      .mockResolvedValue(recovered);
+    sdk.addItem.mockResolvedValue(undefined);
+    const { container, router } = await mount(
+      "/shelves/shelf%2Fid/edit?tab=add-books&q=Candidate&page=2&page_size=30",
+    );
+
+    await act(async () => buttonNamed(container, "Add").click());
+
+    expect(sdk.searchLibrary.mock.calls.map(([query]) => query.page)).toEqual([2, 2, 1, 1]);
+    expect(router.state.location.search).toBe("?tab=add-books&page_size=30&q=Candidate");
+    expect(router.state.historyAction).toBe("REPLACE");
+    expect(container.querySelector("[role=\"alert\"]")).toBeNull();
+  });
+
   it("keeps a candidate visible when adding it fails", async () => {
     arrangeDependencies();
     const candidate = book("candidate", "Candidate Book");
@@ -264,6 +285,26 @@ describe("ShelfEditOrchestrator item mutations", () => {
     expect(sdk.listItems).toHaveBeenCalledTimes(2);
     expect(sdk.getShelf).toHaveBeenCalledTimes(2);
     expect(container.querySelector('[aria-label="Remove Book One from shelf"]')).toBeNull();
+  });
+
+  it("recovers to the last valid URL page after removing the sole final-page item", async () => {
+    arrangeDependencies();
+    sdk.listItems
+      .mockResolvedValueOnce({ ...itemPage([first]), count: 31, previous: "page-1" })
+      .mockRejectedValueOnce(new ApiError("Invalid page.", 404))
+      .mockResolvedValue({ ...itemPage([second]), count: 30 });
+    sdk.removeItem.mockResolvedValue(undefined);
+    const { container, router } = await mount(
+      "/shelves/shelf%2Fid/edit?tab=books&page=2&page_size=30",
+    );
+
+    await act(async () => buttonNamed(container, "Remove Book One from shelf").click());
+
+    expect(sdk.listItems.mock.calls.map(([, query]) => query.page)).toEqual([2, 2, 1, 1]);
+    expect(router.state.location.search).toBe("?tab=books&page_size=30");
+    expect(router.state.historyAction).toBe("REPLACE");
+    expect(container.textContent).toContain("Book Two");
+    expect(container.querySelector("[role=\"alert\"]")).toBeNull();
   });
 
   it("removes a Book and does not hide it when removal fails", async () => {

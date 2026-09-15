@@ -7,6 +7,7 @@ import {
   groupDetailStateFromSearchParams,
   groupEditQueryDuringImmediateMutation,
   groupEditQueryFromSearchParams,
+  groupEditQueryWithPage,
   groupEditSearchParams,
   groupMembersSdkQuery,
   groupShelvesSdkQuery,
@@ -70,20 +71,26 @@ describe("Groups URL state", () => {
 
   it("keeps Group management tabs URL-backed with one universal Details default", () => {
     expect(groupEditQueryFromSearchParams(new URLSearchParams())).toEqual({
-      tab: "details", query: "",
+      tab: "details", query: "", page: 1, pageSize: 20,
     });
     expect(groupEditQueryFromSearchParams(new URLSearchParams("trail=context&tab=books"))).toEqual({
-      tab: "books", query: "trail=context&tab=books",
+      tab: "books", query: "trail=context&tab=books", page: 1, pageSize: 20,
     });
     expect(groupEditQueryFromSearchParams(new URLSearchParams("tab=add-books"))).toEqual({
-      tab: "add-books", query: "tab=add-books",
+      tab: "add-books", query: "tab=add-books", page: 1, pageSize: 20,
     });
     expect(groupEditQueryFromSearchParams(new URLSearchParams("tab=members"))).toEqual({
-      tab: "members", query: "tab=members",
+      tab: "members", query: "tab=members", page: 1, pageSize: 20,
     });
     expect(groupEditQueryFromSearchParams(new URLSearchParams("trail=context&tab=unknown"))).toEqual({
-      tab: "details", query: "trail=context",
+      tab: "details", query: "trail=context", page: 1, pageSize: 20,
     });
+    const paged = groupEditQueryFromSearchParams(new URLSearchParams(
+      "trail=context&tab=books&page=4&page_size=40",
+    ));
+    expect(paged).toMatchObject({ tab: "books", page: 4, pageSize: 40 });
+    expect(groupEditQueryWithPage(paged, { page: 2 })).toBe("trail=context&tab=books&page=2&page_size=40");
+    expect(groupEditQueryWithPage(paged, { pageSize: 30 })).toBe("trail=context&tab=books&page_size=30");
     expect(groupEditSearchParams(new URLSearchParams("trail=context&tab=members"), "details").toString())
       .toBe("trail=context");
   });
@@ -95,4 +102,3 @@ describe("Groups URL state", () => {
     expect(groupEditQueryDuringImmediateMutation(requested, stable, false)).toBe(requested);
   });
 });
-

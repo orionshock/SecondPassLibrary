@@ -16,6 +16,7 @@ import { Link, useLocation, useNavigate, useOutletContext, useParams } from "rea
 
 import type { AppOutletContext } from "../../../app/layout/AppOrchestrator";
 import { usePageBreadcrumbs } from "../../../app/navigation/usePageBreadcrumbs";
+import { useUrlCollectionLifecycle } from "../../../app/routing/useUrlCollectionLifecycle";
 import { Button, ErrorPanel } from "../../../components/UiPrimitives";
 import {
   idleMutationState,
@@ -47,6 +48,7 @@ import {
   groupEditQueryDuringImmediateMutation,
   groupEditQueryFromSearchParams,
   groupEditSearchParams,
+  groupEditQueryWithPage,
   type GroupEditTab,
 } from "../groupsQuery";
 import { GroupMetadataFormPageRegion } from "../regions/GroupMetadataFormPageRegion";
@@ -98,10 +100,6 @@ export function GroupEditOrchestrator() {
     () => groupEditQueryFromSearchParams(new URLSearchParams(location.search)),
     [location.search],
   );
-  const [booksPage, setBooksPage] = useState(1);
-  const [booksPageSize, setBooksPageSize] = useState(20);
-  const [booksLoad, setBooksLoad] = useState<BookPageLoad>({ loading: false });
-  const [booksVersion, setBooksVersion] = useState(0);
   const [bookMutation, setBookMutation] = useState<BookMutation>({});
   const [candidateSearch, setCandidateSearch] = useState("");
   const [candidateQuery, setCandidateQuery] = useState("");
@@ -124,6 +122,24 @@ export function GroupEditOrchestrator() {
   );
   const activeTab = editQuery.tab;
   const group = load.status === "ready" ? load.group : undefined;
+  const metadataAuthority = group ? groupMetadataAuthority(currentUser, group, serverInfo.advancedLibraryGroupsEnabled) : "none";
+  const bookMutationAllowed = group ? canMutateGroupBooks(currentUser, group, serverInfo.advancedLibraryGroupsEnabled) : false;
+  const memberMutationAllowed = canMutateGroupMembers(currentUser, serverInfo.advancedLibraryGroupsEnabled);
+  const deleteAllowed = group ? canDeleteGroup(currentUser, group, serverInfo.advancedLibraryGroupsEnabled) : false;
+  const booksLoad = useUrlCollectionLifecycle({
+    scope: `group:${groupId}:edit-books`,
+    canonicalQuery: editQuery.query,
+    page: editQuery.page,
+    pageSize: editQuery.pageSize,
+    loadPage: (page) => listGroupBooks(groupId, {
+      ordering: "title",
+      page,
+      pageSize: editQuery.pageSize,
+    }),
+    queryForPage: (page) => groupEditQueryWithPage(editQuery, { page }),
+    locationState: location.state,
+    enabled: Boolean(group && bookMutationAllowed && activeTab === "books"),
+  });
   const breadcrumbs = useMemo(
     () => groupEditBreadcrumbFallback(groupId, group?.name, group?.isPublicGroup),
     [group?.isPublicGroup, group?.name, groupId],
@@ -162,22 +178,6 @@ export function GroupEditOrchestrator() {
       });
     return () => { active = false; };
   }, [currentUser, groupId, retry]);
-
-  const metadataAuthority = group ? groupMetadataAuthority(currentUser, group, serverInfo.advancedLibraryGroupsEnabled) : "none";
-  const bookMutationAllowed = group ? canMutateGroupBooks(currentUser, group, serverInfo.advancedLibraryGroupsEnabled) : false;
-  const memberMutationAllowed = canMutateGroupMembers(currentUser, serverInfo.advancedLibraryGroupsEnabled);
-  const deleteAllowed = group ? canDeleteGroup(currentUser, group, serverInfo.advancedLibraryGroupsEnabled) : false;
-  useEffect(() => {
-    if (!group || !bookMutationAllowed || activeTab !== "books") return;
-    let active = true;
-    setBooksLoad((current) => ({ ...current, loading: true, error: undefined }));
-    listGroupBooks(group.id, { ordering: "title", page: booksPage, pageSize: booksPageSize })
-      .then((page) => { if (active) setBooksLoad({ page, loading: false }); })
-      .catch((error: unknown) => {
-        if (active) setBooksLoad((current) => ({ ...current, loading: false, error: normalizeMutationError(error) }));
-      });
-    return () => { active = false; };
-  }, [activeTab, bookMutationAllowed, booksPage, booksPageSize, booksVersion, group]);
 
   useEffect(() => {
     if (!group || !bookMutationAllowed || activeTab !== "add-books") return;
@@ -251,8 +251,7 @@ export function GroupEditOrchestrator() {
     try {
       await removeBookFromGroup(group.id, book.id);
       setBookMutation({ message: "Book removed from group." });
-      if (booksPage > 1 && booksLoad.page?.items.length === 1) setBooksPage(booksPage - 1);
-      else setBooksVersion((value) => value + 1);
+      booksLoad.reload();
       if (candidateQuery) setCandidatesVersion((value) => value + 1);
     } catch (error: unknown) {
       setBookMutation({ error: normalizeMutationError(error) });
@@ -265,7 +264,7 @@ export function GroupEditOrchestrator() {
     try {
       await addBookToGroup(group.id, bookId);
       setCandidateMutation({ message: "Book added to group." });
-      setBooksVersion((value) => value + 1);
+      booksLoad.reload();
       if (candidatePage > 1 && candidatesLoad.page?.items.length === 1) setCandidatePage(candidatePage - 1);
       else setCandidatesVersion((value) => value + 1);
     } catch (error: unknown) {
@@ -333,16 +332,16 @@ export function GroupEditOrchestrator() {
         groupName={load.group.name}
         isPublicGroup={load.group.isPublicGroup}
         page={booksLoad.page}
-        pageNumber={booksPage}
-        pageSize={booksPageSize}
+        pageNumber={editQuery.page}
+        pageSize={editQuery.pageSize}
         loading={booksLoad.loading}
-        error={bookMutation.error ?? booksLoad.error}
+        error={bookMutation.error ?? (booksLoad.error === undefined ? undefined : normalizeMutationError(booksLoad.error))}
         pendingBookId={bookMutation.pendingBookId}
         controlsDisabled={mutation.pending || Boolean(candidateMutation.pendingBookId)}
         onRemove={(book) => void removeBook(book)}
-        onPageChange={setBooksPage}
-        onPageSizeChange={(pageSize) => { setBooksPageSize(pageSize); setBooksPage(1); }}
-        onRetry={() => { setBookMutation({}); setBooksVersion((value) => value + 1); }}
+        onPageChange={(page) => navigate({ pathname: location.pathname, search: groupEditQueryWithPage(editQuery, { page }) }, { state: location.state })}
+        onPageSizeChange={(pageSize) => navigate({ pathname: location.pathname, search: groupEditQueryWithPage(editQuery, { pageSize }) }, { state: location.state })}
+        onRetry={() => { setBookMutation({}); booksLoad.retry(); }}
       />
     </> : <section className="group-edit-section-state" aria-label="Books unavailable"><p className="muted">Book curation is not available for this account.</p></section>}</div> : null}
     {activeTab === "add-books" ? <div

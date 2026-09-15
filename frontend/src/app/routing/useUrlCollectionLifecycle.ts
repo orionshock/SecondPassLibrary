@@ -6,6 +6,7 @@ export interface UrlCollectionLoad<TPage> {
   page?: TPage;
   loading: boolean;
   error?: unknown;
+  reload: () => void;
   retry: () => void;
 }
 
@@ -34,7 +35,7 @@ export function useUrlCollectionLifecycle<TPage extends { count: number }>({
   const [searchParameters, setSearchParameters] = useSearchParams();
   const currentQuery = searchParameters.toString();
   const [retryGeneration, setRetryGeneration] = useState(0);
-  const [load, setLoad] = useState<Omit<UrlCollectionLoad<TPage>, "retry">>({ loading: enabled });
+  const [load, setLoad] = useState<Omit<UrlCollectionLoad<TPage>, "reload" | "retry">>({ loading: enabled });
   const requestGeneration = useRef(0);
   const loadedScope = useRef(scope);
   const recoveredRequests = useRef(new Set<string>());
@@ -103,5 +104,9 @@ export function useUrlCollectionLifecycle<TPage extends { count: number }>({
   }, [canonicalQuery, currentQuery, enabled, page, pageSize, retryGeneration, scope, setSearchParameters]);
 
   const retry = useCallback(() => setRetryGeneration((current) => current + 1), []);
-  return { ...load, retry };
+  const reload = useCallback(() => {
+    recoveredRequests.current.delete(`${scope}:${canonicalQuery}`);
+    setRetryGeneration((current) => current + 1);
+  }, [canonicalQuery, scope]);
+  return { ...load, reload, retry };
 }

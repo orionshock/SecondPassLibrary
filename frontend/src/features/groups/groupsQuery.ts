@@ -32,6 +32,8 @@ export interface GroupDetailUrlState {
 export interface GroupEditQueryState {
   tab: GroupEditTab;
   query: string;
+  page: number;
+  pageSize: number;
 }
 
 const pageSizes = new Set([20, 30, 40, 50]);
@@ -147,10 +149,35 @@ export function groupShelvesSdkQuery(groupId: string, state: GroupDetailUrlState
 
 export function groupEditQueryFromSearchParams(parameters: URLSearchParams): GroupEditQueryState {
   const { tab } = resolveTabQuery(parameters, groupEditTabs, "details");
+  const page = positiveInteger(parameters.get("page"), 1);
+  const pageSize = validPageSize(parameters.get("page_size"));
+  const canonical = withTabQuery(parameters, tab, "details");
+  if (tab === "books") {
+    if (page > 1) canonical.set("page", String(page));
+    else canonical.delete("page");
+    if (pageSize !== 20) canonical.set("page_size", String(pageSize));
+    else canonical.delete("page_size");
+  }
   return {
     tab,
-    query: withTabQuery(parameters, tab, "details").toString(),
+    query: canonical.toString(),
+    page,
+    pageSize,
   };
+}
+
+export function groupEditQueryWithPage(
+  state: GroupEditQueryState,
+  changes: Partial<Pick<GroupEditQueryState, "page" | "pageSize">>,
+): string {
+  const parameters = new URLSearchParams(state.query);
+  const page = changes.pageSize === undefined ? changes.page ?? state.page : 1;
+  const pageSize = changes.pageSize ?? state.pageSize;
+  if (page > 1) parameters.set("page", String(page));
+  else parameters.delete("page");
+  if (pageSize !== 20) parameters.set("page_size", String(pageSize));
+  else parameters.delete("page_size");
+  return parameters.toString();
 }
 
 export function groupEditSearchParams(

@@ -5,7 +5,7 @@ import { createRoot } from "react-dom/client";
 import { createMemoryRouter, Outlet, RouterProvider } from "react-router";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { CompactBook, CurrentUser, LibraryGroup, ServerInfo } from "@second-pass/spl-api";
+import { ApiError, type CompactBook, type CurrentUser, type LibraryGroup, type ServerInfo } from "@second-pass/spl-api";
 import type { AppOutletContext } from "../../../../src/app/layout/AppOrchestrator";
 import { GroupEditOrchestrator } from "../../../../src/features/groups/edit/GroupEditOrchestrator";
 import { buttonNamed, deferred, setControlValue, submit } from "../../../support/domInteraction";
@@ -50,7 +50,7 @@ const serverInfo = {
   secondPassReaderWebClientUrl: null, marginaliaProfileUri: "profile", version: "dev",
   releaseDate: "", publicGroup: { id: "public", name: "Common Room", description: "" },
 } satisfies ServerInfo;
-const page = (items: CompactBook[]) => ({ items, count: items.length, next: null, previous: null });
+const page = (items: CompactBook[], count = items.length) => ({ items, count, next: null, previous: null });
 let root: ReturnType<typeof createRoot> | undefined;
 
 afterEach(async () => {
@@ -74,7 +74,7 @@ async function mount(path: string, currentUser: CurrentUser = manager) {
     children: [{ path: "/groups/:groupId/edit", element: <GroupEditOrchestrator /> }],
   }], { initialEntries: [path] });
   await act(async () => root?.render(<RouterProvider router={router} />));
-  return container;
+  return { container, router };
 }
 
 describe("GroupEditOrchestrator Book assignments", () => {
@@ -82,7 +82,7 @@ describe("GroupEditOrchestrator Book assignments", () => {
     sdk.getGroup.mockResolvedValue(group);
     const pending = deferred<LibraryGroup>();
     sdk.updateGroup.mockReturnValueOnce(pending.promise).mockResolvedValueOnce({ ...group, name: "Edited Readers" });
-    const container = await mount("/groups/group%2Fid/edit");
+    const { container } = await mount("/groups/group%2Fid/edit");
     const nameInput = container.querySelector<HTMLInputElement>("#group-name")!;
 
     await act(async () => setControlValue(nameInput, "Edited Readers"));
@@ -110,7 +110,7 @@ describe("GroupEditOrchestrator Book assignments", () => {
     const pending = deferred<void>();
     sdk.removeBook.mockReturnValue(pending.promise);
     vi.stubGlobal("confirm", vi.fn(() => true));
-    const container = await mount("/groups/group%2Fid/edit?tab=books");
+    const { container, router } = await mount("/groups/group%2Fid/edit?tab=books");
 
     act(() => buttonNamed(container, "Remove Assigned Book from group").click());
     expect(sdk.removeBook).toHaveBeenCalledWith("group/id", "book-one");
@@ -119,6 +119,28 @@ describe("GroupEditOrchestrator Book assignments", () => {
     await act(async () => pending.resolve());
     expect(sdk.listBooks).toHaveBeenCalledTimes(2);
     expect(container.textContent).not.toContain("Assigned Book");
+    expect(router.state.location.search).toBe("?tab=books");
+  });
+
+  it("recovers assigned Books to the last valid URL page after final-page removal", async () => {
+    sdk.getGroup.mockResolvedValue(group);
+    sdk.listBooks
+      .mockResolvedValueOnce({ ...page([assignedBook], 31), previous: "page-1" })
+      .mockRejectedValueOnce(new ApiError("Invalid page.", 404))
+      .mockResolvedValue(page([{ ...assignedBook, id: "remaining", title: "Remaining Book" }], 30));
+    sdk.removeBook.mockResolvedValue(undefined);
+    vi.stubGlobal("confirm", vi.fn(() => true));
+    const { container, router } = await mount(
+      "/groups/group%2Fid/edit?trail=context&tab=books&page=2&page_size=30",
+    );
+
+    await act(async () => buttonNamed(container, "Remove Assigned Book from group").click());
+
+    expect(sdk.listBooks.mock.calls.map(([, query]) => query.page)).toEqual([2, 2, 1, 1]);
+    expect(router.state.location.search).toBe("?trail=context&tab=books&page_size=30");
+    expect(router.state.historyAction).toBe("REPLACE");
+    expect(container.textContent).toContain("Remaining Book");
+    expect(container.querySelector("[role=\"alert\"]")).toBeNull();
   });
 
   it("keeps an assigned Book visible when removal fails", async () => {
@@ -126,7 +148,7 @@ describe("GroupEditOrchestrator Book assignments", () => {
     sdk.listBooks.mockResolvedValue(page([assignedBook]));
     sdk.removeBook.mockRejectedValue(new Error("Book assignment failed."));
     vi.stubGlobal("confirm", vi.fn(() => true));
-    const container = await mount("/groups/group%2Fid/edit?tab=books");
+    const { container } = await mount("/groups/group%2Fid/edit?tab=books");
 
     await act(async () => buttonNamed(container, "Remove Assigned Book from group").click());
 
@@ -139,7 +161,7 @@ describe("GroupEditOrchestrator Book assignments", () => {
     sdk.getGroup.mockResolvedValue(group);
     sdk.searchBooks.mockResolvedValueOnce(page([candidateBook])).mockResolvedValueOnce(page([]));
     sdk.addBook.mockResolvedValue(undefined);
-    const container = await mount("/groups/group%2Fid/edit?tab=add-books");
+    const { container } = await mount("/groups/group%2Fid/edit?tab=add-books");
 
     await act(async () => setControlValue(container.querySelector<HTMLInputElement>("#group-add-books-search")!, "Candidate"));
     await act(async () => submit(container.querySelector<HTMLFormElement>('form[role="search"]')!));
@@ -156,7 +178,7 @@ describe("GroupEditOrchestrator Book assignments", () => {
     sdk.searchBooks.mockImplementation(({ q }: { q: string }) => q === "Old"
       ? oldSearch.promise
       : Promise.resolve(page([{ ...candidateBook, id: "new-book", title: "New Result", sortTitle: "New Result" }])));
-    const container = await mount("/groups/group%2Fid/edit?tab=add-books");
+    const { container } = await mount("/groups/group%2Fid/edit?tab=add-books");
     const input = container.querySelector<HTMLInputElement>("#group-add-books-search")!;
     const form = container.querySelector<HTMLFormElement>('form[role="search"]')!;
 
@@ -174,7 +196,7 @@ describe("GroupEditOrchestrator Book assignments", () => {
   it("does not load or expose mutation controls without Group authority", async () => {
     sdk.getGroup.mockResolvedValue(group);
     const reader = { ...manager, role: "reader", isManager: false, isReader: true } satisfies CurrentUser;
-    const container = await mount("/groups/group%2Fid/edit?tab=books", reader);
+    const { container } = await mount("/groups/group%2Fid/edit?tab=books", reader);
 
     expect(sdk.listBooks).not.toHaveBeenCalled();
     expect(container.querySelector('[aria-label="Remove Assigned Book from group"]')).toBeNull();

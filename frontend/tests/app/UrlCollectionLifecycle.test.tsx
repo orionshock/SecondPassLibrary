@@ -44,6 +44,7 @@ function Harness({ request }: { request: (query: string, page: number) => Promis
   });
   return <>
     <output>{load.loading ? "loading" : load.error ? "error" : load.page?.items[0]}</output>
+    <button type="button" onClick={load.reload}>Reload</button>
     <button type="button" onClick={load.retry}>Retry</button>
   </>;
 }
@@ -122,5 +123,23 @@ describe("useUrlCollectionLifecycle", () => {
     expect(request).toHaveBeenCalledTimes(2);
     expect(request.mock.calls[1]?.[0]).toBe("kept");
     expect(container.querySelector("output")?.textContent).toBe("retried");
+  });
+
+  it("allows a changed collection to recover again when explicitly reloaded", async () => {
+    let secondPageRequests = 0;
+    const request = vi.fn(async (_query: string, requestedPage: number) => {
+      if (requestedPage === 2 && ++secondPageRequests > 1) {
+        throw new ApiError("Invalid page.", 404);
+      }
+      return page(`page-${requestedPage}`, requestedPage === 1 ? 20 : 21);
+    });
+    const { container, router } = await mount("/items?q=kept&page=2", request);
+
+    await act(async () => buttonNamed(container, "Reload").click());
+
+    expect(request.mock.calls.map(([, requestedPage]) => requestedPage)).toEqual([2, 2, 1, 1]);
+    expect(router.state.location.search).toBe("?q=kept");
+    expect(router.state.historyAction).toBe("REPLACE");
+    expect(container.querySelector("output")?.textContent).toBe("page-1");
   });
 });

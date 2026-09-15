@@ -10,16 +10,14 @@ import {
   searchLibraryBooks,
   setShelfItemPosition,
   updateShelf,
-  type CompactBook,
-  type Page,
   type ShelfEditorItem,
-  type ShelfEditorItemsPage,
   type ShelfSummary,
 } from "@second-pass/spl-api";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router";
 
 import { usePageBreadcrumbs } from "../../../app/navigation/usePageBreadcrumbs";
+import { useUrlCollectionLifecycle } from "../../../app/routing/useUrlCollectionLifecycle";
 import { Button, ErrorPanel } from "../../../components/UiPrimitives";
 import {
   idleMutationState,
@@ -52,6 +50,7 @@ import {
 } from "../shelfLifecycle";
 import {
   shelfEditPathWithState,
+  shelfEditSearchParams,
   shelfEditStateDuringItemMutation,
   shelfEditStateFromSearchParams,
   withShelfEditPage,
@@ -67,12 +66,6 @@ type ShelfLoad =
   | { status: "unavailable" }
   | { status: "not-allowed"; shelf: ShelfSummary }
   | { status: "error"; error: Error };
-
-interface PageLoad<T> {
-  page?: Page<T>;
-  loading: boolean;
-  error?: Error;
-}
 
 interface RowMutation {
   pendingId?: string;
@@ -102,14 +95,10 @@ export function ShelfEditOrchestrator() {
     [location.search],
   );
   const [searchDraft, setSearchDraft] = useState(requestedEditState.q);
-  const [itemsLoad, setItemsLoad] = useState<PageLoad<ShelfEditorItem> & { page?: ShelfEditorItemsPage }>({ loading: false });
-  const [candidatesLoad, setCandidatesLoad] = useState<PageLoad<CompactBook>>({ loading: false });
   const [itemMutation, setItemMutation] = useState<RowMutation>({});
   const [candidateMutation, setCandidateMutation] = useState<RowMutation>({});
   useAutoDismissMutationMessage(itemMutation, setItemMutation);
   useAutoDismissMutationMessage(candidateMutation, setCandidateMutation);
-  const [itemsVersion, setItemsVersion] = useState(0);
-  const [candidatesVersion, setCandidatesVersion] = useState(0);
   const immediateItemMutationPending = Boolean(itemMutation.pendingId || candidateMutation.pendingId);
   const stableEditState = useRef(requestedEditState);
   if (!immediateItemMutationPending) stableEditState.current = requestedEditState;
@@ -119,6 +108,44 @@ export function ShelfEditOrchestrator() {
     immediateItemMutationPending,
   );
   const shelf = load.status === "ready" || load.status === "not-allowed" ? load.shelf : undefined;
+  const canonicalQuery = shelfEditSearchParams(editState).toString();
+  const queryForPage = (page: number) => shelfEditSearchParams(
+    withShelfEditPage(editState, { page }),
+  ).toString();
+  const itemsLoad = useUrlCollectionLifecycle({
+    scope: `shelf:${shelfId}:edit-items`,
+    canonicalQuery,
+    page: editState.page,
+    pageSize: editState.pageSize,
+    loadPage: (page) => listShelfEditorItems(shelfId, {
+      page,
+      pageSize: editState.pageSize,
+    }),
+    queryForPage,
+    locationState: location.state,
+    enabled: load.status === "ready" && editState.tab === "books",
+  });
+  const candidatesLoad = useUrlCollectionLifecycle({
+    scope: `shelf:${shelfId}:edit-candidates:${editState.q}`,
+    canonicalQuery,
+    page: editState.page,
+    pageSize: editState.pageSize,
+    loadPage: (page) => {
+      const query = {
+        q: editState.q,
+        excludeShelfId: shelfId,
+        ordering: "title" as const,
+        page,
+        pageSize: editState.pageSize,
+      };
+      if (shelf?.ownerType !== "group") return searchLibraryBooks(query);
+      if (shelf.ownerGroup) return searchGroupBooks(shelf.ownerGroup.id, query);
+      return Promise.reject(new Error("Shelf owner group is unavailable."));
+    },
+    queryForPage,
+    locationState: location.state,
+    enabled: load.status === "ready" && editState.tab === "add-books" && Boolean(editState.q),
+  });
   const scope = shelf ? shelfScopeFromSummary(shelf) : "personal";
   const breadcrumbs = useMemo(
     () => shelfEditBreadcrumbs(shelfId, shelf?.name, scope),
@@ -162,59 +189,6 @@ export function ShelfEditOrchestrator() {
       });
     return () => { active = false; };
   }, [retry, shelfId]);
-
-  useEffect(() => {
-    if (load.status !== "ready" || editState.tab !== "books") return;
-    let active = true;
-    setItemsLoad((current) => ({ ...current, loading: true, error: undefined }));
-    listShelfEditorItems(shelfId, {
-      page: editState.page,
-      pageSize: editState.pageSize,
-    }).then((page) => {
-      if (active) setItemsLoad({ page, loading: false });
-    }).catch((error: unknown) => {
-      if (active) setItemsLoad((current) => ({ ...current, loading: false, error: normalizeMutationError(error) }));
-    });
-    return () => { active = false; };
-  }, [editState.page, editState.pageSize, editState.tab, itemsVersion, load.status, shelfId]);
-
-  useEffect(() => {
-    if (load.status !== "ready" || editState.tab !== "add-books" || !shelf) return;
-    if (!editState.q) {
-      setCandidatesLoad({ loading: false });
-      return;
-    }
-    let active = true;
-    setCandidatesLoad((current) => ({ ...current, loading: true, error: undefined }));
-    const query = {
-      q: editState.q,
-      excludeShelfId: shelf.id,
-      ordering: "title" as const,
-      page: editState.page,
-      pageSize: editState.pageSize,
-    };
-    const request = shelf.ownerType === "group"
-      ? shelf.ownerGroup
-        ? searchGroupBooks(shelf.ownerGroup.id, query)
-        : Promise.reject(new Error("Shelf owner group is unavailable."))
-      : searchLibraryBooks(query);
-    request.then((page) => {
-      if (active) setCandidatesLoad({ page, loading: false });
-    }).catch((error: unknown) => {
-      if (active) setCandidatesLoad((current) => ({ ...current, loading: false, error: normalizeMutationError(error) }));
-    });
-    return () => { active = false; };
-  }, [
-    candidatesVersion,
-    editState.page,
-    editState.pageSize,
-    editState.q,
-    editState.tab,
-    load.status,
-    shelf?.id,
-    shelf?.ownerGroup?.id,
-    shelf?.ownerType,
-  ]);
 
   function change<K extends keyof ShelfDraft>(field: K, value: ShelfDraft[K]) {
     lifecycle.changeDraft((current) => ({ ...current, [field]: value }));
@@ -277,7 +251,7 @@ export function ShelfEditOrchestrator() {
     setItemMutation({ pendingId: item.id, pendingAction: "remove" });
     try {
       await removeShelfItem(shelfId, item.id);
-      setItemsVersion((value) => value + 1);
+      itemsLoad.reload();
     } catch (error: unknown) {
       setItemMutation({ error: normalizeMutationError(error) });
       return;
@@ -298,7 +272,7 @@ export function ShelfEditOrchestrator() {
       } else {
         await moveShelfItem(shelfId, itemId, move);
       }
-      setItemsVersion((value) => value + 1);
+      itemsLoad.reload();
     } catch (error: unknown) {
       setItemMutation({ error: normalizeMutationError(error) });
       return;
@@ -315,8 +289,8 @@ export function ShelfEditOrchestrator() {
     setCandidateMutation({ pendingId: bookId });
     try {
       await addShelfItem(shelfId, { bookId });
-      setItemsVersion((value) => value + 1);
-      setCandidatesVersion((value) => value + 1);
+      itemsLoad.reload();
+      candidatesLoad.reload();
     } catch (error: unknown) {
       setCandidateMutation({ error: normalizeMutationError(error) });
       return;
@@ -382,7 +356,7 @@ export function ShelfEditOrchestrator() {
         pageNumber={editState.page}
         pageSize={editState.pageSize}
         loading={itemsLoad.loading}
-        error={itemMutation.error ?? itemsLoad.error}
+        error={itemMutation.error ?? (itemsLoad.error === undefined ? undefined : normalizeMutationError(itemsLoad.error))}
         pendingItemId={itemMutation.pendingId}
         pendingAction={itemMutation.pendingAction}
         controlsDisabled={mutation.pending || deleteMutation.pending}
@@ -391,7 +365,7 @@ export function ShelfEditOrchestrator() {
         onRemove={(item) => void removeItem(item)}
         onPageChange={(page) => navigateEditState(withShelfEditPage(editState, { page }))}
         onPageSizeChange={(pageSize) => navigateEditState(withShelfEditPage(editState, { pageSize }))}
-        onRetry={() => setItemsVersion((value) => value + 1)}
+        onRetry={itemsLoad.retry}
       />
     </div> : null}
     {editState.tab === "add-books" ? <div
@@ -405,11 +379,11 @@ export function ShelfEditOrchestrator() {
         shelfName={editableShelf.name}
         scope={scope}
         search={searchDraft}
-        page={candidatesLoad.page}
+        page={editState.q ? candidatesLoad.page : undefined}
         pageNumber={editState.page}
         pageSize={editState.pageSize}
-        loading={candidatesLoad.loading}
-        error={candidateMutation.error ?? candidatesLoad.error}
+        loading={Boolean(editState.q) && candidatesLoad.loading}
+        error={candidateMutation.error ?? (candidatesLoad.error === undefined ? undefined : normalizeMutationError(candidatesLoad.error))}
         pendingBookId={candidateMutation.pendingId}
         controlsDisabled={mutation.pending || deleteMutation.pending}
         onSearchChange={(value) => { setSearchDraft(value); setCandidateMutation({}); }}
@@ -417,7 +391,7 @@ export function ShelfEditOrchestrator() {
         onAdd={(bookId) => void addItem(bookId)}
         onPageChange={(page) => navigateEditState(withShelfEditPage(editState, { page }))}
         onPageSizeChange={(pageSize) => navigateEditState(withShelfEditPage(editState, { pageSize }))}
-        onRetry={() => setCandidatesVersion((value) => value + 1)}
+        onRetry={candidatesLoad.retry}
       />
     </div> : null}
   </ProductPageShell>;
