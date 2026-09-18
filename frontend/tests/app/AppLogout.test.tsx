@@ -19,7 +19,7 @@ import { AppOrchestrator } from "../../src/app/layout/AppOrchestrator";
 let root: ReturnType<typeof createRoot> | undefined;
 
 const user: CurrentUser = { username: "owner", email: "", firstName: "", lastName: "", profileId: "profile", role: "manager", mustChangePassword: false, isOwner: true, isManager: false, isLibrarian: false, isReader: false, canAccessDjangoAdmin: false, groups: [] };
-const server: ServerInfo = { name: "Family Library", description: "", bannerText: "", advancedLibraryGroupsEnabled: false, secondPassReaderWebClientUrl: null, marginaliaProfileUri: "profile", publicGroup: { id: "public", name: "Common Room", description: "" }, version: "dev", releaseDate: "" };
+const server: ServerInfo = { installationId: "installation-id", name: "Family Library", description: "", bannerText: "", advancedLibraryGroupsEnabled: false, secondPassReaderWebClientUrl: null, marginaliaProfileUri: "profile", publicGroup: { id: "public", name: "Common Room", description: "" }, version: "dev", releaseDate: "" };
 
 afterEach(async () => {
   if (root) await act(async () => root?.unmount());
