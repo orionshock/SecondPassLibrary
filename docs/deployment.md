@@ -135,6 +135,37 @@ and explicit port while removing any path, query string, fragment, and trailing
 slash, then synchronizes the normalized value into the Server Setting row.
 Runtime code reads that stored row rather than reading the environment directly.
 
+## Optional LAN discovery
+
+The optional `discovery` Compose profile advertises the Library on the host LAN
+through mDNS/DNS-SD. Set the exact externally reachable Library URL and its
+external port in `docker/.env`:
+
+```text
+SECOND_PASS_LIBRARY_URL=https://books.example.com
+SECOND_PASS_DISCOVERY_PORT=443
+```
+
+Then start the normal deployment with discovery enabled:
+
+```powershell
+docker compose -f docker/compose.yml --profile discovery up -d
+```
+
+The sidecar uses host networking and publishes service type
+`_secondpass._tcp` with the single Second Pass TXT property
+`url=<SECOND_PASS_LIBRARY_URL>`. Clients use that URL directly; SRV host and
+port fields are publication plumbing. The record contains no Server ID,
+Library name, description, version, capability, authentication, or user data.
+The server and worker do not depend on the sidecar and continue normally when
+the profile is disabled or the sidecar fails.
+
+Operators with their own Avahi, Bonjour, or compatible DNS-SD infrastructure
+do not need the container. Publish `_secondpass._tcp` with exactly the `url=`
+TXT property pointing to the client-facing Library URL. Multiple Libraries may
+publish the same service type; clients obtain identity and display metadata
+from each discovered URL's normal public HTTP endpoint.
+
 ## Reverse-proxy contract
 
 For HTTPS deployment, use exact public hosts and origins, secure cookies, and
