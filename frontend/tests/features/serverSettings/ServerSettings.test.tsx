@@ -14,7 +14,7 @@ import { DjangoAdminAction } from "../../../src/features/server-settings/DjangoA
 import { serverSettingsFormId, serverSettingsSearchParams, serverSettingsTabFromSearchParams, serverSettingsTabs } from "../../../src/features/server-settings/serverSettingsTabs";
 
 const settings: ServerSettings = {
-  general: { name: "Virgo SPL", description: "<p>Private <strong>library</strong></p>", bannerText: "<p><em>Maintenance</em></p>", secondPassReaderWebClientUrl: "https://reader.example.com", secondPassReaderWebClientUrlLocked: false },
+  general: { installationId: "0f7262f1-d0b8-49fc-bb18-e40e46f56af2", name: "Virgo SPL", description: "<p>Private <strong>library</strong></p>", bannerText: "<p><em>Maintenance</em></p>", secondPassReaderWebClientUrl: "https://reader.example.com", secondPassReaderWebClientUrlLocked: false },
   publicLibrary: { name: "Common Room", description: "Shared books" },
   libraryGroups: { advancedGroupsEnabled: false },
 };
@@ -44,6 +44,9 @@ describe("Server Settings", () => {
     const read = renderToStaticMarkup(<GeneralSettingsPageRegion settings={settings.general} draft={settings.general} editing={false} state={{ pending: false }} onChange={vi.fn()} onSubmit={vi.fn()} />);
     const edit = renderToStaticMarkup(<GeneralSettingsPageRegion settings={settings.general} draft={settings.general} editing state={{ pending: false }} onChange={vi.fn()} onSubmit={vi.fn()} />);
     expect(read).toContain("Virgo SPL");
+    expect(read).toContain("Server ID");
+    expect(read).toContain(settings.general.installationId);
+    expect(edit).toContain(settings.general.installationId);
     expect(read).toContain("<strong>library</strong>");
     expect(read).toContain("<em>Maintenance</em>");
     expect(read).not.toContain("&lt;p&gt;");

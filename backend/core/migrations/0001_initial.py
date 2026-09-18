@@ -7,6 +7,11 @@ from django.conf import settings
 from django.db import migrations, models
 
 
+def create_server_installation(apps, _schema_editor):
+    ServerInstallation = apps.get_model("core", "ServerInstallation")
+    ServerInstallation.objects.create(id=1)
+
+
 class Migration(migrations.Migration):
 
     initial = True
@@ -16,6 +21,21 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.CreateModel(
+            name='ServerInstallation',
+            fields=[
+                ('id', models.PositiveSmallIntegerField(default=1, editable=False, primary_key=True, serialize=False)),
+                ('installation_id', models.UUIDField(default=uuid.uuid4, editable=False, unique=True)),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+            ],
+            options={
+                'constraints': [models.CheckConstraint(condition=models.Q(('id', 1)), name='server_installation_is_singleton')],
+            },
+        ),
+        migrations.RunPython(
+            create_server_installation,
+            migrations.RunPython.noop,
+        ),
         migrations.CreateModel(
             name='ServerSetting',
             fields=[

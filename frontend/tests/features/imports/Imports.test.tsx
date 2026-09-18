@@ -15,7 +15,7 @@ const owner: CurrentUser = {
   mustChangePassword: false, isOwner: true, isManager: false, isLibrarian: false, isReader: false,
   canAccessDjangoAdmin: false, groups: [],
 };
-const server: ServerInfo = { name: "SPL", description: "", bannerText: "", advancedLibraryGroupsEnabled: false, secondPassReaderWebClientUrl: null, marginaliaProfileUri: "profile", publicGroup: { id: "public", name: "Common Room", description: "" }, version: "dev", releaseDate: "" };
+const server: ServerInfo = { installationId: "installation-id", name: "SPL", description: "", bannerText: "", advancedLibraryGroupsEnabled: false, secondPassReaderWebClientUrl: null, marginaliaProfileUri: "profile", publicGroup: { id: "public", name: "Common Room", description: "" }, version: "dev", releaseDate: "" };
 
 function renderRoute(user: CurrentUser) {
   return renderToStaticMarkup(<MemoryRouter initialEntries={["/imports"]}><Routes>

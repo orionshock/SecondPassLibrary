@@ -9,6 +9,7 @@ from rest_framework.test import APIClient, APITestCase
 from accounts.client_sessions.services import hash_client_secret
 from accounts.models import UserClientSession
 from core import server_settings
+from core.server_installation import get_installation_id
 from library.groups.public_services import configure_public_group
 
 
@@ -43,6 +44,7 @@ class ServerInfoApiTests(APITestCase):
         self.assertEqual(
             response.json(),
             {
+                "installation_id": str(get_installation_id()),
                 "server_name": "Family Library",
                 "server_description": "Household books.",
                 "server_banner_message": "Maintenance tonight.",

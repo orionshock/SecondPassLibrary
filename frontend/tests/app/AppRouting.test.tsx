@@ -16,7 +16,7 @@ import {
 import { DashboardOrchestrator } from "../../src/features/dashboard/DashboardOrchestrator";
 
 const user: CurrentUser = { username: "owner", email: "", firstName: "", lastName: "", profileId: "profile", role: "manager", mustChangePassword: false, isOwner: true, isManager: false, isLibrarian: false, isReader: false, canAccessDjangoAdmin: false, groups: [] };
-const server: ServerInfo = { name: "Family Library", description: "Hidden", bannerText: "", advancedLibraryGroupsEnabled: false, secondPassReaderWebClientUrl: null, marginaliaProfileUri: "profile", publicGroup: { id: "public", name: "Common Room", description: "" }, version: "0.1.0-dev", releaseDate: "2026-07-20" };
+const server: ServerInfo = { installationId: "installation-id", name: "Family Library", description: "Hidden", bannerText: "", advancedLibraryGroupsEnabled: false, secondPassReaderWebClientUrl: null, marginaliaProfileUri: "profile", publicGroup: { id: "public", name: "Common Room", description: "" }, version: "0.1.0-dev", releaseDate: "2026-07-20" };
 
 function navMarkup(userOverrides: Partial<CurrentUser> = {}, serverOverrides: Partial<ServerInfo> = {}, path = "/library"): string {
   return renderToStaticMarkup(<MemoryRouter initialEntries={[path]}><AppOrchestrator user={{ ...user, ...userOverrides }} server={{ ...server, ...serverOverrides }} onCurrentUserChange={vi.fn()} /></MemoryRouter>);
@@ -52,6 +52,15 @@ describe("app frame and router", () => {
     expect(markup).not.toContain('>Dashboard</span>');
     expect(markup).not.toContain('href="/profile"');
   });
+
+  it("shows version and the full Server ID as ordinary-user diagnostics", () => {
+    const markup = navMarkup({ isOwner: false, isReader: true });
+
+    expect(markup).toContain(server.version);
+    expect(markup).toContain("Server ID");
+    expect(markup).toContain(`<code>${server.installationId}</code>`);
+  });
+
   it("shows every navigation branch to an Owner when advanced groups are enabled", () => {
     const markup = navMarkup({}, { advancedLibraryGroupsEnabled: true });
     for (const path of ["/marginalia", "/library", "/groups", "/shelves", "/imports", "/users", "/server"]) {

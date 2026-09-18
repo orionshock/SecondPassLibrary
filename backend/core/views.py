@@ -6,6 +6,7 @@ from django.http import JsonResponse
 from django.views.decorators.http import require_safe
 
 from core import server_settings
+from core.server_installation import get_installation_id
 
 
 def _database_is_ready() -> bool:
@@ -62,6 +63,7 @@ def secondpass_well_known(request):
     api_base = request.build_absolute_uri("/api/v1/")
     return JsonResponse(
         {
+            "installation_id": get_installation_id(),
             "server_name": server_settings.get_server_name(),
             "server_description": server_settings.get_server_description(),
             "server_version": settings.SECOND_PASS_SERVER_VERSION,

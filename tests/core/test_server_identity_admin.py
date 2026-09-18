@@ -6,6 +6,7 @@ from django.urls import path, reverse
 from core import server_settings
 from core.admin import ServerSettingAdmin
 from core.models import ServerSetting
+from core.server_installation import get_installation_id
 
 
 urlpatterns = [path("admin/", admin.site.urls)]
@@ -53,6 +54,23 @@ class ServerIdentityAdminTests(TestCase):
         self.assertEqual(
             form.initial["server_banner_message"], "Maintenance tonight"
         )
+
+    def test_combined_form_shows_full_server_id_read_only(self):
+        response = self.client.get(
+            reverse("admin:core_serversetting_change", args=(self.setting.pk,))
+        )
+
+        self.assertEqual(response.status_code, 200)
+        model_admin = response.context["adminform"].model_admin
+        self.assertIn(
+            "installation_id",
+            model_admin.get_readonly_fields(
+                response.wsgi_request,
+                self.setting,
+            ),
+        )
+        self.assertContains(response, str(get_installation_id()))
+
     def test_combined_form_updates_all_three_settings(self):
         response = self.client.post(
             reverse("admin:core_serversetting_change", args=(self.setting.pk,)),

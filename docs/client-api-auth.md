@@ -29,11 +29,14 @@ the Reader to poll and claim the result, while approval still requires an
 authenticated Django session. All pairing responses, including errors, use
 `Cache-Control: no-store, private` and `Pragma: no-cache`.
 
-Public `/.well-known/secondpass` supplies compact server discovery and the API
-root. Client API discovery advertises the active pairing URLs. Authenticated
-`/api/v1/server/info/` refreshes server display context; `/api/v1/accounts/me/`
-supplies current-user identity, memberships, and sparse user capability flags.
-The serializers define the exact response fields.
+Public `/.well-known/secondpass` supplies compact server discovery, the stable
+non-secret `installation_id`, and the API root. Client API discovery advertises
+the active pairing URLs. Authenticated `/api/v1/server/info/` refreshes server
+display context and returns the same installation identity;
+`/api/v1/accounts/me/` supplies current-user identity, memberships, and sparse
+user capability flags. Server ID is comparison metadata only, never an
+authentication or authorization credential. The serializers define the exact
+response fields.
 
 ## Stored state and abuse bounds
 

@@ -4,6 +4,7 @@ import { ApiError, enableAdvancedGroups, getServerSettings, updateExternalServic
 import type { ApiClient } from "../../packages/spl-api/src/client";
 
 const response = {
+  installation_id: "0f7262f1-d0b8-49fc-bb18-e40e46f56af2",
   server_name: "Virgo SPL",
   server_description: "Private library",
   server_banner_message: "Maintenance tonight",
@@ -19,7 +20,7 @@ describe("server settings SDK", () => {
     const calls: string[] = [];
     const client: ApiClient = { request: async <T>(path: string) => { calls.push(path); return response as T; } };
     await expect(getServerSettings(client)).resolves.toEqual({
-      general: { name: "Virgo SPL", description: "Private library", bannerText: "Maintenance tonight", secondPassReaderWebClientUrl: "https://reader.example.com", secondPassReaderWebClientUrlLocked: false },
+      general: { installationId: "0f7262f1-d0b8-49fc-bb18-e40e46f56af2", name: "Virgo SPL", description: "Private library", bannerText: "Maintenance tonight", secondPassReaderWebClientUrl: "https://reader.example.com", secondPassReaderWebClientUrlLocked: false },
       publicLibrary: { name: "Common Room", description: "Shared books" },
       libraryGroups: { advancedGroupsEnabled: false },
     });

@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import uuid
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import TestCase, override_settings
 
 from core import server_settings
+from core.server_installation import get_installation_id
 
 
 User = get_user_model()
@@ -40,6 +43,8 @@ class ServerIdentitySettingsTests(TestCase):
         resp = self.client.get("/api/v1/server/settings/")
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
+        installation_id = data["installation_id"]
+        self.assertEqual(uuid.UUID(installation_id), get_installation_id())
         self.assertEqual(data["server_name"], "Second Pass Library")
         self.assertEqual(data["server_banner_message"], "")
         self.assertEqual(data["public_group_name"], "Common Room")
@@ -60,6 +65,7 @@ class ServerIdentitySettingsTests(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
+        self.assertEqual(data["installation_id"], installation_id)
         self.assertEqual(data["server_name"], "My Library")
         self.assertEqual(data["server_description"], "Private.")
         self.assertEqual(data["server_banner_message"], "Maintenance tonight.")
@@ -304,6 +310,7 @@ class ServerIdentitySettingsTests(TestCase):
         self.assertEqual(
             response.json(),
             {
+                "installation_id": str(get_installation_id()),
                 "server_name": "Second Pass Library",
                 "server_description": "",
                 "server_version": settings.SECOND_PASS_SERVER_VERSION,
@@ -347,6 +354,7 @@ class ServerIdentitySettingsTests(TestCase):
         self.assertEqual(well_known.status_code, 200)
         payload = well_known.json()
         self.assertEqual(payload["server_name"], "My Library")
+        self.assertEqual(payload["installation_id"], str(get_installation_id()))
         self.assertEqual(payload["server_description"], "Private.")
         self.assertEqual(payload["server_version"], settings.SECOND_PASS_SERVER_VERSION)
         self.assertEqual(
@@ -365,6 +373,7 @@ class ServerIdentitySettingsTests(TestCase):
         self.assertEqual(
             set(payload),
             {
+                "installation_id",
                 "server_name",
                 "server_description",
                 "server_version",

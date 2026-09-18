@@ -17,6 +17,10 @@ export function GeneralSettingsPageRegion({ settings, draft, editing, state, onC
   return <form id="server-settings-general-form" className="server-settings-form" aria-busy={state.pending} onSubmit={onSubmit}>
     <section className="server-settings-region server-settings-identity" aria-labelledby="server-identity-heading">
       <h2 id="server-identity-heading">Server Identity</h2>
+      <KeyValueList items={[{
+        label: "Server ID",
+        value: <code className="server-settings-installation-id">{settings.installationId}</code>,
+      }]} />
       {editing ? <div className="form-grid server-settings-identity__form">
         <FormField label="Server name" htmlFor="server-settings-name" error={fieldError(state.error, "serverName")}><input id="server-settings-name" maxLength={120} required value={draft.name} disabled={state.pending} onChange={(event) => onChange("name", event.target.value)} /></FormField>
         <FormField label="Server description" htmlFor="server-settings-description" error={fieldError(state.error, "serverDescription")}><LimitedRichTextEditor id="server-settings-description" value={draft.description} disabled={state.pending} maxLength={1000} onChange={(value) => onChange("description", value)} /></FormField>

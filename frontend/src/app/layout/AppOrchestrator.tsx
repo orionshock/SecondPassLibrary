@@ -187,7 +187,10 @@ export function AppOrchestrator({
 
       <footer className="app-footer">
         <span>Second Pass Library</span>
-        <span>{server.version}</span>
+        <span className="app-footer__server-details">
+          <span>{server.version}</span>
+          <span>Server ID <code>{server.installationId}</code></span>
+        </span>
       </footer>
     </div>
   );

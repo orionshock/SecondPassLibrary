@@ -258,6 +258,17 @@
   font-size: 0.8rem;
 }
 
+.app-footer__server-details {
+  display: inline-flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.app-footer__server-details code {
+  user-select: all;
+}
+
 .bootstrap-panel {
   display: grid;
   width: min(38rem, calc(100% - 2rem));
@@ -354,5 +365,9 @@
 
   .app-footer {
     flex-direction: column;
+  }
+
+  .app-footer__server-details {
+    justify-content: flex-start;
   }
 }

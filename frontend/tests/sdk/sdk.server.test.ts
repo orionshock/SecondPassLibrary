@@ -7,6 +7,7 @@ describe("server context", () => {
   it("maps authenticated server info", async () => {
     const calls: string[] = [];
     const response = {
+      installation_id: "0f7262f1-d0b8-49fc-bb18-e40e46f56af2",
       server_name: "Family Library",
       server_description: "Books for everyone.",
       server_banner_message: "Maintenance tonight.",
@@ -20,6 +21,7 @@ describe("server context", () => {
     const client: ApiClient = { request: async <T>(path: string) => { calls.push(path); return response as T; } };
 
     await expect(getServerInfo(client)).resolves.toEqual({
+      installationId: "0f7262f1-d0b8-49fc-bb18-e40e46f56af2",
       name: "Family Library",
       description: "Books for everyone.",
       bannerText: "Maintenance tonight.",
@@ -36,6 +38,7 @@ describe("server context", () => {
   it("keeps public discovery separate from authenticated context", async () => {
     const calls: string[] = [];
     const response = {
+      installation_id: "0f7262f1-d0b8-49fc-bb18-e40e46f56af2",
       server_name: "Family Library",
       server_description: "Books for everyone.",
       server_version: "0.1.0-dev",
@@ -45,6 +48,7 @@ describe("server context", () => {
     const client: ApiClient = { request: async <T>(path: string) => { calls.push(path); return response as T; } };
 
     await expect(getServerDiscovery(client)).resolves.toEqual({
+      installationId: "0f7262f1-d0b8-49fc-bb18-e40e46f56af2",
       name: "Family Library",
       description: "Books for everyone.",
       version: "0.1.0-dev",

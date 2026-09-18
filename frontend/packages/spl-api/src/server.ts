@@ -1,6 +1,7 @@
 import { apiClient, type ApiClient } from "./client";
 
 interface ServerInfoResponse {
+  installation_id: string;
   server_name: string;
   server_description: string;
   server_banner_message: string;
@@ -17,6 +18,7 @@ interface ServerInfoResponse {
 }
 
 interface ServerDiscoveryResponse {
+  installation_id: string;
   server_name: string;
   server_description: string;
   server_version: string;
@@ -25,6 +27,7 @@ interface ServerDiscoveryResponse {
 }
 
 export interface ServerInfo {
+  installationId: string;
   name: string;
   description: string;
   bannerText: string;
@@ -41,6 +44,7 @@ export interface ServerInfo {
 }
 
 export interface ServerDiscovery {
+  installationId: string;
   name: string;
   description: string;
   version: string;
@@ -51,6 +55,7 @@ export interface ServerDiscovery {
 export async function getServerInfo(client: ApiClient = apiClient): Promise<ServerInfo> {
   const response = await client.request<ServerInfoResponse>("/api/v1/server/info/");
   return {
+    installationId: response.installation_id,
     name: response.server_name,
     description: response.server_description,
     bannerText: response.server_banner_message,
@@ -70,6 +75,7 @@ export async function getServerInfo(client: ApiClient = apiClient): Promise<Serv
 export async function getServerDiscovery(client: ApiClient = apiClient): Promise<ServerDiscovery> {
   const response = await client.request<ServerDiscoveryResponse>("/.well-known/secondpass");
   return {
+    installationId: response.installation_id,
     name: response.server_name,
     description: response.server_description,
     version: response.server_version,

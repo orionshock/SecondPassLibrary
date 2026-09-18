@@ -8,6 +8,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from core import server_settings
+from core.server_installation import get_installation_id
 from core.operational_logging import (
     info_on_commit,
     suppress_state_change_logging,
@@ -61,6 +62,7 @@ class _ValidatedPatch:
 def get_owner_server_configuration() -> dict[str, Any]:
     public_group = get_public_group()
     return {
+        "installation_id": get_installation_id(),
         "server_name": server_settings.get_server_name(),
         "server_description": server_settings.get_server_description(),
         "server_banner_message": server_settings.get_server_banner_message(),

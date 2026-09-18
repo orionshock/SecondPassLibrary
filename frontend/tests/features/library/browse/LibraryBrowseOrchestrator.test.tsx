@@ -40,6 +40,7 @@ const currentUser = {
   canAccessDjangoAdmin: false, groups: [],
 } satisfies CurrentUser;
 const serverInfo = {
+  installationId: "installation-id",
   name: "Library", description: "", bannerText: "", advancedLibraryGroupsEnabled: false,
   secondPassReaderWebClientUrl: null, marginaliaProfileUri: "profile", version: "dev", releaseDate: "",
   publicGroup: { id: "public", name: "Common Room", description: "" },
