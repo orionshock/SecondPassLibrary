@@ -153,8 +153,9 @@ Runtime code reads that stored row rather than reading the environment directly.
 
 The optional `discovery` Compose profile advertises the Library on the host LAN
 through mDNS/DNS-SD. Declare the externally reachable Library base URLs in
-preferred order in the shared Compose environment. Copy the first URL into the
-`secondpass_discovery_service` TXT record and set its external SRV port:
+preferred order in the shared Compose environment. Put the first URL in the
+`secondpass_discovery_service` TXT record and set its external SRV port in the
+same Compose file:
 
 ```yaml
 SECOND_PASS_LIBRARY_URLS: https://library.home.example,https://library.public.example
@@ -176,7 +177,10 @@ docker compose -f docker/compose.yml --profile discovery up -d
 The sidecar uses host networking and publishes service type
 `_secondpass._tcp` with the single Second Pass TXT property
 `url=<first SECOND_PASS_LIBRARY_URLS entry>`. The operator keeps the TXT value
-in sync with the first URL; Compose does not derive one from the other. Clients
+in sync with the first URL; Compose does not derive one from the other. Compose
+mounts the inline declaration read-only, and the sidecar copies it into an
+isolated temporary service directory before starting Avahi. This hides the
+image's packaged SSH and SFTP declarations. Clients
 use that URL directly; SRV host and port fields are publication plumbing. The
 record contains no Server ID,
 Library name, description, version, capability, authentication, or user data.
