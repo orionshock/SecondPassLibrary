@@ -1,10 +1,11 @@
 import { changeCurrentUserPassword } from "@second-pass/spl-api";
 import { useReducer, useState, type FormEvent } from "react";
-import { useNavigate, useOutletContext } from "react-router";
+import { useLocation, useNavigate, useOutletContext } from "react-router";
 
 import type { AppOutletContext } from "../../app/layout/AppOrchestrator";
 import { passwordBreadcrumbFallback } from "../../app/navigation/accountBreadcrumbs";
 import { usePageBreadcrumbs } from "../../app/navigation/usePageBreadcrumbs";
+import { passwordResumeDestination } from "../../app/router";
 import { idleMutationState, normalizeMutationError, type MutationState } from "../../shared/feedback/mutationState";
 import "../../shared/layout/AccountPageLayout.css";
 import { PasswordChangePageRegion } from "./regions/PasswordChangePageRegion";
@@ -15,6 +16,7 @@ export function PasswordChangeOrchestrator() {
   const { currentUser, refreshCurrentUser } = useOutletContext<AppOutletContext>();
   usePageBreadcrumbs(passwordBreadcrumbFallback, currentUser.mustChangePassword);
   const navigate = useNavigate();
+  const location = useLocation();
   const [draft, dispatch] = useReducer(passwordDraftReducer, emptyPasswordDraft);
   const [state, setState] = useState<MutationState>(idleMutationState);
 
@@ -29,7 +31,7 @@ export function PasswordChangeOrchestrator() {
       dispatch({ type: "reset" });
       await refreshCurrentUser();
       setState({ pending: false, message: "Password changed." });
-      if (currentUser.mustChangePassword) navigate("/profile", { replace: true });
+      if (currentUser.mustChangePassword) navigate(passwordResumeDestination(location.state?.passwordResumeTo), { replace: true });
     } catch (error: unknown) {
       setState({ pending: false, error: normalizeMutationError(error) });
     }

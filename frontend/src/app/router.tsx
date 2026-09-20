@@ -1,6 +1,6 @@
 import { canSeeImports, canSeeServerSettings, canSeeUsers, isAtLeastLibrarian, type CurrentUser, type ServerInfo } from "@second-pass/spl-api";
 import { lazy } from "react";
-import { createBrowserRouter } from "react-router";
+import { createBrowserRouter, matchRoutes } from "react-router";
 
 import { App } from "./App";
 import { RoleRouteGuard } from "./navigation/RoleRouteGuard";
@@ -102,6 +102,21 @@ export const appRoutes = [
     ],
   },
 ];
+
+export function passwordResumeDestination(value: unknown): string {
+  if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//") || /[\\\u0000-\u001f\u007f]|%(?![0-9a-fA-F]{2})/.test(value)) return "/";
+
+  try {
+    const parsed = new URL(value, "https://secondpass.invalid");
+    decodeURI(value);
+    if (parsed.origin !== "https://secondpass.invalid" || `${parsed.pathname}${parsed.search}${parsed.hash}` !== value) return "/";
+    const match = matchRoutes(appRoutes, parsed.pathname)?.at(-1)?.route;
+    if (!match || match.path === "*" || match.path === "profile/password") return "/";
+    return value;
+  } catch {
+    return "/";
+  }
+}
 
 export function createAppRouter() {
   return createBrowserRouter(appRoutes);

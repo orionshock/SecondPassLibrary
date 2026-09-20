@@ -54,7 +54,6 @@ export function App() {
       state={state}
       loginPath={`/login/?next=${encodeURIComponent(`${location.pathname}${location.search}`)}`}
       onRetry={() => setAttempt((current) => current + 1)}
-      currentPath={location.pathname}
       onRefreshCurrentUser={refreshCurrentUser}
       onRefreshServerInfo={refreshServerInfo}
       onCurrentUserChange={(user) => {
@@ -69,7 +68,6 @@ export function AppBootstrapView({
   loginPath,
   onRetry,
   onCurrentUserChange,
-  currentPath,
   onRefreshCurrentUser,
   onRefreshServerInfo,
 }: {
@@ -77,10 +75,10 @@ export function AppBootstrapView({
   loginPath: string;
   onRetry: () => void;
   onCurrentUserChange: (user: CurrentUser) => void;
-  currentPath?: string;
   onRefreshCurrentUser?: () => Promise<CurrentUser>;
   onRefreshServerInfo?: () => Promise<ServerInfo>;
 }) {
+  const location = useLocation();
   if (state.status === "loading") {
     return (
       <main className="bootstrap-panel" aria-live="polite" aria-busy="true">
@@ -110,8 +108,8 @@ export function AppBootstrapView({
     );
   }
 
-  if (forcedPasswordChangeDestination(state.user, currentPath)) {
-    return <Navigate to="/profile/password" replace />;
+  if (forcedPasswordChangeDestination(state.user, location.pathname)) {
+    return <Navigate to="/profile/password" replace state={{ passwordResumeTo: `${location.pathname}${location.search}${location.hash}` }} />;
   }
 
   return (
