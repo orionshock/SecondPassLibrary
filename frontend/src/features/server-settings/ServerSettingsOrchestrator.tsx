@@ -40,7 +40,7 @@ interface SettingsLoadState {
 
 export function ServerSettingsOrchestrator() {
   usePageBreadcrumbs(serverSettingsBreadcrumbFallback);
-  const { currentUser, refreshServerInfo } = useOutletContext<AppOutletContext>();
+  const { currentUser, serverInfo, refreshServerInfo } = useOutletContext<AppOutletContext>();
   const location = useLocation();
   const [searchParameters, setSearchParameters] = useSearchParams();
   const tab = serverSettingsTabFromSearchParams(searchParameters);
@@ -189,6 +189,7 @@ export function ServerSettingsOrchestrator() {
     <div id={tabPanelId("server-settings", tab)} role="tabpanel" aria-labelledby={tabButtonId("server-settings", tab)}>
     {tab === "general" ? <GeneralSettingsPageRegion
       settings={settings.general}
+      serverUrls={serverInfo.serverUrls}
       draft={generalDraft}
       editing={editing}
       state={state}

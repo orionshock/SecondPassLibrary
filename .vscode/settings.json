@@ -9,8 +9,6 @@
     "**/node_modules": true,
     "backend/var": true,
     "backend/web/product_ui": true,
-    "test-results": true,
-    "userdata": true
   },
   "python.analysis.diagnosticMode": "workspace",
   "python.defaultInterpreterPath": "${workspaceFolder}/.venv",

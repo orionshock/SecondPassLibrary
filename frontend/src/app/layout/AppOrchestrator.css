@@ -265,10 +265,6 @@
   justify-content: flex-end;
 }
 
-.app-footer__server-details code {
-  user-select: all;
-}
-
 .bootstrap-panel {
   display: grid;
   width: min(38rem, calc(100% - 2rem));

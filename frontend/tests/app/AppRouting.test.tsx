@@ -53,12 +53,14 @@ describe("app frame and router", () => {
     expect(markup).not.toContain('href="/profile"');
   });
 
-  it("shows version and the full Server ID as ordinary-user diagnostics", () => {
+  it("keeps product and version in the footer without Server ID", () => {
     const markup = navMarkup({ isOwner: false, isReader: true });
+    const footer = markup.match(/<footer\b[^>]*>[\s\S]*?<\/footer>/)?.[0];
 
-    expect(markup).toContain(server.version);
-    expect(markup).toContain("Server ID");
-    expect(markup).toContain(`<code>${server.serverId}</code>`);
+    expect(footer).toContain("Second Pass Library");
+    expect(footer).toContain(server.version);
+    expect(footer).not.toContain("Server ID");
+    expect(footer).not.toContain(server.serverId);
   });
 
   it("shows every navigation branch to an Owner when advanced groups are enabled", () => {

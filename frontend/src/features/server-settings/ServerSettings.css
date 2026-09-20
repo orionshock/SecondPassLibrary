@@ -45,8 +45,40 @@
   font-size: 0.9rem;
 }
 
-.server-settings-server-id {
+.server-settings-technical {
+  width: min(100%, 54rem);
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.server-settings-technical summary {
+  width: fit-content;
+  cursor: pointer;
+}
+
+.server-settings-technical[open] summary {
+  margin-bottom: 1rem;
+}
+
+.server-settings-technical .key-value-list {
+  row-gap: 0.9rem;
+}
+
+.server-settings-technical code {
+  color: var(--text);
+  overflow-wrap: anywhere;
   user-select: all;
+}
+
+.server-settings-technical ol {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.server-settings-technical p {
+  margin: 1rem 0 0;
+  font-size: 0.85rem;
 }
 
 .server-settings-help {

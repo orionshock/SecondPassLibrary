@@ -1,3 +1,5 @@
+/** @vitest-environment happy-dom */
+
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
@@ -18,6 +20,11 @@ const settings: ServerSettings = {
   publicLibrary: { name: "Common Room", description: "Shared books" },
   libraryGroups: { advancedGroupsEnabled: false },
 };
+const serverUrls = [
+  "https://library.home.example:8443",
+  "https://library.tailnet.example",
+  "https://library.public.example",
+];
 
 describe("Server Settings", () => {
   it("owns /server as a base route with URL-backed tabs and no breadcrumb", () => {
@@ -41,12 +48,9 @@ describe("Server Settings", () => {
   });
 
   it("renders one Server Identity surface with rich description and banner fields", () => {
-    const read = renderToStaticMarkup(<GeneralSettingsPageRegion settings={settings.general} draft={settings.general} editing={false} state={{ pending: false }} onChange={vi.fn()} onSubmit={vi.fn()} />);
-    const edit = renderToStaticMarkup(<GeneralSettingsPageRegion settings={settings.general} draft={settings.general} editing state={{ pending: false }} onChange={vi.fn()} onSubmit={vi.fn()} />);
+    const read = renderToStaticMarkup(<GeneralSettingsPageRegion settings={settings.general} serverUrls={serverUrls} draft={settings.general} editing={false} state={{ pending: false }} onChange={vi.fn()} onSubmit={vi.fn()} />);
+    const edit = renderToStaticMarkup(<GeneralSettingsPageRegion settings={settings.general} serverUrls={serverUrls} draft={settings.general} editing state={{ pending: false }} onChange={vi.fn()} onSubmit={vi.fn()} />);
     expect(read).toContain("Virgo SPL");
-    expect(read).toContain("Server ID");
-    expect(read).toContain(settings.general.serverId);
-    expect(edit).toContain(settings.general.serverId);
     expect(read).toContain("<strong>library</strong>");
     expect(read).toContain("<em>Maintenance</em>");
     expect(read).not.toContain("&lt;p&gt;");
@@ -59,8 +63,26 @@ describe("Server Settings", () => {
     expect(serverSettingsFormId("general")).toBe("server-settings-general-form");
   });
 
+  it("keeps read-only technical details collapsed until opened", () => {
+    const markup = renderToStaticMarkup(<GeneralSettingsPageRegion settings={settings.general} serverUrls={serverUrls} draft={settings.general} editing={false} state={{ pending: false }} onChange={vi.fn()} onSubmit={vi.fn()} />);
+    const container = document.createElement("div");
+    container.innerHTML = markup;
+    const details = container.querySelector("details");
+    if (!details) throw new Error("Technical details disclosure is missing.");
+
+    expect(details.open).toBe(false);
+    expect(details.querySelector("summary")?.textContent).toBe("Technical details");
+    details.querySelector("summary")?.click();
+    expect(details.open).toBe(true);
+    expect(details.textContent).toContain("Server ID");
+    expect(details.textContent).toContain(settings.general.serverId);
+    expect(details.textContent).toContain("Server URLs");
+    expect(Array.from(details.querySelectorAll("ol li code"), (code) => code.textContent)).toEqual(serverUrls);
+    expect(details.querySelector("a, input, button")).toBeNull();
+  });
+
   it("owns Reader web client state only in External Services and preserves locking", () => {
-    const general = renderToStaticMarkup(<GeneralSettingsPageRegion settings={settings.general} draft={settings.general} editing state={{ pending: false }} onChange={vi.fn()} onSubmit={vi.fn()} />);
+    const general = renderToStaticMarkup(<GeneralSettingsPageRegion settings={settings.general} serverUrls={serverUrls} draft={settings.general} editing state={{ pending: false }} onChange={vi.fn()} onSubmit={vi.fn()} />);
     const read = renderToStaticMarkup(<ExternalServicesPageRegion settings={settings.general} draft={settings.general} editing={false} state={{ pending: false }} onChange={vi.fn()} onSubmit={vi.fn()} />);
     const edit = renderToStaticMarkup(<ExternalServicesPageRegion settings={settings.general} draft={settings.general} editing state={{ pending: false }} onChange={vi.fn()} onSubmit={vi.fn()} />);
     const locked = { ...settings.general, secondPassReaderWebClientUrlLocked: true };

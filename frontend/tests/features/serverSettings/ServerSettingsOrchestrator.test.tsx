@@ -35,7 +35,7 @@ const settings: ServerSettings = {
   libraryGroups: { advancedGroupsEnabled: false },
 };
 const currentUser = { username: "owner", isOwner: true, canAccessDjangoAdmin: true } as CurrentUser;
-const serverInfo = { name: "Virgo SPL" } as ServerInfo;
+const serverInfo = { name: "Virgo SPL", serverUrls: ["https://library.home.example", "https://library.public.example"] } as ServerInfo;
 
 afterEach(async () => {
   if (root) await act(async () => root?.unmount());
@@ -67,6 +67,16 @@ function changeInput(input: HTMLInputElement, value: string) {
 }
 
 describe("ServerSettingsOrchestrator", () => {
+  it("shows the authenticated server URLs in operator order", async () => {
+    sdk.getSettings.mockResolvedValue(settings);
+    const { container } = await mountSettings();
+    const details = container.querySelector("details");
+
+    expect(details?.open).toBe(false);
+    details?.querySelector("summary")?.click();
+    expect(Array.from(details?.querySelectorAll("ol li code") ?? [], (code) => code.textContent)).toEqual(serverInfo.serverUrls);
+  });
+
   it("loads and saves Server Identity as one mutation while preserving rich values", async () => {
     sdk.getSettings.mockResolvedValue(settings);
     sdk.updateIdentity.mockResolvedValue({ ...settings, general: { ...settings.general, name: "Updated Library" } });
