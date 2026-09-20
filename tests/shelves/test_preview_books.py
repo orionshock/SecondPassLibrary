@@ -139,6 +139,71 @@ class ShelfPreviewBooksAPITest(IsolatedMediaRootMixin, APITestCase):
             self.assertIsNone(row["cover_url"])
             self.assertNotIn("download_url", row)
 
+    def test_overlapping_group_assignments_do_not_consume_shelf_preview_slots(self):
+        extra_groups = [
+            LibraryGroup.objects.create(name=f"Preview overlap {index}")
+            for index in range(2)
+        ]
+        for group in extra_groups:
+            LibraryGroupMembership.objects.create(user=self.reader, group=group)
+            add_book_to_group(
+                actor=self.owner, book=self.visible_books[0], group=group
+            )
+        add_book_to_group(
+            actor=self.owner, book=self.visible_books[1], group=extra_groups[0]
+        )
+
+        shared_shelf = Shelf.objects.create(
+            name="Shared overlap",
+            owner_type=Shelf.OWNER_TYPE_USER,
+            owner_user=self.owner,
+            visibility=Shelf.VISIBILITY_LISTED,
+            created_by=self.owner,
+        )
+        group_shelf = Shelf.objects.create(
+            name="Group overlap",
+            owner_type=Shelf.OWNER_TYPE_GROUP,
+            owner_group=extra_groups[0],
+            created_by=self.owner,
+        )
+        for position, book in enumerate(self.visible_books[:4]):
+            ShelfItem.objects.create(
+                shelf=shared_shelf,
+                book=book,
+                position=position,
+                added_by=self.owner,
+            )
+        for position, book in enumerate(self.visible_books[:2]):
+            ShelfItem.objects.create(
+                shelf=group_shelf,
+                book=book,
+                position=position,
+                added_by=self.owner,
+            )
+
+        self.client.login(username="reader", password="pw")
+        expected = [str(book.id) for book in self.visible_books[:3]]
+        for scope, shelf, book_ids, item_count in (
+            ("shared", shared_shelf, expected, 4),
+            ("personal", self.shelf, expected, 25),
+            ("group", group_shelf, expected[:2], 2),
+        ):
+            with self.subTest(scope=scope):
+                response = assert_response(
+                    self.client.get(
+                        "/api/v1/shelves/",
+                        {"scope": scope, "ordering": "name", "preview_limit": "3"},
+                    )
+                )
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                row = next(
+                    row for row in self._results(response) if row["id"] == str(shelf.id)
+                )
+                self.assertEqual(row["item_count"], item_count)
+                self.assertEqual(
+                    [book["id"] for book in row["preview_books"]], book_ids
+                )
+
     def test_shelf_preview_query_count_is_bounded_across_parent_count(self):
         shelves = [self.shelf]
         for index in range(4):
@@ -170,7 +235,8 @@ class ShelfPreviewBooksAPITest(IsolatedMediaRootMixin, APITestCase):
                 limit=6,
             )
 
-        self.assertLessEqual(len(five_shelf_queries), len(one_shelf_queries) + 1)
+        self.assertEqual(len(one_shelf_queries), 1)
+        self.assertEqual(len(five_shelf_queries), 1)
 
     def test_batched_shelf_previews_apply_order_and_limit_per_shelf(self):
         second_shelf = Shelf.objects.create(

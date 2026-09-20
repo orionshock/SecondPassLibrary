@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 from django.core.exceptions import PermissionDenied
-from django.db.models import F, Q, QuerySet, Window
+from django.db.models import Exists, F, OuterRef, Q, QuerySet, Window
 from django.db.models.functions import RowNumber
 
 from library.catalog.book_queries import book_row_queryset
 from library.catalog.preview_books import attach_preview_books_from_queryset
+from library.models import BookGroupAssignment
 from library.queries import visible_books_for_user
 
 from .models import Shelf, ShelfItem
@@ -26,11 +27,19 @@ def attach_shelf_preview_books(*, shelves, user, limit: int) -> None:
             shelf__in=readable_shelves,
             book__in=visible_books,
         )
+        .alias(
+            _eligible_for_owning_group=Exists(
+                BookGroupAssignment.objects.filter(
+                    book_id=OuterRef("book_id"),
+                    group_id=OuterRef("shelf__owner_group_id"),
+                )
+            )
+        )
         .filter(
             Q(shelf__owner_type=Shelf.OWNER_TYPE_USER)
             | Q(
                 shelf__owner_type=Shelf.OWNER_TYPE_GROUP,
-                book__group_assignments__group_id=F("shelf__owner_group_id"),
+                _eligible_for_owning_group=True,
             )
         )
         .select_related("book")
