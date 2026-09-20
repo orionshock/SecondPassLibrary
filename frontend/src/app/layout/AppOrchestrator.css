@@ -31,6 +31,10 @@
   outline: none;
 }
 
+.app-content[tabindex="-1"]:focus {
+  outline: none;
+}
+
 .app-header {
   container-type: inline-size;
   display: grid;

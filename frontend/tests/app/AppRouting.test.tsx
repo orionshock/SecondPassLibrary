@@ -27,6 +27,7 @@ describe("app frame and router", () => {
     const markup = navMarkup();
     expect(markup).toContain('href="#main-content"');
     expect(markup).toContain('id="main-content"');
+    expect(markup).toMatch(/<main\b[^>]*tabindex="-1"/);
 
     const main = document.createElement("main");
     main.innerHTML = "<h1>Library</h1>";
