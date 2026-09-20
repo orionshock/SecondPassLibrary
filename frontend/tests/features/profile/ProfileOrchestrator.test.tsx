@@ -31,7 +31,7 @@ const user: CurrentUser = {
   groups: [{ id: "public", name: "Common Room", isPublicGroup: true, isCurator: false }],
 };
 const serverInfo: ServerInfo = {
-  installationId: "installation-id",
+  serverId: "server-id", serverUrls: [],
   name: "Library", description: "", bannerText: "", advancedLibraryGroupsEnabled: true,
   secondPassReaderWebClientUrl: null, marginaliaProfileUri: "profile", publicGroup: {
     id: "public", name: "Common Room", description: "",

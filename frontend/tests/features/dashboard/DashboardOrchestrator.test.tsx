@@ -27,7 +27,7 @@ const owner = {
   canAccessDjangoAdmin: false, groups: [],
 } satisfies CurrentUser;
 const serverInfo = {
-  installationId: "installation-id",
+  serverId: "server-id", serverUrls: [],
   name: "Library", description: "", bannerText: "<p>Planned <strong>maintenance</strong></p>", advancedLibraryGroupsEnabled: true,
   secondPassReaderWebClientUrl: null, marginaliaProfileUri: "profile", version: "dev", releaseDate: "",
   publicGroup: { id: "public", name: "Common Room", description: "" },

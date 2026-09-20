@@ -1,7 +1,8 @@
 import { apiClient, type ApiClient } from "./client";
 
 interface ServerInfoResponse {
-  installation_id: string;
+  server_id: string;
+  server_urls: string[];
   server_name: string;
   server_description: string;
   server_banner_message: string;
@@ -18,16 +19,16 @@ interface ServerInfoResponse {
 }
 
 interface ServerDiscoveryResponse {
-  installation_id: string;
+  server_id: string;
   server_name: string;
   server_description: string;
   server_version: string;
   server_release_date: string;
-  api_base_url: string;
 }
 
 export interface ServerInfo {
-  installationId: string;
+  serverId: string;
+  serverUrls: string[];
   name: string;
   description: string;
   bannerText: string;
@@ -44,18 +45,18 @@ export interface ServerInfo {
 }
 
 export interface ServerDiscovery {
-  installationId: string;
+  serverId: string;
   name: string;
   description: string;
   version: string;
   releaseDate: string;
-  apiBaseUrl: string;
 }
 
 export async function getServerInfo(client: ApiClient = apiClient): Promise<ServerInfo> {
   const response = await client.request<ServerInfoResponse>("/api/v1/server/info/");
   return {
-    installationId: response.installation_id,
+    serverId: response.server_id,
+    serverUrls: response.server_urls,
     name: response.server_name,
     description: response.server_description,
     bannerText: response.server_banner_message,
@@ -75,11 +76,26 @@ export async function getServerInfo(client: ApiClient = apiClient): Promise<Serv
 export async function getServerDiscovery(client: ApiClient = apiClient): Promise<ServerDiscovery> {
   const response = await client.request<ServerDiscoveryResponse>("/.well-known/secondpass");
   return {
-    installationId: response.installation_id,
+    serverId: response.server_id,
     name: response.server_name,
     description: response.server_description,
     version: response.server_version,
     releaseDate: response.server_release_date,
-    apiBaseUrl: response.api_base_url,
   };
+}
+
+export function libraryApiRoot(libraryBaseUrl: string): string {
+  const base = libraryBaseUrl.trim();
+  const parsed = new URL(base);
+  if (
+    !["http:", "https:"].includes(parsed.protocol)
+    || parsed.username
+    || parsed.password
+    || parsed.pathname !== "/"
+    || base.includes("?")
+    || base.includes("#")
+  ) {
+    throw new TypeError("Library base URL must be an HTTP(S) origin.");
+  }
+  return `${base.replace(/\/$/, "")}/api/v1/`;
 }

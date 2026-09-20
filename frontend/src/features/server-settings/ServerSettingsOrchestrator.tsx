@@ -51,7 +51,7 @@ export function ServerSettingsOrchestrator() {
   const [state, setState] = useState<MutationState>(idleMutationState);
   const [shellRefreshWarning, setShellRefreshWarning] = useState<string>();
   useAutoDismissMutationMessage(state, setState);
-  const [generalDraft, setGeneralDraft] = useState<GeneralServerSettings>({ installationId: "", name: "", description: "", bannerText: "", secondPassReaderWebClientUrl: "", secondPassReaderWebClientUrlLocked: false });
+  const [generalDraft, setGeneralDraft] = useState<GeneralServerSettings>({ serverId: "", name: "", description: "", bannerText: "", secondPassReaderWebClientUrl: "", secondPassReaderWebClientUrlLocked: false });
   const [publicDraft, setPublicDraft] = useState<PublicLibrarySettings>({ name: "", description: "" });
 
   useEffect(() => {

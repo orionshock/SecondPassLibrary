@@ -30,7 +30,7 @@ import { ServerSettingsOrchestrator } from "../../../src/features/server-setting
 let root: ReturnType<typeof createRoot> | undefined;
 
 const settings: ServerSettings = {
-  general: { installationId: "installation-id", name: "Virgo SPL", description: "<p>Private <strong>library</strong></p>", bannerText: "<p><em>Maintenance</em></p>", secondPassReaderWebClientUrl: "https://reader.example.com", secondPassReaderWebClientUrlLocked: false },
+  general: { serverId: "server-id", name: "Virgo SPL", description: "<p>Private <strong>library</strong></p>", bannerText: "<p><em>Maintenance</em></p>", secondPassReaderWebClientUrl: "https://reader.example.com", secondPassReaderWebClientUrlLocked: false },
   publicLibrary: { name: "Common Room", description: "<p>Shared books</p>" },
   libraryGroups: { advancedGroupsEnabled: false },
 };

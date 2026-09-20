@@ -1,7 +1,7 @@
 import { apiClient, type ApiClient } from "./client";
 
 export interface GeneralServerSettings {
-  installationId: string;
+  serverId: string;
   name: string;
   description: string;
   bannerText: string;
@@ -36,7 +36,7 @@ export interface UpdatePublicLibrarySettingsInput {
 }
 
 interface ServerSettingsResponse {
-  installation_id: string;
+  server_id: string;
   server_name: string;
   server_description: string;
   server_banner_message: string;
@@ -103,7 +103,7 @@ async function patchServerSettings(body: Record<string, string>, client: ApiClie
 function mapServerSettings(response: ServerSettingsResponse): ServerSettings {
   return {
     general: {
-      installationId: response.installation_id,
+      serverId: response.server_id,
       name: response.server_name,
       description: response.server_description,
       bannerText: response.server_banner_message,

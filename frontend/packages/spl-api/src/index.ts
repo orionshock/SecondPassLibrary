@@ -211,6 +211,7 @@ export {
 export {
   getServerDiscovery,
   getServerInfo,
+  libraryApiRoot,
   type ServerDiscovery,
   type ServerInfo,
 } from "./server";

@@ -19,7 +19,7 @@ export function GeneralSettingsPageRegion({ settings, draft, editing, state, onC
       <h2 id="server-identity-heading">Server Identity</h2>
       <KeyValueList items={[{
         label: "Server ID",
-        value: <code className="server-settings-installation-id">{settings.installationId}</code>,
+        value: <code className="server-settings-server-id">{settings.serverId}</code>,
       }]} />
       {editing ? <div className="form-grid server-settings-identity__form">
         <FormField label="Server name" htmlFor="server-settings-name" error={fieldError(state.error, "serverName")}><input id="server-settings-name" maxLength={120} required value={draft.name} disabled={state.pending} onChange={(event) => onChange("name", event.target.value)} /></FormField>
