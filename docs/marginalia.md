@@ -45,11 +45,11 @@ closed-session write. All three are supported Reader operations when the Book
 is currently visible.
 
 Only active Sessions accept title, note, progress, or annotation changes.
-Progress is one saved location stored on the Session: an opaque CFI, an
-optional display label, and a server/source timestamp. The CFI is the durable
-anchor. `locationLabel` is persisted display text, not a second position or
-identity field. Marginalia does not parse, normalize, derive, or assign numeric
-meaning to either value.
+Progress is one saved location stored on the Session: a CFI, an optional
+display label, and a server/source timestamp. The CFI is syntax-validated,
+then stored unchanged as the durable anchor. `locationLabel` is persisted
+display text, not a second position or identity field. Marginalia does not
+resolve CFIs or normalize, derive, or assign numeric meaning to either value.
 
 The Reader may show a richer live label while a Book is open, such as
 `Dedication • p1/2 • 1%`. Page fragments describe the current rendition and are
@@ -106,9 +106,10 @@ Annotations are owned through their Reading Session and have one of two kinds:
   user note;
 - a bookmark has a location but no highlight body or comment content.
 
-Every annotation has an opaque CFI, an optional bounded location label, and a
-portable `client_id` unique within its Session. The CFI anchors the annotation;
-the label only describes that saved location for display. Client identity is
+Every annotation has a syntax-validated CFI, an optional bounded location
+label, and a portable `client_id` unique within its Session. The CFI anchors
+the annotation; the label only describes that saved location for display.
+Client identity is
 not global and is distinct from the local database UUID. The API accepts any
 non-whitespace string up to 255 characters and does not require UUID syntax.
 Readers should normally generate a UUID v4 because it provides a simple,

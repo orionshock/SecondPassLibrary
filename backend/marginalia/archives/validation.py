@@ -8,6 +8,7 @@ from typing import Any, cast
 
 from jsonschema import Draft202012Validator, FormatChecker
 
+from marginalia.cfi import is_supported_durable_cfi
 from marginalia.profile import MARGINALIA_PROFILE_URI
 
 from .types import (
@@ -74,6 +75,7 @@ def validate_archive_value(value: Any) -> None:
     errors = sorted(_VALIDATOR.iter_errors(value), key=_validation_error_key)
     issues = [_issue(error.absolute_path, error.validator) for error in errors]
     issues.extend(_identity_and_collection_issues(value))
+    issues.extend(_cfi_issues(value))
     if issues:
         raise ArchiveValidationError(tuple(issues[:MAX_VALIDATION_ISSUES]))
 
@@ -186,6 +188,37 @@ def _identity_and_collection_issues(value: Any) -> list[ArchiveValidationIssue]:
         issues.append(ArchiveValidationIssue(path="$.books", rule="maxSessions"))
     if annotation_count > MAX_ARCHIVE_ANNOTATIONS:
         issues.append(ArchiveValidationIssue(path="$.books", rule="maxAnnotations"))
+    return issues
+
+
+def _cfi_issues(value: Any) -> list[ArchiveValidationIssue]:
+    if not isinstance(value, dict) or not isinstance(value.get("books"), list):
+        return []
+    issues = []
+    for book_index, book in enumerate(value["books"]):
+        if not isinstance(book, dict) or not isinstance(book.get("readingSessions"), list):
+            continue
+        for session_index, session in enumerate(book["readingSessions"]):
+            if not isinstance(session, dict):
+                continue
+            base = f"$.books[{book_index}].readingSessions[{session_index}]"
+            progress = session.get("progress")
+            if isinstance(progress, dict) and isinstance(progress.get("cfi"), str):
+                if not is_supported_durable_cfi(progress["cfi"]):
+                    issues.append(ArchiveValidationIssue(f"{base}.progress.cfi", "supportedCfi"))
+            annotations = session.get("annotations")
+            if not isinstance(annotations, list):
+                continue
+            for annotation_index, annotation in enumerate(annotations):
+                if not isinstance(annotation, dict):
+                    continue
+                location = annotation.get("location")
+                if isinstance(location, dict) and isinstance(location.get("cfi"), str):
+                    if not is_supported_durable_cfi(location["cfi"]):
+                        issues.append(ArchiveValidationIssue(
+                            f"{base}.annotations[{annotation_index}].location.cfi",
+                            "supportedCfi",
+                        ))
     return issues
 
 

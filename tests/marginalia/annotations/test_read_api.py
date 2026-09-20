@@ -42,7 +42,7 @@ class MarginaliaAnnotationReadAPITests(APITestCase):
             session=target,
             client_id="highlight-1",
             kind=Annotation.KIND_HIGHLIGHT,
-            cfi="  epubcfi(/6/8!/4/2)  ",
+            cfi="epubcfi(/6/8!/4/2:7)",
             location_label="  Chapter 08 · 42%  ",
             highlight_text="Selected passage",
             quote_prefix="Before ",

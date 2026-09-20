@@ -104,7 +104,7 @@ class MarginaliaSessionDetailAPITests(APITestCase):
         session_at = timezone.now() - timedelta(hours=3)
         progress_at = timezone.now() - timedelta(hours=2)
         annotation_at = timezone.now() - timedelta(hours=1)
-        cfi = "  epubcfi(/6/8!/4/2)  "
+        cfi = "epubcfi(/6/8!/4/3:7)"
         label = "  Chapter 08 · 42%  "
         ReadingSession.objects.filter(pk=self.active.pk).update(updated_at=session_at)
         assign_session_progress(

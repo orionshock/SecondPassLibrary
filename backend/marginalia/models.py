@@ -9,6 +9,7 @@ from django.db.models import Q
 
 from core.models import TimeStampedModel
 from library.models import Book
+from marginalia.cfi import validate_durable_cfi
 
 
 if TYPE_CHECKING:
@@ -175,6 +176,8 @@ class ReadingSession(TimeStampedModel):
 
     def clean(self) -> None:
         super().clean()
+        if self.progress_cfi:
+            validate_durable_cfi(self.progress_cfi)
         if not self.progress_cfi and (
             self.progress_location_label or self.progress_updated_at is not None
         ):
@@ -302,6 +305,7 @@ class Annotation(TimeStampedModel):
             raise ValidationError({"client_id": "A client correlation id is required."})
         if not self.cfi:
             raise ValidationError({"cfi": "A located annotation requires a CFI."})
+        validate_durable_cfi(self.cfi)
 
         if self.kind == self.KIND_HIGHLIGHT:
             if not self.highlight_text:

@@ -48,7 +48,7 @@ class MarginaliaArchiveSerializationTests(TestCase):
             closed_at=timestamp if status == ReadingSession.STATUS_CLOSED else None,
             name=f"Session {offset}",
             notes="Session notes",
-            progress_cfi="  opaque::progress  " if progress else "",
+            progress_cfi="epubcfi(/6/8!/4/2:7)" if progress else "",
             progress_location_label="  Chapter 08 · 42%  " if progress else "",
             progress_updated_at=timestamp if progress else None,
         )
@@ -65,7 +65,7 @@ class MarginaliaArchiveSerializationTests(TestCase):
             session=session,
             client_id=client_id,
             kind=Annotation.KIND_HIGHLIGHT,
-            cfi="  opaque::highlight  ",
+            cfi="epubcfi(/6/8!/4/3:7)",
             location_label=label,
             highlight_text="Selected passage",
             quote_prefix="Before ",
@@ -85,7 +85,7 @@ class MarginaliaArchiveSerializationTests(TestCase):
             session=closed,
             client_id="reader-bookmark",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="opaque::bookmark",
+            cfi="epubcfi(/6/8!/4/4)",
             location_label="Chapter 09 · 47%",
         )
         active = self.make_session(status=ReadingSession.STATUS_ACTIVE, offset=1)
@@ -151,7 +151,7 @@ class MarginaliaArchiveSerializationTests(TestCase):
             session=deleted_only,
             client_id="deleted",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="opaque::deleted",
+            cfi="epubcfi(/6/8!/4/6)",
             is_deleted=True,
         )
         queryset = ReadingSession.objects.filter(
@@ -219,10 +219,10 @@ class MarginaliaArchiveSerializationTests(TestCase):
         self.make_highlight(later_session, client_id="later")
         session = self.make_session(offset=1)
         fixtures = (
-            ("blank-b", "", "opaque::b"),
-            ("chapter-10", "Chapter 10 · 50%", "opaque::10"),
-            ("blank-a", "", "opaque::a"),
-            ("chapter-02", "Chapter 02 · 10%", "opaque::02"),
+            ("blank-b", "", "epubcfi(/6/8!/4/3)"),
+            ("chapter-10", "Chapter 10 · 50%", "epubcfi(/6/8!/4/10)"),
+            ("blank-a", "", "epubcfi(/6/8!/4/2)"),
+            ("chapter-02", "Chapter 02 · 10%", "epubcfi(/6/8!/4/4)"),
         )
         for client_id, label, cfi in fixtures:
             Annotation.objects.create(

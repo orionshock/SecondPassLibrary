@@ -18,7 +18,7 @@ class MarginaliaArchiveValidationTests(SimpleTestCase):
     def test_valid_archive_parses_to_immutable_bounded_values(self):
         payload = _valid_archive()
         payload["books"][0]["readingSessions"][0]["progress"]["cfi"] = (
-            "  opaque::progress  "
+            "epubcfi(/6/8!/4/2:7)"
         )
         payload["books"][0]["readingSessions"][0]["progress"][
             "locationLabel"
@@ -27,7 +27,7 @@ class MarginaliaArchiveValidationTests(SimpleTestCase):
         parsed = parse_archive(json.dumps(payload).encode())
 
         progress = parsed.books[0].reading_sessions[0].progress
-        self.assertEqual(progress.cfi, "  opaque::progress  ")
+        self.assertEqual(progress.cfi, "epubcfi(/6/8!/4/2:7)")
         self.assertEqual(
             progress.location_label,
             "  Chapter 08 · 42% · Decorative suffix  ",
@@ -49,6 +49,42 @@ class MarginaliaArchiveValidationTests(SimpleTestCase):
             active_value.books[0].reading_sessions[0].progress.location_label
         )
         self.assertEqual(closed_value.books[0].reading_sessions[0].status, "closed")
+
+    def test_archive_progress_and_annotation_use_the_same_cfi_profile(self):
+        for location in ("progress", "annotation"):
+            payload = _valid_archive()
+            if location == "progress":
+                _session(payload)["progress"]["cfi"] = "epubcfi(/6/8~10)"
+                expected_path = "$.books[0].readingSessions[0].progress.cfi"
+            else:
+                _annotation(payload)["location"]["cfi"] = "epubcfi(/6/8!/4/3:2[bad^x])"
+                expected_path = "$.books[0].readingSessions[0].annotations[0].location.cfi"
+
+            with self.subTest(location=location), self.assertRaises(ArchiveValidationError) as caught:
+                parse_archive(json.dumps(payload))
+            self.assertIn((expected_path, "supportedCfi"), [(issue.path, issue.rule) for issue in caught.exception.issues])
+
+    def test_archive_accepts_historical_id_assertions_without_touching_quote_fields(self):
+        payload = _valid_archive()
+        session = _session(payload)
+        progress_cfi = "epubcfi(/6/58!/4[chapter-identifier-01]/2/906/1:280)"
+        annotation_cfi = (
+            "epubcfi(/6/18!/4[chapter-identifier-01]/2,/708/1:0,/710/1:119)"
+        )
+        session["progress"]["cfi"] = progress_cfi
+        _annotation(payload)["location"]["cfi"] = annotation_cfi
+        _annotation(payload)["body"]["text"] = "Separate selected text"
+        _annotation(payload)["body"]["prefix"] = "Before selection"
+        _annotation(payload)["body"]["suffix"] = "After selection"
+
+        parsed = parse_archive(json.dumps(payload))
+
+        self.assertEqual(parsed.books[0].reading_sessions[0].progress.cfi, progress_cfi)
+        annotation = parsed.books[0].reading_sessions[0].annotations[0]
+        self.assertEqual(annotation.location_cfi, annotation_cfi)
+        self.assertEqual(annotation.body.text, "Separate selected text")
+        self.assertEqual(annotation.body.prefix, "Before selection")
+        self.assertEqual(annotation.body.suffix, "After selection")
 
     def test_retired_lifecycle_progress_and_selector_shapes_are_rejected(self):
         for label, mutate in (
@@ -99,7 +135,7 @@ class MarginaliaArchiveValidationTests(SimpleTestCase):
             {
                 "clientAnnotationId": "bookmark-1",
                 "kind": "bookmark",
-                "location": {"cfi": "opaque::bookmark"},
+                "location": {"cfi": "epubcfi(/6/8!/4/4)"},
                 "body": {"text": "invalid", "color": "yellow"},
                 "createdAt": "2026-07-29T11:00:00Z",
                 "updatedAt": "2026-07-29T11:00:00Z",
@@ -171,7 +207,7 @@ def _valid_archive():
                         "createdAt": "2026-07-01T12:00:00Z",
                         "updatedAt": "2026-07-20T12:00:00Z",
                         "progress": {
-                            "cfi": "opaque::progress",
+                            "cfi": "epubcfi(/6/8!/4/2:7)",
                             "locationLabel": "Chapter 08 · 42%",
                             "updatedAt": "2026-07-19T12:00:00Z",
                         },
@@ -180,7 +216,7 @@ def _valid_archive():
                                 "clientAnnotationId": "highlight-1",
                                 "kind": "highlight",
                                 "location": {
-                                    "cfi": "opaque::highlight",
+                                    "cfi": "epubcfi(/6/8!/4/3:7)",
                                     "locationLabel": "Chapter 08 · 42%",
                                 },
                                 "body": {

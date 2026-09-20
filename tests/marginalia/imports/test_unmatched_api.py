@@ -39,7 +39,7 @@ def _bookmark():
         "clientAnnotationId": "bookmark-1",
         "kind": "bookmark",
         "location": {
-            "cfi": "  opaque::bookmark  ",
+            "cfi": "epubcfi(/6/8!/4/4)",
             "locationLabel": "  Chapter 09 · 47%  ",
         },
         "createdAt": "2026-07-19T12:00:00Z",

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from rest_framework import serializers
 
+from marginalia.cfi import validate_durable_cfi
 from marginalia.models import (
     HIGHLIGHT_COLOR_CHOICES,
     HIGHLIGHT_COLOR_YELLOW,
@@ -31,6 +32,7 @@ class AnnotationLocationSerializer(StrictSerializer):
         max_length=MAX_CFI_LENGTH,
         allow_blank=False,
         trim_whitespace=False,
+        validators=[validate_durable_cfi],
     )
     location_label = OpaqueStringField(
         max_length=MAX_LOCATION_LABEL_LENGTH,

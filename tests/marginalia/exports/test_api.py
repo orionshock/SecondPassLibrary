@@ -36,7 +36,7 @@ class MarginaliaExportAPITests(TestCase):
             user=self.user,
             book=self.second_book,
             name="Active",
-            progress_cfi="  opaque::progress  ",
+            progress_cfi="epubcfi(/6/8!/4/2:7)",
             progress_location_label="  Chapter 08 · 42%  ",
             progress_updated_at=GENERATED_AT - timedelta(hours=1),
         )
@@ -58,7 +58,7 @@ class MarginaliaExportAPITests(TestCase):
             session=self.active,
             client_id="reader-highlight",
             kind=Annotation.KIND_HIGHLIGHT,
-            cfi="opaque::highlight",
+            cfi="epubcfi(/6/8!/4/3:7)",
             location_label="Chapter 08 · 42%",
             highlight_text="Selected passage",
             quote_prefix="Before ",
@@ -70,14 +70,14 @@ class MarginaliaExportAPITests(TestCase):
             session=self.closed,
             client_id="reader-bookmark",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="opaque::bookmark",
+            cfi="epubcfi(/6/8!/4/4)",
             location_label="Chapter 09 · 47%",
         )
         Annotation.objects.create(
             session=self.closed,
             client_id="deleted",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="opaque::deleted",
+            cfi="epubcfi(/6/8!/4/6)",
             is_deleted=True,
         )
         foreign_book = Book.objects.create(title="Foreign", checksum="c" * 64)
@@ -89,7 +89,7 @@ class MarginaliaExportAPITests(TestCase):
             session=self.foreign,
             client_id="foreign",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="opaque::foreign",
+            cfi="epubcfi(/6/8!/4/8)",
         )
 
     def _payload(self, response):

@@ -159,6 +159,15 @@ reading-position anchor. The label is persisted display text: clients may show
 it in Session history, progress summaries, bookmarks, highlights, and notes,
 but must not parse it for navigation, identity, matching, or anchoring.
 
+Durable CFIs must remain compact locators. XML ID assertions on element steps
+are accepted when the ID is an XML name without a colon, with at most 128
+characters per ID and 256 across a CFI.
+Text-location assertions after character offsets are not supported. Quote and
+Book text belong in `text`, `prefix`, and `suffix`, not in the CFI. The server
+checks syntax and compactness, then stores accepted CFIs unchanged without
+resolving them against EPUB content. Clients emit compact structural CFIs with
+optional element IDs.
+
 The Reader's live chrome may show temporary rendition details such as
 `Dedication • p1/2 • 1%`. That live label is not the saved label. New saved
 labels use `PPP% - Label`, with a zero-padded whole-Book percentage from `000`

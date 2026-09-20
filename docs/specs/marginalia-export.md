@@ -61,6 +61,8 @@ shape. Deleted annotations are omitted.
 Native import consumes this contract. Foreign formats must be converted by a
 Reader client or dedicated tool; the Library server does not parse EPUB content,
 repair CFIs, or invent location labels while importing Marginalia.
+Imported progress and annotation CFIs must meet the same compact locator
+profile as live writes; see the [location contract](reading-session-annotation-profile/profile.md#locations-and-progress).
 
 The Unmatched download is a ZIP packaging operation, not another schema. Each
 JSON member is a complete single-Session archive conforming to this same

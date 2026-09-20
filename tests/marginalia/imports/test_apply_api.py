@@ -44,7 +44,7 @@ def _bookmark():
         "clientAnnotationId": "bookmark-1",
         "kind": "bookmark",
         "location": {
-            "cfi": "  opaque::bookmark  ",
+            "cfi": "epubcfi(/6/8!/4/4)",
             "locationLabel": "  Chapter 09 · 47%  ",
         },
         "createdAt": "2026-07-19T12:00:00Z",
@@ -299,7 +299,7 @@ class MarginaliaImportApplyAPITests(IsolatedUserdataMixin, APITestCase):
             session=existing,
             client_id="existing-bookmark",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="opaque::existing",
+            cfi="epubcfi(/6/8!/4/6)",
         )
         LibraryGroupMembership.objects.filter(user=self.user, group=self.group).delete()
 

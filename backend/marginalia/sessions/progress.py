@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.utils import timezone
 
+from marginalia.cfi import validate_durable_cfi
 from marginalia.exceptions import SessionClosedError
 from marginalia.models import ReadingSession
 
@@ -23,6 +24,7 @@ def assign_session_progress(
 ) -> ReadingSession:
     if not cfi:
         raise ValidationError({"cfi": "Saved progress requires a CFI."})
+    validate_durable_cfi(cfi)
     _update_active_session(
         session=session,
         progress_cfi=cfi,
@@ -62,6 +64,7 @@ def replace_progress(
     cfi: str,
     location_label: str,
 ) -> ReadingSession:
+    validate_durable_cfi(cfi)
     session = locked_owned_session(user=user, session_id=session_id)
     if not session.is_active:
         raise SessionClosedError

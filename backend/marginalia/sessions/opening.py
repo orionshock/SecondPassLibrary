@@ -6,6 +6,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from library.models import Book
+from marginalia.cfi import validate_durable_cfi
 from marginalia.exceptions import SessionClosedError
 from marginalia.models import ReadingSession
 
@@ -96,6 +97,7 @@ def _finalize_for_start_over(*, session: ReadingSession, finalization: Mapping) 
             values[field] = finalization[field]
     progress = finalization.get("progress")
     if progress is not None:
+        validate_durable_cfi(progress["cfi"])
         values.update(
             progress_cfi=progress["cfi"],
             progress_location_label=progress.get("location_label", ""),

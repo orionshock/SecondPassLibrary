@@ -63,7 +63,7 @@ class MarginaliaStartOverBootstrapTests(APITestCase):
             "name": "Finished first read",
             "notes": "Final thoughts",
             "progress": {
-                "cfi": "  epubcfi(/6/42)  ",
+                "cfi": "epubcfi(/6/42!/4/3:7)",
                 "location_label": "  Chapter 42 · 100%  ",
             },
         }

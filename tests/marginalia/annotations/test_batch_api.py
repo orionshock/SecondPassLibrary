@@ -40,7 +40,7 @@ def highlight(client_id: str, text: str = "Selected passage") -> dict:
             "client_id": client_id,
             "kind": "highlight",
             "location": {
-                "cfi": "  epubcfi(/6/8!/4/2)  ",
+                "cfi": "epubcfi(/6/8!/4/2:7)",
                 "location_label": "  Chapter 08 · 42%  ",
             },
             "body": {
@@ -156,6 +156,24 @@ class MarginaliaAnnotationBatchAPITests(APITestCase):
                 response = self.post(operations)
                 self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
                 self.assertFalse(Annotation.objects.filter(session=self.session).exists())
+
+    def test_unsupported_cfi_rejects_the_complete_batch(self):
+        response = self.post([
+            bookmark("valid"),
+            bookmark("invalid", "epubcfi(/6/8!/4/3:2[bad^x])"),
+        ])
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("cfi", str(response.data))
+        self.assertFalse(Annotation.objects.filter(session=self.session).exists())
+
+    def test_range_cfi_is_stored_unchanged(self):
+        cfi = "epubcfi(/6/8[spine-item]!/4/2,/1:1,/4[section]/1:4)"
+        response = self.post([bookmark("range", cfi)])
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(Annotation.objects.get(session=self.session).cfi, cfi)
+        self.assertEqual(response.data["annotations"][0]["location"]["cfi"], cfi)
 
     def test_kind_specific_and_bounded_body_validation_is_strict(self):
         invalid_annotations = (

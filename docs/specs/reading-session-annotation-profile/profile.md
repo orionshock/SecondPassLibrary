@@ -37,15 +37,32 @@ non-null close time and null progress are materially different conditions.
 
 ## Locations and progress
 
-Every saved location uses an opaque CFI and may include a Reader-generated
+Every saved location uses a CFI and may include a Reader-generated
 `locationLabel`. Progress, highlights, and bookmarks all use this pair. The CFI
 is the durable anchor. The label is persisted display text and must not be used
 for navigation, identity, Book or Session matching, or annotation anchoring.
 
-The server stores and transfers both values without parsing, normalizing,
-repairing, or deriving them from EPUB content. Progress also carries its own
-update time. Product list responses may include summaries, but those are not
-interchange fields.
+Durable CFIs must remain compact locators. The server validates the
+`epubcfi(...)` wrapper, structural steps, optional `!` indirection, terminal
+character offsets, and simple three-part ranges. XML ID assertions on element
+steps are accepted when the ID is an XML name without a colon, with at most 128
+characters per ID and 256 across a CFI.
+The server rejects text-location assertions after offsets, temporal and spatial
+offsets, parameters, extensions, and malformed escapes. This is a syntax and
+compactness check against the
+[EPUB CFI grammar](https://idpf.org/epub/linking/cfi/#sec-syntax); the server
+stores accepted CFIs opaquely and does not resolve or interpret them against
+EPUB contents. Clients emit compact structural CFIs with optional element IDs.
+Quote and Book text belong in `text`, `prefix`, and `suffix`, not in the CFI.
+Progress also carries its own update time. Product list responses may include
+summaries, but those are not interchange fields.
+
+The first step is a positive even package-spine step. Later slash-prefixed
+steps and terminal `:N` offsets use nonnegative decimal integers without leading
+zeros, except `0` itself. Each `!` must be followed by structural steps. A range
+has one absolute parent path and two relative endpoints, each a structural path
+with an optional character offset or a bare character offset. Range endpoints
+do not contain indirection.
 
 ### Saved location labels
 

@@ -5,6 +5,7 @@ from collections.abc import Mapping
 from django.db import transaction
 from django.utils import timezone
 
+from marginalia.cfi import validate_durable_cfi
 from marginalia.exceptions import SessionClosedError
 from marginalia.models import ReadingSession
 
@@ -27,6 +28,7 @@ def close_owned_session(
         raise SessionClosedError
 
     if progress is not None:
+        validate_durable_cfi(progress["cfi"])
         require_book_access(user=user, book_id=session.book_id)
 
     closed_at = timezone.now()

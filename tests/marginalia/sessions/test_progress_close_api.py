@@ -60,7 +60,7 @@ class MarginaliaProgressCloseAPITests(APITestCase):
         self.assertEqual(self.session.updated_at, before)
         self.assertEqual(self.session.progress_cfi, "")
 
-        cfi = "  epubcfi(/6/8!/4/2)  "
+        cfi = "epubcfi(/6/8!/4/3:7)"
         label = "  Chapter 08 · 42% · The Blackstaff  "
         saved_at = timezone.now() - timedelta(hours=1)
         ReadingSession.objects.filter(pk=self.session.pk).update(
@@ -153,7 +153,7 @@ class MarginaliaProgressCloseAPITests(APITestCase):
             progress_updated_at=old_timestamp,
         )
         before = timezone.now()
-        cfi = "  epubcfi(/6/12!/4/2)  "
+        cfi = "epubcfi(/6/12!/4[chapter-identifier-01]/3:7)"
         label = "  Chapter 12 · 61%  "
 
         response = self.client.put(
@@ -214,6 +214,7 @@ class MarginaliaProgressCloseAPITests(APITestCase):
         for payload in (
             {},
             {"cfi": ""},
+            {"cfi": "epubcfi(/6/8@10:20)"},
             {"cfi": {"value": "epubcfi(/6/4)"}},
             {"cfi": "epubcfi(/6/4)", "unknown": True},
             {"cfi": "epubcfi(/6/4)", "location_label": None},
@@ -281,7 +282,7 @@ class MarginaliaProgressCloseAPITests(APITestCase):
                 "name": "Finished first read",
                 "notes": "Final thoughts",
                 "progress": {
-                    "cfi": "  epubcfi(/6/42)  ",
+                    "cfi": "epubcfi(/6/42!/4/3:7)",
                     "location_label": "  Chapter 42 · 100%  ",
                 },
             },
@@ -295,7 +296,7 @@ class MarginaliaProgressCloseAPITests(APITestCase):
         self.assertEqual(response.json()["session"]["notes"], "Final thoughts")
         self.assertEqual(
             response.json()["session"]["progress"]["cfi"],
-            "  epubcfi(/6/42)  ",
+            "epubcfi(/6/42!/4/3:7)",
         )
         self.assertEqual(self.session.progress_updated_at, self.session.closed_at)
         self.assertEqual(ReadingSession.objects.count(), before_count)

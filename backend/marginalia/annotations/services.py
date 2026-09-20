@@ -9,6 +9,7 @@ from django.utils import timezone
 
 from core.operational_logging import info_on_commit, user_log_label
 from library.queries import visible_books_for_user
+from marginalia.cfi import validate_durable_cfi
 from marginalia.exceptions import BookAccessRequiredError, SessionClosedError
 from marginalia.models import Annotation, ReadingSession
 
@@ -60,6 +61,7 @@ def synchronize_annotations(*, user, session_id, operations: Sequence[dict]) -> 
                 )
             continue
 
+        validate_durable_cfi(operation["annotation"]["location"]["cfi"])
         values = _annotation_values(operation["annotation"])
         if annotation is None:
             annotation = Annotation.objects.create(

@@ -101,7 +101,7 @@ class MarginaliaFoundationTests(TestCase):
 
     def test_progress_assignment_preserves_location_and_clears_atomically(self):
         session = ReadingSession.objects.create(user=self.user, book=self.book)
-        cfi = "  epubcfi(/6/8)  "
+        cfi = "epubcfi(/6/8!/4/3:7)"
         label = "  Chapter 08 · 42% · The Blackstaff  "
         updated_at = timezone.now()
 
