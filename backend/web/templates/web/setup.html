@@ -43,10 +43,10 @@
 
             <fieldset class="setup-section setup-section--owner">
               <legend>Owner Account</legend>
-              {% include "web/setup_field.html" with field=form.username %}
               {% include "web/setup_field.html" with field=form.first_name optional=True %}
               {% include "web/setup_field.html" with field=form.last_name optional=True %}
               {% include "web/setup_field.html" with field=form.email optional=True %}
+              {% include "web/setup_field.html" with field=form.username %}
               {% include "web/setup_field.html" with field=form.password1 %}
               {% include "web/setup_field.html" with field=form.password2 %}
             </fieldset>
