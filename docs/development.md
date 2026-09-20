@@ -124,7 +124,7 @@ Production `collectstatic` output goes to `backend/var/static/`, which is genera
 can be rebuilt. The canonical backup unit is documented in
 [Operations](operations.md#backup-and-restore).
 
-Docker environment examples live at `docker/.env.example`. The local
+Docker deployment options live in `docker/compose.example.yml`. The local
 PowerShell helpers define their own environment in the script files.
 
 ## Run server

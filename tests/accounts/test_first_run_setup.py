@@ -13,7 +13,7 @@ from accounts.first_owner_setup import (
 from accounts.models import UserProfile
 from core import server_settings
 from core.models import ServerSetting
-from core.server_installation import get_installation_id
+from core.server_identity import get_server_id
 from library.groups import memberships
 from library.groups.public_group import get_public_group
 from library.models import LibraryGroup, LibraryGroupMembership
@@ -23,15 +23,15 @@ User = get_user_model()
 
 
 class FirstOwnerBootstrapServiceTests(TestCase):
-    def test_setup_does_not_create_or_replace_server_installation(self):
-        installation_id = get_installation_id()
+    def test_setup_does_not_create_or_replace_server_identity(self):
+        server_id = get_server_id()
 
         create_first_owner(
             username="owner",
             password="Correct-Horse-Battery-47",
         )
 
-        self.assertEqual(get_installation_id(), installation_id)
+        self.assertEqual(get_server_id(), server_id)
 
     def test_active_superuser_is_owner_capable(self):
         self.assertFalse(has_active_owner())

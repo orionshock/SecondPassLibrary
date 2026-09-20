@@ -7,9 +7,9 @@ from django.conf import settings
 from django.db import migrations, models
 
 
-def create_server_installation(apps, _schema_editor):
-    ServerInstallation = apps.get_model("core", "ServerInstallation")
-    ServerInstallation.objects.create(id=1)
+def create_server_identity(apps, _schema_editor):
+    ServerIdentity = apps.get_model("core", "ServerIdentity")
+    ServerIdentity.objects.create(id=1)
 
 
 class Migration(migrations.Migration):
@@ -22,18 +22,18 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name='ServerInstallation',
+            name='ServerIdentity',
             fields=[
                 ('id', models.PositiveSmallIntegerField(default=1, editable=False, primary_key=True, serialize=False)),
-                ('installation_id', models.UUIDField(default=uuid.uuid4, editable=False, unique=True)),
+                ('server_id', models.UUIDField(default=uuid.uuid4, editable=False, unique=True)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
             ],
             options={
-                'constraints': [models.CheckConstraint(condition=models.Q(('id', 1)), name='server_installation_is_singleton')],
+                'constraints': [models.CheckConstraint(condition=models.Q(('id', 1)), name='server_identity_is_singleton')],
             },
         ),
         migrations.RunPython(
-            create_server_installation,
+            create_server_identity,
             migrations.RunPython.noop,
         ),
         migrations.CreateModel(

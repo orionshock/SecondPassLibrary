@@ -24,8 +24,8 @@ class TimeStampedModel(UUIDModel):
         abstract = True
 
 
-class ServerInstallation(models.Model):
-    """Immutable, non-secret identity for this database installation."""
+class ServerIdentity(models.Model):
+    """Immutable, non-secret identity for this server database."""
 
     SINGLETON_ID = 1
 
@@ -34,35 +34,33 @@ class ServerInstallation(models.Model):
         default=SINGLETON_ID,
         editable=False,
     )
-    installation_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
+    server_id = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         constraints = [
             models.CheckConstraint(
                 condition=models.Q(id=1),
-                name="server_installation_is_singleton",
+                name="server_identity_is_singleton",
             )
         ]
 
     def save(self, *args, **kwargs):
         if self.pk != self.SINGLETON_ID:
-            raise ValidationError("Only one Server installation row is allowed.")
+            raise ValidationError("Only one Server identity row is allowed.")
         if not self._state.adding:
-            stored_id = type(self).objects.values_list(
-                "installation_id", flat=True
-            ).get(pk=self.pk)
-            if stored_id != self.installation_id:
-                raise ValidationError(
-                    {"installation_id": "The Server ID is immutable."}
-                )
+            stored_id = type(self).objects.values_list("server_id", flat=True).get(
+                pk=self.pk
+            )
+            if stored_id != self.server_id:
+                raise ValidationError({"server_id": "The Server ID is immutable."})
         return super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
-        raise ValidationError("The Server installation identity cannot be deleted.")
+        raise ValidationError("The Server identity cannot be deleted.")
 
     def __str__(self):
-        return str(self.installation_id)
+        return str(self.server_id)
 
 
 class ServerSetting(TimeStampedModel):

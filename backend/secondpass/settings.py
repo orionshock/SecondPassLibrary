@@ -18,6 +18,7 @@ from django.core.exceptions import ImproperlyConfigured
 import environ
 
 from secondpass.version import SERVER_RELEASE_DATE, SERVER_VERSION
+from secondpass.library_urls import parse_library_urls
 
 try:
     import django_stubs_ext
@@ -83,6 +84,9 @@ RUNNING_TESTS = "test" in sys.argv or any(
 
 SECOND_PASS_SERVER_VERSION = SERVER_VERSION
 SECOND_PASS_SERVER_RELEASE_DATE = SERVER_RELEASE_DATE
+SECOND_PASS_LIBRARY_URLS = parse_library_urls(
+    env.str("SECOND_PASS_LIBRARY_URLS", default="") or ""
+)
 SECOND_PASS_READER_WEB_CLIENT_URL = (
     env.str("SECOND_PASS_READER_WEB_CLIENT_URL", default="") or ""
 ).strip()

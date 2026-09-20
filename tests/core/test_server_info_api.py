@@ -3,13 +3,14 @@ from __future__ import annotations
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
+from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
 
 from accounts.client_sessions.services import hash_client_secret
 from accounts.models import UserClientSession
 from core import server_settings
-from core.server_installation import get_installation_id
+from core.server_identity import get_server_id
 from library.groups.public_services import configure_public_group
 
 
@@ -26,6 +27,7 @@ class ServerInfoApiTests(APITestCase):
         response = self.client.get("/api/v1/server/info/")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
+    @override_settings(SECOND_PASS_LIBRARY_URLS=["https://library.home.example", "https://library.public.example"])
     def test_session_request_returns_authenticated_server_context(self):
         server_settings.set_server_name("Family Library")
         server_settings.set_server_description("Household books.")
@@ -44,7 +46,8 @@ class ServerInfoApiTests(APITestCase):
         self.assertEqual(
             response.json(),
             {
-                "installation_id": str(get_installation_id()),
+                "server_id": str(get_server_id()),
+                "server_urls": ["https://library.home.example", "https://library.public.example"],
                 "server_name": "Family Library",
                 "server_description": "Household books.",
                 "server_banner_message": "Maintenance tonight.",
@@ -109,3 +112,4 @@ class ServerInfoApiTests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIsNone(response.json()["second_pass_reader_web_client_url"])
+        self.assertEqual(response.json()["server_urls"], [])

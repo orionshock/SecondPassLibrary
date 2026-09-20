@@ -18,7 +18,7 @@ Back up the complete `/app/userdata` tree as one unit:
 - `media/` contains EPUBs and covers referenced by that database;
 - `imports/` contains temporary and staged import data.
 
-Back up deployment-owned `docker/.env` and `docker/compose.yml` separately so
+Back up deployment-owned `docker/compose.yml` so
 the instance can be reconstructed. Protect configuration and backup archives
 with restrictive host permissions; they contain secrets or private reading
 data. Generated static output is image/build material and is not part of the
@@ -217,7 +217,7 @@ not reduce Django security or error logging.
 - Watch database growth and bounded logs for repeated import/export failures,
   cleanup failures, storage errors, or authentication throttling.
 - Before upgrading, take and verify a consistent backup and review changes to
-  `docker/.env.example`, `docker/compose.example.yml`, and migration notes.
+  `docker/compose.example.yml` and migration notes.
 
 Inspect bounded container logs with:
 
@@ -229,7 +229,7 @@ docker compose -f docker/compose.yml logs --tail 200 server
 
 - **Startup rejects settings:** inspect container logs. Production refuses a
   missing/default `DJANGO_SECRET_KEY`; also verify explicit
-  `DJANGO_ALLOWED_HOSTS` and the values in `docker/.env`.
+  `DJANGO_ALLOWED_HOSTS` and the values in `docker/compose.yml`.
 - **Migration failure:** the entrypoint stops before Uvicorn. Do not fake an
   incompatible migration. Preserve the failed database, inspect the error, and
   restore the last verified database/userdata pair if recovery is unsafe.

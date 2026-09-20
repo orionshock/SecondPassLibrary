@@ -8,7 +8,7 @@ from django.core.cache import cache
 from django.test import TestCase, override_settings
 
 from core import server_settings
-from core.server_installation import get_installation_id
+from core.server_identity import get_server_id
 
 
 User = get_user_model()
@@ -43,8 +43,8 @@ class ServerIdentitySettingsTests(TestCase):
         resp = self.client.get("/api/v1/server/settings/")
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
-        installation_id = data["installation_id"]
-        self.assertEqual(uuid.UUID(installation_id), get_installation_id())
+        server_id = data["server_id"]
+        self.assertEqual(uuid.UUID(server_id), get_server_id())
         self.assertEqual(data["server_name"], "Second Pass Library")
         self.assertEqual(data["server_banner_message"], "")
         self.assertEqual(data["public_group_name"], "Common Room")
@@ -65,7 +65,7 @@ class ServerIdentitySettingsTests(TestCase):
         )
         self.assertEqual(resp.status_code, 200)
         data = resp.json()
-        self.assertEqual(data["installation_id"], installation_id)
+        self.assertEqual(data["server_id"], server_id)
         self.assertEqual(data["server_name"], "My Library")
         self.assertEqual(data["server_description"], "Private.")
         self.assertEqual(data["server_banner_message"], "Maintenance tonight.")
@@ -304,18 +304,18 @@ class ServerIdentitySettingsTests(TestCase):
             "<ol><li>Maintenance</li></ol>",
         )
 
+    @override_settings(SECOND_PASS_LIBRARY_URLS=["https://private.home.example"])
     def test_well_known_secondpass_returns_compact_server_discovery(self):
         response = self.client.get("/.well-known/secondpass")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.json(),
             {
-                "installation_id": str(get_installation_id()),
+                "server_id": str(get_server_id()),
                 "server_name": "Second Pass Library",
                 "server_description": "",
                 "server_version": settings.SECOND_PASS_SERVER_VERSION,
                 "server_release_date": settings.SECOND_PASS_SERVER_RELEASE_DATE,
-                "api_base_url": "http://testserver/api/v1/",
             },
         )
         payload = response.json()
@@ -354,13 +354,14 @@ class ServerIdentitySettingsTests(TestCase):
         self.assertEqual(well_known.status_code, 200)
         payload = well_known.json()
         self.assertEqual(payload["server_name"], "My Library")
-        self.assertEqual(payload["installation_id"], str(get_installation_id()))
+        self.assertEqual(payload["server_id"], str(get_server_id()))
         self.assertEqual(payload["server_description"], "Private.")
         self.assertEqual(payload["server_version"], settings.SECOND_PASS_SERVER_VERSION)
         self.assertEqual(
             payload["server_release_date"], settings.SECOND_PASS_SERVER_RELEASE_DATE
         )
-        self.assertEqual(payload["api_base_url"], "http://testserver/api/v1/")
+        self.assertNotIn("api_base_url", payload)
+        self.assertNotIn("server_urls", payload)
         self.assertNotIn("banner_text", payload)
         self.assertNotIn("advanced_library_groups_enabled", payload)
         self.assertNotIn("capabilities", payload)
@@ -373,12 +374,11 @@ class ServerIdentitySettingsTests(TestCase):
         self.assertEqual(
             set(payload),
             {
-                "installation_id",
+                "server_id",
                 "server_name",
                 "server_description",
                 "server_version",
                 "server_release_date",
-                "api_base_url",
             },
         )
 

@@ -73,6 +73,51 @@ class DjangoSettingsContractTests(SimpleTestCase):
         with patch.dict("os.environ", {"DJANGO_ALLOWED_HOSTS": "*"}):
             self.assertEqual(_env_list("DJANGO_ALLOWED_HOSTS", []), ["*"])
 
+    def test_library_urls_are_env_driven_without_changing_host_or_csrf_trust(self):
+        env = os.environ | {
+            "DJANGO_DEBUG": "1",
+            "SECOND_PASS_LIBRARY_URLS": (
+                "https://home.example/,https://public.example,https://HOME.example"
+            ),
+        }
+        env.pop("DJANGO_ALLOWED_HOSTS", None)
+        env.pop("DJANGO_CSRF_TRUSTED_ORIGINS", None)
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                "from secondpass import settings; "
+                "print(settings.SECOND_PASS_LIBRARY_URLS); "
+                "print(settings.ALLOWED_HOSTS); "
+                "print(settings.CSRF_TRUSTED_ORIGINS)",
+            ],
+            cwd=BACKEND_ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(
+            result.stdout.splitlines(),
+            [
+                "['https://home.example', 'https://public.example']",
+                "['localhost', '127.0.0.1', '[::1]']",
+                "[]",
+            ],
+        )
+
+    def test_malformed_library_url_rejects_settings_import(self):
+        result = self._settings_import(
+            {
+                "DJANGO_DEBUG": "1",
+                "SECOND_PASS_LIBRARY_URLS": "https://home.example/books",
+            }
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("SECOND_PASS_LIBRARY_URLS", result.stderr)
+
     def test_silenced_system_checks_are_env_driven(self):
         self.assertEqual(settings.SILENCED_SYSTEM_CHECKS, [])
         with patch.dict(

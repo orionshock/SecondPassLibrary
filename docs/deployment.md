@@ -11,6 +11,11 @@ Do not publish the Uvicorn port on the host or expose it directly to the
 internet. The operator's proxy handles HTTPS, HTTP-to-HTTPS redirects, HSTS,
 and public access.
 
+The Compose example enables secure cookies and Django's trust of the forwarded
+HTTPS protocol for this deployment. The reverse proxy must replace incoming
+`X-Forwarded-Proto` before forwarding requests. Forwarded client-IP and host
+trust remain disabled unless separately configured.
+
 See [Operations](operations.md) for backups, cleanup, Admin repair, maintenance,
 and troubleshooting.
 
@@ -67,22 +72,28 @@ post-deployment status check; it runs Compose `ps` in the same remote checkout.
 From the repository root:
 
 ```powershell
-copy docker\.env.example docker\.env
 copy docker\compose.example.yml docker\compose.yml
+```
+
+Before starting, edit the shared application environment in `docker/compose.yml`
+and replace the secret, allowed-host, HTTPS origin, and Library URL placeholders:
+
+```yaml
+DJANGO_SECRET_KEY: <generated-secret>
+DJANGO_ALLOWED_HOSTS: <library-server-hostnames-or-ips>
+DJANGO_CSRF_TRUSTED_ORIGINS: https://books.example.com
+SECOND_PASS_LIBRARY_URLS: https://books.example.com
+```
+
+Start the deployment after editing the file:
+
+```powershell
 docker compose -f docker/compose.yml up -d --build
 ```
 
-Before starting, replace the secret and hostname placeholders:
-
-```text
-DJANGO_SECRET_KEY=<generated-secret>
-DJANGO_ALLOWED_HOSTS=<library-server-hostnames-or-ips>
-```
-
-Keep `docker/.env` readable only by the deployment account. Apply similarly
-restrictive host permissions to bind-mounted userdata and any deployment-owned
-Compose overrides. Optional values and defaults remain documented next to the
-configuration in `docker/.env.example`.
+`docker/compose.yml` is the deployment configuration and contains the secret.
+Keep it readable only by the deployment account. Optional values and defaults
+are documented beside their entries in `docker/compose.example.yml`.
 
 The standard image fixes `SECOND_PASS_USERDATA_DIR=/app/userdata`. Its default
 UID/GID is `1000:1000`; alternative IDs are Docker build arguments in
@@ -123,10 +134,11 @@ Once an active Owner exists, `/setup/` is disabled.
 
 The optional `second_pass_reader_web_client_url` Server Setting is the base URL
 used to open Books in the Second Pass Reader web client. It can be
-edited in Django Admin as a single-line URL field, or fixed by deployment with:
+edited in Django Admin as a single-line URL field, or fixed by deployment in
+the shared Compose environment with:
 
-```text
-SECOND_PASS_READER_WEB_CLIENT_URL=https://reader.example.com
+```yaml
+SECOND_PASS_READER_WEB_CLIENT_URL: https://reader.example.com
 ```
 
 The value must be an absolute `http` or `https` URL. Localhost, private-network
@@ -138,12 +150,19 @@ Runtime code reads that stored row rather than reading the environment directly.
 ## Optional LAN discovery
 
 The optional `discovery` Compose profile advertises the Library on the host LAN
-through mDNS/DNS-SD. Set the exact externally reachable Library URL and its
-external port in `docker/.env`:
+through mDNS/DNS-SD. Declare the externally reachable Library base URLs in
+preferred order in the shared Compose environment. Copy the first URL into the
+`secondpass_discovery_service` TXT record and set its external SRV port:
 
-```text
-SECOND_PASS_LIBRARY_URL=https://books.example.com
-SECOND_PASS_DISCOVERY_PORT=443
+```yaml
+SECOND_PASS_LIBRARY_URLS: https://library.home.example,https://library.public.example
+```
+
+In `secondpass_discovery_service`:
+
+```xml
+<port>443</port>
+<txt-record>url=https://library.home.example</txt-record>
 ```
 
 Then start the normal deployment with discovery enabled:
@@ -154,8 +173,10 @@ docker compose -f docker/compose.yml --profile discovery up -d
 
 The sidecar uses host networking and publishes service type
 `_secondpass._tcp` with the single Second Pass TXT property
-`url=<SECOND_PASS_LIBRARY_URL>`. Clients use that URL directly; SRV host and
-port fields are publication plumbing. The record contains no Server ID,
+`url=<first SECOND_PASS_LIBRARY_URLS entry>`. The operator keeps the TXT value
+in sync with the first URL; Compose does not derive one from the other. Clients
+use that URL directly; SRV host and port fields are publication plumbing. The
+record contains no Server ID,
 Library name, description, version, capability, authentication, or user data.
 The server and worker do not depend on the sidecar and continue normally when
 the profile is disabled or the sidecar fails.
@@ -166,19 +187,28 @@ TXT property pointing to the client-facing Library URL. Multiple Libraries may
 publish the same service type; clients obtain identity and display metadata
 from each discovered URL's normal public HTTP endpoint.
 
+`SECOND_PASS_LIBRARY_URLS` is also returned by authenticated server info as
+`server_urls`. Values are comma-separated absolute HTTP(S) base URLs. The server
+trims surrounding whitespace and a root trailing slash, removes duplicate
+origins without changing the order, and rejects empty entries, credentials,
+paths, queries, fragments, and malformed hosts or ports. An empty value yields
+an empty list. Configure at least one URL and copy its first entry into the TXT
+record before enabling discovery. The URLs are declarations,
+not routing configuration. Operators must separately configure DNS, TLS, reverse
+proxy routes, `DJANGO_ALLOWED_HOSTS`, CSRF trusted origins, and proxy trust.
+
 ## Reverse-proxy contract
 
 For HTTPS deployment, use exact public hosts and origins, secure cookies, and
 explicit forwarded-protocol trust:
 
-```text
-DJANGO_DEBUG=0
-DJANGO_SECRET_KEY=<generated-secret>
-DJANGO_ALLOWED_HOSTS=books.example.com
-DJANGO_CSRF_TRUSTED_ORIGINS=https://books.example.com
-DJANGO_TRUST_X_FORWARDED_PROTO=1
-DJANGO_SECURE_COOKIES=1
-DJANGO_USE_X_FORWARDED_HOST=0
+```yaml
+DJANGO_SECRET_KEY: <generated-secret>
+DJANGO_ALLOWED_HOSTS: books.example.com
+DJANGO_CSRF_TRUSTED_ORIGINS: https://books.example.com
+DJANGO_TRUST_X_FORWARDED_PROTO: "1"
+DJANGO_SECURE_COOKIES: "1"
+DJANGO_USE_X_FORWARDED_HOST: "0"
 ```
 
 Uvicorn proxy-header rewriting is disabled in every supported startup path, so
@@ -192,9 +222,9 @@ ignore `X-Forwarded-For`. If the application should distinguish client IPs,
 enable Django's interpretation and list the direct proxy peers as exact IP
 addresses or bounded CIDR networks:
 
-```text
-DJANGO_TRUST_X_FORWARDED_FOR=1
-DJANGO_TRUSTED_PROXY_IPS=127.0.0.1,::1
+```yaml
+DJANGO_TRUST_X_FORWARDED_FOR: "1"
+DJANGO_TRUSTED_PROXY_IPS: 127.0.0.1,::1
 ```
 
 For a request received from a trusted peer, the application uses the first
@@ -283,7 +313,7 @@ git pull
 docker compose -f docker/compose.yml up -d --build
 ```
 
-Review changes to `docker/.env.example`, `docker/compose.example.yml`, and
+Review changes to `docker/compose.example.yml` and
 migration requirements before starting the replacement container. The
 entrypoint completes deploy checks and migrations before Uvicorn accepts
 requests.

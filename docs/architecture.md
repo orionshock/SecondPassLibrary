@@ -22,11 +22,11 @@ Operator recovery workflows in the Django admin are documented in
 Server-wide configuration lives in the database as `core.ServerSetting` and is accessed through the cached service helpers in `core.server_settings` to avoid a DB hit on every request.
 
 Immutable database identity lives separately in the singleton
-`core.ServerInstallation` row. Its random, non-secret UUID is created by the
+`core.ServerIdentity` row. Its random, non-secret UUID is created by the
 initial schema migration, is not cached or editable as a setting, and is never
 used for authentication or authorization. The public discovery document,
 authenticated server-info response, Owner Server Settings, and Django Admin
-project the same value as `installation_id` / “Server ID”.
+project the same value as `server_id` / “Server ID”.
 
 Notes:
 

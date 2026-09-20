@@ -5,7 +5,7 @@ from typing import Any
 from django.conf import settings
 
 from core import server_settings
-from core.server_installation import get_installation_id
+from core.server_identity import get_server_id
 from library.groups.public_group import get_public_group
 from marginalia.profile import MARGINALIA_PROFILE_URI
 
@@ -13,7 +13,8 @@ from marginalia.profile import MARGINALIA_PROFILE_URI
 def server_info_payload() -> dict[str, Any]:
     public_group = get_public_group()
     return {
-        "installation_id": get_installation_id(),
+        "server_id": get_server_id(),
+        "server_urls": settings.SECOND_PASS_LIBRARY_URLS,
         "server_name": server_settings.get_server_name(),
         "server_description": server_settings.get_server_description(),
         "server_banner_message": server_settings.get_server_banner_message(),

@@ -25,7 +25,7 @@ from library.groups.consolidation import (
 from . import server_settings
 from .admin_menu import install_admin_menu
 from .models import ServerSetting
-from .server_installation import get_installation_id
+from .server_identity import get_server_id
 from .server_configuration import update_owner_server_configuration
 
 
@@ -227,7 +227,7 @@ class ServerSettingAdmin(admin.ModelAdmin):
     readonly_fields = [
         "key",
         "description",
-        "installation_id",
+        "server_id",
         "created_at",
         "updated_at",
     ]
@@ -311,7 +311,7 @@ class ServerSettingAdmin(admin.ModelAdmin):
                     "Server identity and banner",
                     {
                         "fields": (
-                            "installation_id",
+                            "server_id",
                             "server_name",
                             "server_description",
                             "server_banner_message",
@@ -412,8 +412,8 @@ class ServerSettingAdmin(admin.ModelAdmin):
         return form
 
     @admin.display(description="Server ID")
-    def installation_id(self, obj):
-        return get_installation_id()
+    def server_id(self, obj):
+        return get_server_id()
 
     def has_delete_permission(self, request, obj=None):
         if self._is_structural_setting(obj):

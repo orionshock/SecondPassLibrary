@@ -1,5 +1,29 @@
 name: secondpasslibrary
 
+# Shared application environment for the web server and maintenance worker.
+# Replace the secret, host, HTTPS origin, and Library URL placeholders.
+x-app-environment: &app_environment
+  DJANGO_SECRET_KEY: replace-me-with-a-generated-secret
+  # Hostnames or IPs only, with no scheme or port.
+  DJANGO_ALLOWED_HOSTS: your-hostname-or-domain
+  DJANGO_TIME_ZONE: America/Phoenix
+  # Set the exact HTTPS origin served by your reverse proxy.
+  DJANGO_CSRF_TRUSTED_ORIGINS: https://your-hostname-or-domain
+  # The standard deployment terminates HTTPS at the operator's reverse proxy.
+  DJANGO_SECURE_COOKIES: "1"
+  # The proxy must replace, never pass through, incoming X-Forwarded-Proto.
+  DJANGO_TRUST_X_FORWARDED_PROTO: "1"
+  # Client-IP and forwarded-host trust are separate; leave them off by default.
+  DJANGO_TRUST_X_FORWARDED_FOR: "0"
+  # If enabling forwarded client IPs, list only direct proxy peers here.
+  DJANGO_TRUSTED_PROXY_IPS: ""
+  DJANGO_USE_X_FORWARDED_HOST: "0"
+  SECOND_PASS_ENABLE_DJANGO_ADMIN: "0"
+  SECOND_PASS_READER_WEB_CLIENT_URL: ""
+  # Replace with Library base URLs from most preferred to least preferred.
+  SECOND_PASS_LIBRARY_URLS: https://library.example.com
+  DJANGO_SILENCED_SYSTEM_CHECKS: ""
+
 services:
   server:
     build:
@@ -8,8 +32,7 @@ services:
       args:
         APP_UID: 1000
         APP_GID: 1000
-    env_file:
-      - .env
+    environment: *app_environment
     expose:
       - "8000"
     volumes:
@@ -29,8 +52,7 @@ services:
       args:
         APP_UID: 1000
         APP_GID: 1000
-    env_file:
-      - .env
+    environment: *app_environment
     volumes:
       - secondpass_userdata:/app/userdata
     network_mode: "none"
@@ -45,13 +67,12 @@ services:
     profiles: ["discovery"]
     network_mode: host
     environment:
-      SECOND_PASS_LIBRARY_URL: ${SECOND_PASS_LIBRARY_URL:-}
       SERVER_ENABLE_DBUS: "no"
     command:
       - sh
       - -eu
       - -c
-      - ': "$${SECOND_PASS_LIBRARY_URL:?Set SECOND_PASS_LIBRARY_URL to the externally reachable Library URL}"; cp /secondpass.service /etc/avahi/services/secondpass.service; exec avahi-daemon'
+      - 'cp /secondpass.service /etc/avahi/services/secondpass.service; exec avahi-daemon'
     configs:
       - source: secondpass_discovery_service
         target: /secondpass.service
@@ -71,7 +92,8 @@ configs:
         <name replace-wildcards="yes">Second Pass Library on %h</name>
         <service>
           <type>_secondpass._tcp</type>
-          <port>${SECOND_PASS_DISCOVERY_PORT:-443}</port>
-          <txt-record>url=${SECOND_PASS_LIBRARY_URL:-}</txt-record>
+          <!-- Copy the first SECOND_PASS_LIBRARY_URLS entry here. -->
+          <port>443</port>
+          <txt-record>url=https://library.example.com</txt-record>
         </service>
       </service-group>
