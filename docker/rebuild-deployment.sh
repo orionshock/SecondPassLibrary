@@ -26,10 +26,10 @@ if [ -z "$VERSION" ] || [ -z "$RELEASE_DATE" ]; then
 fi
 
 echo "Stopping Second Pass Library..."
-docker compose -f "$COMPOSE_FILE" down
+docker compose -f "$COMPOSE_FILE" --profile discovery down
 
 echo "Building Second Pass Library $VERSION ($RELEASE_DATE)..."
 docker compose -f "$COMPOSE_FILE" build \
     --build-arg "SERVER_VERSION=$VERSION" \
     --build-arg "SERVER_RELEASE_DATE=$RELEASE_DATE"
-docker compose -f "$COMPOSE_FILE" up -d
+docker compose -f "$COMPOSE_FILE" --profile discovery up -d

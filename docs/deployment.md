@@ -57,6 +57,8 @@ layers so changes to one do not invalidate the others.
 replaces `secondpass/version.py` only in the image staging tree before running
 `collectstatic`; it does not modify the checkout or require Git at runtime.
 Direct Compose builds default to `live-dev-env` and the current UTC build date.
+The rebuild script enables the `discovery` profile when stopping and starting
+the deployment, so the discovery sidecar starts with the server and worker.
 
 The canonical homelab deployment runs from a clean, already-pushed local
 commit and lets the server pull and rebuild its checkout:
