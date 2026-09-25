@@ -60,7 +60,7 @@ jobs:
         with:
           tags: ${{ steps.metadata.outputs.image }}
           smoke_image: ${{ steps.metadata.outputs.image }}
-          version: ${{ steps.metadata.outputs.version }}
+          server_version: ${{ steps.metadata.outputs.version }}
           release_date: ${{ steps.metadata.outputs.release_date }}
 
       - name: Require registry credentials

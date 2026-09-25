@@ -90,7 +90,7 @@ jobs:
         with:
           tags: ${{ steps.metadata.outputs.images }}
           smoke_image: ${{ steps.metadata.outputs.immutable_image }}
-          version: ${{ steps.metadata.outputs.version }}
+          server_version: ${{ steps.metadata.outputs.version }}
           release_date: ${{ steps.metadata.outputs.release_date }}
 
       - name: Log in to registry

@@ -8,7 +8,7 @@ inputs:
   smoke_image:
     description: Image reference exercised by the production smoke test.
     required: true
-  version:
+  server_version:
     description: Server version embedded in the image.
     required: true
   release_date:
@@ -30,17 +30,17 @@ runs:
         push: false
         tags: ${{ inputs.tags }}
         build-args: |
-          SERVER_VERSION=${{ inputs.version }}
+          SERVER_VERSION=${{ inputs.server_version }}
           SERVER_RELEASE_DATE=${{ inputs.release_date }}
         labels: |
           org.opencontainers.image.revision=${{ github.sha }}
           org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
-          org.opencontainers.image.version=${{ inputs.version }}
+          org.opencontainers.image.version=${{ inputs.server_version }}
 
     - name: Exercise production image
       shell: bash
       env:
         IMAGE: ${{ inputs.smoke_image }}
-        EXPECTED_VERSION: ${{ inputs.version }}
+        EXPECTED_VERSION: ${{ inputs.server_version }}
         EXPECTED_RELEASE_DATE: ${{ inputs.release_date }}
       run: tools/smoke-production-image.sh "$IMAGE" "$EXPECTED_VERSION" "$EXPECTED_RELEASE_DATE"
