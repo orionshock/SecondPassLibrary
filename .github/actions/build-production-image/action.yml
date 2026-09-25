@@ -1,0 +1,46 @@
+name: Build and smoke production image
+description: Build the production Dockerfile and exercise its server and worker roles.
+
+inputs:
+  tags:
+    description: One or more newline-separated local image references for the build.
+    required: true
+  smoke_image:
+    description: Image reference exercised by the production smoke test.
+    required: true
+  version:
+    description: Server version embedded in the image.
+    required: true
+  release_date:
+    description: Commit release date embedded in the image.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build production image
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        file: docker/Dockerfile
+        load: true
+        push: false
+        tags: ${{ inputs.tags }}
+        build-args: |
+          SERVER_VERSION=${{ inputs.version }}
+          SERVER_RELEASE_DATE=${{ inputs.release_date }}
+        labels: |
+          org.opencontainers.image.revision=${{ github.sha }}
+          org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          org.opencontainers.image.version=${{ inputs.version }}
+
+    - name: Exercise production image
+      shell: bash
+      env:
+        IMAGE: ${{ inputs.smoke_image }}
+        EXPECTED_VERSION: ${{ inputs.version }}
+        EXPECTED_RELEASE_DATE: ${{ inputs.release_date }}
+      run: tools/smoke-production-image.sh "$IMAGE" "$EXPECTED_VERSION" "$EXPECTED_RELEASE_DATE"

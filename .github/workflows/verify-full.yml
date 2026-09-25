@@ -1,0 +1,28 @@
+name: Verify full release confidence
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: verify-full-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Full verification
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up verification environment
+        uses: ./.github/actions/setup-verification
+
+      - name: Run canonical release-confidence verification
+        run: python tools/verify.py --lane all
+
+      - name: Check dependency advisories
+        run: python tools/verify.py --lane security-deps

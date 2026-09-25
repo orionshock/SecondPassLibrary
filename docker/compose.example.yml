@@ -26,8 +26,8 @@ x-app-environment: &app_environment
 
 services:
   server:
-    # Override SECOND_PASS_IMAGE to deploy a release tag or immutable digest.
-    image: ${SECOND_PASS_IMAGE:-git.zcaprica.duckdns.org/orionshock/secondpasslibrary:main}
+    # Replace the placeholder with a release tag, or override SECOND_PASS_IMAGE.
+    image: ${SECOND_PASS_IMAGE:-git.zcaprica.duckdns.org/orionshock/secondpasslibrary:replace-with-release-tag}
     environment: *app_environment
     expose:
       - "8000"
@@ -42,7 +42,7 @@ services:
     restart: unless-stopped
 
   worker:
-    image: ${SECOND_PASS_IMAGE:-git.zcaprica.duckdns.org/orionshock/secondpasslibrary:main}
+    image: ${SECOND_PASS_IMAGE:-git.zcaprica.duckdns.org/orionshock/secondpasslibrary:replace-with-release-tag}
     environment: *app_environment
     volumes:
       - secondpass_userdata:/app/userdata

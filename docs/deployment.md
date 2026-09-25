@@ -51,19 +51,21 @@ metadata, migrations, templates, translations, and schemas remain available.
 The final script, dependency, and application copies use independent BuildKit
 layers so changes to one do not invalidate the others.
 
-The workflow in `.github/workflows/ci.yml` derives the version with
-`git describe --tags --always --dirty` and the release date from the commit with
-`git log -1 --format=%cs`. It passes both values to the existing Dockerfile
-build arguments. The build replaces `secondpass/version.py` only in the image
-staging tree before running `collectstatic`; it does not modify the checkout or
-require Git in the runtime image.
+The manual image and release workflows derive version metadata from Git and the
+release date from the commit with `git log -1 --format=%cs`. They pass both
+values to the existing Dockerfile build arguments. The build replaces
+`secondpass/version.py` only in the image staging tree before running
+`collectstatic`; it does not modify the checkout or require Git in the runtime
+image. `tools/smoke-production-image.sh` then exercises the server and worker
+roles and verifies the embedded metadata.
 
 Images are published at
 `git.zcaprica.duckdns.org/orionshock/secondpasslibrary`. Every published build
-has an immutable `sha-<full-commit-sha>` tag. Builds from `main` also update the
-moving `main` integration tag, and Git tags add a same-named image tag. Use an
-immutable SHA tag, a deliberate release tag, or a digest for deployments; do
-not use `main` as a production deployment identity.
+has an immutable commit identity. Manually published development builds use
+`dev-sha-<full-commit-sha>`. Release builds use
+`sha-<full-commit-sha>` and the exact release Git tag. No workflow publishes
+`latest` or `main`. Use a release SHA tag, a deliberate release tag, or a digest
+for deployments.
 
 The canonical homelab deployment receives an already-published image identity
 and does not pull source or build on NewCaprica:
@@ -103,9 +105,9 @@ docker compose -f docker/compose.yml up -d --no-build
 Keep it readable only by the deployment account. Optional values and defaults
 are documented beside their entries in `docker/compose.example.yml`.
 Set `SECOND_PASS_IMAGE` for a one-off immutable image selection, or replace the
-example's `image:` value with the chosen release tag or digest. The default
-`main` tag is intended only for integration deployments. The supported example
-is self-contained and does not require a project `.env` file.
+example's `replace-with-release-tag` image placeholder with the chosen release
+tag or digest. The supported example is self-contained and does not require a
+project `.env` file.
 
 The standard image fixes `SECOND_PASS_USERDATA_DIR=/app/userdata`. Its default
 UID/GID is `1000:1000`. The entrypoint creates and verifies the required

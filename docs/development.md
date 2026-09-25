@@ -332,12 +332,25 @@ checks, not vulnerability scans.
 
 ## CI and releases
 
-Normal branch pushes and pull requests run the same repository-owned
-verification through `.github/workflows/ci.yml`. A successful push to `main`
-also builds the production Dockerfile, exercises the web and worker roles,
-publishes an immutable `sha-<full-commit-sha>` image, and updates the moving
-`main` integration tag. A pushed Git tag runs the same verification and build
-and publishes both the immutable SHA tag and a same-named release image tag.
+Normal branch pushes and pull requests run the repository-owned fast lane
+through `.github/workflows/verify.yml`. They do not build or publish images.
+Use the manual `.github/workflows/verify-full.yml` workflow when HEAD needs the
+complete release-confidence lane plus dependency advisory scans without an
+image build.
+
+The manual `.github/workflows/build-image.yml` workflow builds and smoke-tests
+the selected commit as a development image. Its `publish` input defaults to
+false. When enabled, it publishes only the immutable
+`dev-sha-<full-commit-sha>` tag; it does not create a release or a moving tag.
+
+Pushing a release tag matching `alpha-rc<integer>` or
+`alpha-rc<integer>.<integer>` starts `.github/workflows/release.yml`. That
+workflow runs complete verification and advisory scans before it builds,
+smoke-tests, and publishes the production image. It publishes both
+`sha-<full-commit-sha>` and the exact Git tag as image tags, then deletes its
+local image and pulls the SHA tag back from the registry. The registry image is
+the release artifact; the workflow does not add a forge-specific release-record
+adapter.
 
 The Gitea repository must define `REGISTRY_HOST`, `REGISTRY_IMAGE`, and
 `REGISTRY_USERNAME` Actions variables and a write-capable `REGISTRY_TOKEN`
@@ -345,10 +358,9 @@ Actions secret. These are CI configuration, not developer workstation
 credentials. The workflow is standard GitHub Actions YAML; migrating it to
 GitHub primarily requires changing those registry values and secret.
 
-Tags should be intentional release identifiers and valid container tag names.
-The existing pre-release convention uses names such as `alpha-rc1.1`. The
-container registry image is the release artifact; the tagged source tree
-contains the corresponding self-contained `docker/compose.example.yml`.
+Tags should be intentional release identifiers. Existing releases establish
+the `alpha-rc1` and `alpha-rc1.1` forms. The tagged source tree contains the
+corresponding self-contained `docker/compose.example.yml`.
 
 Individual checks remain available below for focused work.
 
