@@ -7,12 +7,16 @@ from marginalia.books.serializers import (
     MarginaliaBookSummarySerializer,
     MarginaliaSessionBookReferenceSerializer,
 )
-from marginalia.models import MAX_CFI_LENGTH, MAX_LOCATION_LABEL_LENGTH, ReadingSession
+from marginalia.models import (
+    MAX_LOCATION_LENGTH,
+    MAX_LOCATION_LABEL_LENGTH,
+    ReadingSession,
+)
 from marginalia.serializer_fields import OpaqueStringField, StrictSerializer
 
 
 class MarginaliaProgressSerializer(serializers.Serializer):
-    cfi = serializers.CharField(source="progress_cfi")
+    location = serializers.CharField(source="progress_location")
     location_label = serializers.CharField(source="progress_location_label")
     updated_at = serializers.DateTimeField(source="progress_updated_at")
 
@@ -22,8 +26,8 @@ class MarginaliaProgressEnvelopeSerializer(serializers.Serializer):
 
 
 class MarginaliaProgressPutSerializer(StrictSerializer):
-    cfi = OpaqueStringField(
-        max_length=MAX_CFI_LENGTH,
+    location = OpaqueStringField(
+        max_length=MAX_LOCATION_LENGTH,
         allow_blank=False,
         trim_whitespace=False,
         validators=[validate_durable_cfi],
@@ -89,7 +93,7 @@ class MarginaliaRecentSessionSerializer(serializers.ModelSerializer):
         ).data
 
     def get_progress(self, session: ReadingSession) -> dict | None:
-        if not session.progress_cfi:
+        if not session.progress_location:
             return None
         return MarginaliaProgressSerializer(session).data
 
@@ -133,7 +137,7 @@ class MarginaliaSessionDetailSerializer(serializers.ModelSerializer):
     progress = serializers.SerializerMethodField()
 
     def get_progress(self, session: ReadingSession) -> dict | None:
-        if not session.progress_cfi:
+        if not session.progress_location:
             return None
         return MarginaliaProgressSerializer(session).data
 
@@ -200,5 +204,5 @@ class MarginaliaStartOverSerializer(StrictSerializer):
 
 
 def progress_envelope(session: ReadingSession) -> dict:
-    progress = session if session.progress_cfi else None
+    progress = session if session.progress_location else None
     return MarginaliaProgressEnvelopeSerializer({"progress": progress}).data

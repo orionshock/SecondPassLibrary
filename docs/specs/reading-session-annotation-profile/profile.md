@@ -37,23 +37,23 @@ non-null close time and null progress are materially different conditions.
 
 ## Locations and progress
 
-Every saved location uses a CFI and may include a Reader-generated
-`locationLabel`. Progress, highlights, and bookmarks all use this pair. The CFI
-is the durable anchor. The label is persisted display text and must not be used
+Every saved position uses a `location` field and may include a Reader-generated
+`locationLabel`. Progress, highlights, and bookmarks all use this pair. The
+location is the durable anchor. The label is persisted display text and must not be used
 for navigation, identity, Book or Session matching, or annotation anchoring.
 
 Durable CFIs must remain compact locators. The server validates the
 `epubcfi(...)` wrapper, structural steps, optional `!` indirection, terminal
 character offsets, and simple three-part ranges. XML ID assertions on element
 steps are accepted when the ID is an XML name without a colon, with at most 128
-characters per ID and 256 across a CFI.
+characters per ID and 256 across a location.
 The server rejects text-location assertions after offsets, temporal and spatial
 offsets, parameters, extensions, and malformed escapes. This is a syntax and
 compactness check against the
 [EPUB CFI grammar](https://idpf.org/epub/linking/cfi/#sec-syntax); the server
 stores accepted CFIs opaquely and does not resolve or interpret them against
 EPUB contents. Clients emit compact structural CFIs with optional element IDs.
-Quote and Book text belong in `text`, `prefix`, and `suffix`, not in the CFI.
+Quote and Book text belong in `text`, `prefix`, and `suffix`, not in the location.
 Progress also carries its own update time. Product list responses may include
 summaries, but those are not interchange fields.
 
@@ -105,7 +105,7 @@ automatically. Clients and servers must accept both historical values and the
 new `PPP% - Label` style without treating either form as identity.
 
 Second Pass Library currently uses a nonblank label as the first lexical sort
-key for annotation display, followed by CFI, creation time, and stable identity.
+key for annotation display, followed by location, creation time, and stable identity.
 This compares the entire string; it does not parse the percentage or infer EPUB
 position. There is no canonical numeric progression field.
 
@@ -146,7 +146,7 @@ defined synchronization contract.
 Archive arrays are emitted deterministically. Author order is meaningful.
 Sessions and annotations use stable runtime ordering so identical archive input
 and state render consistently. Annotation reading order prefers nonblank
-location labels, then falls back to opaque CFI, creation time, and identity; it
+location labels, then falls back to opaque location, creation time, and identity; it
 does not claim to reconstruct EPUB spine order.
 
 Portable identities make retries correlatable, but the profile does not define

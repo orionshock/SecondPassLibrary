@@ -68,8 +68,7 @@ class MarginaliaSessionDetailAPITests(APITestCase):
     def test_missing_and_foreign_sessions_have_equivalent_no_leakage_responses(self):
         foreign = self.client.get(self.url(self.foreign))
         missing = self.client.get(
-            "/api/v1/marginalia/sessions/"
-            "00000000-0000-0000-0000-000000000000/"
+            "/api/v1/marginalia/sessions/00000000-0000-0000-0000-000000000000/"
         )
 
         self.assertEqual(foreign.status_code, status.HTTP_404_NOT_FOUND)
@@ -104,12 +103,12 @@ class MarginaliaSessionDetailAPITests(APITestCase):
         session_at = timezone.now() - timedelta(hours=3)
         progress_at = timezone.now() - timedelta(hours=2)
         annotation_at = timezone.now() - timedelta(hours=1)
-        cfi = "epubcfi(/6/8!/4/3:7)"
+        location = "epubcfi(/6/8!/4/3:7)"
         label = "  Chapter 08 · 42%  "
         ReadingSession.objects.filter(pk=self.active.pk).update(updated_at=session_at)
         assign_session_progress(
             session=self.active,
-            cfi=cfi,
+            location=location,
             location_label=label,
             updated_at=progress_at,
         )
@@ -117,14 +116,14 @@ class MarginaliaSessionDetailAPITests(APITestCase):
             session=self.active,
             client_id="detail-activity",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="epubcfi(/6/10)",
+            location="epubcfi(/6/10)",
         )
         Annotation.objects.filter(pk=annotation.pk).update(updated_at=annotation_at)
 
         session = self.client.get(self.url(self.active)).json()["session"]
 
         self.assertEqual(session["annotation_count"], 1)
-        self.assertEqual(session["progress"]["cfi"], cfi)
+        self.assertEqual(session["progress"]["location"], location)
         self.assertEqual(session["progress"]["location_label"], label)
         self.assertEqual(
             parse_datetime(session["progress"]["updated_at"]),
@@ -220,13 +219,13 @@ class MarginaliaSessionDetailAPITests(APITestCase):
             session=self.active,
             client_id="delete-active",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="epubcfi(/6/2)",
+            location="epubcfi(/6/2)",
         )
         closed_annotation = Annotation.objects.create(
             session=self.closed,
             client_id="keep-closed",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="epubcfi(/6/4)",
+            location="epubcfi(/6/4)",
         )
 
         response = self.client.delete(self.url(self.active))
@@ -272,8 +271,7 @@ class MarginaliaSessionDetailAPITests(APITestCase):
     def test_delete_foreign_missing_and_repeated_ids_share_not_found_boundary(self):
         foreign = self.client.delete(self.url(self.foreign))
         missing = self.client.delete(
-            "/api/v1/marginalia/sessions/"
-            "00000000-0000-0000-0000-000000000000/"
+            "/api/v1/marginalia/sessions/00000000-0000-0000-0000-000000000000/"
         )
         first = self.client.delete(self.url(self.closed))
         repeated = self.client.delete(self.url(self.closed))

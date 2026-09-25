@@ -58,13 +58,13 @@ class MarginaliaProgressCloseAPITests(APITestCase):
         self.assertEqual(absent.status_code, status.HTTP_200_OK)
         self.assertEqual(absent.json(), {"progress": None})
         self.assertEqual(self.session.updated_at, before)
-        self.assertEqual(self.session.progress_cfi, "")
+        self.assertEqual(self.session.progress_location, "")
 
-        cfi = "epubcfi(/6/8!/4/3:7)"
+        location = "epubcfi(/6/8!/4/3:7)"
         label = "  Chapter 08 · 42% · The Blackstaff  "
         saved_at = timezone.now() - timedelta(hours=1)
         ReadingSession.objects.filter(pk=self.session.pk).update(
-            progress_cfi=cfi,
+            progress_location=location,
             progress_location_label=label,
             progress_updated_at=saved_at,
         )
@@ -73,7 +73,7 @@ class MarginaliaProgressCloseAPITests(APITestCase):
         present = self.client.get(self.progress_url())
 
         self.assertEqual(present.status_code, status.HTTP_200_OK)
-        self.assertEqual(present.json()["progress"]["cfi"], cfi)
+        self.assertEqual(present.json()["progress"]["location"], location)
         self.assertEqual(present.json()["progress"]["location_label"], label)
         self.assertEqual(
             parse_datetime(present.json()["progress"]["updated_at"]),
@@ -85,7 +85,7 @@ class MarginaliaProgressCloseAPITests(APITestCase):
         ReadingSession.objects.filter(pk=self.session.pk).update(
             status=ReadingSession.STATUS_CLOSED,
             closed_at=timezone.now(),
-            progress_cfi="epubcfi(/6/10)",
+            progress_location="epubcfi(/6/10)",
             progress_updated_at=saved_at,
         )
         session_payload = self.client.get(self.progress_url()).json()
@@ -119,7 +119,7 @@ class MarginaliaProgressCloseAPITests(APITestCase):
 
         progress = bearer.put(
             self.progress_url(),
-            {"cfi": "epubcfi(/6/8)"},
+            {"location": "epubcfi(/6/8)"},
             format="json",
             **authorization,
         )
@@ -137,8 +137,7 @@ class MarginaliaProgressCloseAPITests(APITestCase):
     def test_progress_missing_and_foreign_sessions_do_not_leak(self):
         foreign = self.client.get(self.progress_url(self.foreign))
         missing = self.client.get(
-            "/api/v1/marginalia/sessions/"
-            "00000000-0000-0000-0000-000000000000/progress/"
+            "/api/v1/marginalia/sessions/00000000-0000-0000-0000-000000000000/progress/"
         )
 
         self.assertEqual(foreign.status_code, status.HTTP_404_NOT_FOUND)
@@ -148,24 +147,24 @@ class MarginaliaProgressCloseAPITests(APITestCase):
     def test_progress_put_atomically_replaces_location_with_server_timestamp(self):
         old_timestamp = timezone.now() - timedelta(days=1)
         ReadingSession.objects.filter(pk=self.session.pk).update(
-            progress_cfi="epubcfi(/6/2)",
+            progress_location="epubcfi(/6/2)",
             progress_location_label="Old",
             progress_updated_at=old_timestamp,
         )
         before = timezone.now()
-        cfi = "epubcfi(/6/12!/4[chapter-identifier-01]/3:7)"
+        location = "epubcfi(/6/12!/4[chapter-identifier-01]/3:7)"
         label = "  Chapter 12 · 61%  "
 
         response = self.client.put(
             self.progress_url(),
-            {"cfi": cfi, "location_label": label},
+            {"location": location, "location_label": label},
             format="json",
         )
         after = timezone.now()
         self.session.refresh_from_db()
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(self.session.progress_cfi, cfi)
+        self.assertEqual(self.session.progress_location, location)
         self.assertEqual(self.session.progress_location_label, label)
         self.assertGreaterEqual(self.session.progress_updated_at, before)
         self.assertLessEqual(self.session.progress_updated_at, after)
@@ -177,12 +176,12 @@ class MarginaliaProgressCloseAPITests(APITestCase):
     def test_progress_put_accepts_omitted_or_blank_label(self):
         omitted = self.client.put(
             self.progress_url(),
-            {"cfi": "epubcfi(/6/2)"},
+            {"location": "epubcfi(/6/2)"},
             format="json",
         )
         blank = self.client.put(
             self.progress_url(),
-            {"cfi": "epubcfi(/6/4)", "location_label": ""},
+            {"location": "epubcfi(/6/4)", "location_label": ""},
             format="json",
         )
 
@@ -194,7 +193,7 @@ class MarginaliaProgressCloseAPITests(APITestCase):
     def test_progress_route_supports_only_get_and_put(self):
         patched = self.client.patch(
             self.progress_url(),
-            {"cfi": "epubcfi(/6/2)"},
+            {"location": "epubcfi(/6/2)"},
             format="json",
         )
         deleted = self.client.delete(self.progress_url())
@@ -206,18 +205,19 @@ class MarginaliaProgressCloseAPITests(APITestCase):
         saved_at = timezone.now() - timedelta(hours=2)
         original = ("epubcfi(/6/2)", "Original", saved_at)
         ReadingSession.objects.filter(pk=self.session.pk).update(
-            progress_cfi=original[0],
+            progress_location=original[0],
             progress_location_label=original[1],
             progress_updated_at=original[2],
         )
 
         for payload in (
             {},
-            {"cfi": ""},
-            {"cfi": "epubcfi(/6/8@10:20)"},
-            {"cfi": {"value": "epubcfi(/6/4)"}},
-            {"cfi": "epubcfi(/6/4)", "unknown": True},
-            {"cfi": "epubcfi(/6/4)", "location_label": None},
+            {"cfi": "epubcfi(/6/4)"},
+            {"location": ""},
+            {"location": "epubcfi(/6/8@10:20)"},
+            {"location": {"value": "epubcfi(/6/4)"}},
+            {"location": "epubcfi(/6/4)", "unknown": True},
+            {"location": "epubcfi(/6/4)", "location_label": None},
         ):
             with self.subTest(payload=payload):
                 response = self.client.put(self.progress_url(), payload, format="json")
@@ -225,7 +225,7 @@ class MarginaliaProgressCloseAPITests(APITestCase):
                 self.session.refresh_from_db()
                 self.assertEqual(
                     (
-                        self.session.progress_cfi,
+                        self.session.progress_location,
                         self.session.progress_location_label,
                         self.session.progress_updated_at,
                     ),
@@ -235,7 +235,7 @@ class MarginaliaProgressCloseAPITests(APITestCase):
     def test_progress_write_rechecks_closed_state_and_book_authority(self):
         previous = ("epubcfi(/6/2)", "Original")
         ReadingSession.objects.filter(pk=self.session.pk).update(
-            progress_cfi=previous[0],
+            progress_location=previous[0],
             progress_location_label=previous[1],
             progress_updated_at=timezone.now(),
         )
@@ -249,12 +249,12 @@ class MarginaliaProgressCloseAPITests(APITestCase):
             replace_progress(
                 user=self.user,
                 session_id=self.session.pk,
-                cfi="epubcfi(/6/4)",
+                location="epubcfi(/6/4)",
                 location_label="New",
             )
         closed = self.client.put(
             self.progress_url(),
-            {"cfi": "epubcfi(/6/4)"},
+            {"location": "epubcfi(/6/4)"},
             format="json",
         )
         self.assertEqual(closed.status_code, status.HTTP_409_CONFLICT)
@@ -266,12 +266,12 @@ class MarginaliaProgressCloseAPITests(APITestCase):
         )
         denied = self.client.put(
             self.progress_url(active),
-            {"cfi": "epubcfi(/6/4)"},
+            {"location": "epubcfi(/6/4)"},
             format="json",
         )
         active.refresh_from_db()
         self.assertEqual(denied.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(active.progress_cfi, "")
+        self.assertEqual(active.progress_location, "")
 
     def test_close_updates_final_metadata_and_progress_atomically(self):
         before_count = ReadingSession.objects.count()
@@ -282,7 +282,7 @@ class MarginaliaProgressCloseAPITests(APITestCase):
                 "name": "Finished first read",
                 "notes": "Final thoughts",
                 "progress": {
-                    "cfi": "epubcfi(/6/42!/4/3:7)",
+                    "location": "epubcfi(/6/42!/4/3:7)",
                     "location_label": "  Chapter 42 · 100%  ",
                 },
             },
@@ -295,7 +295,7 @@ class MarginaliaProgressCloseAPITests(APITestCase):
         self.assertEqual(response.json()["session"]["name"], "Finished first read")
         self.assertEqual(response.json()["session"]["notes"], "Final thoughts")
         self.assertEqual(
-            response.json()["session"]["progress"]["cfi"],
+            response.json()["session"]["progress"]["location"],
             "epubcfi(/6/42!/4/3:7)",
         )
         self.assertEqual(self.session.progress_updated_at, self.session.closed_at)
@@ -322,7 +322,7 @@ class MarginaliaProgressCloseAPITests(APITestCase):
             {
                 "name": "Must not save",
                 "notes": "Must not save",
-                "progress": {"cfi": "epubcfi(/6/42)"},
+                "progress": {"location": "epubcfi(/6/42)"},
             },
             format="json",
         )
@@ -332,14 +332,14 @@ class MarginaliaProgressCloseAPITests(APITestCase):
         self.assertEqual(self.session.status, ReadingSession.STATUS_ACTIVE)
         self.assertEqual(self.session.name, "Current pass")
         self.assertEqual(self.session.notes, "Initial notes")
-        self.assertEqual(self.session.progress_cfi, "")
+        self.assertEqual(self.session.progress_location, "")
 
     def test_close_retries_are_idempotent_only_when_values_match(self):
         payload = {
             "name": "Finished",
             "notes": "Done",
             "progress": {
-                "cfi": "epubcfi(/6/42)",
+                "location": "epubcfi(/6/42)",
                 "location_label": "Chapter 42 · 100%",
             },
         }
@@ -363,7 +363,7 @@ class MarginaliaProgressCloseAPITests(APITestCase):
     def test_close_rejects_invalid_nested_fields_without_mutation(self):
         for payload in (
             {"status": "closed"},
-            {"progress": {"cfi": "epubcfi(/6/4)", "unknown": True}},
+            {"progress": {"location": "epubcfi(/6/4)", "unknown": True}},
             {"progress": {}},
         ):
             with self.subTest(payload=payload):
@@ -376,8 +376,7 @@ class MarginaliaProgressCloseAPITests(APITestCase):
     def test_close_missing_and_foreign_sessions_do_not_leak(self):
         foreign = self.client.post(self.close_url(self.foreign), {}, format="json")
         missing = self.client.post(
-            "/api/v1/marginalia/sessions/"
-            "00000000-0000-0000-0000-000000000000/close/",
+            "/api/v1/marginalia/sessions/00000000-0000-0000-0000-000000000000/close/",
             {},
             format="json",
         )

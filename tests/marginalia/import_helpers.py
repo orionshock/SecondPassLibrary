@@ -42,7 +42,7 @@ def archive_session(
         "createdAt": "2026-07-01T12:00:00Z",
         "updatedAt": "2026-07-20T12:00:00Z",
         "progress": {
-            "cfi": "epubcfi(/6/8!/4/2:7)",
+            "location": "epubcfi(/6/8!/4/2:7)",
             "locationLabel": "  Chapter 08 · 42%  ",
             "updatedAt": "2026-07-19T12:00:00Z",
         },
@@ -55,7 +55,7 @@ def archive_highlight() -> dict:
         "clientAnnotationId": "highlight-1",
         "kind": "highlight",
         "location": {
-            "cfi": "epubcfi(/6/8!/4/3:7)",
+            "location": "epubcfi(/6/8!/4/3:7)",
             "locationLabel": "  Chapter 08 · 42% · Context  ",
         },
         "body": {

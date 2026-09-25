@@ -54,7 +54,7 @@ class MarginaliaAdminTests(IsolatedUserdataMixin, TestCase):
             session=session,
             client_id=client_id,
             kind=Annotation.KIND_HIGHLIGHT,
-            cfi="epubcfi(/6/2)",
+            location="epubcfi(/6/2)",
             location_label="Chapter 01 · 2%",
             highlight_text="Selected text",
             highlight_color="yellow",
@@ -229,7 +229,7 @@ class MarginaliaAdminTests(IsolatedUserdataMixin, TestCase):
                 "status",
                 "started_at",
                 "closed_at",
-                "progress_cfi",
+                "progress_location",
                 "progress_location_label",
                 "progress_updated_at",
                 "created_at",
@@ -242,7 +242,9 @@ class MarginaliaAdminTests(IsolatedUserdataMixin, TestCase):
             {field.name for field in Annotation._meta.fields},
         )
         stage_fields = _fieldset_names(self.stage_admin.fieldsets)
-        self.assertEqual(stage_fields, {field.name for field in ImportStage._meta.fields})
+        self.assertEqual(
+            stage_fields, {field.name for field in ImportStage._meta.fields}
+        )
         self.assertNotIn("import_token", stage_fields)
         self.assertNotIn("raw_token", stage_fields)
 
@@ -261,7 +263,7 @@ class MarginaliaAdminTests(IsolatedUserdataMixin, TestCase):
         )
         for repair_field in (
             "kind",
-            "cfi",
+            "location",
             "location_label",
             "highlight_text",
             "quote_prefix",
@@ -283,7 +285,7 @@ class MarginaliaAdminTests(IsolatedUserdataMixin, TestCase):
                 "notes": "Repaired active notes",
                 "status": "active",
                 "closed_at": "",
-                "progress_cfi": "",
+                "progress_location": "",
                 "progress_location_label": "",
                 "progress_updated_at": "",
             },
@@ -293,7 +295,9 @@ class MarginaliaAdminTests(IsolatedUserdataMixin, TestCase):
         active_form.save()
 
         closed_book = Book.objects.create(title="Closed Admin Book", checksum="c" * 64)
-        closed = self.create_session(status=ReadingSession.STATUS_CLOSED, book=closed_book)
+        closed = self.create_session(
+            status=ReadingSession.STATUS_CLOSED, book=closed_book
+        )
         closed_form_class = self.session_admin.get_form(self.request, obj=closed)
         closed_form = closed_form_class(
             data={
@@ -304,7 +308,7 @@ class MarginaliaAdminTests(IsolatedUserdataMixin, TestCase):
                 "status": "closed",
                 "closed_at_0": closed.closed_at.strftime("%Y-%m-%d"),
                 "closed_at_1": closed.closed_at.strftime("%H:%M:%S"),
-                "progress_cfi": "",
+                "progress_location": "",
                 "progress_location_label": "",
                 "progress_updated_at": "",
             },
@@ -404,9 +408,7 @@ class MarginaliaAdminTests(IsolatedUserdataMixin, TestCase):
             self.request,
             ReadingSession.objects.filter(pk=bulk_session.pk),
         )
-        self.assertFalse(
-            ReadingSession.objects.filter(pk=bulk_session.pk).exists()
-        )
+        self.assertFalse(ReadingSession.objects.filter(pk=bulk_session.pk).exists())
 
     def test_import_stage_admin_deletion_removes_only_its_staged_files(self):
         first, first_path = self.create_stage(suffix="1")
@@ -427,7 +429,5 @@ class MarginaliaAdminTests(IsolatedUserdataMixin, TestCase):
 
 def _fieldset_names(fieldsets) -> set[str]:
     return {
-        field_name
-        for _title, options in fieldsets
-        for field_name in options["fields"]
+        field_name for _title, options in fieldsets for field_name in options["fields"]
     }

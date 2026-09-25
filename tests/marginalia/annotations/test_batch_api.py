@@ -22,13 +22,13 @@ from marginalia.models import Annotation, ReadingSession
 User = get_user_model()
 
 
-def bookmark(client_id: str, cfi: str = "epubcfi(/6/2)") -> dict:
+def bookmark(client_id: str, location: str = "epubcfi(/6/2)") -> dict:
     return {
         "action": "upsert",
         "annotation": {
             "client_id": client_id,
             "kind": "bookmark",
-            "location": {"cfi": cfi, "location_label": "Chapter 01 · 5%"},
+            "location": {"location": location, "location_label": "Chapter 01 · 5%"},
         },
     }
 
@@ -40,7 +40,7 @@ def highlight(client_id: str, text: str = "Selected passage") -> dict:
             "client_id": client_id,
             "kind": "highlight",
             "location": {
-                "cfi": "epubcfi(/6/8!/4/2:7)",
+                "location": "epubcfi(/6/8!/4/2:7)",
                 "location_label": "  Chapter 08 · 42%  ",
             },
             "body": {
@@ -95,7 +95,10 @@ class MarginaliaAnnotationBatchAPITests(APITestCase):
             "yellow",
         )
         self.assertEqual(
-            {row["client_id"]: row["updated_at"] for row in second.json()["annotations"]},
+            {
+                row["client_id"]: row["updated_at"]
+                for row in second.json()["annotations"]
+            },
             timestamps,
         )
 
@@ -110,7 +113,9 @@ class MarginaliaAnnotationBatchAPITests(APITestCase):
         restored = self.post([highlight("same", text="Restored")])
 
         annotation = Annotation.objects.get(session=self.session, client_id="same")
-        self.assertEqual(updated.json()["annotations"][0]["body"]["text"], "Replacement")
+        self.assertEqual(
+            updated.json()["annotations"][0]["body"]["text"], "Replacement"
+        )
         self.assertEqual(deleted.json()["annotations"], [])
         self.assertEqual(repeated.json()["annotations"], [])
         self.assertIsNotNone(deleted_at)
@@ -135,7 +140,9 @@ class MarginaliaAnnotationBatchAPITests(APITestCase):
         self.assertEqual(set(rows), {"update-me", "new-bookmark"})
         self.assertEqual(rows["update-me"]["body"]["text"], "Updated")
         self.assertTrue(
-            Annotation.objects.get(session=self.session, client_id="delete-me").is_deleted
+            Annotation.objects.get(
+                session=self.session, client_id="delete-me"
+            ).is_deleted
         )
         self.assertIsNotNone(
             Annotation.objects.get(
@@ -155,25 +162,42 @@ class MarginaliaAnnotationBatchAPITests(APITestCase):
             with self.subTest(operations=operations):
                 response = self.post(operations)
                 self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-                self.assertFalse(Annotation.objects.filter(session=self.session).exists())
+                self.assertFalse(
+                    Annotation.objects.filter(session=self.session).exists()
+                )
 
     def test_unsupported_cfi_rejects_the_complete_batch(self):
-        response = self.post([
-            bookmark("valid"),
-            bookmark("invalid", "epubcfi(/6/8!/4/3:2[bad^x])"),
-        ])
+        response = self.post(
+            [
+                bookmark("valid"),
+                bookmark("invalid", "epubcfi(/6/8!/4/3:2[bad^x])"),
+            ]
+        )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertIn("cfi", str(response.data))
+        self.assertIn("location", str(response.data))
+        self.assertFalse(Annotation.objects.filter(session=self.session).exists())
+
+    def test_retired_cfi_wire_field_is_rejected(self):
+        operation = bookmark("retired-field")
+        operation["annotation"]["location"] = {"cfi": "epubcfi(/6/2)"}
+
+        response = self.post([operation])
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertFalse(Annotation.objects.filter(session=self.session).exists())
 
     def test_range_cfi_is_stored_unchanged(self):
-        cfi = "epubcfi(/6/8[spine-item]!/4/2,/1:1,/4[section]/1:4)"
-        response = self.post([bookmark("range", cfi)])
+        location = "epubcfi(/6/8[spine-item]!/4/2,/1:1,/4[section]/1:4)"
+        response = self.post([bookmark("range", location)])
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(Annotation.objects.get(session=self.session).cfi, cfi)
-        self.assertEqual(response.data["annotations"][0]["location"]["cfi"], cfi)
+        self.assertEqual(
+            Annotation.objects.get(session=self.session).location, location
+        )
+        self.assertEqual(
+            response.data["annotations"][0]["location"]["location"], location
+        )
 
     def test_kind_specific_and_bounded_body_validation_is_strict(self):
         invalid_annotations = (
@@ -184,7 +208,7 @@ class MarginaliaAnnotationBatchAPITests(APITestCase):
             {
                 "client_id": "highlight-no-body",
                 "kind": "highlight",
-                "location": {"cfi": "epubcfi(/6/2)"},
+                "location": {"location": "epubcfi(/6/2)"},
             },
             highlight("too-long", text="x" * (64 * 1024 + 1))["annotation"],
             {
@@ -230,7 +254,10 @@ class MarginaliaAnnotationBatchAPITests(APITestCase):
         self.assertFalse(Annotation.objects.exists())
 
     def test_batch_limit_and_session_scope_are_enforced(self):
-        too_many = [bookmark(f"bookmark-{index}") for index in range(BATCH_ANNOTATION_OPERATION_LIMIT + 1)]
+        too_many = [
+            bookmark(f"bookmark-{index}")
+            for index in range(BATCH_ANNOTATION_OPERATION_LIMIT + 1)
+        ]
         limited = self.post(too_many)
 
         other_book = Book.objects.create(title="Other")
@@ -240,7 +267,7 @@ class MarginaliaAnnotationBatchAPITests(APITestCase):
             session=other_session,
             client_id="same-id",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="epubcfi(/6/20)",
+            location="epubcfi(/6/20)",
         )
         scoped = self.post([bookmark("same-id")])
 

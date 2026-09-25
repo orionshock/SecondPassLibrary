@@ -72,7 +72,9 @@ class StoredEpubRepairTests(IsolatedMediaRootMixin, TestCase):
             **kwargs,
         )
 
-    def test_missing_stored_file_restoration_succeeds_without_replace_confirmation(self):
+    def test_missing_stored_file_restoration_succeeds_without_replace_confirmation(
+        self,
+    ):
         old_name = self.book.book_file.name
         self.book.book_file.storage.delete(old_name)
 
@@ -193,7 +195,7 @@ class StoredEpubRepairTests(IsolatedMediaRootMixin, TestCase):
         session = ReadingSession.objects.create(
             user=self.operator,
             book=self.book,
-            progress_cfi="epubcfi(/6/2)",
+            progress_location="epubcfi(/6/2)",
             progress_location_label="Chapter 1",
             progress_updated_at=timezone.now(),
         )
@@ -201,7 +203,7 @@ class StoredEpubRepairTests(IsolatedMediaRootMixin, TestCase):
             session=session,
             client_id="file-repair-preservation",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="epubcfi(/6/2)",
+            location="epubcfi(/6/2)",
         )
         snapshot = {
             "cover": self.book.cover_file.name,
@@ -212,7 +214,7 @@ class StoredEpubRepairTests(IsolatedMediaRootMixin, TestCase):
             "groups": list(self.book.group_assignments.values_list("id", flat=True)),
             "shelf_item": shelf_item.id,
             "session": session.id,
-            "progress_cfi": session.progress_cfi,
+            "progress_location": session.progress_location,
             "progress_location_label": session.progress_location_label,
             "progress_updated_at": session.progress_updated_at,
             "annotation": annotation.id,
@@ -231,17 +233,21 @@ class StoredEpubRepairTests(IsolatedMediaRootMixin, TestCase):
             list(self.book.book_catalog_tags.values_list("id", flat=True)),
             snapshot["tags"],
         )
-        self.assertTrue(self.book.identifiers.filter(pk=snapshot["identifier"]).exists())
+        self.assertTrue(
+            self.book.identifiers.filter(pk=snapshot["identifier"]).exists()
+        )
         self.assertEqual(
             list(self.book.group_assignments.values_list("id", flat=True)),
             snapshot["groups"],
         )
-        self.assertTrue(self.book.shelf_items.filter(pk=snapshot["shelf_item"]).exists())
+        self.assertTrue(
+            self.book.shelf_items.filter(pk=snapshot["shelf_item"]).exists()
+        )
         session.refresh_from_db()
         self.assertTrue(
             self.book.marginalia_sessions.filter(pk=snapshot["session"]).exists()
         )
-        self.assertEqual(session.progress_cfi, snapshot["progress_cfi"])
+        self.assertEqual(session.progress_location, snapshot["progress_location"])
         self.assertEqual(
             session.progress_location_label,
             snapshot["progress_location_label"],
@@ -255,7 +261,9 @@ class StoredEpubRepairTests(IsolatedMediaRootMixin, TestCase):
         before = {path for path in Path(self._media_root).rglob("*") if path.is_file()}
 
         with (
-            patch("library.file_repair.Book.save", side_effect=IntegrityError("forced")),
+            patch(
+                "library.file_repair.Book.save", side_effect=IntegrityError("forced")
+            ),
             self.assertRaises(IntegrityError),
         ):
             self._repair(

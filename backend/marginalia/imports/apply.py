@@ -215,7 +215,7 @@ def _create_sessions(
             status=ReadingSession.STATUS_CLOSED,
             started_at=_timestamp(source.started_at),
             closed_at=closed_at,
-            progress_cfi=source.progress.cfi if source.progress else "",
+            progress_location=source.progress.location if source.progress else "",
             progress_location_label=(
                 (source.progress.location_label or "") if source.progress else ""
             ),
@@ -291,7 +291,7 @@ def _create_annotations(
                 "session": session,
                 "client_id": source.client_annotation_id,
                 "kind": source.kind,
-                "cfi": source.location_cfi,
+                "location": source.location,
                 "location_label": source.location_label or "",
                 "created_at": _timestamp(source.created_at),
                 "updated_at": _timestamp(source.updated_at),

@@ -180,7 +180,7 @@ def _export_stats(sessions, *, include_empty_sessions: bool) -> _ExportStats:
         text_characters=_text_character_sum(
             "name",
             "notes",
-            "progress_cfi",
+            "progress_location",
             "progress_location_label",
         ),
     )
@@ -192,7 +192,7 @@ def _export_stats(sessions, *, include_empty_sessions: bool) -> _ExportStats:
         count=Count("pk"),
         text_characters=_text_character_sum(
             "client_id",
-            "cfi",
+            "location",
             "location_label",
             "highlight_text",
             "quote_prefix",

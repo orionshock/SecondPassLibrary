@@ -124,25 +124,29 @@ class MarginaliaBookAPITests(APITestCase):
         visible = self.client.get(f"/api/v1/marginalia/books/{self.visible.id}/")
         self.assertTrue(visible.json()["can_open"])
 
-    def test_last_activity_includes_progress_and_annotations_and_orders_newest_first(self):
+    def test_last_activity_includes_progress_and_annotations_and_orders_newest_first(
+        self,
+    ):
         now = timezone.now()
         older = now - timedelta(days=3)
         middle = now - timedelta(days=2)
         newest = now - timedelta(days=1)
-        ReadingSession.objects.filter(pk=self.visible_session.pk).update(updated_at=middle)
+        ReadingSession.objects.filter(pk=self.visible_session.pk).update(
+            updated_at=middle
+        )
         ReadingSession.objects.filter(pk=self.hidden_closed.pk).update(updated_at=older)
         ReadingSession.objects.filter(pk=self.hidden_older_closed.pk).update(
             updated_at=older
         )
         ReadingSession.objects.filter(pk=self.visible_session.pk).update(
-            progress_cfi="epubcfi(/6/4)",
+            progress_location="epubcfi(/6/4)",
             progress_updated_at=middle,
         )
         annotation = Annotation.objects.create(
             session=self.hidden_closed,
             client_id="book-activity",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="epubcfi(/6/2)",
+            location="epubcfi(/6/2)",
         )
         Annotation.objects.filter(pk=annotation.pk).update(updated_at=newest)
 
@@ -163,9 +167,9 @@ class MarginaliaBookAPITests(APITestCase):
             ("Patternist", self.hidden.id),
         ):
             with self.subTest(term=term):
-                rows = self.client.get(
-                    "/api/v1/marginalia/books/", {"q": term}
-                ).json()["results"]
+                rows = self.client.get("/api/v1/marginalia/books/", {"q": term}).json()[
+                    "results"
+                ]
                 self.assertEqual([row["id"] for row in rows], [str(expected_id)])
 
         self.visible_session.notes = "private search phrase"
@@ -204,9 +208,7 @@ class MarginaliaBookAPITests(APITestCase):
         )
 
     def test_detail_uses_no_leakage_not_found_for_unowned_and_missing_books(self):
-        unowned = self.client.get(
-            f"/api/v1/marginalia/books/{self.other_only.id}/"
-        )
+        unowned = self.client.get(f"/api/v1/marginalia/books/{self.other_only.id}/")
         missing = self.client.get(
             "/api/v1/marginalia/books/00000000-0000-0000-0000-000000000000/"
         )

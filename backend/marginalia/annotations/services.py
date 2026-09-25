@@ -18,16 +18,20 @@ logger = logging.getLogger(__name__)
 
 
 @transaction.atomic
-def synchronize_annotations(*, user, session_id, operations: Sequence[dict]) -> ReadingSession:
+def synchronize_annotations(
+    *, user, session_id, operations: Sequence[dict]
+) -> ReadingSession:
     session = ReadingSession.objects.select_for_update().get(
         pk=session_id,
         user=user,
     )
     if not session.is_active:
         raise SessionClosedError
-    if not visible_books_for_user(user, cached=False).filter(
-        pk=session.book_id
-    ).exists():
+    if (
+        not visible_books_for_user(user, cached=False)
+        .filter(pk=session.book_id)
+        .exists()
+    ):
         raise BookAccessRequiredError
 
     # SQLite has no row-level SELECT FOR UPDATE. This no-op compare-and-set
@@ -61,7 +65,7 @@ def synchronize_annotations(*, user, session_id, operations: Sequence[dict]) -> 
                 )
             continue
 
-        validate_durable_cfi(operation["annotation"]["location"]["cfi"])
+        validate_durable_cfi(operation["annotation"]["location"]["location"])
         values = _annotation_values(operation["annotation"])
         if annotation is None:
             annotation = Annotation.objects.create(
@@ -73,7 +77,9 @@ def synchronize_annotations(*, user, session_id, operations: Sequence[dict]) -> 
             continue
 
         changed_fields = [
-            field for field, value in values.items() if getattr(annotation, field) != value
+            field
+            for field, value in values.items()
+            if getattr(annotation, field) != value
         ]
         if annotation.is_deleted:
             annotation.is_deleted = False
@@ -151,7 +157,7 @@ def _annotation_values(annotation: dict) -> dict:
     if annotation["kind"] == Annotation.KIND_BOOKMARK:
         return {
             "kind": Annotation.KIND_BOOKMARK,
-            "cfi": location["cfi"],
+            "location": location["location"],
             "location_label": location.get("location_label", ""),
             "highlight_text": "",
             "quote_prefix": "",
@@ -164,7 +170,7 @@ def _annotation_values(annotation: dict) -> dict:
     body = annotation["body"]
     return {
         "kind": Annotation.KIND_HIGHLIGHT,
-        "cfi": location["cfi"],
+        "location": location["location"],
         "location_label": location.get("location_label", ""),
         "highlight_text": body["text"],
         "quote_prefix": body.get("prefix", ""),

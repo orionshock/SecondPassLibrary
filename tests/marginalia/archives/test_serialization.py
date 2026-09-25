@@ -48,7 +48,7 @@ class MarginaliaArchiveSerializationTests(TestCase):
             closed_at=timestamp if status == ReadingSession.STATUS_CLOSED else None,
             name=f"Session {offset}",
             notes="Session notes",
-            progress_cfi="epubcfi(/6/8!/4/2:7)" if progress else "",
+            progress_location="epubcfi(/6/8!/4/2:7)" if progress else "",
             progress_location_label="  Chapter 08 · 42%  " if progress else "",
             progress_updated_at=timestamp if progress else None,
         )
@@ -65,7 +65,7 @@ class MarginaliaArchiveSerializationTests(TestCase):
             session=session,
             client_id=client_id,
             kind=Annotation.KIND_HIGHLIGHT,
-            cfi="epubcfi(/6/8!/4/3:7)",
+            location="epubcfi(/6/8!/4/3:7)",
             location_label=label,
             highlight_text="Selected passage",
             quote_prefix="Before ",
@@ -85,7 +85,7 @@ class MarginaliaArchiveSerializationTests(TestCase):
             session=closed,
             client_id="reader-bookmark",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="epubcfi(/6/8!/4/4)",
+            location="epubcfi(/6/8!/4/4)",
             location_label="Chapter 09 · 47%",
         )
         active = self.make_session(status=ReadingSession.STATUS_ACTIVE, offset=1)
@@ -116,9 +116,11 @@ class MarginaliaArchiveSerializationTests(TestCase):
         self.assertEqual(
             closed_payload["progress"],
             {
-                "cfi": closed.progress_cfi,
+                "location": closed.progress_location,
                 "locationLabel": closed.progress_location_label,
-                "updatedAt": closed.progress_updated_at.isoformat().replace("+00:00", "Z"),
+                "updatedAt": closed.progress_updated_at.isoformat().replace(
+                    "+00:00", "Z"
+                ),
             },
         )
         annotations = {
@@ -151,7 +153,7 @@ class MarginaliaArchiveSerializationTests(TestCase):
             session=deleted_only,
             client_id="deleted",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="epubcfi(/6/8!/4/6)",
+            location="epubcfi(/6/8!/4/6)",
             is_deleted=True,
         )
         queryset = ReadingSession.objects.filter(
@@ -224,18 +226,22 @@ class MarginaliaArchiveSerializationTests(TestCase):
             ("blank-a", "", "epubcfi(/6/8!/4/2)"),
             ("chapter-02", "Chapter 02 · 10%", "epubcfi(/6/8!/4/4)"),
         )
-        for client_id, label, cfi in fixtures:
+        for client_id, label, location in fixtures:
             Annotation.objects.create(
                 session=session,
                 client_id=client_id,
                 kind=Annotation.KIND_BOOKMARK,
-                cfi=cfi,
+                location=location,
                 location_label=label,
             )
         queryset = ReadingSession.objects.filter(pk__in=[later_session.pk, session.pk])
 
-        first = render_archive_json(serialize_archive(queryset, generated_at=GENERATED_AT))
-        second = render_archive_json(serialize_archive(queryset, generated_at=GENERATED_AT))
+        first = render_archive_json(
+            serialize_archive(queryset, generated_at=GENERATED_AT)
+        )
+        second = render_archive_json(
+            serialize_archive(queryset, generated_at=GENERATED_AT)
+        )
         payload = json.loads(first)
 
         self.assertEqual(first, second)
@@ -259,7 +265,7 @@ class MarginaliaArchiveSerializationTests(TestCase):
         before = (
             session.status,
             session.updated_at,
-            session.progress_cfi,
+            session.progress_location,
             annotation.updated_at,
             Annotation.objects.count(),
         )
@@ -272,7 +278,7 @@ class MarginaliaArchiveSerializationTests(TestCase):
             (
                 session.status,
                 session.updated_at,
-                session.progress_cfi,
+                session.progress_location,
                 annotation.updated_at,
                 Annotation.objects.count(),
             ),
@@ -282,9 +288,7 @@ class MarginaliaArchiveSerializationTests(TestCase):
 
 def _contains_bare_id(value) -> bool:
     if isinstance(value, dict):
-        return "id" in value or any(
-            _contains_bare_id(item) for item in value.values()
-        )
+        return "id" in value or any(_contains_bare_id(item) for item in value.values())
     if isinstance(value, list):
         return any(_contains_bare_id(item) for item in value)
     return False

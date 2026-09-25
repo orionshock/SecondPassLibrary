@@ -39,7 +39,7 @@ def _bookmark():
         "clientAnnotationId": "bookmark-1",
         "kind": "bookmark",
         "location": {
-            "cfi": "epubcfi(/6/8!/4/4)",
+            "location": "epubcfi(/6/8!/4/4)",
             "locationLabel": "  Chapter 09 · 47%  ",
         },
         "createdAt": "2026-07-19T12:00:00Z",
@@ -167,8 +167,8 @@ class MarginaliaImportUnmatchedAPITests(IsolatedUserdataMixin, APITestCase):
         sessions = [archive.books[0].reading_sessions[0] for archive in archives]
         self.assertEqual([session.status for session in sessions], ["active", "closed"])
         self.assertEqual(
-            sessions[0].progress.cfi,
-            payload["books"][1]["readingSessions"][0]["progress"]["cfi"],
+            sessions[0].progress.location,
+            payload["books"][1]["readingSessions"][0]["progress"]["location"],
         )
         self.assertEqual(
             sessions[0].progress.location_label,
@@ -360,7 +360,9 @@ class MarginaliaImportUnmatchedAPITests(IsolatedUserdataMixin, APITestCase):
         self.assertEqual(retry_apply.status_code, status.HTTP_200_OK)
         self.assertTrue(ReadingSession.objects.filter(book=lost_book).exists())
 
-    def test_apply_time_access_loss_downloads_only_selected_sessions_in_stage_order(self):
+    def test_apply_time_access_loss_downloads_only_selected_sessions_in_stage_order(
+        self,
+    ):
         payload = archive_payload(
             file_hash=f"sha256:{'a' * 64}",
             sessions=[

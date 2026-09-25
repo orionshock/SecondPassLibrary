@@ -84,13 +84,15 @@ class MarginaliaOpenActiveBootstrapTests(APITestCase):
         self.assertEqual(response.json()["session"]["id"], str(existing.id))
         self.assertEqual((existing.name, existing.notes), ("Existing", "Keep me"))
         self.assertEqual(existing.updated_at, before)
-        self.assertEqual(ReadingSession.objects.filter(user=self.user, book=self.book).count(), 1)
+        self.assertEqual(
+            ReadingSession.objects.filter(user=self.user, book=self.book).count(), 1
+        )
 
     def test_bootstrap_contains_complete_ordered_annotations_and_closed_page(self):
         active = ReadingSession.objects.create(user=self.user, book=self.book)
         progress_updated_at = timezone.now()
         ReadingSession.objects.filter(pk=active.pk).update(
-            progress_cfi="epubcfi(/6/6)",
+            progress_location="epubcfi(/6/6)",
             progress_location_label="Chapter 06",
             progress_updated_at=progress_updated_at,
         )
@@ -106,28 +108,28 @@ class MarginaliaOpenActiveBootstrapTests(APITestCase):
             session=active,
             client_id="later",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="epubcfi(/6/10)",
+            location="epubcfi(/6/10)",
             location_label="Chapter 10",
         )
         earlier = Annotation.objects.create(
             session=active,
             client_id="earlier",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="epubcfi(/6/2)",
+            location="epubcfi(/6/2)",
             location_label="Chapter 02",
         )
         Annotation.objects.create(
             session=active,
             client_id="deleted",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="epubcfi(/6/1)",
+            location="epubcfi(/6/1)",
             location_label="Chapter 01",
             is_deleted=True,
         )
 
         payload = self.client.get(self.active_url).json()
 
-        self.assertEqual(payload["session"]["progress"]["cfi"], "epubcfi(/6/6)")
+        self.assertEqual(payload["session"]["progress"]["location"], "epubcfi(/6/6)")
         self.assertEqual(
             payload["session"]["progress"]["location_label"],
             "Chapter 06",
@@ -176,7 +178,9 @@ class MarginaliaOpenActiveBootstrapTests(APITestCase):
         self.assertEqual(response.json()["annotations"], [])
         self.assertEqual(response.json()["closed_sessions"]["count"], 1)
         self.assertEqual(closed.updated_at, before)
-        self.assertEqual(ReadingSession.objects.filter(user=self.user, book=self.book).count(), 1)
+        self.assertEqual(
+            ReadingSession.objects.filter(user=self.user, book=self.book).count(), 1
+        )
 
     def test_active_session_supports_an_authorized_book_with_no_history(self):
         response = self.client.get(self.active_url)
@@ -187,7 +191,9 @@ class MarginaliaOpenActiveBootstrapTests(APITestCase):
         self.assertEqual(response.json()["closed_sessions"]["count"], 0)
         self.assertEqual(response.json()["context"]["book"]["session_count"], 0)
         self.assertIsNone(response.json()["context"]["book"]["last_activity_at"])
-        self.assertFalse(ReadingSession.objects.filter(user=self.user, book=self.book).exists())
+        self.assertFalse(
+            ReadingSession.objects.filter(user=self.user, book=self.book).exists()
+        )
 
     def test_authority_is_required_without_inspecting_book_asset_state(self):
         inaccessible = Book.objects.create(title="Hidden")
@@ -234,12 +240,14 @@ class MarginaliaOpenActiveBootstrapTests(APITestCase):
     def test_open_rejects_unknown_fields(self):
         response = self.client.post(
             self.open_url,
-            {"progress": {"cfi": "epubcfi(/6/2)"}},
+            {"progress": {"location": "epubcfi(/6/2)"}},
             format="json",
         )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertFalse(ReadingSession.objects.filter(user=self.user, book=self.book).exists())
+        self.assertFalse(
+            ReadingSession.objects.filter(user=self.user, book=self.book).exists()
+        )
 
     def test_bootstrap_query_count_is_bounded(self):
         active = ReadingSession.objects.create(user=self.user, book=self.book)
@@ -247,7 +255,7 @@ class MarginaliaOpenActiveBootstrapTests(APITestCase):
             session=active,
             client_id="one",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="epubcfi(/6/2)",
+            location="epubcfi(/6/2)",
         )
         request = RequestFactory().get(self.active_url)
         request.user = self.user

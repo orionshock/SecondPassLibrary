@@ -53,7 +53,9 @@ class MarginaliaImportPreviewAPITests(IsolatedUserdataMixin, APITestCase):
         )
         BookGroupAssignment.objects.create(book=self.book, group=self.group)
         self.hidden_book = Book.objects.create(title="Archive Book", checksum="b" * 64)
-        BookGroupAssignment.objects.create(book=self.hidden_book, group=self.other_group)
+        BookGroupAssignment.objects.create(
+            book=self.hidden_book, group=self.other_group
+        )
         self.url = "/api/v1/marginalia/import/preview/"
         self.client.force_login(self.user)
 
@@ -97,9 +99,9 @@ class MarginaliaImportPreviewAPITests(IsolatedUserdataMixin, APITestCase):
 
     def test_preview_rejects_unsupported_durable_cfi_before_staging(self):
         payload = archive_payload(file_hash=f"sha256:{'a' * 64}")
-        payload["books"][0]["readingSessions"][0]["annotations"][0]["location"]["cfi"] = (
-            "epubcfi(/6/8!/4/3:2[bad^x])"
-        )
+        payload["books"][0]["readingSessions"][0]["annotations"][0]["location"][
+            "location"
+        ] = "epubcfi(/6/8!/4/3:2[bad^x])"
 
         response = self.post_preview(payload)
 
@@ -108,18 +110,22 @@ class MarginaliaImportPreviewAPITests(IsolatedUserdataMixin, APITestCase):
 
     def test_preview_accepts_historical_step_id_assertion(self):
         payload = archive_payload(file_hash=f"sha256:{'a' * 64}")
-        cfi = "epubcfi(/6/18!/4[chapter-identifier-01]/2,/708/1:0,/710/1:119)"
+        location = "epubcfi(/6/18!/4[chapter-identifier-01]/2,/708/1:0,/710/1:119)"
         payload["books"][0]["readingSessions"][0]["annotations"][0]["location"][
-            "cfi"
-        ] = cfi
+            "location"
+        ] = location
 
         response = self.post_preview(payload)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        staged = json.loads(stage_file_path(ImportStage.objects.get().storage_name).read_bytes())
+        staged = json.loads(
+            stage_file_path(ImportStage.objects.get().storage_name).read_bytes()
+        )
         self.assertEqual(
-            staged["books"][0]["readingSessions"][0]["annotations"][0]["location"]["cfi"],
-            cfi,
+            staged["books"][0]["readingSessions"][0]["annotations"][0]["location"][
+                "location"
+            ],
+            location,
         )
 
     def test_preview_contract_uses_explicit_candidates_and_exact_accessible_hash_match(
@@ -334,7 +340,9 @@ class MarginaliaImportPreviewAPITests(IsolatedUserdataMixin, APITestCase):
             response.data["books"][0]["match"],
             {"status": "unmatched", "reason": "ambiguous_match"},
         )
-        self.assertFalse(response.data["books"][0]["reading_sessions"][0]["will_import"])
+        self.assertFalse(
+            response.data["books"][0]["reading_sessions"][0]["will_import"]
+        )
         self.assertEqual(ImportStage.objects.count(), 1)
 
     def test_session_only_authentication(self):

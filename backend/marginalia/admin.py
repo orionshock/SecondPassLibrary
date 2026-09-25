@@ -68,7 +68,9 @@ class SessionAnnotationInline(admin.TabularInline):
     ]
     extra = 0
     verbose_name = "Annotation"
-    verbose_name_plural = "Annotations — soft delete keeps a tombstone; hard delete is permanent"
+    verbose_name_plural = (
+        "Annotations — soft delete keeps a tombstone; hard delete is permanent"
+    )
 
     def get_queryset(self, request):
         return super().get_queryset(request).order_by("-created_at", "-id")
@@ -136,7 +138,7 @@ class ReadingSessionAdmin(admin.ModelAdmin):
             "Saved progress",
             {
                 "fields": [
-                    "progress_cfi",
+                    "progress_location",
                     "progress_location_label",
                     "progress_updated_at",
                 ]
@@ -165,9 +167,9 @@ class ReadingSessionAdmin(admin.ModelAdmin):
     def display_name(self, obj: ReadingSession) -> str:
         return obj.name.strip() if obj.name else "Unnamed Session"
 
-    @admin.display(description="Progress", boolean=True, ordering="progress_cfi")
+    @admin.display(description="Progress", boolean=True, ordering="progress_location")
     def has_progress(self, obj: ReadingSession) -> bool:
-        return bool(obj.progress_cfi)
+        return bool(obj.progress_location)
 
     @admin.display(description="Annotations", ordering="_admin_annotation_count")
     def annotation_count(self, obj: ReadingSession) -> int:
@@ -243,7 +245,7 @@ class AnnotationAdmin(admin.ModelAdmin):
     readonly_fields = ["id", "created_at", "updated_at"]
     fieldsets = [
         ("Annotation", {"fields": ["id", "session", "client_id", "kind"]}),
-        ("Location", {"fields": ["cfi", "location_label"]}),
+        ("Location", {"fields": ["location", "location_label"]}),
         (
             "Highlight body",
             {
@@ -284,10 +286,14 @@ class AnnotationAdmin(admin.ModelAdmin):
         return {}
 
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related(
-            "session",
-            "session__user",
-            "session__book",
+        return (
+            super()
+            .get_queryset(request)
+            .select_related(
+                "session",
+                "session__user",
+                "session__book",
+            )
         )
 
     @admin.display(description="User", ordering="session__user__username")
@@ -366,6 +372,8 @@ class ImportStageAdmin(admin.ModelAdmin):
 
     @staticmethod
     def _preview_summary_count(obj: ImportStage, key: str) -> int:
-        summary = obj.preview.get("summary", {}) if isinstance(obj.preview, dict) else {}
+        summary = (
+            obj.preview.get("summary", {}) if isinstance(obj.preview, dict) else {}
+        )
         value = summary.get(key, 0) if isinstance(summary, dict) else 0
         return value if isinstance(value, int) and not isinstance(value, bool) else 0

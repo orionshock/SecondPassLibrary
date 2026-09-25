@@ -45,9 +45,9 @@ closed-session write. All three are supported Reader operations when the Book
 is currently visible.
 
 Only active Sessions accept title, note, progress, or annotation changes.
-Progress is one saved location stored on the Session: a CFI, an optional
-display label, and a server/source timestamp. The CFI is syntax-validated,
-then stored unchanged as the durable anchor. `locationLabel` is persisted
+Progress is one saved location stored on the Session: a `location`, an optional
+display label, and a server/source timestamp. For EPUB Books, the location is a
+syntax-validated CFI stored unchanged as the durable anchor. `locationLabel` is persisted
 display text, not a second position or identity field. Marginalia does not
 resolve CFIs or normalize, derive, or assign numeric meaning to either value.
 
@@ -106,8 +106,9 @@ Annotations are owned through their Reading Session and have one of two kinds:
   user note;
 - a bookmark has a location but no highlight body or comment content.
 
-Every annotation has a syntax-validated CFI, an optional bounded location
-label, and a portable `client_id` unique within its Session. The CFI anchors
+Every annotation has a syntax-validated `location`, an optional bounded location
+label, and a portable `client_id` unique within its Session. For EPUB Books, the
+self-describing CFI value anchors
 the annotation; the label only describes that saved location for display.
 Client identity is
 not global and is distinct from the local database UUID. The API accepts any
@@ -156,7 +157,7 @@ Any display-only whitespace treatment belongs to the client and must apply to
 Session detail.
 
 Annotation collections use a stable display order. Nonblank location labels
-sort first and lexically; blank labels fall back to CFI, creation time, and
+sort first and lexically; blank labels fall back to location, creation time, and
 server identity. The server compares the complete label as opaque text. It does
 not parse the percentage or suffix, and this ordering is not a substitute for
 EPUB navigation or annotation anchoring. Active and closed collections remain
@@ -191,7 +192,7 @@ Book matching uses the canonical `fileHash` identity only. `fileHash` is
 EPUB byte stream before parsing and is the same checksum stored on the Library
 Book. Export serializes that stored checksum; import compares it directly with
 currently stored Book checksums. Title, Author, ISBN, EPUB UID, Calibre ID,
-other identifiers, and CFI values are never matching fallbacks. The same
+other identifiers, and location values are never matching fallbacks. The same
 bibliographic work in a repacked or otherwise byte-different EPUB therefore
 remains Unmatched because its annotation locations may not be compatible.
 Preview distinguishes:

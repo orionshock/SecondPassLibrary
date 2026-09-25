@@ -22,7 +22,7 @@
           "createdAt": "2026-07-20T12:00:00Z",
           "updatedAt": "2026-07-29T12:00:00Z",
           "progress": {
-            "cfi": "epubcfi(/6/8!/4/2)",
+            "location": "epubcfi(/6/8!/4/2)",
             "locationLabel": "042% - Chapter 08",
             "updatedAt": "2026-07-29T12:00:00Z"
           },
@@ -31,7 +31,7 @@
               "clientAnnotationId": "reader-highlight-42",
               "kind": "highlight",
               "location": {
-                "cfi": "epubcfi(/6/8!/4/4)",
+                "location": "epubcfi(/6/8!/4/4)",
                 "locationLabel": "043% - Chapter 08"
               },
               "body": {
@@ -48,7 +48,7 @@
               "clientAnnotationId": "reader-bookmark-17",
               "kind": "bookmark",
               "location": {
-                "cfi": "epubcfi(/6/10!/4/2)",
+                "location": "epubcfi(/6/10!/4/2)",
                 "locationLabel": "047% - Chapter 09"
               },
               "createdAt": "2026-07-29T11:00:00Z",

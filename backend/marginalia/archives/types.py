@@ -9,7 +9,7 @@ SessionStatus = Literal["active", "closed"]
 
 @dataclass(frozen=True, slots=True)
 class ArchiveProgress:
-    cfi: str
+    location: str
     location_label: str | None
     updated_at: str
 
@@ -26,7 +26,7 @@ class ArchiveHighlightBody:
 @dataclass(frozen=True, slots=True)
 class ArchiveHighlight:
     client_annotation_id: str
-    location_cfi: str
+    location: str
     location_label: str | None
     body: ArchiveHighlightBody
     created_at: str
@@ -37,7 +37,7 @@ class ArchiveHighlight:
 @dataclass(frozen=True, slots=True)
 class ArchiveBookmark:
     client_annotation_id: str
-    location_cfi: str
+    location: str
     location_label: str | None
     created_at: str
     updated_at: str

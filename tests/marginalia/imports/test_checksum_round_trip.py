@@ -28,7 +28,9 @@ CALIBRE_FIXTURE = (
 
 
 class MarginaliaChecksumRoundTripTests(IsolatedUserdataMixin, TestCase):
-    def test_exact_epub_bytes_round_trip_from_library_import_to_marginalia_preview(self):
+    def test_exact_epub_bytes_round_trip_from_library_import_to_marginalia_preview(
+        self,
+    ):
         epub_bytes, filename = _real_epub_fixture()
         user = User.objects.create_superuser(
             username="owner",
@@ -47,7 +49,7 @@ class MarginaliaChecksumRoundTripTests(IsolatedUserdataMixin, TestCase):
             session=session,
             client_id="round-trip-highlight",
             kind=Annotation.KIND_HIGHLIGHT,
-            cfi="epubcfi(/6/2!/4/2)",
+            location="epubcfi(/6/2!/4/2)",
             highlight_text="Selected fixture text",
         )
 
@@ -89,8 +91,6 @@ class MarginaliaChecksumRoundTripTests(IsolatedUserdataMixin, TestCase):
 def _real_epub_fixture() -> tuple[bytes, str]:
     with zipfile.ZipFile(CALIBRE_FIXTURE) as archive:
         member = next(
-            name
-            for name in archive.namelist()
-            if name.lower().endswith(".epub")
+            name for name in archive.namelist() if name.lower().endswith(".epub")
         )
         return archive.read(member), Path(member).name

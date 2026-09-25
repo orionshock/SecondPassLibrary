@@ -80,9 +80,7 @@ class MarginaliaSessionListView(MarginaliaReadMixin, ListAPIView):
     serializer_class = MarginaliaGlobalSessionSummarySerializer
 
     def get_queryset(self):
-        query = MarginaliaSessionListQuerySerializer(
-            data=self.request.query_params
-        )
+        query = MarginaliaSessionListQuerySerializer(data=self.request.query_params)
         query.is_valid(raise_exception=True)
         self._list_options = query.validated_data
         return marginalia_sessions_for_user(
@@ -103,7 +101,9 @@ class MarginaliaSessionListView(MarginaliaReadMixin, ListAPIView):
         book_ids = {session.book_id for session in page}
         book_by_id = {
             book.pk: book
-            for book in marginalia_books_for_user(user=request.user).filter(pk__in=book_ids)
+            for book in marginalia_books_for_user(user=request.user).filter(
+                pk__in=book_ids
+            )
         }
         for session in page:
             session.book = book_by_id[session.book_id]
@@ -170,9 +170,7 @@ class MarginaliaSessionDetailView(MarginaliaReadMixin, APIView):
                 changes=serializer.validated_data,
             )
         except ClosedSessionMutationError as exc:
-            raise ValidationError(
-                {"detail": "Closed Sessions are read-only."}
-            ) from exc
+            raise ValidationError({"detail": "Closed Sessions are read-only."}) from exc
 
         return Response(
             session_detail_envelope(request=request, session_id=session.pk),
@@ -191,7 +189,7 @@ class MarginaliaSessionProgressView(MarginaliaReadMixin, APIView):
     def get(self, request, session_id):
         session = get_object_or_404(
             ReadingSession.objects.only(
-                "progress_cfi",
+                "progress_location",
                 "progress_location_label",
                 "progress_updated_at",
             ),

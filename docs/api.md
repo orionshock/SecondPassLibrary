@@ -153,18 +153,19 @@ Marginalia highlights keep selected `text` separate from the anchoring
 
 ## Saved Marginalia locations
 
-Every saved progress value and annotation location has a CFI and may include a
-`locationLabel` (`location_label` in the REST API). The CFI is the durable
-reading-position anchor. The label is persisted display text: clients may show
+Every saved progress value and annotation location has a `location` and may
+include a `locationLabel` (`location_label` in the REST API). `location` is the
+durable reading-position anchor. The label is persisted display text: clients may show
 it in Session history, progress summaries, bookmarks, highlights, and notes,
 but must not parse it for navigation, identity, matching, or anchoring.
 
-Durable CFIs must remain compact locators. XML ID assertions on element steps
+For EPUB Books, `location` contains a self-describing `epubcfi(...)` value in
+the supported compact structural profile. XML ID assertions on element steps
 are accepted when the ID is an XML name without a colon, with at most 128
 characters per ID and 256 across a CFI.
 Text-location assertions after character offsets are not supported. Quote and
 Book text belong in `text`, `prefix`, and `suffix`, not in the CFI. The server
-checks syntax and compactness, then stores accepted CFIs unchanged without
+checks syntax and compactness, then stores accepted locations unchanged without
 resolving them against EPUB content. Clients emit compact structural CFIs with
 optional element IDs.
 

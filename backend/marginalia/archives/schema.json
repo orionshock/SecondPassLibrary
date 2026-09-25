@@ -29,18 +29,18 @@
   "$defs": {
     "location": {
       "type": "object",
-      "required": ["cfi"],
+      "required": ["location"],
       "properties": {
-        "cfi": { "type": "string", "minLength": 1, "maxLength": 8192 },
+        "location": { "type": "string", "minLength": 1, "maxLength": 8192 },
         "locationLabel": { "type": "string", "maxLength": 255 }
       },
       "additionalProperties": false
     },
     "progress": {
       "type": "object",
-      "required": ["cfi", "updatedAt"],
+      "required": ["location", "updatedAt"],
       "properties": {
-        "cfi": { "type": "string", "minLength": 1, "maxLength": 8192 },
+        "location": { "type": "string", "minLength": 1, "maxLength": 8192 },
         "locationLabel": { "type": "string", "maxLength": 255 },
         "updatedAt": { "type": "string", "format": "date-time" }
       },

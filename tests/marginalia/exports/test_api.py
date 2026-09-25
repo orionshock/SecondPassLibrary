@@ -36,7 +36,7 @@ class MarginaliaExportAPITests(TestCase):
             user=self.user,
             book=self.second_book,
             name="Active",
-            progress_cfi="epubcfi(/6/8!/4/2:7)",
+            progress_location="epubcfi(/6/8!/4/2:7)",
             progress_location_label="  Chapter 08 · 42%  ",
             progress_updated_at=GENERATED_AT - timedelta(hours=1),
         )
@@ -58,7 +58,7 @@ class MarginaliaExportAPITests(TestCase):
             session=self.active,
             client_id="reader-highlight",
             kind=Annotation.KIND_HIGHLIGHT,
-            cfi="epubcfi(/6/8!/4/3:7)",
+            location="epubcfi(/6/8!/4/3:7)",
             location_label="Chapter 08 · 42%",
             highlight_text="Selected passage",
             quote_prefix="Before ",
@@ -70,14 +70,14 @@ class MarginaliaExportAPITests(TestCase):
             session=self.closed,
             client_id="reader-bookmark",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="epubcfi(/6/8!/4/4)",
+            location="epubcfi(/6/8!/4/4)",
             location_label="Chapter 09 · 47%",
         )
         Annotation.objects.create(
             session=self.closed,
             client_id="deleted",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="epubcfi(/6/8!/4/6)",
+            location="epubcfi(/6/8!/4/6)",
             is_deleted=True,
         )
         foreign_book = Book.objects.create(title="Foreign", checksum="c" * 64)
@@ -89,7 +89,7 @@ class MarginaliaExportAPITests(TestCase):
             session=self.foreign,
             client_id="foreign",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="epubcfi(/6/8!/4/8)",
+            location="epubcfi(/6/8!/4/8)",
         )
 
     def _payload(self, response):
@@ -115,16 +115,14 @@ class MarginaliaExportAPITests(TestCase):
             [f"sha256:{'a' * 64}", f"sha256:{'b' * 64}"],
         )
         sessions = [
-            session
-            for book in payload["books"]
-            for session in book["readingSessions"]
+            session for book in payload["books"] for session in book["readingSessions"]
         ]
         self.assertEqual({row["status"] for row in sessions}, {"active", "closed"})
         self.assertNotIn("Empty", {row["name"] for row in sessions})
         self.assertNotIn(str(self.active.pk), json.dumps(payload))
         self.assertTrue(all(row["sourceReadingSessionId"] for row in sessions))
         active = next(row for row in sessions if row["name"] == "Active")
-        self.assertEqual(active["progress"]["cfi"], self.active.progress_cfi)
+        self.assertEqual(active["progress"]["location"], self.active.progress_location)
         self.assertEqual(
             active["progress"]["locationLabel"],
             self.active.progress_location_label,

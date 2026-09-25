@@ -41,19 +41,15 @@ class DeletedAnnotationCleanupTests(TestCase):
     def tearDown(self):
         clear_server_settings_cache()
 
-    def test_retention_is_session_aware_and_never_touches_live_or_unknown_age_rows(self):
+    def test_retention_is_session_aware_and_never_touches_live_or_unknown_age_rows(
+        self,
+    ):
         active_old = self._tombstone(self.active_session, "active-old", days_old=29)
-        active_young = self._tombstone(
-            self.active_session, "active-young", days_old=27
-        )
+        active_young = self._tombstone(self.active_session, "active-young", days_old=27)
         closed_old = self._tombstone(self.closed_session, "closed-old", days_old=8)
-        closed_young = self._tombstone(
-            self.closed_session, "closed-young", days_old=6
-        )
+        closed_young = self._tombstone(self.closed_session, "closed-young", days_old=6)
         live = self._annotation(self.closed_session, "live")
-        unknown_age = self._annotation(
-            self.closed_session, "legacy", is_deleted=True
-        )
+        unknown_age = self._annotation(self.closed_session, "legacy", is_deleted=True)
 
         result = execute_deleted_annotation_cleanup(now=self.now)
 
@@ -63,8 +59,12 @@ class DeletedAnnotationCleanupTests(TestCase):
         self.assertTrue(Annotation.objects.filter(pk=closed_young.pk).exists())
         self.assertTrue(Annotation.objects.filter(pk=live.pk).exists())
         self.assertTrue(Annotation.objects.filter(pk=unknown_age.pk).exists())
-        self.assertTrue(ReadingSession.objects.filter(pk=self.active_session.pk).exists())
-        self.assertTrue(ReadingSession.objects.filter(pk=self.closed_session.pk).exists())
+        self.assertTrue(
+            ReadingSession.objects.filter(pk=self.active_session.pk).exists()
+        )
+        self.assertTrue(
+            ReadingSession.objects.filter(pk=self.closed_session.pk).exists()
+        )
         self.assertTrue(Book.objects.filter(pk=self.active_session.book_id).exists())
         self.assertEqual(result.counts["active_candidates"], 1)
         self.assertEqual(result.counts["closed_candidates"], 1)
@@ -74,7 +74,9 @@ class DeletedAnnotationCleanupTests(TestCase):
         self.assertEqual(result.counts["active_retention_days"], 28)
         self.assertEqual(result.counts["closed_retention_days"], 7)
 
-    def test_closing_session_immediately_applies_closed_retention_to_tombstone_age(self):
+    def test_closing_session_immediately_applies_closed_retention_to_tombstone_age(
+        self,
+    ):
         tombstone = self._tombstone(self.active_session, "ten-days", days_old=10)
         first = execute_deleted_annotation_cleanup(now=self.now)
         self.assertEqual(first.counts["total_deleted"], 0)
@@ -107,7 +109,9 @@ class DeletedAnnotationCleanupTests(TestCase):
         )
         self.assertEqual(preview.counts["active_retention_days"], 2)
         self.assertEqual(preview.counts["closed_retention_days"], 3)
-        self.assertEqual(preview.counts["active_selected"] + preview.counts["closed_selected"], 1)
+        self.assertEqual(
+            preview.counts["active_selected"] + preview.counts["closed_selected"], 1
+        )
         self.assertEqual(preview.counts["deferred_by_limit"], 1)
         self.assertEqual(preview.counts["total_deleted"], 0)
         self.assertEqual(
@@ -115,9 +119,13 @@ class DeletedAnnotationCleanupTests(TestCase):
         )
 
         execute_deleted_annotation_cleanup(limit=1, now=self.now)
-        self.assertEqual(Annotation.objects.filter(pk__in=[first.pk, second.pk]).count(), 1)
+        self.assertEqual(
+            Annotation.objects.filter(pk__in=[first.pk, second.pk]).count(), 1
+        )
         execute_deleted_annotation_cleanup(limit=1, now=self.now)
-        self.assertFalse(Annotation.objects.filter(pk__in=[first.pk, second.pk]).exists())
+        self.assertFalse(
+            Annotation.objects.filter(pk__in=[first.pk, second.pk]).exists()
+        )
         rerun = execute_deleted_annotation_cleanup(limit=1, now=self.now)
         self.assertEqual(rerun.counts["total_deleted"], 0)
 
@@ -264,7 +272,7 @@ class DeletedAnnotationCleanupTests(TestCase):
             session=session,
             client_id=client_id,
             kind=Annotation.KIND_BOOKMARK,
-            cfi=f"epubcfi(/6/{Annotation.objects.count() + 2})",
+            location=f"epubcfi(/6/{Annotation.objects.count() + 2})",
             is_deleted=is_deleted,
         )
 

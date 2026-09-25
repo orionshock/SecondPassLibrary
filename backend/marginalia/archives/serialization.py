@@ -203,7 +203,7 @@ def _annotation_sort_key(annotation: Annotation) -> tuple[int, str, str, str, st
     return (
         0 if annotation.location_label else 1,
         annotation.location_label,
-        annotation.cfi,
+        annotation.location,
         _timestamp(annotation.created_at),
         annotation.client_id,
     )
@@ -226,11 +226,11 @@ def _serialize_session(
         updated_at=_timestamp(session.updated_at),
         progress=(
             ArchiveProgress(
-                cfi=session.progress_cfi,
+                location=session.progress_location,
                 location_label=session.progress_location_label or None,
                 updated_at=_timestamp(session.progress_updated_at),
             )
-            if session.progress_cfi
+            if session.progress_location
             else None
         ),
         annotations=tuple(
@@ -243,7 +243,7 @@ def _serialize_session(
 def _serialize_annotation(annotation: Annotation) -> ArchiveAnnotation:
     common = {
         "client_annotation_id": annotation.client_id,
-        "location_cfi": annotation.cfi,
+        "location": annotation.location,
         "location_label": annotation.location_label or None,
         "created_at": _timestamp(annotation.created_at),
         "updated_at": _timestamp(annotation.updated_at),
@@ -289,7 +289,7 @@ def _session_to_wire(session: ArchiveReadingSession) -> dict[str, Any]:
         "progress": (
             _optional_label(
                 {
-                    "cfi": progress.cfi,
+                    "location": progress.location,
                     "updatedAt": progress.updated_at,
                 },
                 progress.location_label,
@@ -308,7 +308,7 @@ def _annotation_to_wire(annotation: ArchiveAnnotation) -> dict[str, Any]:
         "clientAnnotationId": annotation.client_annotation_id,
         "kind": annotation.kind,
         "location": _optional_label(
-            {"cfi": annotation.location_cfi}, annotation.location_label
+            {"location": annotation.location}, annotation.location_label
         ),
     }
     if isinstance(annotation, ArchiveHighlight):

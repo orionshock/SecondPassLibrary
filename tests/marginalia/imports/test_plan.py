@@ -93,7 +93,7 @@ def _archive_session(source_id: str, annotation_count: int) -> ArchiveReadingSes
         annotations=tuple(
             ArchiveBookmark(
                 client_annotation_id=f"{source_id}-{number}",
-                location_cfi="epubcfi(/6/8!/4/2)",
+                location="epubcfi(/6/8!/4/2)",
                 location_label=None,
                 created_at="2026-07-19T12:00:00Z",
                 updated_at="2026-07-19T12:00:00Z",

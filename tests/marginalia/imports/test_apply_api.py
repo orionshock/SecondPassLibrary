@@ -44,7 +44,7 @@ def _bookmark():
         "clientAnnotationId": "bookmark-1",
         "kind": "bookmark",
         "location": {
-            "cfi": "epubcfi(/6/8!/4/4)",
+            "location": "epubcfi(/6/8!/4/4)",
             "locationLabel": "  Chapter 09 · 47%  ",
         },
         "createdAt": "2026-07-19T12:00:00Z",
@@ -126,7 +126,7 @@ class MarginaliaImportApplyAPITests(IsolatedUserdataMixin, APITestCase):
         self.assertEqual(imported.created_at, parse_datetime(source["createdAt"]))
         self.assertEqual(imported.updated_at, parse_datetime(source["updatedAt"]))
         self.assertEqual(imported.closed_at, parse_datetime(source["updatedAt"]))
-        self.assertEqual(imported.progress_cfi, source["progress"]["cfi"])
+        self.assertEqual(imported.progress_location, source["progress"]["location"])
         self.assertEqual(
             imported.progress_location_label,
             source["progress"]["locationLabel"],
@@ -139,7 +139,9 @@ class MarginaliaImportApplyAPITests(IsolatedUserdataMixin, APITestCase):
         highlight = annotations[Annotation.KIND_HIGHLIGHT]
         bookmark = annotations[Annotation.KIND_BOOKMARK]
         self.assertEqual(highlight.client_id, "highlight-1")
-        self.assertEqual(highlight.cfi, source["annotations"][0]["location"]["cfi"])
+        self.assertEqual(
+            highlight.location, source["annotations"][0]["location"]["location"]
+        )
         self.assertEqual(highlight.highlight_text, "Selected passage")
         self.assertEqual(highlight.quote_prefix, "Before ")
         self.assertEqual(highlight.quote_suffix, " after.")
@@ -276,7 +278,9 @@ class MarginaliaImportApplyAPITests(IsolatedUserdataMixin, APITestCase):
         second_checksum = "b" * 64
         second_group = LibraryGroup.objects.create(name="Second group")
         LibraryGroupMembership.objects.create(user=self.user, group=second_group)
-        second = Book.objects.create(title="Visible database title", checksum=second_checksum)
+        second = Book.objects.create(
+            title="Visible database title", checksum=second_checksum
+        )
         BookGroupAssignment.objects.create(book=second, group=second_group)
         payload = archive_payload(file_hash=f"sha256:{'a' * 64}")
         payload["books"] = [
@@ -299,7 +303,7 @@ class MarginaliaImportApplyAPITests(IsolatedUserdataMixin, APITestCase):
             session=existing,
             client_id="existing-bookmark",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="epubcfi(/6/8!/4/6)",
+            location="epubcfi(/6/8!/4/6)",
         )
         LibraryGroupMembership.objects.filter(user=self.user, group=self.group).delete()
 
@@ -323,15 +327,21 @@ class MarginaliaImportApplyAPITests(IsolatedUserdataMixin, APITestCase):
         self.assertTrue(response.data["unmatched_download_available"])
         self.assertEqual(
             response.data["unmatched_books"],
-            [{
-                "candidate_id": "book-000001",
-                "title": "Lost staged title",
-                "reason": "book_inaccessible",
-            }],
+            [
+                {
+                    "candidate_id": "book-000001",
+                    "title": "Lost staged title",
+                    "reason": "book_inaccessible",
+                }
+            ],
         )
         visibility_query.assert_called_once_with(self.user, cached=False)
         self.assertEqual(ReadingSession.objects.filter(book=second).count(), 1)
-        self.assertFalse(ReadingSession.objects.filter(book=self.book).exclude(pk=existing.pk).exists())
+        self.assertFalse(
+            ReadingSession.objects.filter(book=self.book)
+            .exclude(pk=existing.pk)
+            .exists()
+        )
         self.assertTrue(ReadingSession.objects.filter(pk=existing.pk).exists())
         self.assertTrue(Annotation.objects.filter(pk=existing_annotation.pk).exists())
         detail = self.client.get(f"/api/v1/marginalia/sessions/{existing.pk}/")
@@ -363,7 +373,9 @@ class MarginaliaImportApplyAPITests(IsolatedUserdataMixin, APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["imported_reading_session_count"], 0)
         self.assertEqual(response.data["unmatched_reading_session_count"], 1)
-        self.assertEqual(response.data["unmatched_books"][0]["reason"], "book_inaccessible")
+        self.assertEqual(
+            response.data["unmatched_books"][0]["reason"], "book_inaccessible"
+        )
         self.assertEqual(ReadingSession.objects.count(), 0)
         self.assertEqual(Annotation.objects.count(), 0)
         stage = ImportStage.objects.get()
@@ -371,9 +383,7 @@ class MarginaliaImportApplyAPITests(IsolatedUserdataMixin, APITestCase):
         self.assertIsNotNone(stage.result)
 
     def test_apply_keeps_missing_book_and_malformed_stage_contracts(self):
-        missing_preview = self.preview(
-            archive_payload(file_hash=f"sha256:{'a' * 64}")
-        )
+        missing_preview = self.preview(archive_payload(file_hash=f"sha256:{'a' * 64}"))
         self.book.delete()
 
         missing = self.apply(

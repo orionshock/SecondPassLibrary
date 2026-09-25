@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     from django.contrib.auth.models import AbstractUser
 
 
-MAX_CFI_LENGTH = 8 * 1024
+MAX_LOCATION_LENGTH = 8 * 1024
 MAX_LOCATION_LABEL_LENGTH = 255
 MAX_ANNOTATION_CLIENT_ID_LENGTH = 255
 MAX_ANNOTATION_BODY_LENGTH = 64 * 1024
@@ -127,7 +127,9 @@ class ReadingSession(TimeStampedModel):
     )
     started_at = models.DateTimeField(auto_now_add=True)
     closed_at = models.DateTimeField(blank=True, null=True)
-    progress_cfi = models.TextField(max_length=MAX_CFI_LENGTH, blank=True, default="")
+    progress_location = models.TextField(
+        max_length=MAX_LOCATION_LENGTH, blank=True, default=""
+    )
     progress_location_label = models.CharField(
         max_length=MAX_LOCATION_LABEL_LENGTH,
         blank=True,
@@ -160,11 +162,11 @@ class ReadingSession(TimeStampedModel):
             models.CheckConstraint(
                 condition=(
                     Q(
-                        progress_cfi="",
+                        progress_location="",
                         progress_location_label="",
                         progress_updated_at__isnull=True,
                     )
-                    | (~Q(progress_cfi="") & Q(progress_updated_at__isnull=False))
+                    | (~Q(progress_location="") & Q(progress_updated_at__isnull=False))
                 ),
                 name="marginalia_session_progress_is_complete",
             ),
@@ -176,15 +178,17 @@ class ReadingSession(TimeStampedModel):
 
     def clean(self) -> None:
         super().clean()
-        if self.progress_cfi:
-            validate_durable_cfi(self.progress_cfi)
-        if not self.progress_cfi and (
+        if self.progress_location:
+            validate_durable_cfi(self.progress_location)
+        if not self.progress_location and (
             self.progress_location_label or self.progress_updated_at is not None
         ):
             raise ValidationError(
-                {"progress_cfi": "A progress label or timestamp requires a CFI."}
+                {
+                    "progress_location": "A progress label or timestamp requires a location."
+                }
             )
-        if self.progress_cfi and self.progress_updated_at is None:
+        if self.progress_location and self.progress_updated_at is None:
             raise ValidationError(
                 {"progress_updated_at": "Saved progress requires an update timestamp."}
             )
@@ -210,7 +214,7 @@ class Annotation(TimeStampedModel):
     )
     client_id = models.CharField(max_length=MAX_ANNOTATION_CLIENT_ID_LENGTH)
     kind = models.CharField(max_length=16, choices=KIND_CHOICES)
-    cfi = models.TextField(max_length=MAX_CFI_LENGTH)
+    location = models.TextField(max_length=MAX_LOCATION_LENGTH)
     location_label = models.CharField(
         max_length=MAX_LOCATION_LABEL_LENGTH,
         blank=True,
@@ -271,8 +275,8 @@ class Annotation(TimeStampedModel):
                 name="marginalia_annotation_client_id_per_session",
             ),
             models.CheckConstraint(
-                condition=~Q(cfi=""),
-                name="marginalia_annotation_has_cfi",
+                condition=~Q(location=""),
+                name="marginalia_annotation_has_location",
             ),
             models.CheckConstraint(
                 condition=~Q(kind="highlight") | ~Q(highlight_text=""),
@@ -303,9 +307,11 @@ class Annotation(TimeStampedModel):
         super().clean()
         if not self.client_id:
             raise ValidationError({"client_id": "A client correlation id is required."})
-        if not self.cfi:
-            raise ValidationError({"cfi": "A located annotation requires a CFI."})
-        validate_durable_cfi(self.cfi)
+        if not self.location:
+            raise ValidationError(
+                {"location": "A located annotation requires a location."}
+            )
+        validate_durable_cfi(self.location)
 
         if self.kind == self.KIND_HIGHLIGHT:
             if not self.highlight_text:

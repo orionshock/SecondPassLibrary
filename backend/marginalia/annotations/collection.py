@@ -18,7 +18,7 @@ def annotations_for_session(session: ReadingSession) -> QuerySet[Annotation]:
         .order_by(
             "_blank_location_label",
             "location_label",
-            "cfi",
+            "location",
             "created_at",
             "id",
         )

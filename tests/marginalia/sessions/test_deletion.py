@@ -58,7 +58,7 @@ class DeleteOwnedSessionServiceTests(TestCase):
             session=session,
             client_id=client_id,
             kind=Annotation.KIND_BOOKMARK,
-            cfi=f"epubcfi(/6/{client_id})",
+            location=f"epubcfi(/6/{client_id})",
             is_deleted=is_deleted,
         )
 
@@ -76,7 +76,9 @@ class DeleteOwnedSessionServiceTests(TestCase):
         self.assertTrue(Book.objects.filter(pk=self.book.pk).exists())
         self.closed.refresh_from_db()
         self.assertEqual(self.closed.status, ReadingSession.STATUS_CLOSED)
-        self.assertTrue(Annotation.objects.filter(pk=self.closed_annotation.pk).exists())
+        self.assertTrue(
+            Annotation.objects.filter(pk=self.closed_annotation.pk).exists()
+        )
         self.assertFalse(
             ReadingSession.objects.filter(
                 user=self.user,
@@ -99,7 +101,9 @@ class DeleteOwnedSessionServiceTests(TestCase):
         delete_owned_session(user=self.user, session_id=self.closed.pk)
 
         self.assertFalse(ReadingSession.objects.filter(pk=closed_id).exists())
-        self.assertFalse(Annotation.objects.filter(pk=self.closed_annotation.pk).exists())
+        self.assertFalse(
+            Annotation.objects.filter(pk=self.closed_annotation.pk).exists()
+        )
         self.active.refresh_from_db()
         self.assertEqual(self.active.status, ReadingSession.STATUS_ACTIVE)
         self.assertEqual(self.active.updated_at, active_updated_at)

@@ -17,17 +17,17 @@ from marginalia.profile import MARGINALIA_PROFILE_URI
 class MarginaliaArchiveValidationTests(SimpleTestCase):
     def test_valid_archive_parses_to_immutable_bounded_values(self):
         payload = _valid_archive()
-        payload["books"][0]["readingSessions"][0]["progress"]["cfi"] = (
+        payload["books"][0]["readingSessions"][0]["progress"]["location"] = (
             "epubcfi(/6/8!/4/2:7)"
         )
-        payload["books"][0]["readingSessions"][0]["progress"][
-            "locationLabel"
-        ] = "  Chapter 08 · 42% · Decorative suffix  "
+        payload["books"][0]["readingSessions"][0]["progress"]["locationLabel"] = (
+            "  Chapter 08 · 42% · Decorative suffix  "
+        )
 
         parsed = parse_archive(json.dumps(payload).encode())
 
         progress = parsed.books[0].reading_sessions[0].progress
-        self.assertEqual(progress.cfi, "epubcfi(/6/8!/4/2:7)")
+        self.assertEqual(progress.location, "epubcfi(/6/8!/4/2:7)")
         self.assertEqual(
             progress.location_label,
             "  Chapter 08 · 42% · Decorative suffix  ",
@@ -54,50 +54,86 @@ class MarginaliaArchiveValidationTests(SimpleTestCase):
         for location in ("progress", "annotation"):
             payload = _valid_archive()
             if location == "progress":
-                _session(payload)["progress"]["cfi"] = "epubcfi(/6/8~10)"
-                expected_path = "$.books[0].readingSessions[0].progress.cfi"
+                _session(payload)["progress"]["location"] = "epubcfi(/6/8~10)"
+                expected_path = "$.books[0].readingSessions[0].progress.location"
             else:
-                _annotation(payload)["location"]["cfi"] = "epubcfi(/6/8!/4/3:2[bad^x])"
-                expected_path = "$.books[0].readingSessions[0].annotations[0].location.cfi"
+                _annotation(payload)["location"]["location"] = (
+                    "epubcfi(/6/8!/4/3:2[bad^x])"
+                )
+                expected_path = (
+                    "$.books[0].readingSessions[0].annotations[0].location.location"
+                )
 
-            with self.subTest(location=location), self.assertRaises(ArchiveValidationError) as caught:
+            with (
+                self.subTest(location=location),
+                self.assertRaises(ArchiveValidationError) as caught,
+            ):
                 parse_archive(json.dumps(payload))
-            self.assertIn((expected_path, "supportedCfi"), [(issue.path, issue.rule) for issue in caught.exception.issues])
+            self.assertIn(
+                (expected_path, "supportedCfi"),
+                [(issue.path, issue.rule) for issue in caught.exception.issues],
+            )
 
-    def test_archive_accepts_historical_id_assertions_without_touching_quote_fields(self):
+    def test_retired_cfi_wire_fields_are_rejected(self):
+        for target in ("progress", "annotation"):
+            payload = _valid_archive()
+            if target == "progress":
+                progress = _session(payload)["progress"]
+                progress["cfi"] = progress.pop("location")
+            else:
+                location = _annotation(payload)["location"]
+                location["cfi"] = location.pop("location")
+
+            with self.subTest(target=target), self.assertRaises(ArchiveValidationError):
+                parse_archive(json.dumps(payload))
+
+    def test_archive_accepts_historical_id_assertions_without_touching_quote_fields(
+        self,
+    ):
         payload = _valid_archive()
         session = _session(payload)
-        progress_cfi = "epubcfi(/6/58!/4[chapter-identifier-01]/2/906/1:280)"
+        progress_location = "epubcfi(/6/58!/4[chapter-identifier-01]/2/906/1:280)"
         annotation_cfi = (
             "epubcfi(/6/18!/4[chapter-identifier-01]/2,/708/1:0,/710/1:119)"
         )
-        session["progress"]["cfi"] = progress_cfi
-        _annotation(payload)["location"]["cfi"] = annotation_cfi
+        session["progress"]["location"] = progress_location
+        _annotation(payload)["location"]["location"] = annotation_cfi
         _annotation(payload)["body"]["text"] = "Separate selected text"
         _annotation(payload)["body"]["prefix"] = "Before selection"
         _annotation(payload)["body"]["suffix"] = "After selection"
 
         parsed = parse_archive(json.dumps(payload))
 
-        self.assertEqual(parsed.books[0].reading_sessions[0].progress.cfi, progress_cfi)
+        self.assertEqual(
+            parsed.books[0].reading_sessions[0].progress.location, progress_location
+        )
         annotation = parsed.books[0].reading_sessions[0].annotations[0]
-        self.assertEqual(annotation.location_cfi, annotation_cfi)
+        self.assertEqual(annotation.location, annotation_cfi)
         self.assertEqual(annotation.body.text, "Separate selected text")
         self.assertEqual(annotation.body.prefix, "Before selection")
         self.assertEqual(annotation.body.suffix, "After selection")
 
     def test_retired_lifecycle_progress_and_selector_shapes_are_rejected(self):
         for label, mutate in (
-            ("completed", lambda value: _session(value).__setitem__("status", "completed")),
-            ("archived", lambda value: _session(value).__setitem__("status", "archived")),
+            (
+                "completed",
+                lambda value: _session(value).__setitem__("status", "completed"),
+            ),
+            (
+                "archived",
+                lambda value: _session(value).__setitem__("status", "archived"),
+            ),
             (
                 "numeric progress",
-                lambda value: _session(value).__setitem__("progress", {"progression": 0.5}),
+                lambda value: _session(value).__setitem__(
+                    "progress", {"progression": 0.5}
+                ),
             ),
             (
                 "W3C selector",
                 lambda value: _annotation(value).__setitem__(
-                    "target", {"selector": {"type": "FragmentSelector", "value": "opaque"}}
+                    "target",
+                    {"selector": {"type": "FragmentSelector", "value": "opaque"}},
                 ),
             ),
         ):
@@ -135,7 +171,7 @@ class MarginaliaArchiveValidationTests(SimpleTestCase):
             {
                 "clientAnnotationId": "bookmark-1",
                 "kind": "bookmark",
-                "location": {"cfi": "epubcfi(/6/8!/4/4)"},
+                "location": {"location": "epubcfi(/6/8!/4/4)"},
                 "body": {"text": "invalid", "color": "yellow"},
                 "createdAt": "2026-07-29T11:00:00Z",
                 "updatedAt": "2026-07-29T11:00:00Z",
@@ -147,7 +183,10 @@ class MarginaliaArchiveValidationTests(SimpleTestCase):
         _annotation(unknown_field)["unexpected"] = True
 
         for payload in (bookmark_with_body, highlight_without_text, unknown_field):
-            with self.subTest(payload=payload), self.assertRaises(ArchiveValidationError):
+            with (
+                self.subTest(payload=payload),
+                self.assertRaises(ArchiveValidationError),
+            ):
                 parse_archive(json.dumps(payload))
 
     def test_duplicate_explicit_identities_follow_archive_identity_rules(self):
@@ -160,12 +199,15 @@ class MarginaliaArchiveValidationTests(SimpleTestCase):
         )
 
         duplicate_annotation = _valid_archive()
-        duplicate_annotation["books"][0]["readingSessions"][0][
-            "annotations"
-        ].append(copy.deepcopy(_annotation(duplicate_annotation)))
+        duplicate_annotation["books"][0]["readingSessions"][0]["annotations"].append(
+            copy.deepcopy(_annotation(duplicate_annotation))
+        )
 
         for payload in (duplicate_book, duplicate_session, duplicate_annotation):
-            with self.subTest(payload=payload), self.assertRaises(ArchiveValidationError):
+            with (
+                self.subTest(payload=payload),
+                self.assertRaises(ArchiveValidationError),
+            ):
                 parse_archive(json.dumps(payload))
 
         cross_session = _valid_archive()
@@ -207,7 +249,7 @@ def _valid_archive():
                         "createdAt": "2026-07-01T12:00:00Z",
                         "updatedAt": "2026-07-20T12:00:00Z",
                         "progress": {
-                            "cfi": "epubcfi(/6/8!/4/2:7)",
+                            "location": "epubcfi(/6/8!/4/2:7)",
                             "locationLabel": "Chapter 08 · 42%",
                             "updatedAt": "2026-07-19T12:00:00Z",
                         },
@@ -216,7 +258,7 @@ def _valid_archive():
                                 "clientAnnotationId": "highlight-1",
                                 "kind": "highlight",
                                 "location": {
-                                    "cfi": "epubcfi(/6/8!/4/3:7)",
+                                    "location": "epubcfi(/6/8!/4/3:7)",
                                     "locationLabel": "Chapter 08 · 42%",
                                 },
                                 "body": {

@@ -48,7 +48,9 @@ class MarginaliaSessionListAPITests(APITestCase):
         author = Author.objects.create(name="Searchable Author")
         BookAuthor.objects.create(book=self.visible_book, author=author, position=0)
         series = Series.objects.create(name="Searchable Series")
-        BookSeries.objects.create(book=self.hidden_book, series=series, series_index="2.0")
+        BookSeries.objects.create(
+            book=self.hidden_book, series=series, series_index="2.0"
+        )
 
         self.active = ReadingSession.objects.create(
             user=self.user,
@@ -171,13 +173,13 @@ class MarginaliaSessionListAPITests(APITestCase):
             session=self.active,
             client_id="present",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="epubcfi(/6/2)",
+            location="epubcfi(/6/2)",
         )
         Annotation.objects.create(
             session=self.closed,
             client_id="deleted-only",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="epubcfi(/6/4)",
+            location="epubcfi(/6/4)",
             is_deleted=True,
         )
 
@@ -214,14 +216,14 @@ class MarginaliaSessionListAPITests(APITestCase):
             pk__in=[self.active.pk, self.closed.pk, self.older_closed.pk]
         ).update(updated_at=oldest)
         ReadingSession.objects.filter(pk=self.active.pk).update(
-            progress_cfi="epubcfi(/6/4)",
+            progress_location="epubcfi(/6/4)",
             progress_updated_at=middle,
         )
         annotation = Annotation.objects.create(
             session=self.closed,
             client_id="list-activity",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="epubcfi(/6/2)",
+            location="epubcfi(/6/2)",
         )
         Annotation.objects.filter(pk=annotation.pk).update(updated_at=newest)
 
@@ -233,9 +235,7 @@ class MarginaliaSessionListAPITests(APITestCase):
         self.assertEqual(parse_datetime(rows[1]["last_activity_at"]), middle)
 
     def test_book_reference_is_bounded_and_keeps_historical_identity(self):
-        rows = {
-            row["id"]: row for row in self.client.get(self.url).json()["results"]
-        }
+        rows = {row["id"]: row for row in self.client.get(self.url).json()["results"]}
         hidden = rows[str(self.closed.id)]["book"]
         visible = rows[str(self.active.id)]["book"]
 

@@ -18,16 +18,16 @@ from .lookup import locked_owned_session
 def assign_session_progress(
     *,
     session: ReadingSession,
-    cfi: str,
+    location: str,
     location_label: str = "",
     updated_at: datetime | None = None,
 ) -> ReadingSession:
-    if not cfi:
-        raise ValidationError({"cfi": "Saved progress requires a CFI."})
-    validate_durable_cfi(cfi)
+    if not location:
+        raise ValidationError({"location": "Saved progress requires a location."})
+    validate_durable_cfi(location)
     _update_active_session(
         session=session,
-        progress_cfi=cfi,
+        progress_location=location,
         progress_location_label=location_label,
         progress_updated_at=updated_at or timezone.now(),
     )
@@ -38,7 +38,7 @@ def assign_session_progress(
 def clear_session_progress(*, session: ReadingSession) -> ReadingSession:
     _update_active_session(
         session=session,
-        progress_cfi="",
+        progress_location="",
         progress_location_label="",
         progress_updated_at=None,
     )
@@ -61,10 +61,10 @@ def replace_progress(
     *,
     user,
     session_id,
-    cfi: str,
+    location: str,
     location_label: str,
 ) -> ReadingSession:
-    validate_durable_cfi(cfi)
+    validate_durable_cfi(location)
     session = locked_owned_session(user=user, session_id=session_id)
     if not session.is_active:
         raise SessionClosedError
@@ -76,13 +76,13 @@ def replace_progress(
         user=user,
         status=ReadingSession.STATUS_ACTIVE,
     ).update(
-        progress_cfi=cfi,
+        progress_location=location,
         progress_location_label=location_label,
         progress_updated_at=updated_at,
     )
     if not updated:
         raise SessionClosedError
-    session.progress_cfi = cfi
+    session.progress_location = location
     session.progress_location_label = location_label
     session.progress_updated_at = updated_at
     return session

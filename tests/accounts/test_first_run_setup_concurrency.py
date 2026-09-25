@@ -30,6 +30,7 @@ User = get_user_model()
 @skipUnless(connection.vendor == "sqlite", "SQLite concurrency regression")
 class FirstOwnerSetupConcurrencyTests(TransactionTestCase):
     reset_sequences = True
+    serialized_rollback = True
 
     def setUp(self):
         cache.clear()

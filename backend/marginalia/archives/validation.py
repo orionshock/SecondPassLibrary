@@ -48,7 +48,9 @@ class UnsupportedArchiveProfileError(ValueError):
 
 class ArchiveValidationError(ValueError):
     def __init__(self, issues: tuple[ArchiveValidationIssue, ...]):
-        super().__init__("The Marginalia archive does not satisfy the canonical contract.")
+        super().__init__(
+            "The Marginalia archive does not satisfy the canonical contract."
+        )
         self.issues = issues
 
 
@@ -196,16 +198,22 @@ def _cfi_issues(value: Any) -> list[ArchiveValidationIssue]:
         return []
     issues = []
     for book_index, book in enumerate(value["books"]):
-        if not isinstance(book, dict) or not isinstance(book.get("readingSessions"), list):
+        if not isinstance(book, dict) or not isinstance(
+            book.get("readingSessions"), list
+        ):
             continue
         for session_index, session in enumerate(book["readingSessions"]):
             if not isinstance(session, dict):
                 continue
             base = f"$.books[{book_index}].readingSessions[{session_index}]"
             progress = session.get("progress")
-            if isinstance(progress, dict) and isinstance(progress.get("cfi"), str):
-                if not is_supported_durable_cfi(progress["cfi"]):
-                    issues.append(ArchiveValidationIssue(f"{base}.progress.cfi", "supportedCfi"))
+            if isinstance(progress, dict) and isinstance(progress.get("location"), str):
+                if not is_supported_durable_cfi(progress["location"]):
+                    issues.append(
+                        ArchiveValidationIssue(
+                            f"{base}.progress.location", "supportedCfi"
+                        )
+                    )
             annotations = session.get("annotations")
             if not isinstance(annotations, list):
                 continue
@@ -213,12 +221,16 @@ def _cfi_issues(value: Any) -> list[ArchiveValidationIssue]:
                 if not isinstance(annotation, dict):
                     continue
                 location = annotation.get("location")
-                if isinstance(location, dict) and isinstance(location.get("cfi"), str):
-                    if not is_supported_durable_cfi(location["cfi"]):
-                        issues.append(ArchiveValidationIssue(
-                            f"{base}.annotations[{annotation_index}].location.cfi",
-                            "supportedCfi",
-                        ))
+                if isinstance(location, dict) and isinstance(
+                    location.get("location"), str
+                ):
+                    if not is_supported_durable_cfi(location["location"]):
+                        issues.append(
+                            ArchiveValidationIssue(
+                                f"{base}.annotations[{annotation_index}].location.location",
+                                "supportedCfi",
+                            )
+                        )
     return issues
 
 
@@ -257,7 +269,7 @@ def _session_from_wire(value: dict[str, Any]) -> ArchiveReadingSession:
         updated_at=value["updatedAt"],
         progress=(
             ArchiveProgress(
-                cfi=progress["cfi"],
+                location=progress["location"],
                 location_label=progress.get("locationLabel"),
                 updated_at=progress["updatedAt"],
             )
@@ -272,7 +284,7 @@ def _annotation_from_wire(value: dict[str, Any]) -> ArchiveAnnotation:
     location = value["location"]
     common = {
         "client_annotation_id": value["clientAnnotationId"],
-        "location_cfi": location["cfi"],
+        "location": location["location"],
         "location_label": location.get("locationLabel"),
         "created_at": value["createdAt"],
         "updated_at": value["updatedAt"],

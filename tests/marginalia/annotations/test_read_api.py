@@ -42,7 +42,7 @@ class MarginaliaAnnotationReadAPITests(APITestCase):
             session=target,
             client_id="highlight-1",
             kind=Annotation.KIND_HIGHLIGHT,
-            cfi="epubcfi(/6/8!/4/2:7)",
+            location="epubcfi(/6/8!/4/2:7)",
             location_label="  Chapter 08 · 42%  ",
             highlight_text="Selected passage",
             quote_prefix="Before ",
@@ -54,12 +54,14 @@ class MarginaliaAnnotationReadAPITests(APITestCase):
             session=target,
             client_id="bookmark-1",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="epubcfi(/6/10!/4/2)",
+            location="epubcfi(/6/10!/4/2)",
             location_label="Chapter 09 · 47%",
         )
         return highlight, bookmark
 
-    def test_active_and_closed_annotations_are_owner_readable_without_library_access(self):
+    def test_active_and_closed_annotations_are_owner_readable_without_library_access(
+        self,
+    ):
         self.make_annotations(self.active)
         self.make_annotations(self.closed)
 
@@ -85,7 +87,10 @@ class MarginaliaAnnotationReadAPITests(APITestCase):
         )
         self.assertEqual(
             rows["highlight-1"]["location"],
-            {"cfi": highlight.cfi, "location_label": highlight.location_label},
+            {
+                "location": highlight.location,
+                "location_label": highlight.location_label,
+            },
         )
         self.assertEqual(
             rows["highlight-1"]["body"],
@@ -109,13 +114,15 @@ class MarginaliaAnnotationReadAPITests(APITestCase):
             session=self.active,
             client_id="deleted",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="epubcfi(/6/12)",
+            location="epubcfi(/6/12)",
             is_deleted=True,
         )
 
         rows = self.client.get(self.url()).json()["annotations"]
 
-        self.assertEqual({row["client_id"] for row in rows}, {"highlight-1", "bookmark-1"})
+        self.assertEqual(
+            {row["client_id"] for row in rows}, {"highlight-1", "bookmark-1"}
+        )
 
     def test_reading_order_uses_labels_then_deterministic_blank_label_fallback(self):
         created = timezone.now() - timedelta(days=1)
@@ -125,12 +132,12 @@ class MarginaliaAnnotationReadAPITests(APITestCase):
             ("blank-a", "", "epubcfi(/6/2)"),
             ("chapter-02", "Chapter 02 · 10%", "epubcfi(/6/8)"),
         )
-        for client_id, label, cfi in fixtures:
+        for client_id, label, location in fixtures:
             annotation = Annotation.objects.create(
                 session=self.active,
                 client_id=client_id,
                 kind=Annotation.KIND_BOOKMARK,
-                cfi=cfi,
+                location=location,
                 location_label=label,
             )
             Annotation.objects.filter(pk=annotation.pk).update(created_at=created)

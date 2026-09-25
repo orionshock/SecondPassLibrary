@@ -8,7 +8,7 @@ from marginalia.models import (
     HIGHLIGHT_COLOR_YELLOW,
     MAX_ANNOTATION_BODY_LENGTH,
     MAX_ANNOTATION_CLIENT_ID_LENGTH,
-    MAX_CFI_LENGTH,
+    MAX_LOCATION_LENGTH,
     MAX_LOCATION_LABEL_LENGTH,
     MAX_QUOTE_CONTEXT_LENGTH,
     Annotation,
@@ -28,8 +28,8 @@ class ClientIdField(OpaqueStringField):
 
 
 class AnnotationLocationSerializer(StrictSerializer):
-    cfi = OpaqueStringField(
-        max_length=MAX_CFI_LENGTH,
+    location = OpaqueStringField(
+        max_length=MAX_LOCATION_LENGTH,
         allow_blank=False,
         trim_whitespace=False,
         validators=[validate_durable_cfi],
@@ -83,7 +83,9 @@ class AnnotationUpsertSerializer(StrictSerializer):
         allow_blank=False,
         trim_whitespace=False,
     )
-    kind = serializers.ChoiceField(choices=[choice[0] for choice in Annotation.KIND_CHOICES])
+    kind = serializers.ChoiceField(
+        choices=[choice[0] for choice in Annotation.KIND_CHOICES]
+    )
     location = AnnotationLocationSerializer()
     body = HighlightBodySerializer(required=False)
 
@@ -178,7 +180,7 @@ class AnnotationSerializer(serializers.ModelSerializer):
 
     def get_location(self, annotation: Annotation) -> dict:
         return {
-            "cfi": annotation.cfi,
+            "location": annotation.location,
             "location_label": annotation.location_label,
         }
 

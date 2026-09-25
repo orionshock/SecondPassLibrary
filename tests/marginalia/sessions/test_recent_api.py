@@ -83,14 +83,14 @@ class MarginaliaRecentSessionAPITests(APITestCase):
             pk__in=[self.active.pk, progress.pk, annotated.pk, deleted.pk]
         ).update(updated_at=oldest)
         ReadingSession.objects.filter(pk=progress.pk).update(
-            progress_cfi="epubcfi(/6/4)",
+            progress_location="epubcfi(/6/4)",
             progress_updated_at=now - timedelta(days=2),
         )
         visible_annotation = Annotation.objects.create(
             session=annotated,
             client_id="recent-visible",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="epubcfi(/6/6)",
+            location="epubcfi(/6/6)",
         )
         Annotation.objects.filter(pk=visible_annotation.pk).update(
             updated_at=now - timedelta(days=1)
@@ -99,7 +99,7 @@ class MarginaliaRecentSessionAPITests(APITestCase):
             session=deleted,
             client_id="recent-deleted",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="epubcfi(/6/8)",
+            location="epubcfi(/6/8)",
             is_deleted=True,
         )
         Annotation.objects.filter(pk=deleted_annotation.pk).update(updated_at=now)
@@ -107,10 +107,14 @@ class MarginaliaRecentSessionAPITests(APITestCase):
         rows = self.client.get(self.url).json()["results"]
 
         self.assertEqual(rows[0]["id"], str(annotated.id))
-        self.assertEqual(parse_datetime(rows[0]["last_activity_at"]), now - timedelta(days=1))
+        self.assertEqual(
+            parse_datetime(rows[0]["last_activity_at"]), now - timedelta(days=1)
+        )
         self.assertEqual(rows[1]["id"], str(progress.id))
         self.assertGreater(
-            next(index for index, row in enumerate(rows) if row["id"] == str(deleted.id)),
+            next(
+                index for index, row in enumerate(rows) if row["id"] == str(deleted.id)
+            ),
             1,
         )
 
@@ -131,7 +135,9 @@ class MarginaliaRecentSessionAPITests(APITestCase):
 
         limited = self.client.get(self.url, {"limit": 2}).json()["results"]
 
-        self.assertEqual({row["id"] for row in limited}, {str(self.active.id), str(second_active.id)})
+        self.assertEqual(
+            {row["id"] for row in limited}, {str(self.active.id), str(second_active.id)}
+        )
         self.assertEqual(self.client.get(self.url, {"limit": 0}).status_code, 400)
         self.assertEqual(self.client.get(self.url, {"limit": 51}).status_code, 400)
 
@@ -156,7 +162,7 @@ class MarginaliaRecentSessionAPITests(APITestCase):
 
     def test_projection_keeps_inaccessible_book_identity_and_is_bounded(self):
         ReadingSession.objects.filter(pk=self.active.pk).update(
-            progress_cfi="epubcfi(/6/8!/4/2)",
+            progress_location="epubcfi(/6/8!/4/2)",
             progress_location_label="Chapter 08 · 42%",
             progress_updated_at=timezone.now(),
         )
@@ -172,7 +178,7 @@ class MarginaliaRecentSessionAPITests(APITestCase):
             row["book"]["cover_url"].endswith(f"/media/{self.book.cover_file.name}")
         )
         self.assertFalse(row["book"]["can_open"])
-        self.assertEqual(row["progress"]["cfi"], "epubcfi(/6/8!/4/2)")
+        self.assertEqual(row["progress"]["location"], "epubcfi(/6/8!/4/2)")
         self.assertEqual(row["progress"]["location_label"], "Chapter 08 · 42%")
 
     def test_projection_uses_null_when_session_has_no_saved_progress(self):
@@ -209,4 +215,6 @@ class MarginaliaRecentSessionAPITests(APITestCase):
         self.assertEqual(len(queries), 1)
         self.assertEqual(len(rows), 1)
         self.client.get(self.url)
-        self.assertEqual(ReadingSession.objects.get(pk=self.active.pk).updated_at, before)
+        self.assertEqual(
+            ReadingSession.objects.get(pk=self.active.pk).updated_at, before
+        )

@@ -82,7 +82,7 @@ class MarginaliaFoundationTests(TestCase):
             session=session,
             client_id="owned-bookmark",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="epubcfi(/6/2)",
+            location="epubcfi(/6/2)",
         )
 
         self.assertEqual(annotation.session, session)
@@ -95,30 +95,30 @@ class MarginaliaFoundationTests(TestCase):
     def test_session_can_exist_without_saved_progress(self):
         session = ReadingSession.objects.create(user=self.user, book=self.book)
 
-        self.assertEqual(session.progress_cfi, "")
+        self.assertEqual(session.progress_location, "")
         self.assertEqual(session.progress_location_label, "")
         self.assertIsNone(session.progress_updated_at)
 
     def test_progress_assignment_preserves_location_and_clears_atomically(self):
         session = ReadingSession.objects.create(user=self.user, book=self.book)
-        cfi = "epubcfi(/6/8!/4/3:7)"
+        location = "epubcfi(/6/8!/4/3:7)"
         label = "  Chapter 08 · 42% · The Blackstaff  "
         updated_at = timezone.now()
 
         assign_session_progress(
             session=session,
-            cfi=cfi,
+            location=location,
             location_label=label,
             updated_at=updated_at,
         )
         session.refresh_from_db()
-        self.assertEqual(session.progress_cfi, cfi)
+        self.assertEqual(session.progress_location, location)
         self.assertEqual(session.progress_location_label, label)
         self.assertEqual(session.progress_updated_at, updated_at)
 
         clear_session_progress(session=session)
         session.refresh_from_db()
-        self.assertEqual(session.progress_cfi, "")
+        self.assertEqual(session.progress_location, "")
         self.assertEqual(session.progress_location_label, "")
         self.assertIsNone(session.progress_updated_at)
 
@@ -126,12 +126,14 @@ class MarginaliaFoundationTests(TestCase):
         invalid_values = (
             {"progress_location_label": "Chapter 1"},
             {"progress_updated_at": timezone.now()},
-            {"progress_cfi": "epubcfi(/6/8)"},
+            {"progress_location": "epubcfi(/6/8)"},
         )
         for values in invalid_values:
-            with self.subTest(values=values), self.assertRaises(
-                IntegrityError
-            ), transaction.atomic():
+            with (
+                self.subTest(values=values),
+                self.assertRaises(IntegrityError),
+                transaction.atomic(),
+            ):
                 ReadingSession.objects.create(
                     user=self.user,
                     book=self.book,
@@ -141,14 +143,15 @@ class MarginaliaFoundationTests(TestCase):
     def test_progress_label_is_optional(self):
         session = ReadingSession.objects.create(user=self.user, book=self.book)
 
-        assign_session_progress(session=session, cfi="epubcfi(/6/8)")
+        assign_session_progress(session=session, location="epubcfi(/6/8)")
 
         self.assertEqual(session.progress_location_label, "")
 
     def test_profile_uri_is_not_stored_per_row(self):
         for model in (ReadingSession, Annotation):
-            with self.subTest(model=model.__name__), self.assertRaises(
-                FieldDoesNotExist
+            with (
+                self.subTest(model=model.__name__),
+                self.assertRaises(FieldDoesNotExist),
             ):
                 model._meta.get_field("profile_version")
 
@@ -158,14 +161,14 @@ class MarginaliaFoundationTests(TestCase):
             session=session,
             client_id="unlabeled-bookmark",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="epubcfi(/6/2)",
+            location="epubcfi(/6/2)",
         )
         label = "Location 008 · 42% · Appendix B"
         noted_highlight = Annotation.objects.create(
             session=session,
             client_id="labeled-highlight",
             kind=Annotation.KIND_HIGHLIGHT,
-            cfi="epubcfi(/6/4)",
+            location="epubcfi(/6/4)",
             location_label=label,
             highlight_text="Selected text.",
             comment_text="Remember this.",
@@ -179,7 +182,7 @@ class MarginaliaFoundationTests(TestCase):
                 session=session,
                 client_id="null-location-label",
                 kind=Annotation.KIND_BOOKMARK,
-                cfi="epubcfi(/6/6)",
+                location="epubcfi(/6/6)",
                 location_label=None,
             )
 
@@ -189,23 +192,23 @@ class MarginaliaFoundationTests(TestCase):
         with self.assertRaises(IntegrityError), transaction.atomic():
             Annotation.objects.create(
                 session=session,
-                client_id="missing-cfi",
+                client_id="missing-location",
                 kind=Annotation.KIND_BOOKMARK,
-                cfi="",
+                location="",
             )
         with self.assertRaises(IntegrityError), transaction.atomic():
             Annotation.objects.create(
                 session=session,
                 client_id="missing-highlight-text",
                 kind=Annotation.KIND_HIGHLIGHT,
-                cfi="epubcfi(/6/2)",
+                location="epubcfi(/6/2)",
             )
         with self.assertRaises(IntegrityError), transaction.atomic():
             Annotation.objects.create(
                 session=session,
                 client_id="bookmark-with-note",
                 kind=Annotation.KIND_BOOKMARK,
-                cfi="epubcfi(/6/4)",
+                location="epubcfi(/6/4)",
                 comment_text="Not valid bookmark content.",
             )
         for field in (
@@ -214,14 +217,16 @@ class MarginaliaFoundationTests(TestCase):
             "quote_suffix",
             "highlight_color",
         ):
-            with self.subTest(field=field), self.assertRaises(
-                IntegrityError
-            ), transaction.atomic():
+            with (
+                self.subTest(field=field),
+                self.assertRaises(IntegrityError),
+                transaction.atomic(),
+            ):
                 Annotation.objects.create(
                     session=session,
                     client_id=f"bookmark-with-{field}",
                     kind=Annotation.KIND_BOOKMARK,
-                    cfi="epubcfi(/6/4)",
+                    location="epubcfi(/6/4)",
                     **{field: "not allowed"},
                 )
 
@@ -235,13 +240,13 @@ class MarginaliaFoundationTests(TestCase):
             session=session,
             client_id="reader-annotation-1",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="epubcfi(/6/2)",
+            location="epubcfi(/6/2)",
         )
         Annotation.objects.create(
             session=other_session,
             client_id="reader-annotation-1",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="epubcfi(/6/2)",
+            location="epubcfi(/6/2)",
         )
 
         with self.assertRaises(IntegrityError), transaction.atomic():
@@ -249,14 +254,14 @@ class MarginaliaFoundationTests(TestCase):
                 session=session,
                 client_id="reader-annotation-1",
                 kind=Annotation.KIND_BOOKMARK,
-                cfi="epubcfi(/6/4)",
+                location="epubcfi(/6/4)",
             )
         with self.assertRaises(IntegrityError), transaction.atomic():
             Annotation.objects.create(
                 session=session,
                 client_id="",
                 kind=Annotation.KIND_BOOKMARK,
-                cfi="epubcfi(/6/6)",
+                location="epubcfi(/6/6)",
             )
 
     def test_closed_session_progress_is_immutable(self):
@@ -268,4 +273,4 @@ class MarginaliaFoundationTests(TestCase):
         )
 
         with self.assertRaises(ValidationError):
-            assign_session_progress(session=session, cfi="epubcfi(/6/8)")
+            assign_session_progress(session=session, location="epubcfi(/6/8)")

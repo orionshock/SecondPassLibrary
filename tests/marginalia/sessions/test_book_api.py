@@ -68,13 +68,13 @@ class MarginaliaBookSessionAPITests(APITestCase):
             session=self.active,
             client_id="visible-bookmark",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="epubcfi(/6/2)",
+            location="epubcfi(/6/2)",
         )
         Annotation.objects.create(
             session=self.active,
             client_id="deleted-bookmark",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="epubcfi(/6/4)",
+            location="epubcfi(/6/4)",
             is_deleted=True,
         )
 
@@ -123,8 +123,7 @@ class MarginaliaBookSessionAPITests(APITestCase):
             f"/api/v1/marginalia/books/{self.unowned.id}/sessions/"
         )
         missing = self.client.get(
-            "/api/v1/marginalia/books/00000000-0000-0000-0000-000000000000/"
-            "sessions/"
+            "/api/v1/marginalia/books/00000000-0000-0000-0000-000000000000/sessions/"
         )
 
         self.assertEqual(unowned.status_code, status.HTTP_404_NOT_FOUND)
@@ -151,12 +150,12 @@ class MarginaliaBookSessionAPITests(APITestCase):
 
     def test_search_uses_session_name_and_notes_but_not_parent_book(self):
         by_name = self.client.get(self.url, {"q": "Current pass"}).json()["results"]
-        by_notes = self.client.get(
-            self.url, {"q": "Remember the ending"}
-        ).json()["results"]
-        by_book = self.client.get(
-            self.url, {"q": "Hidden Session Book"}
-        ).json()["results"]
+        by_notes = self.client.get(self.url, {"q": "Remember the ending"}).json()[
+            "results"
+        ]
+        by_book = self.client.get(self.url, {"q": "Hidden Session Book"}).json()[
+            "results"
+        ]
 
         self.assertEqual([row["id"] for row in by_name], [str(self.active.id)])
         self.assertEqual([row["id"] for row in by_notes], [str(self.closed.id)])
@@ -180,14 +179,14 @@ class MarginaliaBookSessionAPITests(APITestCase):
             pk__in=[self.active.pk, self.closed.pk, self.older_closed.pk]
         ).update(updated_at=oldest)
         ReadingSession.objects.filter(pk=self.active.pk).update(
-            progress_cfi="epubcfi(/6/4)",
+            progress_location="epubcfi(/6/4)",
             progress_updated_at=middle,
         )
         annotation = Annotation.objects.create(
             session=self.closed,
             client_id="closed-activity",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="epubcfi(/6/8)",
+            location="epubcfi(/6/8)",
         )
         Annotation.objects.filter(pk=annotation.pk).update(updated_at=newest)
 

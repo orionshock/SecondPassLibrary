@@ -28,7 +28,7 @@ def close_owned_session(
         raise SessionClosedError
 
     if progress is not None:
-        validate_durable_cfi(progress["cfi"])
+        validate_durable_cfi(progress["location"])
         require_book_access(user=user, book_id=session.book_id)
 
     closed_at = timezone.now()
@@ -41,7 +41,7 @@ def close_owned_session(
 
     if progress is not None:
         values.update(
-            progress_cfi=progress["cfi"],
+            progress_location=progress["location"],
             progress_location_label=progress.get("location_label", ""),
             progress_updated_at=closed_at,
         )
@@ -69,7 +69,6 @@ def _closed_retry_matches(
         return False
     if progress is None:
         return True
-    return (
-        session.progress_cfi == progress["cfi"]
-        and session.progress_location_label == progress.get("location_label", "")
-    )
+    return session.progress_location == progress[
+        "location"
+    ] and session.progress_location_label == progress.get("location_label", "")

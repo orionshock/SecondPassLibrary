@@ -2,7 +2,7 @@
   "clientAnnotationId": "reader-bookmark-invalid",
   "kind": "bookmark",
   "location": {
-    "cfi": "epubcfi(/6/10!/4/2)",
+    "location": "epubcfi(/6/10!/4/2)",
     "locationLabel": "047% - Chapter 09"
   },
   "body": {

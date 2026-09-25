@@ -32,11 +32,15 @@ def open_or_create_session(
     defaults: Mapping[str, str],
 ) -> tuple[ReadingSession, bool]:
     book = _locked_accessible_book(user=user, book_id=book_id)
-    existing = ReadingSession.objects.select_for_update().filter(
-        user=user,
-        book=book,
-        status=ReadingSession.STATUS_ACTIVE,
-    ).first()
+    existing = (
+        ReadingSession.objects.select_for_update()
+        .filter(
+            user=user,
+            book=book,
+            status=ReadingSession.STATUS_ACTIVE,
+        )
+        .first()
+    )
     if existing is not None:
         return existing, False
 
@@ -66,11 +70,15 @@ def start_over_session(
     finalization: Mapping,
 ) -> ReadingSession:
     book = _locked_accessible_book(user=user, book_id=book_id)
-    active = ReadingSession.objects.select_for_update().filter(
-        user=user,
-        book=book,
-        status=ReadingSession.STATUS_ACTIVE,
-    ).first()
+    active = (
+        ReadingSession.objects.select_for_update()
+        .filter(
+            user=user,
+            book=book,
+            status=ReadingSession.STATUS_ACTIVE,
+        )
+        .first()
+    )
     if active is None:
         if finalization:
             raise FinalizationWithoutActiveSessionError
@@ -97,9 +105,9 @@ def _finalize_for_start_over(*, session: ReadingSession, finalization: Mapping) 
             values[field] = finalization[field]
     progress = finalization.get("progress")
     if progress is not None:
-        validate_durable_cfi(progress["cfi"])
+        validate_durable_cfi(progress["location"])
         values.update(
-            progress_cfi=progress["cfi"],
+            progress_location=progress["location"],
             progress_location_label=progress.get("location_label", ""),
             progress_updated_at=closed_at,
         )

@@ -18,7 +18,11 @@ from marginalia.models import Annotation, ReadingSession
 from shelves.models import Shelf, ShelfItem
 from tests.shelves.helpers import BaseShelvesAPITest
 from tests.utils.books import attach_test_cover
-from tests.utils.responses import assert_response, response_data_dict, response_data_list
+from tests.utils.responses import (
+    assert_response,
+    response_data_dict,
+    response_data_list,
+)
 
 
 pytestmark = [pytest.mark.integration]
@@ -367,7 +371,7 @@ class ShelfWriteContractTests(BaseShelvesAPITest):
             session=session,
             client_id="shelf-preservation",
             kind=Annotation.KIND_BOOKMARK,
-            cfi="epubcfi(/6/2)",
+            location="epubcfi(/6/2)",
         )
         create = assert_response(
             self.client.post(
@@ -395,7 +399,11 @@ class ShelfWriteContractTests(BaseShelvesAPITest):
         self.assertEqual(deleted.status_code, status.HTTP_204_NO_CONTENT)
         self.assertFalse(Shelf.objects.filter(pk=shelf_id).exists())
         self.assertFalse(ShelfItem.objects.filter(pk=item_id).exists())
-        self.assertTrue(self.book_in_group.__class__.objects.filter(pk=self.book_in_group.pk).exists())
+        self.assertTrue(
+            self.book_in_group.__class__.objects.filter(
+                pk=self.book_in_group.pk
+            ).exists()
+        )
         self.assertTrue(
             self.book_in_group.group_assignments.filter(group=self.group).exists()
         )
