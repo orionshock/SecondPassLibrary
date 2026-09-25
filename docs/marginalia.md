@@ -47,14 +47,15 @@ is currently visible.
 Only active Sessions accept title, note, progress, or annotation changes.
 Progress is one saved location stored on the Session: a `location`, an optional
 display label, and a server/source timestamp. For EPUB Books, the location is a
-syntax-validated CFI stored unchanged as the durable anchor. `locationLabel` is persisted
-display text, not a second position or identity field. Marginalia does not
-resolve CFIs or normalize, derive, or assign numeric meaning to either value.
+syntax-validated CFI stored unchanged as the durable anchor; the exact accepted
+subset and behavior belong to the [EPUB Location Profile](specs/epub-location.md).
+`locationLabel` is persisted display text, not a second position or identity
+field.
 
 The Reader may show a richer live label while a Book is open, such as
 `Dedication • p1/2 • 1%`. Page fragments describe the current rendition and are
 not saved. New saved labels use the stable `PPP% - Label` form described in the
-[interchange profile](specs/reading-session-annotation-profile/profile.md#saved-location-labels).
+[interchange contract](specs/marginalia.md#saved-location-labels).
 Historical labels remain valid display text and are never migrated or
 reinterpreted by the server.
 
@@ -320,7 +321,7 @@ The archive specifications define the exact interchange structures:
 
 - [Marginalia export archive](specs/marginalia-export.md) defines the portable
   archive envelope and Book grouping.
-- [Reading Session and Annotation profile](specs/reading-session-annotation-profile/README.md)
+- [Marginalia Interchange Contract](specs/marginalia.md)
   defines exact Session, progress, location, highlight, bookmark, and portable
   identity shapes.
 

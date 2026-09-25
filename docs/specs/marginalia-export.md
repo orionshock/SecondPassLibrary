@@ -4,18 +4,18 @@
 
 This specification defines the portable archive envelope around the reusable
 Marginalia objects in the
-[Reading Session and Annotation profile](reading-session-annotation-profile/profile.md).
+[Marginalia Interchange Contract](marginalia.md).
 It does not define alternate Session, progress, location, or annotation shapes.
 
 [marginalia-export.schema.json](marginalia-export.schema.json) is the normative
 machine-readable envelope schema. It references the normative reusable profile
-[schema](reading-session-annotation-profile/schema.json) by its canonical URI.
+[schema](marginalia.schema.json) by its canonical URI.
 The runtime keeps an offline bundled schema beside the archive codec; the
 focused contract test composes these two documentation schemas and checks their
 semantic parity with that runtime bundle.
 
 The complete valid end-to-end fixture is
-[complete-export.json](reading-session-annotation-profile/examples/complete-export.json).
+[complete-export.json](examples/complete-export.json).
 It is validated offline against both documentation schemas and accepted by the
 runtime codec during the focused specification check.
 
@@ -60,9 +60,10 @@ shape. Deleted annotations are omitted.
 
 Native import consumes this contract. Foreign formats must be converted by a
 Reader client or dedicated tool; the Library server does not parse EPUB content,
-repair CFIs, or invent location labels while importing Marginalia.
-Imported progress and annotation CFIs must meet the same compact locator
-profile as live writes; see the [location contract](reading-session-annotation-profile/profile.md#locations-and-progress).
+repair locations, or invent location labels while importing Marginalia.
+Imported progress and annotation locations must meet the format-specific
+profile accepted for their Book; current EPUB locations use the
+[EPUB Location Profile](epub-location.md).
 
 The Unmatched download is a ZIP packaging operation, not another schema. Each
 JSON member is a complete single-Session archive conforming to this same

@@ -17,10 +17,9 @@ from marginalia.profile import MARGINALIA_PROFILE_URI
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 RUNTIME_SCHEMA_PATH = REPOSITORY_ROOT / "backend/marginalia/archives/schema.json"
 SPEC_ROOT = REPOSITORY_ROOT / "docs/specs"
-PROFILE_ROOT = SPEC_ROOT / "reading-session-annotation-profile"
-PROFILE_SCHEMA_PATH = PROFILE_ROOT / "schema.json"
+PROFILE_SCHEMA_PATH = SPEC_ROOT / "marginalia.schema.json"
 EXPORT_SCHEMA_PATH = SPEC_ROOT / "marginalia-export.schema.json"
-EXAMPLES_ROOT = PROFILE_ROOT / "examples"
+EXAMPLES_ROOT = SPEC_ROOT / "examples"
 
 VALID_EXAMPLES = {
     "closed-session.json": "profile",

@@ -12,6 +12,25 @@ for exact methods, parameters, and wire fields. The first-party SDK defines the
 shapes consumed by the Product UI, while the Marginalia schemas define the
 portable archive formats.
 
+## Machine-readable contract status
+
+The repository does not currently publish OpenAPI as an authoritative contract.
+DRF's built-in generator is deprecated, and an evaluation of `drf-spectacular`
+showed that adopting it is viable but not yet a modest annotation task. The
+current API has serializer-light `APIView` endpoints, custom bearer
+authentication, multipart uploads, binary downloads, action-specific
+envelopes, and public well-known routes that cannot be inferred truthfully.
+
+OpenAPI should be adopted only as a complete structural contract: every
+supported API and public discovery operation included, session and bearer
+authentication represented accurately, request and response media types and
+error envelopes described, and generation completing without warnings or
+operation-name collisions. Adoption must also add one deterministic repository
+command plus validation and drift checks. Until that work is done, URL
+configuration, serializers, runtime behavior, and contract tests remain the
+structural authority; no generated schema artifact should be treated as
+complete.
+
 DRF returns JSON by default. Product UI transport details may change with the
 SDK before release and should not be treated as public API merely because the
 current frontend uses them.
@@ -160,14 +179,11 @@ it in Session history, progress summaries, bookmarks, highlights, and notes,
 but must not parse it for navigation, identity, matching, or anchoring.
 
 For EPUB Books, `location` contains a self-describing `epubcfi(...)` value in
-the supported compact structural profile. XML ID assertions on element steps
-are accepted when the ID is an XML name without a colon, with at most 128
-characters per ID and 256 across a CFI.
-Text-location assertions after character offsets are not supported. Quote and
-Book text belong in `text`, `prefix`, and `suffix`, not in the CFI. The server
-checks syntax and compactness, then stores accepted locations unchanged without
-resolving them against EPUB content. Clients emit compact structural CFIs with
-optional element IDs.
+the supported compact structural profile. The server validates its syntax and
+profile, then stores it unchanged without resolving it against EPUB content.
+The exact subset and Second Pass compactness limits belong to the
+[EPUB Location Profile](specs/epub-location.md); quote and Book text remain in
+`text`, `prefix`, and `suffix`.
 
 The Reader's live chrome may show temporary rendition details such as
 `Dedication • p1/2 • 1%`. That live label is not the saved label. New saved
@@ -176,7 +192,7 @@ through `100`, for example `001% - Dedication` or `014% - Chapter 08`.
 
 Older labels such as `Chapter 08 - 01%` remain valid. The server stores and
 returns them as supplied and does not migrate or reinterpret them. See the
-[Reading Session and Annotation profile](specs/reading-session-annotation-profile/profile.md#saved-location-labels)
+[Marginalia Interchange Contract](specs/marginalia.md#saved-location-labels)
 for label construction and fallback rules.
 
 ## Errors
@@ -433,7 +449,7 @@ schemas below define the exact interchange structures.
 - [Marginalia](marginalia.md) covers the reading-data lifecycle, staged import,
   partial apply, replay, and export limits.
 - [Marginalia export archive](specs/marginalia-export.md) and the
-  [Reading Session and Annotation profile](specs/reading-session-annotation-profile/README.md)
+  [Marginalia Interchange Contract](specs/marginalia.md)
   define the portable interchange schemas. Offline contract tests validate the
   examples and compare the documented schemas with the runtime copy.
 - [Imports](imports.md) covers Library metadata import and untrusted archives.
