@@ -78,7 +78,7 @@
       "command": "ssh",
       "args": [
         "NewCaprica",
-        "cd ~/projects/SecondPassLibrary/ && git pull && ./docker/rebuild-deployment.sh"
+        "cd ~/projects/SecondPassLibrary/ && ./tools/redeploy-homelab.sh '${input:secondPassImage}'"
       ],
       "problemMatcher": [],
       "presentation": {
@@ -99,6 +99,13 @@
         "reveal": "always",
         "panel": "dedicated"
       }
+    }
+  ],
+  "inputs": [
+    {
+      "id": "secondPassImage",
+      "type": "promptString",
+      "description": "Immutable image tag or full image reference"
     }
   ]
 }

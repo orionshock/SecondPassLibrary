@@ -1,0 +1,218 @@
+name: Verify, build, and publish
+
+on:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "*"
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY_IMAGE: ${{ vars.REGISTRY_IMAGE }}
+
+jobs:
+  verify:
+    name: Verify repository
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install verification dependencies
+        run: |
+          python -m pip install --disable-pip-version-check -r requirements-dev.txt pip-audit
+          npm --prefix frontend ci
+
+      - name: Run canonical verification
+        run: python tools/verify.py --lane all
+
+      - name: Check dependency advisories
+        run: python tools/verify.py --lane security-deps
+
+  build_publish:
+    name: Build, test, and publish image
+    needs: verify
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out complete Git history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Require registry configuration
+        shell: bash
+        env:
+          REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
+        run: |
+          set -euo pipefail
+          test -n "$REGISTRY_IMAGE" || {
+            echo "Repository variable REGISTRY_IMAGE is required." >&2
+            exit 1
+          }
+          test -n "${{ vars.REGISTRY_HOST }}" || {
+            echo "Repository variable REGISTRY_HOST is required." >&2
+            exit 1
+          }
+          test -n "${{ vars.REGISTRY_USERNAME }}" || {
+            echo "Repository variable REGISTRY_USERNAME is required." >&2
+            exit 1
+          }
+          test -n "$REGISTRY_TOKEN" || {
+            echo "Repository secret REGISTRY_TOKEN is required." >&2
+            exit 1
+          }
+
+      - name: Derive image metadata
+        id: metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(git describe --tags --always --dirty)
+          release_date=$(git log -1 --format=%cs)
+          immutable_tag="${REGISTRY_IMAGE}:sha-${GITHUB_SHA}"
+
+          {
+            echo "version=$version"
+            echo "release_date=$release_date"
+            echo "immutable_tag=$immutable_tag"
+            echo "tags<<EOF"
+            echo "$immutable_tag"
+            if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+              echo "${REGISTRY_IMAGE}:main"
+            fi
+            if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+              tag=${GITHUB_REF#refs/tags/}
+              if [[ ! "$tag" =~ ^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$ ]]; then
+                echo "Git tag is not a valid container tag: $tag" >&2
+                exit 1
+              fi
+              echo "${REGISTRY_IMAGE}:$tag"
+            fi
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ vars.REGISTRY_HOST }}
+          username: ${{ vars.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_TOKEN }}
+
+      - name: Build production image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: docker/Dockerfile
+          load: true
+          push: false
+          tags: ${{ steps.metadata.outputs.tags }}
+          build-args: |
+            SERVER_VERSION=${{ steps.metadata.outputs.version }}
+            SERVER_RELEASE_DATE=${{ steps.metadata.outputs.release_date }}
+          labels: |
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+            org.opencontainers.image.version=${{ steps.metadata.outputs.version }}
+
+      - name: Exercise production image
+        shell: bash
+        env:
+          IMAGE: ${{ steps.metadata.outputs.immutable_tag }}
+          EXPECTED_VERSION: ${{ steps.metadata.outputs.version }}
+          EXPECTED_RELEASE_DATE: ${{ steps.metadata.outputs.release_date }}
+        run: |
+          set -euo pipefail
+          suffix="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          server="secondpass-ci-server-$suffix"
+          worker="secondpass-ci-worker-$suffix"
+          volume="secondpass-ci-userdata-$suffix"
+          cleanup() {
+            docker rm -f "$worker" "$server" >/dev/null 2>&1 || true
+            docker volume rm "$volume" >/dev/null 2>&1 || true
+          }
+          trap cleanup EXIT
+
+          docker volume create "$volume" >/dev/null
+          docker run --detach --name "$server" \
+            --volume "$volume:/app/userdata" \
+            --env DJANGO_SECRET_KEY=ci-only-not-a-production-secret \
+            --env DJANGO_ALLOWED_HOSTS=127.0.0.1 \
+            "$IMAGE" >/dev/null
+
+          for attempt in $(seq 1 60); do
+            if docker exec "$server" python /app/docker/healthcheck.py; then
+              break
+            fi
+            if [ "$attempt" -eq 60 ]; then
+              docker logs "$server"
+              exit 1
+            fi
+            sleep 2
+          done
+
+          docker exec \
+            --env EXPECTED_VERSION="$EXPECTED_VERSION" \
+            --env EXPECTED_RELEASE_DATE="$EXPECTED_RELEASE_DATE" \
+            "$server" python -c \
+            'import os; from secondpass.version import SERVER_RELEASE_DATE, SERVER_VERSION; assert SERVER_VERSION == os.environ["EXPECTED_VERSION"]; assert SERVER_RELEASE_DATE == os.environ["EXPECTED_RELEASE_DATE"]'
+
+          docker run --detach --name "$worker" --network none \
+            --volume "$volume:/app/userdata" \
+            --env DJANGO_SECRET_KEY=ci-only-not-a-production-secret \
+            --env DJANGO_ALLOWED_HOSTS=127.0.0.1 \
+            "$IMAGE" worker >/dev/null
+          sleep 5
+          [ "$(docker inspect --format '{{.State.Status}}' "$worker")" = running ] || {
+            docker logs "$worker"
+            exit 1
+          }
+
+      - name: Push image tags
+        shell: bash
+        env:
+          IMAGE_TAGS: ${{ steps.metadata.outputs.tags }}
+        run: |
+          set -euo pipefail
+          while IFS= read -r tag; do
+            [ -n "$tag" ] && docker push "$tag"
+          done <<< "$IMAGE_TAGS"
+
+      - name: Prove immutable registry artifact is pullable
+        shell: bash
+        env:
+          IMAGE: ${{ steps.metadata.outputs.immutable_tag }}
+        run: |
+          set -euo pipefail
+          docker image rm "$IMAGE"
+          docker pull "$IMAGE"
+          docker image inspect --format 'pulled {{index .RepoDigests 0}}' "$IMAGE"

@@ -1,10 +1,10 @@
 # Deployment
 
 Second Pass Library supports one Docker Compose application instance with
-SQLite and persistent Docker storage. The image builds the React Product UI,
-collects static assets, applies migrations at web-container startup, and runs
-one Uvicorn web process plus one Huey maintenance worker as the non-root
-`secondpass` user.
+SQLite and persistent Docker storage. CI builds the React Product UI, collects
+static assets, and publishes the production image. A deployment host only
+pulls that image. At startup it applies migrations and runs one Uvicorn web
+process plus one Huey maintenance worker as the non-root `secondpass` user.
 
 Run the application behind a reverse proxy connected to the Compose network.
 Do not publish the Uvicorn port on the host or expose it directly to the
@@ -51,25 +51,30 @@ metadata, migrations, templates, translations, and schemas remain available.
 The final script, dependency, and application copies use independent BuildKit
 layers so changes to one do not invalidate the others.
 
-`docker/rebuild-deployment.sh` derives the image version with
-`git describe --tags --always --dirty` and its release date with
-`git log -1 --format=%cs`, then passes both into the Compose build. The build
-replaces `secondpass/version.py` only in the image staging tree before running
-`collectstatic`; it does not modify the checkout or require Git at runtime.
-Direct Compose builds default to `live-dev-env` and the current UTC build date.
-The rebuild script enables the `discovery` profile when stopping and starting
-the deployment, so the discovery sidecar starts with the server and worker.
+The workflow in `.github/workflows/ci.yml` derives the version with
+`git describe --tags --always --dirty` and the release date from the commit with
+`git log -1 --format=%cs`. It passes both values to the existing Dockerfile
+build arguments. The build replaces `secondpass/version.py` only in the image
+staging tree before running `collectstatic`; it does not modify the checkout or
+require Git in the runtime image.
 
-The canonical homelab deployment runs from a clean, already-pushed local
-commit and lets the server pull and rebuild its checkout:
+Images are published at
+`git.zcaprica.duckdns.org/orionshock/secondpasslibrary`. Every published build
+has an immutable `sha-<full-commit-sha>` tag. Builds from `main` also update the
+moving `main` integration tag, and Git tags add a same-named image tag. Use an
+immutable SHA tag, a deliberate release tag, or a digest for deployments; do
+not use `main` as a production deployment identity.
+
+The canonical homelab deployment receives an already-published image identity
+and does not pull source or build on NewCaprica:
 
 ```powershell
-ssh NewCaprica "cd ~/projects/SecondPassLibrary/ && git pull && ./docker/rebuild-deployment.sh"
+ssh NewCaprica "cd ~/projects/SecondPassLibrary/ && ./tools/redeploy-homelab.sh sha-<full-commit-sha>"
 ```
 
-VS Code exposes this exact command as `Deploy: Homelab`. It does not commit,
-push, or modify the local checkout. `Deploy: Homelab Status` is the read-only
-post-deployment status check; it runs Compose `ps` in the same remote checkout.
+VS Code exposes this command as `Deploy: Homelab` and prompts for the immutable
+tag or full image reference. `Deploy: Homelab Status` is the read-only
+post-deployment status check.
 
 From the repository root:
 
@@ -90,17 +95,28 @@ SECOND_PASS_LIBRARY_URLS: https://books.example.com
 Start the deployment after editing the file:
 
 ```powershell
-docker compose -f docker/compose.yml up -d --build
+docker compose -f docker/compose.yml pull
+docker compose -f docker/compose.yml up -d --no-build
 ```
 
 `docker/compose.yml` is the deployment configuration and contains the secret.
 Keep it readable only by the deployment account. Optional values and defaults
 are documented beside their entries in `docker/compose.example.yml`.
+Set `SECOND_PASS_IMAGE` for a one-off immutable image selection, or replace the
+example's `image:` value with the chosen release tag or digest. The default
+`main` tag is intended only for integration deployments. The supported example
+is self-contained and does not require a project `.env` file.
 
 The standard image fixes `SECOND_PASS_USERDATA_DIR=/app/userdata`. Its default
-UID/GID is `1000:1000`; alternative IDs are Docker build arguments in
-`docker/compose.yml`, not runtime environment variables. The entrypoint creates
-and verifies the required userdata directories before dropping privileges.
+UID/GID is `1000:1000`. The entrypoint creates and verifies the required
+userdata directories before dropping privileges.
+
+If the registry requires authentication, log in with a pull-only token before
+running Compose. For the homelab tool, either rely on Docker's existing
+credential store or set `SECOND_PASS_REGISTRY_USERNAME` and
+`SECOND_PASS_REGISTRY_TOKEN_FILE`. The token file is read through
+`docker login --password-stdin`; do not place tokens in Compose or command-line
+arguments.
 
 Web startup performs:
 
@@ -349,24 +365,23 @@ enabled, restrict it to trusted operator networks or a proxy allowlist. See
 ## Upgrades
 
 Before upgrading, take a verified backup as documented in
-[Operations](operations.md#backup-and-restore). Then, from the repository root:
+[Operations](operations.md#backup-and-restore). Select the immutable image
+identity produced by a successful CI run, review changes to the distributable
+Compose example and migration requirements, then pull and start it:
 
 ```powershell
-git pull
-docker compose -f docker/compose.yml up -d --build
+$env:SECOND_PASS_IMAGE = "git.zcaprica.duckdns.org/orionshock/secondpasslibrary:sha-<full-commit-sha>"
+docker compose -f docker/compose.yml pull
+docker compose -f docker/compose.yml up -d --no-build
 ```
 
-Review changes to `docker/compose.example.yml` and
-migration requirements before starting the replacement container. The
-entrypoint completes deploy checks and migrations before Uvicorn accepts
-requests.
-
-For a clean image rebuild:
-
-```powershell
-docker compose -f docker/compose.yml build --no-cache --pull
-docker compose -f docker/compose.yml up -d
-```
+The homelab command is `tools/redeploy-homelab.sh <tag-or-reference>`. It pulls
+first, stops the old deployment, starts the selected image without building,
+waits for server health, checks the worker and discovery sidecar, and reports
+the running version and image identity. It intentionally does not roll back:
+if the replacement is broken, the deployment remains visibly broken until the
+underlying problem is fixed. The entrypoint completes deploy checks and
+migrations before Uvicorn accepts requests.
 
 Use `docs/development.md` for the Windows local production-mode helper and
 contributor startup commands; those helpers are not production secret or

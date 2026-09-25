@@ -330,6 +330,26 @@ from fast and release-confidence verification so registry outages do not block
 offline development. `pip check` and `npm ls` remain dependency-integrity
 checks, not vulnerability scans.
 
+## CI and releases
+
+Normal branch pushes and pull requests run the same repository-owned
+verification through `.github/workflows/ci.yml`. A successful push to `main`
+also builds the production Dockerfile, exercises the web and worker roles,
+publishes an immutable `sha-<full-commit-sha>` image, and updates the moving
+`main` integration tag. A pushed Git tag runs the same verification and build
+and publishes both the immutable SHA tag and a same-named release image tag.
+
+The Gitea repository must define `REGISTRY_HOST`, `REGISTRY_IMAGE`, and
+`REGISTRY_USERNAME` Actions variables and a write-capable `REGISTRY_TOKEN`
+Actions secret. These are CI configuration, not developer workstation
+credentials. The workflow is standard GitHub Actions YAML; migrating it to
+GitHub primarily requires changing those registry values and secret.
+
+Tags should be intentional release identifiers and valid container tag names.
+The existing pre-release convention uses names such as `alpha-rc1.1`. The
+container registry image is the release artifact; the tagged source tree
+contains the corresponding self-contained `docker/compose.example.yml`.
+
 Individual checks remain available below for focused work.
 
 ```powershell

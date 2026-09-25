@@ -26,12 +26,8 @@ x-app-environment: &app_environment
 
 services:
   server:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
-      args:
-        APP_UID: 1000
-        APP_GID: 1000
+    # Override SECOND_PASS_IMAGE to deploy a release tag or immutable digest.
+    image: ${SECOND_PASS_IMAGE:-git.zcaprica.duckdns.org/orionshock/secondpasslibrary:main}
     environment: *app_environment
     expose:
       - "8000"
@@ -46,12 +42,7 @@ services:
     restart: unless-stopped
 
   worker:
-    build:
-      context: ..
-      dockerfile: docker/Dockerfile
-      args:
-        APP_UID: 1000
-        APP_GID: 1000
+    image: ${SECOND_PASS_IMAGE:-git.zcaprica.duckdns.org/orionshock/secondpasslibrary:main}
     environment: *app_environment
     volumes:
       - secondpass_userdata:/app/userdata
