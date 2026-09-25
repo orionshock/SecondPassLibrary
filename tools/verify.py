@@ -52,13 +52,19 @@ def main() -> int:
     python = sys.executable
     django_environment = os.environ.copy()
     django_environment["DJANGO_DEBUG"] = "1"
+    test_environment = os.environ.copy()
+    test_environment["DJANGO_DEBUG"] = "0"
 
     if lane == "backend":
-        run("Backend tests", [python, "-m", "pytest", "-q"])
+        run("Backend tests", [python, "-m", "pytest", "-q"], environment=test_environment)
         return 0
     if lane == "backend-coverage":
         run("Erase Python coverage", [python, "-m", "coverage", "erase"])
-        run("Python coverage tests", [python, "-m", "coverage", "run", "--branch", "-m", "pytest", "-q"])
+        run(
+            "Python coverage tests",
+            [python, "-m", "coverage", "run", "--branch", "-m", "pytest", "-q"],
+            environment=test_environment,
+        )
         run("Python coverage HTML", [python, "-m", "coverage", "html"])
         run("Python coverage XML", [python, "-m", "coverage", "xml"])
         run("Python coverage summary", [python, "-m", "coverage", "report"])
@@ -106,7 +112,7 @@ def main() -> int:
     backend_command = [python, "-m", "pytest", "-q"]
     if lane == "fast":
         backend_command.extend(["-m", "not slow and not integration and not concurrency and not subprocess"])
-    run("Backend tests", backend_command)
+    run("Backend tests", backend_command, environment=test_environment)
     run("Frontend tests" if lane == "fast" else "Frontend verification", [npm, "--prefix", "frontend", "run", "test" if lane == "fast" else "verify"])
     run("Repository hygiene", [python, "tools/static_hygiene.py"])
     return 0
