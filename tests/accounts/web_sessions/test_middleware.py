@@ -21,7 +21,7 @@ class UserWebSessionMiddlewareTests(APITestCase):
     def test_authenticated_me_request_has_one_account_facts_query(self):
         user = User.objects.create_user(username="query-user", password="pw")
         self.client.login(username="query-user", password="pw")
-        self.client.get("/api/v1/health/")
+        self.client.get("/api/v1/not-a-route/")
 
         with CaptureQueriesContext(connection) as captured:
             response = self.client.get("/api/v1/accounts/me/")
@@ -63,7 +63,10 @@ class UserWebSessionMiddlewareTests(APITestCase):
     def test_next_request_observes_web_session_generation_advancement(self):
         user = User.objects.create_user(username="revoked", password="pw")
         self.client.force_login(user)
-        self.assertEqual(self.client.get("/api/v1/health/").status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            self.client.get("/api/v1/accounts/me/").status_code,
+            status.HTTP_200_OK,
+        )
 
         UserProfile.objects.filter(user=user).update(
             web_session_generation=F("web_session_generation") + 1
@@ -98,9 +101,9 @@ class UserWebSessionMiddlewareTests(APITestCase):
         UserWebSession.objects.create(user=previous_user, session_key=session_key)
 
         with CaptureQueriesContext(connection) as captured:
-            response = self.client.get("/api/v1/health/")
+            response = self.client.get("/api/v1/not-a-route/")
 
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         tracked = UserWebSession.objects.get(session_key=session_key)
         self.assertEqual(tracked.user_id, user.pk)
         auth_user_selects = [
