@@ -185,7 +185,7 @@ describe("Marginalia recent Session SDK", () => {
           status: "active",
           last_activity_at: "2026-07-30T12:00:00Z",
           progress: {
-            cfi: "epubcfi(/6/8!/4/2)",
+            location: "epubcfi(/6/8!/4/2)",
             location_label: "Chapter 08 Â· 42%",
             updated_at: "2026-07-30T12:00:00Z",
           },
@@ -208,7 +208,7 @@ describe("Marginalia recent Session SDK", () => {
       status: "active",
       lastActivityAt: "2026-07-30T12:00:00Z",
       progress: {
-        cfi: "epubcfi(/6/8!/4/2)",
+        location: "epubcfi(/6/8!/4/2)",
         locationLabel: "Chapter 08 Â· 42%",
         updatedAt: "2026-07-30T12:00:00Z",
       },

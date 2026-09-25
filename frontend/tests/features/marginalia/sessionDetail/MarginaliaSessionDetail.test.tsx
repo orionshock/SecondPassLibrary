@@ -49,7 +49,7 @@ const detail: MarginaliaSessionEnvelope = {
     lastActivityAt: "2026-01-03T00:00:00Z",
     annotationCount: 2,
     progress: {
-      cfi: "epubcfi(/6/2)",
+      location: "epubcfi(/6/2)",
       locationLabel: "Chapter 08 · 42%",
       updatedAt: "2026-01-03T00:00:00Z",
     },
@@ -61,7 +61,7 @@ const annotations: MarginaliaAnnotation[] = [
     id: "annotation-1",
     clientId: "reader-highlight-1",
     kind: "highlight",
-    location: { cfi: "epubcfi(/6/4)", locationLabel: "Chapter 09 · 47%" },
+    location: { location: "epubcfi(/6/4)", locationLabel: "Chapter 09 · 47%" },
     body: {
       text: "Quoted passage",
       prefix: "Before ",
@@ -76,7 +76,7 @@ const annotations: MarginaliaAnnotation[] = [
     id: "annotation-2",
     clientId: "reader-bookmark-1",
     kind: "bookmark",
-    location: { cfi: "epubcfi(/6/6)", locationLabel: "Chapter 10 · 51%" },
+    location: { location: "epubcfi(/6/6)", locationLabel: "Chapter 10 · 51%" },
     createdAt: "2026-01-03T00:00:00Z",
     updatedAt: "2026-01-03T00:00:00Z",
   },

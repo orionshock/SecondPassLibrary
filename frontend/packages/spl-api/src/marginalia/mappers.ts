@@ -59,14 +59,14 @@ export function mapSessionEnvelope(item: SessionEnvelopeResponse): MarginaliaSes
 }
 
 export function mapProgress(item: ProgressResponse): MarginaliaProgress {
-  return { cfi: item.cfi, locationLabel: item.location_label, updatedAt: item.updated_at };
+  return { location: item.location, locationLabel: item.location_label, updatedAt: item.updated_at };
 }
 
 export function mapAnnotation(item: AnnotationResponse): MarginaliaAnnotation {
   const base = {
     id: item.id,
     clientId: item.client_id,
-    location: { cfi: item.location.cfi, locationLabel: item.location.location_label },
+    location: { location: item.location.location, locationLabel: item.location.location_label },
     createdAt: item.created_at,
     updatedAt: item.updated_at,
   };

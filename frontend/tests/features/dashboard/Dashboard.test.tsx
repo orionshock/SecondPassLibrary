@@ -13,7 +13,7 @@ const recentItem: RecentMarginaliaSession = {
   status: "active",
   lastActivityAt: "2026-07-27T18:30:00Z",
   progress: {
-    cfi: "epubcfi(/6/8!/4/2)",
+    location: "epubcfi(/6/8!/4/2)",
     locationLabel: "Chapter 08 · 42%",
     updatedAt: "2026-07-27T18:30:00Z",
   },

@@ -16,7 +16,7 @@ export interface MarginaliaBookSummary {
   lastActivityAt: string;
 }
 export interface MarginaliaBookReference { id: string; title: string; coverUrl: string | null; canOpen: boolean; }
-export interface MarginaliaProgress { cfi: string; locationLabel: string; updatedAt: string; }
+export interface MarginaliaProgress { location: string; locationLabel: string; updatedAt: string; }
 export interface MarginaliaSessionSummary {
   id: string;
   name: string;
@@ -41,7 +41,7 @@ export interface RecentMarginaliaSession {
 export interface MarginaliaSessionDetail extends MarginaliaSessionSummary { progress: MarginaliaProgress | null; }
 export interface MarginaliaSessionEnvelope { book: MarginaliaBookSummary; session: MarginaliaSessionDetail; }
 export interface MarginaliaBookSessionsPage extends Page<MarginaliaSessionSummary> { book: MarginaliaBookSummary; }
-export interface MarginaliaLocation { cfi: string; locationLabel: string; }
+export interface MarginaliaLocation { location: string; locationLabel: string; }
 interface MarginaliaAnnotationBase { id: string; clientId: string; location: MarginaliaLocation; createdAt: string; updatedAt: string; }
 export interface MarginaliaHighlight extends MarginaliaAnnotationBase {
   kind: "highlight";

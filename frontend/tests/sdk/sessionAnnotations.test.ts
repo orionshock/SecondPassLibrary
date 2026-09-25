@@ -20,7 +20,7 @@ const detail = {
   updated_at: "2026-07-30T11:00:00Z", last_activity_at: "2026-07-30T12:00:00Z",
   annotation_count: 2,
   progress: {
-    cfi: " epubcfi(/6/8!/4/2) ",
+    location: " epubcfi(/6/8!/4/2) ",
     location_label: "Chapter 08 Â· 42% Â· The Blackstaff",
     updated_at: "2026-07-30T12:00:00Z",
   },
@@ -29,13 +29,13 @@ const envelope = { context: { book }, session: detail };
 const annotations = [
   {
     id: "annotation-1", client_id: " client-highlight ", kind: "highlight",
-    location: { cfi: " epubcfi(/6/8!/4/2) ", location_label: "Chapter 08 Â· 42%" },
+    location: { location: " epubcfi(/6/8!/4/2) ", location_label: "Chapter 08 Â· 42%" },
     body: { text: " selected text ", prefix: " before ", suffix: " after ", color: "yellow", note: " note " },
     created_at: "2026-07-30T10:00:00Z", updated_at: "2026-07-30T11:00:00Z",
   },
   {
     id: "annotation-2", client_id: "bookmark-1", kind: "bookmark",
-    location: { cfi: "epubcfi(/6/10!/4/2)", location_label: "Chapter 09 Â· 47%" },
+    location: { location: "epubcfi(/6/10!/4/2)", location_label: "Chapter 09 Â· 47%" },
     created_at: "2026-07-30T10:00:00Z", updated_at: "2026-07-30T11:00:00Z",
   },
 ] as const;
@@ -52,11 +52,12 @@ describe("Marginalia Product UI Session detail and close SDK", () => {
         id: "session-1",
         notes: " Note unchanged ",
         progress: {
-          cfi: " epubcfi(/6/8!/4/2) ",
+          location: " epubcfi(/6/8!/4/2) ",
           locationLabel: "Chapter 08 Â· 42% Â· The Blackstaff",
         },
       },
     });
+    expect(result.session.progress).not.toHaveProperty("cfi");
   });
 
   it("PATCHes only supplied metadata and maps the returned detail envelope", async () => {
@@ -128,15 +129,16 @@ describe("Marginalia Annotation SDK", () => {
     expect(calls).toEqual(["/api/v1/marginalia/sessions/session-1/annotations/"]);
     expect(result[0]).toEqual({
       id: "annotation-1", clientId: " client-highlight ", kind: "highlight",
-      location: { cfi: " epubcfi(/6/8!/4/2) ", locationLabel: "Chapter 08 Â· 42%" },
+      location: { location: " epubcfi(/6/8!/4/2) ", locationLabel: "Chapter 08 Â· 42%" },
       body: { text: " selected text ", prefix: " before ", suffix: " after ", color: "yellow", note: " note " },
       createdAt: "2026-07-30T10:00:00Z", updatedAt: "2026-07-30T11:00:00Z",
     });
     expect(result[1]).toEqual({
       id: "annotation-2", clientId: "bookmark-1", kind: "bookmark",
-      location: { cfi: "epubcfi(/6/10!/4/2)", locationLabel: "Chapter 09 Â· 47%" },
+      location: { location: "epubcfi(/6/10!/4/2)", locationLabel: "Chapter 09 Â· 47%" },
       createdAt: "2026-07-30T10:00:00Z", updatedAt: "2026-07-30T11:00:00Z",
     });
+    expect(result[0]?.location).not.toHaveProperty("cfi");
     expect(result[1]).not.toHaveProperty("body");
   });
 

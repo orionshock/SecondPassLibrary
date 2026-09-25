@@ -13,7 +13,7 @@ export interface BookSummaryResponse {
   last_activity_at: string;
 }
 export interface BookReferenceResponse { id: string; title: string; cover_url: string | null; can_open: boolean; }
-export interface ProgressResponse { cfi: string; location_label: string; updated_at: string; }
+export interface ProgressResponse { location: string; location_label: string; updated_at: string; }
 export interface SessionSummaryResponse {
   id: string;
   name: string;
@@ -38,7 +38,7 @@ export interface RecentSessionsResponse { results: RecentSessionResponse[]; }
 export interface SessionDetailResponse extends SessionSummaryResponse { progress: ProgressResponse | null; }
 export interface SessionEnvelopeResponse { context: { book: BookSummaryResponse }; session: SessionDetailResponse; }
 export interface BookSessionsPageResponse extends ApiPage<SessionSummaryResponse> { context: { book: BookSummaryResponse }; }
-interface AnnotationLocationResponse { cfi: string; location_label: string; }
+interface AnnotationLocationResponse { location: string; location_label: string; }
 interface AnnotationBaseResponse { id: string; client_id: string; location: AnnotationLocationResponse; created_at: string; updated_at: string; }
 interface HighlightResponse extends AnnotationBaseResponse {
   kind: "highlight";

@@ -91,7 +91,7 @@ describe("MarginaliaSessionDetailOrchestrator", () => {
     sdk.getSession.mockResolvedValue(detail);
     sdk.listAnnotations.mockResolvedValue([{
       id: "annotation-id", clientId: "client-id", kind: "highlight",
-      location: { cfi: "epubcfi(/6/4)", locationLabel: "Chapter 2" },
+      location: { location: "epubcfi(/6/4)", locationLabel: "Chapter 2" },
       body: { text: "Selected quote", prefix: "hidden prefix", suffix: "hidden suffix", note: "Reader note" },
       createdAt: "2026-01-02T00:00:00Z", updatedAt: "2026-01-02T00:00:00Z",
     }]);
