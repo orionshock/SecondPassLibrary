@@ -176,6 +176,13 @@ For a clean local reset:
 4. Visit `/`.
 5. Complete the first-run setup wizard.
 
+As an optional headless alternative to step 4-5, run
+`python backend/manage.py setup_server --username owner` from an interactive
+terminal after startup. Raw or Django-encoded credentials can instead be piped
+through stdin for automation; see
+[Optional command-line setup](deployment.md#optional-command-line-setup) for
+the secure input modes and Docker examples.
+
 The setup page initializes:
 
 - Server Name: `Second Pass Library`

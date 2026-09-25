@@ -132,6 +132,43 @@ before enabling remote proxy exposure. The setup wizard configures application
 state after migrations; it does not create database tables during a request.
 Once an active Owner exists, `/setup/` is disabled.
 
+### Optional command-line setup
+
+Headless and disposable deployments may run the same first-owner setup workflow
+with `setup_server` instead of using `/setup/`. The command accepts the Owner's
+username plus optional account, server, Public/Common Room, and Advanced Library
+Groups fields; run `python manage.py setup_server --help` for the complete list.
+
+For an interactive terminal, omit the password options. The command prompts
+twice without echoing the password:
+
+```powershell
+docker compose -f docker/compose.yml exec server python manage.py setup_server --username owner --server-name "Family Library"
+```
+
+For automation, pipe one raw password through stdin. It receives the same
+Django password-strength validation as browser setup:
+
+```sh
+printf '%s' "$PASSWORD" | docker compose -f docker/compose.yml exec -T server python manage.py setup_server --username owner --password-stdin
+```
+
+An operator may instead pipe an already encoded Django password:
+
+```sh
+cat /run/secrets/owner-password-hash | docker compose -f docker/compose.yml exec -T server python manage.py setup_server --username owner --encoded-password-stdin
+```
+
+Encoded mode verifies that the configured Django hasher recognizes the value
+and stores it unchanged. Plaintext strength validation is impossible in this
+mode and remains the operator's responsibility. Treat the encoded value as a
+secret: do not place either password form in process arguments or logs.
+
+Both stdin modes read exactly one value and are mutually exclusive. The command
+is atomic, refuses an already initialized server without changing it, and has
+no force or reset mode. Migrations must already be complete, as they are during
+normal container startup.
+
 ## Second Pass Reader web client URL
 
 The optional `second_pass_reader_web_client_url` Server Setting is the base URL

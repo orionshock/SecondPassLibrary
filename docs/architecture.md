@@ -146,14 +146,16 @@ authority remains represented by Django `is_superuser`; the associated
 `UserProfile` uses the existing Manager app role rather than introducing a
 separate Owner role.
 
-Owner creation is performed by `accounts.bootstrap.create_first_owner()` inside
-a transaction. The service checks the active-owner condition again immediately
-before creation and sets a usable local password. The same setup submission
-saves the server name and optional description, configures the protected Public
-group's display name and description, saves the advanced-library-groups setting,
-creates the Manager `UserProfile`, and adds the Owner as a reader
-member of the Public group. The default Public display name is `Common Room`;
-its internal identity and protections still come from
+Owner creation is performed by
+`accounts.first_owner_setup.create_first_owner()` inside a transaction. The
+browser form and optional `setup_server` management command are adapters over
+that same workflow. The service checks the active-owner condition again
+immediately before creation and sets the local credential. The same setup
+operation saves the server name and optional description, configures the
+protected Public group's display name and description, saves the
+advanced-library-groups setting, creates the Manager `UserProfile`, and adds
+the Owner as a reader member of the Public group. The default Public display
+name is `Common Room`; its internal identity and protections still come from
 `ServerSetting(public_group_id)`. Email is optional metadata and no email,
 invite, or SMTP flow is involved.
 
