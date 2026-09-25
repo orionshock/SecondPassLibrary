@@ -134,10 +134,15 @@ class MustChangePasswordEnforcementTests(APITestCase):
                 '<!doctype html><div id="root"></div>',
                 encoding="utf-8",
             )
-            with override_settings(PRODUCT_UI_DIR=product_ui):
+            (product_ui / "collected-static").mkdir()
+            with override_settings(
+                PRODUCT_UI_DIR=product_ui,
+                STATIC_ROOT=product_ui / "collected-static",
+                WHITENOISE_USE_FINDERS=True,
+            ):
                 password_page = self.client.get("/profile/password")
                 other_shell = self.client.get("/library")
-        static_asset = self.client.get("/static/web/app.css")
+                static_asset = self.client.get("/static/web/app.css")
 
         self.assertEqual(password_page.status_code, status.HTTP_200_OK)
         self.assertEqual(other_shell.status_code, status.HTTP_200_OK)
