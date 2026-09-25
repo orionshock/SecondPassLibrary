@@ -1,5 +1,5 @@
 import { listShelves } from "@second-pass/spl-api";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 
 import { usePageBreadcrumbs } from "../../../app/navigation/usePageBreadcrumbs";
@@ -25,6 +25,7 @@ export function ShelvesListOrchestrator() {
     [queryKey],
   );
   const canonicalQuery = shelvesListSearchParams(queryState).toString();
+  const [searchDraft, setSearchDraft] = useState(queryState.q);
   const sdkQuery = shelvesListSdkQuery(queryState);
   const load = useUrlCollectionLifecycle({
     scope: "shelves",
@@ -34,6 +35,8 @@ export function ShelvesListOrchestrator() {
     loadPage: (page) => listShelves({ ...sdkQuery, page }),
     queryForPage: (page) => shelvesListSearchParams(withShelvesListChange(queryState, { page }, false)).toString(),
   });
+
+  useEffect(() => setSearchDraft(queryState.q), [queryState.q]);
 
   function changeQuery(changes: Parameters<typeof withShelvesListChange>[1], resetPage = true) {
     setSearchParameters(shelvesListSearchParams(withShelvesListChange(queryState, changes, resetPage)), { state: null });
@@ -45,10 +48,13 @@ export function ShelvesListOrchestrator() {
       pageNumber={queryState.page}
       pageSize={queryState.pageSize}
       scope={queryState.scope}
+      search={searchDraft}
       ordering={queryState.ordering}
       loading={load.loading}
       error={load.error === undefined ? undefined : normalizeMutationError(load.error)}
-      onScopeChange={(scope) => changeQuery({ scope })}
+      onScopeChange={(scope) => changeQuery({ scope, q: "" })}
+      onSearchChange={setSearchDraft}
+      onSearch={() => changeQuery({ q: searchDraft.trim() })}
       onOrderingChange={(ordering) => changeQuery({ ordering })}
       onPageChange={(page) => changeQuery({ page }, false)}
       onPageSizeChange={(pageSize) => changeQuery({ pageSize })}

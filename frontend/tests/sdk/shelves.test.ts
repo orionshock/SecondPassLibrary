@@ -126,6 +126,7 @@ describe("Shelves SDK", () => {
 
     const page = await listShelves({
       scope: "shared",
+      q: "other picks",
       ownerGroupId: "group/id",
       bookId: "book/id",
       ordering: "-item_count",
@@ -134,7 +135,7 @@ describe("Shelves SDK", () => {
       pageSize: 30,
     }, client);
 
-    expect(calls).toEqual(["/api/v1/shelves/?scope=shared&owner_group=group%2Fid&book=book%2Fid&ordering=-item_count&include_preview_books=true&page=2&page_size=30"]);
+    expect(calls).toEqual(["/api/v1/shelves/?scope=shared&q=other+picks&owner_group=group%2Fid&book=book%2Fid&ordering=-item_count&include_preview_books=true&page=2&page_size=30"]);
     expect(page.items).toEqual([{
       id: "personal",
       name: "Current Favorites",

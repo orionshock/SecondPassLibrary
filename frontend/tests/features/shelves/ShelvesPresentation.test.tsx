@@ -50,15 +50,22 @@ describe("Shelves read-only regions", () => {
       pageNumber={1}
       pageSize={20}
       scope={scope}
+      search=""
       ordering={ordering}
       loading={false}
       onScopeChange={vi.fn()}
+      onSearchChange={vi.fn()}
+      onSearch={vi.fn()}
       onOrderingChange={vi.fn()}
       onPageChange={vi.fn()}
       onPageSizeChange={vi.fn()}
       onRetry={vi.fn()}
     /></MemoryRouter>);
     const personal = renderList(personalShelf, "personal");
+    expect(personal).toContain('role="search"');
+    expect(personal).toContain('placeholder="Search shelves"');
+    expect(personal.indexOf("Shelf scopes")).toBeLessThan(personal.indexOf('role="search"'));
+    expect(personal.indexOf('role="search"')).toBeLessThan(personal.indexOf("Shelves pagination, top"));
     expect(personal).toContain('href="/shelves/shelf"');
     expect(personal).toContain("Favorites");
     expect(personal).toContain("<b>Reader picks</b>");
@@ -75,10 +82,12 @@ describe("Shelves read-only regions", () => {
     expect(renderList(personalShelf, "personal", "item_count")).toContain("Fewest Items");
 
     const group = renderList(groupShelf, "group");
+    expect(group).toContain('placeholder="Search shelves or groups"');
     expect(group).toContain('aria-label="Public group: Common Room"');
     expect(group).not.toContain('href="/shelves/group-shelf/edit"');
 
     const shared = renderList(personalShelf, "shared");
+    expect(shared).toContain('placeholder="Search shelves or users"');
     expect(shared).toContain('aria-label="User reader"');
     expect(shared).not.toContain("@reader");
     expect(shared).toContain('href="/shelves/shelf"');

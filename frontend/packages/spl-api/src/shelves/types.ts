@@ -27,6 +27,7 @@ export interface UpdateShelfInput { name?: string; description?: string; visibil
 export interface AddShelfItemInput { bookId: string; }
 export interface ShelvesQuery {
   scope?: ShelfScope;
+  q?: string;
   ownerGroupId?: string;
   bookId?: string;
   ordering?: ShelfOrdering;

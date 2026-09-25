@@ -130,9 +130,12 @@ class ShelfViewSet(
         qs = (
             super()
             .get_queryset()
-            .select_related("owner_user", "owner_group", "created_by")
+            .select_related(
+                "owner_user__profile",
+                "owner_group",
+                "created_by__profile",
+            )
         )
-        qs = with_visible_item_count(qs, user=user)
 
         if self.action == "list":
             visible_qs = build_visible_shelf_list_queryset(
@@ -140,6 +143,7 @@ class ShelfViewSet(
                 user=user,
                 query_params=self.request.query_params,
             )
+            visible_qs = with_visible_item_count(visible_qs, user=user)
             ordering = parse_ordering_param(
                 self.request,
                 allowed={"name", "-name", "item_count", "-item_count"},
@@ -147,7 +151,10 @@ class ShelfViewSet(
             )
             return apply_shelf_ordering(visible_qs, ordering)
 
-        visible_qs = filter_readable_shelves(qs, user=user)
+        visible_qs = filter_readable_shelves(
+            with_visible_item_count(qs, user=user),
+            user=user,
+        )
         return visible_qs.order_by("name", "id")
 
     def get_object(self):

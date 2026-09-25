@@ -34,7 +34,7 @@ export function shelfScopePresentation(scope: ShelfScope): ShelfScopePresentatio
 }
 
 export function shelfScopePath(scope: ShelfScope): string {
-  return shelvesListPath({ scope, ordering: "name", page: 1, pageSize: 20 });
+  return shelvesListPath({ scope, q: "", ordering: "name", page: 1, pageSize: 20 });
 }
 
 export function shelfScopeBreadcrumb(scope: ShelfScope): BreadcrumbItem {

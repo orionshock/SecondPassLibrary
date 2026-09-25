@@ -8,6 +8,7 @@ import type { ShelfSummaryResponse } from "./wire";
 export async function listShelves(query: ShelvesQuery = {}, client: ApiClient = apiClient): Promise<Page<ShelfSummary>> {
   const parameters = new URLSearchParams();
   if (query.scope) parameters.set("scope", query.scope);
+  if (query.q) parameters.set("q", query.q);
   if (query.ownerGroupId) parameters.set("owner_group", query.ownerGroupId);
   if (query.bookId) parameters.set("book", query.bookId);
   if (query.ordering) parameters.set("ordering", query.ordering);

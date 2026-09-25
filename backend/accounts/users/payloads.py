@@ -30,7 +30,7 @@ def managed_user_group_payloads(user) -> list[dict[str, Any]]:
 
 
 def compact_user_payload(user) -> dict[str, Any]:
-    profile = get_or_create_profile(user=user)
+    profile = user._state.fields_cache.get("profile") or get_or_create_profile(user=user)
     return {
         "profile_id": profile.id,
         "username": user.get_username(),

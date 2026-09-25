@@ -238,6 +238,48 @@ class ShelfPreviewBooksAPITest(IsolatedMediaRootMixin, APITestCase):
         self.assertEqual(len(one_shelf_queries), 1)
         self.assertEqual(len(five_shelf_queries), 1)
 
+    def test_searched_shelf_list_preview_query_count_is_bounded(self):
+        for index in range(5):
+            shelf = Shelf.objects.create(
+                name=f"Searchable {index}",
+                owner_type=Shelf.OWNER_TYPE_USER,
+                owner_user=self.reader,
+                visibility=Shelf.VISIBILITY_PRIVATE,
+                created_by=self.reader,
+            )
+            ShelfItem.objects.create(
+                shelf=shelf,
+                book=self.visible_books[index],
+                position=0,
+                added_by=self.reader,
+            )
+
+        self.client.login(username="reader", password="pw")
+        assert_response(
+            self.client.get(
+                "/api/v1/shelves/",
+                {"scope": "personal", "q": "No match", "preview_limit": 3},
+            )
+        )
+        with CaptureQueriesContext(connection) as one_result_queries:
+            one_result = assert_response(
+                self.client.get(
+                    "/api/v1/shelves/",
+                    {"scope": "personal", "q": "Searchable 0", "preview_limit": 3},
+                )
+            )
+        with CaptureQueriesContext(connection) as many_result_queries:
+            many_results = assert_response(
+                self.client.get(
+                    "/api/v1/shelves/",
+                    {"scope": "personal", "q": "Searchable", "preview_limit": 3},
+                )
+            )
+
+        self.assertEqual(len(response_data_list(one_result)), 1)
+        self.assertEqual(len(response_data_list(many_results)), 5)
+        self.assertEqual(len(many_result_queries), len(one_result_queries))
+
     def test_batched_shelf_previews_apply_order_and_limit_per_shelf(self):
         second_shelf = Shelf.objects.create(
             name="Second Preview Shelf",

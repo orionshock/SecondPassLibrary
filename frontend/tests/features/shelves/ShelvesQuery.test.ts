@@ -29,12 +29,12 @@ describe("Shelves URL state", () => {
     });
 
     const state = shelvesListStateFromSearchParams(new URLSearchParams(
-      "page_size=40&page=3&ordering=-item_count&scope=group",
+      "page_size=40&page=3&ordering=-item_count&scope=group&q= maps ",
     ));
-    expect(shelvesListSearchParams(state).toString()).toBe("scope=group&ordering=-item_count&page=3&page_size=40");
-    expect(shelvesListPath(state)).toBe("/shelves?scope=group&ordering=-item_count&page=3&page_size=40");
+    expect(shelvesListSearchParams(state).toString()).toBe("scope=group&q=maps&ordering=-item_count&page=3&page_size=40");
+    expect(shelvesListPath(state)).toBe("/shelves?scope=group&q=maps&ordering=-item_count&page=3&page_size=40");
     expect(shelvesListSdkQuery(state)).toEqual({
-      scope: "group", ordering: "-item_count", includePreviewBooks: true,
+      scope: "group", q: "maps", ordering: "-item_count", includePreviewBooks: true,
       previewLimit: 12, page: 3, pageSize: 40,
     });
     expect(shelvesListStateFromSearchParams(new URLSearchParams("ordering=-name")).ordering).toBe("-name");
@@ -47,6 +47,7 @@ describe("Shelves URL state", () => {
     expect(shelvesListPath(current)).toBe("/shelves?scope=shared&page=4&page_size=40");
     expect(withShelvesListChange(current, { scope: "group" }).page).toBe(1);
     expect(withShelvesListChange(current, { ordering: "-item_count" }).page).toBe(1);
+    expect(withShelvesListChange(current, { q: "needle" }).page).toBe(1);
     expect(withShelvesListChange(current, { pageSize: 30 }).page).toBe(1);
     expect(withShelvesListChange(current, { page: 2 }, false).page).toBe(2);
   });

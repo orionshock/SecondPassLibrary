@@ -4,11 +4,11 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
-from django.db.models import Count, F, OuterRef, Q, QuerySet, Subquery
+from django.db.models import Count, Exists, F, OuterRef, Q, QuerySet, Subquery
 from rest_framework.exceptions import ValidationError
 
 from accounts.roles import is_librarian
-from library.queries import visible_books_for_user
+from library.queries import effective_group_ids_for_user, visible_books_for_user
 from library.catalog.ordering import with_primary_author_sort
 
 from .models import Shelf, ShelfItem
@@ -19,6 +19,7 @@ class ShelfListFilters:
     scope: str | None = None
     owner_group_id: UUID | None = None
     book_id: UUID | None = None
+    query: str = ""
 
 
 def visible_shelf_filter(user) -> Q:
@@ -31,7 +32,7 @@ def visible_shelf_filter(user) -> Q:
     )
     group_shelves = Q(
         owner_type=Shelf.OWNER_TYPE_GROUP,
-        owner_group__memberships__user=user,
+        owner_group_id__in=effective_group_ids_for_user(user),
     )
     if is_librarian(user):
         group_shelves = Q(owner_type=Shelf.OWNER_TYPE_GROUP)
@@ -61,6 +62,7 @@ def parse_shelf_list_filters(query_params) -> ShelfListFilters:
 
     owner_group_id = _parse_uuid_query_param(query_params, "owner_group")
     book_id = _parse_uuid_query_param(query_params, "book")
+    query = str(query_params.get("q") or "").strip()
 
     if scope == "personal" and owner_group_id is not None:
         raise ValidationError(
@@ -76,6 +78,7 @@ def parse_shelf_list_filters(query_params) -> ShelfListFilters:
         scope=scope,
         owner_group_id=owner_group_id,
         book_id=book_id,
+        query=query,
     )
 
 
@@ -104,7 +107,20 @@ def build_visible_shelf_list_queryset(
     query_params,
 ) -> QuerySet[Shelf]:
     filters = parse_shelf_list_filters(query_params)
-    visible_qs = filter_readable_shelves(queryset, user=user)
+    visible_books = visible_books_for_user(user, cached=False)
+    has_visible_item = ShelfItem.objects.filter(
+        shelf_id=OuterRef("pk"),
+        book__in=visible_books,
+    )
+    visible_qs = (
+        queryset.filter(visible_shelf_filter(user))
+        .alias(_has_visible_item=Exists(has_visible_item))
+        .filter(
+            Q(owner_type=Shelf.OWNER_TYPE_GROUP)
+            | Q(owner_type=Shelf.OWNER_TYPE_USER, owner_user=user)
+            | Q(_has_visible_item=True)
+        )
+    )
 
     if filters.scope == "personal":
         visible_qs = visible_qs.filter(
@@ -127,8 +143,35 @@ def build_visible_shelf_list_queryset(
             owner_group_id=filters.owner_group_id,
         )
 
+    if filters.query:
+        name_match = Q(name__icontains=filters.query)
+        if filters.scope == "personal":
+            search_filter = name_match
+        elif filters.scope == "shared":
+            search_filter = name_match | Q(
+                owner_type=Shelf.OWNER_TYPE_USER,
+                owner_user__username__icontains=filters.query,
+            )
+        elif filters.scope == "group":
+            search_filter = name_match | Q(
+                owner_type=Shelf.OWNER_TYPE_GROUP,
+                owner_group__name__icontains=filters.query,
+            )
+        else:
+            search_filter = (
+                name_match
+                | Q(
+                    owner_type=Shelf.OWNER_TYPE_USER,
+                    owner_user__username__icontains=filters.query,
+                )
+                | Q(
+                    owner_type=Shelf.OWNER_TYPE_GROUP,
+                    owner_group__name__icontains=filters.query,
+                )
+            )
+        visible_qs = visible_qs.filter(search_filter)
+
     if filters.book_id is not None:
-        visible_books = visible_books_for_user(user, cached=False)
         visible_item_filter = (
             Q(owner_type=Shelf.OWNER_TYPE_USER, items__book__in=visible_books)
             | Q(

@@ -11,6 +11,7 @@ import { resolveTabQuery, withTabQuery } from "../../app/routing/tabQuery";
 
 export interface ShelvesListUrlState {
   scope: ShelfScope;
+  q: string;
   ordering: ShelfOrdering;
   page: number;
   pageSize: number;
@@ -42,6 +43,7 @@ export function shelvesListStateFromSearchParams(parameters: URLSearchParams): S
   const rawOrdering = parameters.get("ordering") as ShelfOrdering | null;
   return {
     scope: rawScope && scopes.has(rawScope) ? rawScope : "personal",
+    q: (parameters.get("q") ?? "").trim(),
     ordering: rawOrdering && shelfOrderings.has(rawOrdering) ? rawOrdering : "name",
     page: positiveInteger(parameters.get("page"), 1),
     pageSize: validPageSize(parameters.get("page_size")),
@@ -51,6 +53,7 @@ export function shelvesListStateFromSearchParams(parameters: URLSearchParams): S
 export function shelvesListSearchParams(state: ShelvesListUrlState): URLSearchParams {
   const parameters = new URLSearchParams();
   if (state.scope !== "personal") parameters.set("scope", state.scope);
+  if (state.q) parameters.set("q", state.q);
   if (state.ordering !== "name") parameters.set("ordering", state.ordering);
   if (state.page > 1) parameters.set("page", String(state.page));
   if (state.pageSize !== 20) parameters.set("page_size", String(state.pageSize));
@@ -64,6 +67,7 @@ export function shelvesListPath(state: ShelvesListUrlState): string {
 export function shelvesListSdkQuery(state: ShelvesListUrlState): ShelvesQuery {
   return {
     scope: state.scope,
+    ...(state.q ? { q: state.q } : {}),
     ordering: state.ordering,
     includePreviewBooks: true,
     previewLimit: COMPACT_BOOK_COVER_PREVIEW_SOURCE_LIMIT,

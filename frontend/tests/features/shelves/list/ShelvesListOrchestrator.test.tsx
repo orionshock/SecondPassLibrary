@@ -7,7 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { Page, ShelfSummary } from "@second-pass/spl-api";
 import { ShelvesListOrchestrator } from "../../../../src/features/shelves/list/ShelvesListOrchestrator";
-import { buttonNamed, deferred } from "../../../support/domInteraction";
+import { buttonNamed, deferred, setControlValue, submit } from "../../../support/domInteraction";
 
 const sdk = vi.hoisted(() => ({ listShelves: vi.fn() }));
 vi.mock("@second-pass/spl-api", async (importOriginal) => ({
@@ -42,16 +42,28 @@ async function mount(path = "/shelves") {
 describe("ShelvesListOrchestrator", () => {
   it("loads URL-backed scope and ordering and replaces them from the controls", async () => {
     sdk.listShelves.mockResolvedValue(page([shelf("shared", "Shared Shelf")]));
-    const { container } = await mount("/shelves?scope=shared&ordering=-item_count&page=2&page_size=30");
+    const { container, router } = await mount("/shelves?scope=shared&q=other&ordering=-item_count&page=2&page_size=30");
 
-    expect(sdk.listShelves).toHaveBeenCalledWith({ scope: "shared", ordering: "-item_count", includePreviewBooks: true, previewLimit: 12, page: 2, pageSize: 30 });
+    expect(sdk.listShelves).toHaveBeenCalledWith({ scope: "shared", q: "other", ordering: "-item_count", includePreviewBooks: true, previewLimit: 12, page: 2, pageSize: 30 });
     expect(container.querySelector('a[href="/shelves/shared"]')).not.toBeNull();
+    expect(container.querySelector<HTMLInputElement>('#shelves-search')?.value).toBe("other");
+    expect(container.querySelector<HTMLInputElement>('#shelves-search')?.placeholder).toBe("Search shelves or users");
+
+    await act(async () => {
+      setControlValue(container.querySelector<HTMLInputElement>('#shelves-search')!, "  maps  ");
+      submit(container.querySelector<HTMLFormElement>('form[role="search"]')!);
+    });
+    expect(router.state.location.search).toBe("?scope=shared&q=maps&ordering=-item_count&page_size=30");
+    expect(sdk.listShelves).toHaveBeenLastCalledWith(expect.objectContaining({ scope: "shared", q: "maps", page: 1 }));
 
     const groupScope = Array.from(container.querySelectorAll<HTMLButtonElement>('[role="group"][aria-label="Shelf scopes"] button'))
       .find((button) => button.textContent?.includes("Group Shelves"));
     expect(groupScope).toBeDefined();
     await act(async () => groupScope?.click());
+    expect(router.state.location.search).toBe("?scope=group&ordering=-item_count&page_size=30");
     expect(sdk.listShelves).toHaveBeenLastCalledWith(expect.objectContaining({ scope: "group", page: 1 }));
+    expect(sdk.listShelves).toHaveBeenLastCalledWith(expect.not.objectContaining({ q: expect.anything() }));
+    expect(container.querySelector<HTMLInputElement>('#shelves-search')?.placeholder).toBe("Search shelves or groups");
   });
 
   it("retries a failed Shelf request", async () => {

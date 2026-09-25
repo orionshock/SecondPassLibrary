@@ -1,4 +1,5 @@
 import type { Page, ShelfOrdering, ShelfScope, ShelfSummary } from "@second-pass/spl-api";
+import type { FormEvent } from "react";
 import { Link } from "react-router";
 
 import { breadcrumbNavigationState } from "../../../app/navigation/breadcrumbs";
@@ -19,27 +20,48 @@ const shelfOrderingOptions: readonly OrderMenuOption<ShelfOrdering>[] = [
   { value: "item_count", label: "Fewest Items", icon: "format_list_numbered" },
 ];
 
-export function ShelvesListPageRegion({ page, pageNumber, pageSize, scope, ordering, loading, error, onScopeChange, onOrderingChange, onPageChange, onPageSizeChange, onRetry }: {
+export function ShelvesListPageRegion({ page, pageNumber, pageSize, scope, search, ordering, loading, error, onScopeChange, onSearchChange, onSearch, onOrderingChange, onPageChange, onPageSizeChange, onRetry }: {
   page?: Page<ShelfSummary>;
   pageNumber: number;
   pageSize: number;
   scope: ShelfScope;
+  search: string;
   ordering: ShelfOrdering;
   loading: boolean;
   error?: Error;
   onScopeChange: (scope: ShelfScope) => void;
+  onSearchChange: (value: string) => void;
+  onSearch: () => void;
   onOrderingChange: (ordering: ShelfOrdering) => void;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   onRetry: () => void;
 }) {
+  function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    onSearch();
+  }
+
   return <div className="shelves-list-page">
     <PageHeader title="Shelves" actions={<Link className="button-link" to={shelfNewPath()} state={breadcrumbNavigationState(shelfNewBreadcrumbs(scope))}>New Shelf</Link>} />
     <div className="shelves-list-toolbar">
       <ShelfScopesPageRegion activeScope={scope} onScopeChange={onScopeChange} />
     </div>
+    <section className="shelves-search" aria-label="Shelf search">
+      <form role="search" onSubmit={submit}>
+        <label htmlFor="shelves-search">Search</label>
+        <input id="shelves-search" type="search" value={search} placeholder={shelfSearchPlaceholder(scope)} onChange={(event) => onSearchChange(event.target.value)} />
+        <Button type="submit">Search</Button>
+      </form>
+    </section>
     <ShelvesListResults page={page} pageNumber={pageNumber} pageSize={pageSize} scope={scope} ordering={ordering} loading={loading} error={error} onOrderingChange={onOrderingChange} onPageChange={onPageChange} onPageSizeChange={onPageSizeChange} onRetry={onRetry} />
   </div>;
+}
+
+function shelfSearchPlaceholder(scope: ShelfScope): string {
+  if (scope === "shared") return "Search shelves or users";
+  if (scope === "group") return "Search shelves or groups";
+  return "Search shelves";
 }
 
 function ShelvesListResults({ page, pageNumber, pageSize, scope, ordering, loading, error, onOrderingChange, onPageChange, onPageSizeChange, onRetry }: {

@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 from rest_framework import status
 
+from library.models import LibraryGroup, LibraryGroupMembership
 from shelves.models import Shelf, ShelfItem
 from tests.shelves.helpers import BaseShelvesAPITest
 from tests.utils.responses import (
@@ -17,6 +18,162 @@ pytestmark = [pytest.mark.integration]
 
 
 class ShelfListEndpointTests(BaseShelvesAPITest):
+    def test_searches_shelf_and_applicable_owner_identity_within_each_scope(self):
+        personal = Shelf.objects.create(
+            name="Personal Needle",
+            owner_type=Shelf.OWNER_TYPE_USER,
+            owner_user=self.reader,
+            created_by=self.reader,
+        )
+        shared = Shelf.objects.create(
+            name="Shared Needle",
+            owner_type=Shelf.OWNER_TYPE_USER,
+            owner_user=self.other,
+            visibility=Shelf.VISIBILITY_LISTED,
+            created_by=self.other,
+        )
+        ShelfItem.objects.create(
+            shelf=shared,
+            book=self.book_public,
+            position=0,
+            added_by=self.other,
+        )
+        searchable_group = LibraryGroup.objects.create(name="Cartographers")
+        LibraryGroupMembership.objects.create(
+            user=self.reader,
+            group=searchable_group,
+        )
+        group_shelf = Shelf.objects.create(
+            name="Group Needle",
+            owner_type=Shelf.OWNER_TYPE_GROUP,
+            owner_group=searchable_group,
+            created_by=self.owner,
+        )
+
+        self.client.login(username="reader", password="pw")
+
+        cases = (
+            ("personal", "needle", personal.id),
+            ("shared", "needle", shared.id),
+            ("shared", "other", shared.id),
+            ("group", "needle", group_shelf.id),
+            ("group", "cartograph", group_shelf.id),
+            ("all", "other", shared.id),
+            ("all", "cartograph", group_shelf.id),
+        )
+        for scope, query, expected_id in cases:
+            with self.subTest(scope=scope, query=query):
+                response = assert_response(
+                    self.client.get("/api/v1/shelves/", {"scope": scope, "q": query})
+                )
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.assertEqual(
+                    {row["id"] for row in response_data_list(response)},
+                    {str(expected_id)},
+                )
+
+        for scope, query in (
+            ("personal", "reader"),
+            ("shared", "cartographers"),
+            ("group", "other"),
+        ):
+            with self.subTest(scope=scope, ignored_owner_query=query):
+                response = assert_response(
+                    self.client.get("/api/v1/shelves/", {"scope": scope, "q": query})
+                )
+                self.assertEqual(response_data_list(response), [])
+
+    def test_search_does_not_expose_unreadable_shelves(self):
+        private = Shelf.objects.create(
+            name="Forbidden Needle",
+            owner_type=Shelf.OWNER_TYPE_USER,
+            owner_user=self.other,
+            visibility=Shelf.VISIBILITY_PRIVATE,
+            created_by=self.other,
+        )
+        hidden_only = Shelf.objects.create(
+            name="Hidden Needle",
+            owner_type=Shelf.OWNER_TYPE_USER,
+            owner_user=self.other,
+            visibility=Shelf.VISIBILITY_LISTED,
+            created_by=self.other,
+        )
+        ShelfItem.objects.create(
+            shelf=hidden_only,
+            book=self.book_hidden,
+            position=0,
+            added_by=self.other,
+        )
+
+        self.client.login(username="reader", password="pw")
+        response = assert_response(
+            self.client.get("/api/v1/shelves/", {"scope": "all", "q": "needle"})
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        result_ids = {row["id"] for row in response_data_list(response)}
+        self.assertNotIn(str(private.id), result_ids)
+        self.assertNotIn(str(hidden_only.id), result_ids)
+
+    def test_search_trims_whitespace_and_preserves_ordering_and_pagination(self):
+        shelves = [
+            Shelf.objects.create(
+                name=f"Search {name}",
+                owner_type=Shelf.OWNER_TYPE_USER,
+                owner_user=self.reader,
+                created_by=self.reader,
+            )
+            for name in ("Alpha", "Bravo", "Charlie")
+        ]
+        self.client.login(username="reader", password="pw")
+
+        unfiltered = assert_response(
+            self.client.get("/api/v1/shelves/", {"scope": "personal"})
+        )
+        whitespace = assert_response(
+            self.client.get("/api/v1/shelves/", {"scope": "personal", "q": "   "})
+        )
+        self.assertEqual(
+            [row["id"] for row in response_data_list(whitespace)],
+            [row["id"] for row in response_data_list(unfiltered)],
+        )
+
+        first_page = assert_response(
+            self.client.get(
+                "/api/v1/shelves/",
+                {
+                    "scope": "personal",
+                    "q": "  search  ",
+                    "ordering": "-name",
+                    "page_size": 2,
+                },
+            )
+        )
+        first_payload = response_data_dict(first_page)
+        self.assertEqual(first_payload["count"], 3)
+        self.assertEqual(
+            [row["name"] for row in response_data_list(first_page)],
+            ["Search Charlie", "Search Bravo"],
+        )
+        self.assertIn("q=++search++", first_payload["next"])
+
+        second_page = assert_response(
+            self.client.get(
+                "/api/v1/shelves/",
+                {
+                    "scope": "personal",
+                    "q": "search",
+                    "ordering": "-name",
+                    "page_size": 2,
+                    "page": 2,
+                },
+            )
+        )
+        self.assertEqual(
+            [row["id"] for row in response_data_list(second_page)],
+            [str(shelves[0].id)],
+        )
+
     def test_list_scopes_partition_visible_shelves_and_preserve_empty_rows(self):
         own_private = Shelf.objects.create(
             name="Own Private",
