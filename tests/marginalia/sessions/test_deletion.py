@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from unittest.mock import patch
-
 from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.utils import timezone
@@ -139,19 +137,19 @@ class DeleteOwnedSessionServiceTests(TestCase):
         book_id = str(self.book.pk)
         owner_id = user_uuid(self.user)
 
-        with patch("marginalia.sessions.deletion.logger.info") as log_info:
+        with self.assertNoLogs("marginalia.sessions.services", level="INFO"):
             with self.captureOnCommitCallbacks(execute=False) as callbacks:
                 delete_owned_session(user=self.user, session_id=self.active.pk)
 
-            log_info.assert_not_called()
-            self.assertEqual(len(callbacks), 1)
-            callbacks[0]()
-            log_info.assert_called_once_with(
-                "Marginalia Reading Session deleted: session=%s owner=%s book=%s "
-                "previous_status=%s annotation_count=%d",
-                session_id,
-                owner_id,
-                book_id,
-                ReadingSession.STATUS_ACTIVE,
-                2,
-            )
+        with self.assertLogs("marginalia.sessions.services", level="INFO") as logs:
+            for callback in callbacks:
+                callback()
+
+        self.assertEqual(len(logs.output), 1)
+        event = logs.output[0]
+        self.assertIn("Reading Session deleted", event)
+        self.assertIn(f"session={session_id}", event)
+        self.assertIn(f"owner={owner_id}", event)
+        self.assertIn(f"book={book_id}", event)
+        self.assertIn(f"previous_status={ReadingSession.STATUS_ACTIVE}", event)
+        self.assertIn("annotation_count=2", event)

@@ -250,7 +250,7 @@ class AccountOperationalLoggingTests(APITestCase):
     def test_expected_validation_failures_do_not_emit_error(self):
         self.client.login(username="reader", password="pw")
 
-        with patch("accounts.operational_logging.logger.error") as error:
+        with self.assertNoLogs("accounts.operational_logging", level="ERROR"):
             response = assert_response(
                 self.client.post(
                     "/api/v1/accounts/me/change-password/",
@@ -264,7 +264,6 @@ class AccountOperationalLoggingTests(APITestCase):
             )
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        error.assert_not_called()
 
     def test_unexpected_explicit_revoke_failure_logs_one_safe_error(self):
         session = self._make_client_session(self.reader, name="Kitchen Reader")

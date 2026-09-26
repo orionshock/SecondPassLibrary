@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from unittest.mock import patch
 from uuid import uuid4
 
 from django.contrib.auth import get_user_model
@@ -220,11 +219,7 @@ class LibraryGroupOperationalLoggingTests(LibraryGroupServiceTestCase):
         add_user_to_group(user=self.user, group=group)
         add_book_to_group(book=self.book, group=group)
 
-        with (
-            patch("library.groups.services.logger.error") as group_error_log,
-            patch("library.groups.memberships.logger.error") as membership_error_log,
-            patch("library.groups.book_assignments.logger.error") as assignment_error_log,
-        ):
+        with self.assertNoLogs("library.groups", level="ERROR"):
             with self.assertRaises(ValidationError):
                 delete_library_group(group=self.public, actor=self.actor)
             add_user_to_group(user=self.user, group=group)
@@ -235,23 +230,17 @@ class LibraryGroupOperationalLoggingTests(LibraryGroupServiceTestCase):
                 description=group.description,
             )
 
-        group_error_log.assert_not_called()
-        membership_error_log.assert_not_called()
-        assignment_error_log.assert_not_called()
-
     def test_state_change_info_logs_do_not_fire_when_outer_transaction_rolls_back(self):
         group = create_library_group(name="Rollback Room")
 
-        with patch("library.groups.memberships.logger.info") as info_log:
+        with self.assertNoLogs("library.groups.memberships", level="INFO"):
             with self.assertRaises(RuntimeError):
                 with transaction.atomic():
                     add_user_to_group(user=self.user, group=group)
                     raise RuntimeError("rollback")
 
-        info_log.assert_not_called()
-
     def test_on_commit_log_arguments_are_frozen_primitives(self):
-        with patch("library.groups.services.logger.info") as info_log:
+        with self.assertNoLogs("library.groups.services", level="INFO"):
             with self.captureOnCommitCallbacks(execute=False) as callbacks:
                 group = create_library_group(
                     name="Frozen Room",
@@ -260,13 +249,16 @@ class LibraryGroupOperationalLoggingTests(LibraryGroupServiceTestCase):
 
             group.name = "Changed after scheduling"
             self.actor.username = "changed-actor"
-            self.assertEqual(len(callbacks), 1)
-            callbacks[0]()
 
-        self.assertIn("Frozen Room", info_log.call_args.args)
-        self.assertIn("actor", info_log.call_args.args)
-        self.assertNotIn("Changed after scheduling", info_log.call_args.args)
-        self.assertNotIn("changed-actor", info_log.call_args.args)
+        with self.assertLogs("library.groups.services", level="INFO") as logs:
+            for callback in callbacks:
+                callback()
+
+        event = "\n".join(logs.output)
+        self.assertIn("group=Frozen Room", event)
+        self.assertIn("actor=actor", event)
+        self.assertNotIn("Changed after scheduling", event)
+        self.assertNotIn("changed-actor", event)
 
     def test_readable_log_labels_are_single_line_and_fall_back_to_uuid(self):
         group = create_library_group(name="Two\nLine Room")
@@ -322,21 +314,13 @@ class AdvancedGroupCollapseLoggingSuppressionTests(TestCase):
         add_book_to_group(book=book, group=group)
         plan = consolidation.build_advanced_groups_disable_plan()
 
-        with (
-            patch("library.groups.services.logger.info") as low_level_info,
-            patch("library.groups.memberships.logger.info") as membership_low_level_info,
-            patch("library.groups.book_assignments.logger.info") as assignment_low_level_info,
-            self.assertLogs("library.groups.consolidation", level="INFO") as logs,
-        ):
+        with self.assertLogs("library.groups", level="INFO") as logs:
             with self.captureOnCommitCallbacks(execute=True):
                 consolidation.execute_advanced_groups_disable_plan(
                     actor=self.owner,
                     expected_fingerprint=plan.fingerprint,
                 )
 
-        low_level_info.assert_not_called()
-        membership_low_level_info.assert_not_called()
-        assignment_low_level_info.assert_not_called()
         self.assertEqual(len(logs.output), 1)
         self.assertIn("Advanced library groups consolidated", logs.output[0])
         self.assertIn("public_group=Configured Common Room", logs.output[0])

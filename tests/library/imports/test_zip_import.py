@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 from io import BytesIO
-from types import SimpleNamespace
-from unittest.mock import patch
 
+from django.contrib.auth import get_user_model
 from django.core.cache import cache
 from django.test import TestCase, TransactionTestCase
 
@@ -15,8 +14,8 @@ from library.imports.results import (
     IMPORT_STATUS_IMPORTED,
     IMPORT_STATUS_SKIPPED,
 )
-from library.models import Book, BookGroupAssignment, BookIdentifier
-from library.queries import VISIBLE_BOOK_IDS_CACHE_VERSION_KEY
+from library.models import Book, BookGroupAssignment, BookIdentifier, LibraryGroupMembership
+from library.queries import visible_books_for_user
 from tests.library.imports.helpers import (
     ImportPersistenceFixtureMixin,
     metadata_xml,
@@ -188,21 +187,22 @@ class ZipImportCacheInvalidationTests(
     ImportPersistenceFixtureMixin,
     TransactionTestCase,
 ):
-    def test_zip_import_coalesces_visible_books_cache_invalidation(self):
+    def test_zip_import_publishes_complete_batch_to_cached_visibility(self):
         cache.clear()
+        reader = get_user_model().objects.create_user(username="reader")
+        LibraryGroupMembership.objects.create(user=reader, group=get_public_group())
+        self.assertEqual(list(visible_books_for_user(reader)), [])
 
-        with patch(
-            "library.queries.uuid4",
-            return_value=SimpleNamespace(hex="zip-import-version"),
-        ) as fake_uuid4:
-            result = import_zip_file(
-                zip_bytes(
-                    ("one.epub", minimal_epub_bytes(metadata_xml=metadata_xml("One"))),
-                    ("two.epub", minimal_epub_bytes(metadata_xml=metadata_xml("Two"))),
-                ),
-                source_filename="books.zip",
-            )
+        result = import_zip_file(
+            zip_bytes(
+                ("one.epub", minimal_epub_bytes(metadata_xml=metadata_xml("One"))),
+                ("two.epub", minimal_epub_bytes(metadata_xml=metadata_xml("Two"))),
+            ),
+            source_filename="books.zip",
+        )
 
         self.assertEqual(result.imported_count, 2)
-        fake_uuid4.assert_called_once()
-        self.assertEqual(cache.get(VISIBLE_BOOK_IDS_CACHE_VERSION_KEY), "zip-import-version")
+        self.assertEqual(
+            set(visible_books_for_user(reader).values_list("title", flat=True)),
+            {"One", "Two"},
+        )

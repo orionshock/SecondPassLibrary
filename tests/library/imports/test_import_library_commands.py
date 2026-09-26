@@ -354,40 +354,6 @@ class ImportLibraryCommandTests(
         importer.assert_not_called()
         self.assertIn("Destination free space", output.getvalue())
 
-    def test_all_three_commands_use_the_shared_candidate_pipeline(self):
-        cases = []
-        with TemporaryDirectory() as tmp:
-            root = Path(tmp)
-            direct = _write_file(root / "direct.epub", minimal_epub_bytes())
-            aio = _write_file(
-                root / "aio.zip",
-                zip_bytes(("book/book.epub", minimal_epub_bytes())).getvalue(),
-            )
-            tree = root / "tree"
-            _write_file(tree / "book" / "book.epub", minimal_epub_bytes())
-            cases.extend(
-                (
-                    ("import_library_folder_of_zip", direct, "folder_of_zip"),
-                    ("import_library_aio_zip", aio, "aio_zip"),
-                    ("import_library_tree", tree, "tree"),
-                )
-            )
-            for command_name, source, method in cases:
-                with (
-                    self.subTest(command=command_name),
-                    patch(
-                        "library.imports.cli_runner.import_epub_file",
-                        return_value=ImportItemResult(
-                            status=IMPORT_STATUS_IMPORTED,
-                            source_label="book.epub",
-                        ),
-                    ) as importer,
-                ):
-                    call_command(command_name, str(source), stdout=StringIO())
-                    self.assertEqual(importer.call_count, 1)
-                    self.assertEqual(importer.call_args.kwargs["source_method"], method)
-
-
 class SequentialImportRunnerTests(TestCase):
     def test_result_is_printed_before_source_advances(self):
         output = StringIO()

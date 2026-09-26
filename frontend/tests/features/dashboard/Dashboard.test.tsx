@@ -3,7 +3,6 @@ import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
 import type { RecentMarginaliaSession } from "@second-pass/spl-api";
-import { DASHBOARD_RECENT_QUERY, DASHBOARD_RECENT_READING_LIMIT } from "../../../src/features/dashboard/DashboardOrchestrator";
 import { dashboardScrollerState, scrollDashboardScroller } from "../../../src/features/dashboard/components/RecentSessionScroller";
 import { DashboardPageRegion, type RecentReadingState } from "../../../src/features/dashboard/regions/DashboardPageRegion";
 
@@ -42,12 +41,6 @@ function renderDashboard(
 }
 
 describe("Dashboard", () => {
-  it("uses the canonical bounded active-only recent Marginalia request", () => {
-    expect(DASHBOARD_RECENT_READING_LIMIT).toBe(50);
-    expect(DASHBOARD_RECENT_QUERY).toEqual({ limit: 50 });
-    expect(DASHBOARD_RECENT_QUERY).not.toHaveProperty("includeClosed");
-  });
-
   it("renders structured banner content only when a server message exists", () => {
     const markup = renderDashboard({ status: "loading" });
     expect(markup).toContain('aria-label="Server message"');

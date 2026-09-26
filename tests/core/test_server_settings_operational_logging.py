@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from unittest.mock import patch
-
 from django.core.cache import cache
 from django.db import transaction
 from django.test import TestCase
@@ -63,25 +61,19 @@ class ServerSettingOperationalLoggingTests(TestCase):
     def test_idempotent_server_setting_save_stays_quiet(self):
         server_settings.set_server_banner_message("Shown once")
 
-        with patch("core.server_settings.logger.info") as info_log:
+        with self.assertNoLogs("core.server_settings", level="INFO"):
             server_settings.set_server_banner_message("Shown once")
 
-        info_log.assert_not_called()
-
     def test_expected_invalid_server_setting_value_does_not_emit_error(self):
-        with patch("core.server_settings.logger.error") as error_log:
+        with self.assertNoLogs("core.server_settings", level="ERROR"):
             with self.assertRaises(ValueError):
                 server_settings.set_application_log_level("TRACE")
             with self.assertRaises(ValueError):
                 server_settings.set_server_banner_message("x" * 501)
 
-        error_log.assert_not_called()
-
     def test_state_change_info_does_not_fire_when_outer_transaction_rolls_back(self):
-        with patch("core.server_settings.logger.info") as info_log:
+        with self.assertNoLogs("core.server_settings", level="INFO"):
             with self.assertRaises(RuntimeError):
                 with transaction.atomic():
                     server_settings.set_server_name("Rolled Back")
                     raise RuntimeError("rollback")
-
-        info_log.assert_not_called()

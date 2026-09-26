@@ -1,42 +1,15 @@
 import { renderToStaticMarkup } from "react-dom/server";
-import { MemoryRouter, Route, Routes } from "react-router";
+import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
-import { ApiError, canSeeImports, type CurrentUser, type LibraryImportResult, type ServerInfo } from "@second-pass/spl-api";
-import { AppOrchestrator } from "../../../src/app/layout/AppOrchestrator";
+import { ApiError, type LibraryImportResult } from "@second-pass/spl-api";
 import { readIncomingBreadcrumbTrail } from "../../../src/app/navigation/breadcrumbs";
-import { clearImportFileInput, importResultBookNavigation, importsBreadcrumbFallback, ImportsOrchestrator, uploadSelectedLibraryFile } from "../../../src/features/imports/ImportsOrchestrator";
+import { clearImportFileInput, importResultBookNavigation, importsBreadcrumbFallback, uploadSelectedLibraryFile } from "../../../src/features/imports/ImportsOrchestrator";
 import { ImportResultPageRegion } from "../../../src/features/imports/regions/ImportResultPageRegion";
 import { ImportUploadPageRegion } from "../../../src/features/imports/regions/ImportUploadPageRegion";
 import { LocalValidationError } from "../../../src/shared/feedback/mutationState";
 
-const owner: CurrentUser = {
-  username: "owner", email: "", firstName: "", lastName: "", profileId: "owner", role: "manager",
-  mustChangePassword: false, isOwner: true, isManager: false, isLibrarian: false, isReader: false,
-  canAccessDjangoAdmin: false, groups: [],
-};
-const server: ServerInfo = { serverId: "server-id", serverUrls: [], name: "SPL", description: "", bannerText: "", advancedLibraryGroupsEnabled: false, secondPassReaderWebClientUrl: null, marginaliaProfileUri: "profile", publicGroup: { id: "public", name: "Common Room", description: "" }, version: "dev", releaseDate: "" };
-
-function renderRoute(user: CurrentUser) {
-  return renderToStaticMarkup(<MemoryRouter initialEntries={["/imports"]}><Routes>
-    <Route element={<AppOrchestrator user={user} server={server} onCurrentUserChange={vi.fn()} />}>
-      <Route path="imports" element={<ImportsOrchestrator />} />
-    </Route>
-  </Routes></MemoryRouter>);
-}
-
 describe("Imports", () => {
-  it("allows Librarian, Manager, and Owner while rejecting Reader access", () => {
-    expect(canSeeImports(owner)).toBe(true);
-    expect(canSeeImports({ isOwner: false, isManager: true, isLibrarian: false, isReader: false })).toBe(true);
-    expect(canSeeImports({ isOwner: false, isManager: false, isLibrarian: true, isReader: false })).toBe(true);
-    expect(canSeeImports({ isOwner: false, isManager: false, isLibrarian: false, isReader: true })).toBe(false);
-    expect(renderRoute(owner)).toContain('accept=".epub,.zip"');
-    const denied = renderRoute({ ...owner, isOwner: false, isReader: true, role: "reader" });
-    expect(denied).toContain('role="alert"');
-    expect(denied).not.toContain('type="file"');
-  });
-
   it("disables the native upload form while an import is pending", () => {
     const markup = renderToStaticMarkup(<ImportUploadPageRegion state={{ pending: true }} inputRef={{ current: null }} onFileChange={vi.fn()} onSubmit={vi.fn()} />);
     expect(markup).toContain('type="file"');

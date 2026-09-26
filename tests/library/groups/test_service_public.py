@@ -21,6 +21,8 @@ from library.groups.public_services import (
 from library.groups.services import create_library_group, delete_library_group
 from library.models import Book, BookGroupAssignment, LibraryGroup, LibraryGroupMembership
 from tests.library.groups.service_helpers import LibraryGroupServiceTestCase
+from tests.library.helpers import queryset_titles
+from library.queries import visible_books_for_user
 
 
 class LibraryPublicGroupServiceTests(LibraryGroupServiceTestCase):
@@ -168,15 +170,22 @@ class LibraryPublicGroupServiceTests(LibraryGroupServiceTestCase):
             1,
         )
 
-    def test_public_repair_registers_one_visibility_cache_invalidation(self):
-        with patch("library.queries.invalidate_visible_books_cache") as invalidate:
-            with self.captureOnCommitCallbacks(execute=True):
-                repair_public_group_identity(
-                    create_new_common_room=False,
-                    actor=self.actor,
-                )
+    def test_public_repair_publishes_restored_visibility(self):
+        self.assertEqual(
+            queryset_titles(visible_books_for_user(self.user, cached=True)),
+            [],
+        )
 
-        invalidate.assert_called_once_with()
+        with self.captureOnCommitCallbacks(execute=True):
+            repair_public_group_identity(
+                create_new_common_room=False,
+                actor=self.actor,
+            )
+
+        self.assertEqual(
+            queryset_titles(visible_books_for_user(self.user, cached=True)),
+            ["Service Book"],
+        )
 
     def test_public_repair_rolls_back_relationships_on_failure(self):
         with (

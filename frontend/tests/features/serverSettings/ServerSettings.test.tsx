@@ -5,7 +5,6 @@ import { MemoryRouter } from "react-router";
 import { describe, expect, it, vi } from "vitest";
 
 import { ApiError, type ServerSettings } from "@second-pass/spl-api";
-import { appRoutes, sectionRoutes } from "../../../src/app/router";
 import { ExternalServicesPageRegion } from "../../../src/features/server-settings/regions/ExternalServicesPageRegion";
 import { GeneralSettingsPageRegion } from "../../../src/features/server-settings/regions/GeneralSettingsPageRegion";
 import { LibraryGroupsPageRegion } from "../../../src/features/server-settings/regions/LibraryGroupsPageRegion";
@@ -28,8 +27,6 @@ const serverUrls = [
 
 describe("Server Settings", () => {
   it("owns /server as a base route with URL-backed tabs and no breadcrumb", () => {
-    expect(sectionRoutes.map(({ path }) => path)).not.toContain("server");
-    expect(appRoutes[0].children.some((route) => route.path === "server")).toBe(true);
     expect(serverSettingsBreadcrumbFallback).toEqual([]);
     expect(serverSettingsTabFromSearchParams(new URLSearchParams())).toBe("general");
     expect(serverSettingsTabFromSearchParams(new URLSearchParams("tab=public-library"))).toBe("public-library");

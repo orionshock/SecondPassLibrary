@@ -1,4 +1,5 @@
 import logging
+from time import sleep
 from unittest.mock import patch
 
 from django.contrib import admin
@@ -67,52 +68,43 @@ class ApplicationLogLevelTests(TestCase):
         self.assertEqual(server_settings.get_application_log_level(), "INFO")
 
     def test_other_process_log_level_is_observed_on_bounded_refresh(self):
-        ServerSetting.objects.update_or_create(
-            key=server_settings.APPLICATION_LOG_LEVEL_SETTING,
-            defaults={"value": "INFO"},
-        )
-        server_settings.clear_server_settings_cache()
-        self.assertEqual(server_settings.get_application_log_level(), "INFO")
+        with patch.object(server_settings, "APPLICATION_LOG_LEVEL_CACHE_SECONDS", 0.1):
+            ServerSetting.objects.update_or_create(
+                key=server_settings.APPLICATION_LOG_LEVEL_SETTING,
+                defaults={"value": "INFO"},
+            )
+            server_settings.clear_server_settings_cache()
+            self.assertEqual(server_settings.get_application_log_level(), "INFO")
 
-        # Simulate another process committing without touching this LocMemCache.
-        ServerSetting.objects.filter(
-            key=server_settings.APPLICATION_LOG_LEVEL_SETTING
-        ).update(value="ERROR")
-        self.assertEqual(server_settings.get_application_log_level(), "INFO")
+            # Simulate another process committing without touching this LocMemCache.
+            ServerSetting.objects.filter(
+                key=server_settings.APPLICATION_LOG_LEVEL_SETTING
+            ).update(value="ERROR")
+            self.assertEqual(server_settings.get_application_log_level(), "INFO")
 
-        cache = server_settings.cache
-        cache.delete(server_settings.APPLICATION_LOG_LEVEL_CACHE_KEY)
-        with patch("core.server_settings.cache.set", wraps=cache.set) as cache_set:
+            sleep(0.2)
             self.assertEqual(server_settings.get_application_log_level(), "ERROR")
-        cache_set.assert_called_once_with(
-            server_settings.APPLICATION_LOG_LEVEL_CACHE_KEY,
-            "ERROR",
-            timeout=server_settings.APPLICATION_LOG_LEVEL_CACHE_SECONDS,
-        )
+            self.assertEqual(
+                logging.getLogger("library.catalog.example").getEffectiveLevel(),
+                logging.ERROR,
+            )
 
-    def test_rolled_back_log_level_does_not_apply_or_invalidate(self):
+    def test_rolled_back_log_level_does_not_become_visible_or_apply(self):
         server_settings.cache.set(
             server_settings.APPLICATION_LOG_LEVEL_CACHE_KEY,
             "INFO",
             timeout=None,
         )
 
-        with (
-            patch("core.server_settings.clear_server_settings_cache") as clear_cache,
-            patch("core.server_settings.apply_application_log_level") as apply_level,
-            self.assertRaises(RuntimeError),
-        ):
+        with self.assertRaises(RuntimeError):
             with transaction.atomic():
                 server_settings.set_application_log_level("DEBUG")
                 raise RuntimeError("rollback")
 
-        clear_cache.assert_not_called()
-        apply_level.assert_not_called()
+        self.assertEqual(server_settings.get_application_log_level(), "INFO")
         self.assertEqual(
-            server_settings.cache.get(
-                server_settings.APPLICATION_LOG_LEVEL_CACHE_KEY
-            ),
-            "INFO",
+            logging.getLogger("library.catalog.example").getEffectiveLevel(),
+            logging.INFO,
         )
 
 

@@ -66,21 +66,25 @@ class LibraryGroupServiceCacheInvalidationTests(LibraryGroupServiceTestCase):
 
         self.assertEqual(queryset_titles(visible_books_for_user(self.user, cached=True)), [])
 
-    def test_failed_remove_book_hook_does_not_invalidate_cache(self):
+    def test_failed_remove_book_hook_rolls_back_assignment_and_visibility(self):
         group = create_library_group(name="Club")
         LibraryGroupMembership.objects.create(user=self.user, group=group)
         BookGroupAssignment.objects.create(book=self.book, group=group)
+        self.assertEqual(
+            queryset_titles(visible_books_for_user(self.user, cached=True)),
+            ["Service Book"],
+        )
 
         with patch(
-            "library.queries.invalidate_visible_books_cache"
-        ) as invalidate, patch(
             "library.groups.book_assignments.remove_book_from_group_owned_shelves",
             side_effect=RuntimeError("hook failed"),
         ):
-            with self.captureOnCommitCallbacks(execute=True) as callbacks:
+            with self.captureOnCommitCallbacks(execute=True):
                 with self.assertRaisesMessage(RuntimeError, "hook failed"):
                     remove_book_from_group(book=self.book, group=group, actor=self.actor)
 
-        self.assertEqual(callbacks, [])
-        invalidate.assert_not_called()
         self.assertTrue(BookGroupAssignment.objects.filter(book=self.book, group=group).exists())
+        self.assertEqual(
+            queryset_titles(visible_books_for_user(self.user, cached=True)),
+            ["Service Book"],
+        )

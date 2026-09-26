@@ -92,7 +92,7 @@ class OwnerServerConfigurationTests(TestCase):
             "https://reader.example",
         )
 
-    def test_public_group_failure_rolls_back_settings_and_does_not_clear_cache(self):
+    def test_public_group_failure_keeps_committed_settings_visible(self):
         original_group_name = self.public_group.name
 
         with (
@@ -100,7 +100,6 @@ class OwnerServerConfigurationTests(TestCase):
                 "core.server_configuration.configure_public_group",
                 side_effect=RuntimeError("injected failure"),
             ),
-            patch("core.server_settings.clear_server_settings_cache") as clear_cache,
             self.assertLogs("core.server_configuration", level="ERROR"),
             self.captureOnCommitCallbacks(execute=True),
             self.assertRaises(RuntimeError),
@@ -119,7 +118,7 @@ class OwnerServerConfigurationTests(TestCase):
         )
         self.public_group.refresh_from_db()
         self.assertEqual(self.public_group.name, original_group_name)
-        clear_cache.assert_not_called()
+        self.assertEqual(server_settings.get_server_name(), "Original Library")
 
     def test_partial_patch_retains_omitted_values(self):
         server_settings.set_server_description("Original description.")
@@ -135,11 +134,8 @@ class OwnerServerConfigurationTests(TestCase):
         self.assertEqual(result["server_banner_message"], "Maintenance tonight.")
         self.assertEqual(result["public_group_name"], original_group_name)
 
-    def test_successful_multi_setting_update_invalidates_cache_once_after_commit(self):
-        with (
-            patch("core.server_settings.clear_server_settings_cache") as clear_cache,
-            self.captureOnCommitCallbacks(execute=True),
-        ):
+    def test_successful_multi_setting_update_publishes_complete_state(self):
+        with self.captureOnCommitCallbacks(execute=True):
             update_owner_server_configuration(
                 patch={
                     "server_name": "Committed Library",
@@ -148,6 +144,13 @@ class OwnerServerConfigurationTests(TestCase):
                 },
                 actor=self.owner,
             )
-            clear_cache.assert_not_called()
 
-        clear_cache.assert_called_once_with()
+        self.assertEqual(server_settings.get_server_name(), "Committed Library")
+        self.assertEqual(
+            server_settings.get_server_description(),
+            "Committed description.",
+        )
+        self.assertEqual(
+            server_settings.get_server_banner_message(),
+            "Committed banner.",
+        )

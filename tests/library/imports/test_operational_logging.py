@@ -67,7 +67,7 @@ class ImportOperationalLoggingTests(
             actor=self.librarian,
         )
 
-        with patch("library.imports.epub.logger.error") as error:
+        with self.assertNoLogs("library.imports.epub", level="ERROR"):
             result = import_epub_file(
                 BytesIO(data),
                 source_filename="second.epub",
@@ -75,7 +75,6 @@ class ImportOperationalLoggingTests(
             )
 
         self.assertEqual(result.status, "duplicate")
-        error.assert_not_called()
 
     def test_shared_identifier_metadata_emits_no_warning_or_error(self):
         existing = Book.objects.create(title="Existing", checksum="existing")

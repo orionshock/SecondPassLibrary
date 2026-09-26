@@ -6,13 +6,11 @@ from io import StringIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from time import sleep
-from unittest.mock import patch
 
 from django.core.cache import cache
 from django.core.management import call_command
 from django.test import SimpleTestCase, TestCase, TransactionTestCase, override_settings
 
-from core import server_settings
 from core.checks import second_pass_reader_web_client_url_check
 from core.models import ServerSetting
 from core.server_settings import (
@@ -211,11 +209,8 @@ class ServerSettingsServiceTests(TestCase):
             with self.subTest(invalid=invalid), self.assertRaises(ValueError):
                 get_marginalia_active_session_tombstone_retention_days()
 
-    def test_paired_annotation_retention_write_publishes_effects_once(self):
-        with (
-            patch("core.server_settings.clear_server_settings_cache") as clear_cache,
-            self.captureOnCommitCallbacks(execute=True),
-        ):
+    def test_paired_annotation_retention_write_publishes_complete_state(self):
+        with self.captureOnCommitCallbacks(execute=True):
             set_marginalia_tombstone_retention_days(
                 active_days=35,
                 closed_days=9,
@@ -227,7 +222,6 @@ class ServerSettingsServiceTests(TestCase):
         self.assertEqual(
             get_marginalia_closed_session_tombstone_retention_days(), 9
         )
-        clear_cache.assert_called_once_with()
 
     def test_advanced_library_groups_are_disabled_by_default(self):
         self.assertFalse(advanced_library_groups_enabled())
@@ -238,43 +232,6 @@ class ServerSettingsServiceTests(TestCase):
 
         set_advanced_library_groups_enabled(False)
         self.assertFalse(advanced_library_groups_enabled())
-
-    def test_set_invalidates_cache(self):
-        ServerSetting.objects.create(key="k", value="v1", description="")
-
-        with (
-            patch("core.server_settings.clear_server_settings_cache") as clear_cache,
-            self.captureOnCommitCallbacks(execute=True),
-        ):
-            set_server_setting(key="k", value="v2", description="")
-            clear_cache.assert_not_called()
-
-        clear_cache.assert_called_once_with()
-
-    def test_direct_model_save_invalidates_cache(self):
-        obj = ServerSetting.objects.create(key="k", value="v1", description="")
-
-        obj.value = "v2"
-        with (
-            patch("core.server_settings.clear_server_settings_cache") as clear_cache,
-            self.captureOnCommitCallbacks(execute=True),
-        ):
-            obj.save(update_fields=["value", "updated_at"])
-            clear_cache.assert_not_called()
-
-        clear_cache.assert_called_once_with()
-
-    def test_direct_model_delete_invalidates_cache(self):
-        obj = ServerSetting.objects.create(key="k", value="v1", description="")
-
-        with (
-            patch("core.server_settings.clear_server_settings_cache") as clear_cache,
-            self.captureOnCommitCallbacks(execute=True),
-        ):
-            obj.delete()
-            clear_cache.assert_not_called()
-
-        clear_cache.assert_called_once_with()
 
     def test_get_public_group_missing_setting_creates_new_default_group(self):
         ordinary = LibraryGroup.objects.create(name="Existing Room")
@@ -442,17 +399,16 @@ class ServerSettingsFreshnessTests(TransactionTestCase):
     def tearDown(self):
         cache.clear()
 
-    def test_presentation_settings_cache_is_bounded(self):
-        ServerSetting.objects.create(key="k", value="v1", description="")
+    def test_direct_model_mutations_refresh_public_getters_after_commit(self):
+        setting = ServerSetting.objects.create(key="k", value="v1", description="")
+        self.assertEqual(get_server_setting("k", default=None), "v1")
 
-        with patch("core.server_settings.cache.set", wraps=cache.set) as cache_set:
-            self.assertEqual(get_server_setting("k", default=None), "v1")
+        setting.value = "v2"
+        setting.save(update_fields=["value", "updated_at"])
+        self.assertEqual(get_server_setting("k", default=None), "v2")
 
-        cache_set.assert_called_once_with(
-            server_settings.SERVER_SETTINGS_CACHE_KEY,
-            {"k": "v1"},
-            timeout=server_settings.SERVER_SETTINGS_CACHE_SECONDS,
-        )
+        setting.delete()
+        self.assertIsNone(get_server_setting("k", default=None))
 
     def test_worker_sensitive_retention_read_bypasses_stale_process_cache(self):
         ServerSetting.objects.create(
