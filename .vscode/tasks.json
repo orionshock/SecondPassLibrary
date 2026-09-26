@@ -71,41 +71,6 @@
         "isDefault": true
       },
       "problemMatcher": []
-    },
-    {
-      "label": "Deploy: Homelab",
-      "type": "process",
-      "command": "ssh",
-      "args": [
-        "NewCaprica",
-        "cd ~/projects/SecondPassLibrary/ && ./tools/redeploy-homelab.sh '${input:secondPassImage}'"
-      ],
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated"
-      }
-    },
-    {
-      "label": "Deploy: Homelab Status",
-      "type": "process",
-      "command": "ssh",
-      "args": [
-        "NewCaprica",
-        "cd ~/projects/SecondPassLibrary/ && docker compose -f docker/compose.yml ps"
-      ],
-      "problemMatcher": [],
-      "presentation": {
-        "reveal": "always",
-        "panel": "dedicated"
-      }
-    }
-  ],
-  "inputs": [
-    {
-      "id": "secondPassImage",
-      "type": "promptString",
-      "description": "Immutable image tag or full image reference"
     }
   ]
 }

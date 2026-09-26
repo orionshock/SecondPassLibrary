@@ -31,7 +31,7 @@ Retaining `userdata/media/` does not restore its database records or
 relationships. Re-import EPUBs through a supported import path, or restore one
 complete, mutually consistent database and userdata backup.
 
-## Docker Compose
+## Deploy with Docker Compose
 
 The Compose project is `secondpasslibrary`. Its web service is `server`;
 `worker` is its separate background-maintenance consumer. Both mount the named volume
@@ -40,85 +40,68 @@ only to containers on its Compose network; it does not publish a host port. The
 reverse proxy should connect to `http://server:8000` on that network. Do not
 scale the service or increase its worker count while it uses SQLite.
 
-The multi-stage image uses Python 3.14, builds only `frontend/`, copies
-`backend/` into the runtime tree, places the React artifact at
-`web/product_ui/`, and runs `collectstatic`. The final image contains the
-prepared backend runtime and one collected static asset tree, not Node,
-frontend source, tests, docs, or tools.
-The image also omits dependency test suites and the virtualenv's pip and
-bytecode caches. The `seed_dev_users` command remains included. Runtime package
-metadata, migrations, templates, translations, and schemas remain available.
-The final script, dependency, and application copies use independent BuildKit
-layers so changes to one do not invalidate the others.
+CI verifies the application, builds the production image, and publishes it to
+the configured registry. The registry image is the release artifact. A
+deployment host needs Docker with the Compose plugin, the tracked
+`docker/compose.example.yml`, and registry access if the image is private. It
+does not need a source checkout, Git, Python, Node, or project build scripts.
 
-The manual image and release workflows derive version metadata from Git and the
-release date from the commit with `git log -1 --format=%cs`. They pass both
-values to the existing Dockerfile build arguments. The build replaces
-`secondpass/version.py` only in the image staging tree before running
-`collectstatic`; it does not modify the checkout or require Git in the runtime
-image. `tools/smoke-production-image.sh` then exercises the server and worker
-roles and verifies the embedded metadata.
-
-Images are published at
-`git.zcaprica.duckdns.org/orionshock/secondpasslibrary`. Every published build
-has an immutable commit identity. Manually published development builds use
-`dev-sha-<full-commit-sha>`. Release builds use
-`sha-<full-commit-sha>` and the exact release Git tag. No workflow publishes
-`latest` or `main`. Use a release SHA tag, a deliberate release tag, or a digest
-for deployments.
-
-The canonical homelab deployment receives an already-published image identity
-and does not pull source or build on NewCaprica:
+Obtain `docker/compose.example.yml` from the same tagged project revision as
+the selected release, then copy it to an operator-owned deployment file. For
+example, after placing the example in a deployment directory:
 
 ```powershell
-ssh NewCaprica "cd ~/projects/SecondPassLibrary/ && ./tools/redeploy-homelab.sh sha-<full-commit-sha>"
+copy compose.example.yml compose.yml
 ```
 
-VS Code exposes this command as `Deploy: Homelab` and prompts for the immutable
-tag or full image reference. `Deploy: Homelab Status` is the read-only
-post-deployment status check.
-
-From the repository root:
-
-```powershell
-copy docker\compose.example.yml docker\compose.yml
-```
-
-Before starting, edit the shared application environment in `docker/compose.yml`
-and replace the secret, allowed-host, HTTPS origin, and Library URL placeholders:
+Edit `compose.yml` and replace the image, secret, allowed-host, time-zone,
+HTTPS-origin, and Library URL examples. Use the full reference of a published
+release image, preferably an immutable release tag, commit tag, or digest:
 
 ```yaml
+services:
+  server:
+    image: registry.example.com/secondpasslibrary/secondpasslibrary:<release-tag>
+  worker:
+    image: registry.example.com/secondpasslibrary/secondpasslibrary:<release-tag>
+
 DJANGO_SECRET_KEY: <generated-secret>
 DJANGO_ALLOWED_HOSTS: <library-server-hostnames-or-ips>
+DJANGO_TIME_ZONE: <IANA-time-zone>
 DJANGO_CSRF_TRUSTED_ORIGINS: https://books.example.com
 SECOND_PASS_LIBRARY_URLS: https://books.example.com
 ```
 
-Start the deployment after editing the file:
+Configure DNS, TLS, and a reverse proxy for the operator's environment. The
+proxy may be Caddy, nginx, Traefik, or another suitable implementation; none is
+assumed by the application. It must satisfy the
+[reverse-proxy contract](#reverse-proxy-contract) below.
+
+If the registry requires authentication, log in with a pull-only credential
+using the registry's documented `docker login` flow. Do not place registry
+tokens in Compose or command-line arguments.
+
+Pull and start the deployment from the directory containing `compose.yml`:
 
 ```powershell
-docker compose -f docker/compose.yml pull
-docker compose -f docker/compose.yml up -d --no-build
+docker compose -f compose.yml pull
+docker compose -f compose.yml up -d --no-build
+docker compose -f compose.yml ps
 ```
 
-`docker/compose.yml` is the deployment configuration and contains the secret.
+Wait for `server` to report healthy and confirm that `worker` remains running.
+If either fails, inspect `docker compose -f compose.yml logs server worker`.
+
+`compose.yml` is deployment configuration and contains the secret.
 Keep it readable only by the deployment account. Optional values and defaults
-are documented beside their entries in `docker/compose.example.yml`.
-Set `SECOND_PASS_IMAGE` for a one-off immutable image selection, or replace the
-example's `replace-with-release-tag` image placeholder with the chosen release
-tag or digest. The supported example is self-contained and does not require a
-project `.env` file.
+are documented beside their entries in the tracked example. Set
+`SECOND_PASS_IMAGE` for a one-off immutable image selection, or replace the
+generic registry and `replace-with-release-tag` placeholders in both services.
+The example is self-contained and does not require a project `.env` file.
 
 The standard image fixes `SECOND_PASS_USERDATA_DIR=/app/userdata`. Its default
 UID/GID is `1000:1000`. The entrypoint creates and verifies the required
 userdata directories before dropping privileges.
-
-If the registry requires authentication, log in with a pull-only token before
-running Compose. For the homelab tool, either rely on Docker's existing
-credential store or set `SECOND_PASS_REGISTRY_USERNAME` and
-`SECOND_PASS_REGISTRY_TOKEN_FILE`. The token file is read through
-`docker login --password-stdin`; do not place tokens in Compose or command-line
-arguments.
 
 Web startup performs:
 
@@ -161,20 +144,20 @@ For an interactive terminal, omit the password options. The command prompts
 twice without echoing the password:
 
 ```powershell
-docker compose -f docker/compose.yml exec server python manage.py setup_server --username owner --server-name "Family Library"
+docker compose -f compose.yml exec server python manage.py setup_server --username owner --server-name "Family Library"
 ```
 
 For automation, pipe one raw password through stdin. It receives the same
 Django password-strength validation as browser setup:
 
 ```sh
-printf '%s' "$PASSWORD" | docker compose -f docker/compose.yml exec -T server python manage.py setup_server --username owner --password-stdin
+printf '%s' "$PASSWORD" | docker compose -f compose.yml exec -T server python manage.py setup_server --username owner --password-stdin
 ```
 
 An operator may instead pipe an already encoded Django password:
 
 ```sh
-cat /run/secrets/owner-password-hash | docker compose -f docker/compose.yml exec -T server python manage.py setup_server --username owner --encoded-password-stdin
+cat /run/secrets/owner-password-hash | docker compose -f compose.yml exec -T server python manage.py setup_server --username owner --encoded-password-stdin
 ```
 
 Encoded mode verifies that the configured Django hasher recognizes the value
@@ -226,7 +209,7 @@ In `secondpass_discovery_service`:
 Then start the normal deployment with discovery enabled:
 
 ```powershell
-docker compose -f docker/compose.yml --profile discovery up -d
+docker compose -f compose.yml --profile discovery up -d
 ```
 
 The sidecar uses host networking and publishes service type
@@ -372,18 +355,15 @@ identity produced by a successful CI run, review changes to the distributable
 Compose example and migration requirements, then pull and start it:
 
 ```powershell
-$env:SECOND_PASS_IMAGE = "git.zcaprica.duckdns.org/orionshock/secondpasslibrary:sha-<full-commit-sha>"
-docker compose -f docker/compose.yml pull
-docker compose -f docker/compose.yml up -d --no-build
+$env:SECOND_PASS_IMAGE = "registry.example.com/secondpasslibrary/secondpasslibrary:<immutable-release-tag-or-digest>"
+docker compose -f compose.yml pull
+docker compose -f compose.yml up -d --no-build
+docker compose -f compose.yml ps
 ```
 
-The homelab command is `tools/redeploy-homelab.sh <tag-or-reference>`. It pulls
-first, stops the old deployment, starts the selected image without building,
-waits for server health, checks the worker and discovery sidecar, and reports
-the running version and image identity. It intentionally does not roll back:
-if the replacement is broken, the deployment remains visibly broken until the
-underlying problem is fixed. The entrypoint completes deploy checks and
-migrations before Uvicorn accepts requests.
+The entrypoint completes deploy checks and migrations before Uvicorn accepts
+requests. Confirm server health and worker state before considering the upgrade
+complete.
 
 Use `docs/development.md` for the Windows local production-mode helper and
 contributor startup commands; those helpers are not production secret or

@@ -354,11 +354,10 @@ local image and pulls the SHA tag back from the registry. The registry image is
 the release artifact; the workflow does not add a forge-specific release-record
 adapter.
 
-The Gitea repository must define `REGISTRY_HOST`, `REGISTRY_IMAGE`, and
+The CI repository must define `REGISTRY_HOST`, `REGISTRY_IMAGE`, and
 `REGISTRY_USERNAME` Actions variables and a write-capable `REGISTRY_TOKEN`
-Actions secret. These are CI configuration, not developer workstation
-credentials. The workflow is standard GitHub Actions YAML; migrating it to
-GitHub primarily requires changing those registry values and secret.
+Actions secret. These are CI configuration, not developer workstation or
+deployment-host credentials.
 
 Tags should be intentional release identifiers. Existing releases establish
 the `alpha-rc1` and `alpha-rc1.1` forms. The tagged source tree contains the

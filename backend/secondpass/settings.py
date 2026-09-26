@@ -233,7 +233,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = env.str("DJANGO_TIME_ZONE", default="America/Phoenix")
+TIME_ZONE = env.str("DJANGO_TIME_ZONE", default="UTC")
 
 USE_I18N = True
 

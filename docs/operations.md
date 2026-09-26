@@ -18,7 +18,7 @@ Back up the complete `/app/userdata` tree as one unit:
 - `media/` contains EPUBs and covers referenced by that database;
 - `imports/` contains temporary and staged import data.
 
-Back up deployment-owned `docker/compose.yml` so
+Back up the deployment-owned `compose.yml` so
 the instance can be reconstructed. Protect configuration and backup archives
 with restrictive host permissions; they contain secrets or private reading
 data. Generated static output is image/build material and is not part of the
@@ -33,9 +33,9 @@ For the default named volume, the existing quiesced backup procedure is:
 
 ```powershell
 New-Item -ItemType Directory -Force backups
-docker compose -f docker/compose.yml stop
-docker compose -f docker/compose.yml run --rm --no-deps -v ./backups:/backup --entrypoint python server -c "import tarfile; archive=tarfile.open('/backup/secondpass-userdata.tar.gz','w:gz'); archive.add('/app/userdata', arcname='userdata'); archive.close()"
-docker compose -f docker/compose.yml start
+docker compose -f compose.yml stop
+docker compose -f compose.yml run --rm --no-deps -v ./backups:/backup --entrypoint python server -c "import tarfile; archive=tarfile.open('/backup/secondpass-userdata.tar.gz','w:gz'); archive.add('/app/userdata', arcname='userdata'); archive.close()"
+docker compose -f compose.yml start
 ```
 
 Place `backups/` outside any web-served directory and restrict it with the
@@ -60,9 +60,9 @@ worker. Review Shelf cleanup before applying it.
 ### Client pairing requests
 
 ```bash
-docker compose -f docker/compose.yml exec -T server python manage.py cleanup_client_pairing_requests --dry-run
-docker compose -f docker/compose.yml exec -T server python manage.py cleanup_client_pairing_requests
-docker compose -f docker/compose.yml exec -T server python manage.py cleanup_client_pairing_requests --limit 1000
+docker compose -f compose.yml exec -T server python manage.py cleanup_client_pairing_requests --dry-run
+docker compose -f compose.yml exec -T server python manage.py cleanup_client_pairing_requests
+docker compose -f compose.yml exec -T server python manage.py cleanup_client_pairing_requests --limit 1000
 ```
 
 The command preserves active, unexpired requests. Expired pending or approved
@@ -73,8 +73,8 @@ bounds one run from 1 through 10,000 rows and defaults to 1,000.
 ### Marginalia import stages
 
 ```bash
-docker compose -f docker/compose.yml exec -T server python manage.py cleanup_marginalia_import_stages --dry-run
-docker compose -f docker/compose.yml exec -T server python manage.py cleanup_marginalia_import_stages
+docker compose -f compose.yml exec -T server python manage.py cleanup_marginalia_import_stages --dry-run
+docker compose -f compose.yml exec -T server python manage.py cleanup_marginalia_import_stages
 ```
 
 The command removes expired stage records and their protected staged files, and
@@ -86,9 +86,9 @@ expired records without deleting them. This command has no batch-limit option.
 ### Deleted Marginalia Annotations
 
 ```bash
-docker compose -f docker/compose.yml exec -T server python manage.py cleanup_deleted_annotations --dry-run
-docker compose -f docker/compose.yml exec -T server python manage.py cleanup_deleted_annotations
-docker compose -f docker/compose.yml exec -T server python manage.py cleanup_deleted_annotations --limit 1000
+docker compose -f compose.yml exec -T server python manage.py cleanup_deleted_annotations --dry-run
+docker compose -f compose.yml exec -T server python manage.py cleanup_deleted_annotations
+docker compose -f compose.yml exec -T server python manage.py cleanup_deleted_annotations --limit 1000
 ```
 
 Soft-deleted Annotation tombstones are permanently deleted according to their
@@ -108,8 +108,8 @@ database state, so the separate worker does not rely on its presentation cache.
 ### Unavailable personal Shelf items
 
 ```bash
-docker compose -f docker/compose.yml exec -T server python manage.py cleanup_shelves
-docker compose -f docker/compose.yml exec -T server python manage.py cleanup_shelves --apply
+docker compose -f compose.yml exec -T server python manage.py cleanup_shelves
+docker compose -f compose.yml exec -T server python manage.py cleanup_shelves --apply
 ```
 
 The default invocation is the dry run. `--apply` permanently removes currently
@@ -206,7 +206,7 @@ not reduce Django security or error logging.
 
 ## Routine maintenance
 
-- Check `docker compose -f docker/compose.yml ps` and investigate unhealthy
+- Check `docker compose -f compose.yml ps` and investigate unhealthy
   containers.
 - Monitor free space for the Docker volume, database, media, staged imports,
   logs, and backup destination.
@@ -222,14 +222,14 @@ not reduce Django security or error logging.
 Inspect bounded container logs with:
 
 ```powershell
-docker compose -f docker/compose.yml logs --tail 200 server
+docker compose -f compose.yml logs --tail 200 server
 ```
 
 ## Troubleshooting
 
 - **Startup rejects settings:** inspect container logs. Production refuses a
   missing/default `DJANGO_SECRET_KEY`; also verify explicit
-  `DJANGO_ALLOWED_HOSTS` and the values in `docker/compose.yml`.
+  `DJANGO_ALLOWED_HOSTS` and the values in `compose.yml`.
 - **Migration failure:** the entrypoint stops before Uvicorn. Do not fake an
   incompatible migration. Preserve the failed database, inspect the error, and
   restore the last verified database/userdata pair if recovery is unsafe.

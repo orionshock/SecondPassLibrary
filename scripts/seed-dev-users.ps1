@@ -14,7 +14,7 @@ if ($LASTEXITCODE -ne 0) {
 $env:DJANGO_SETTINGS_MODULE = "secondpass.settings"
 $env:DJANGO_DEBUG = "1"
 $env:DJANGO_SECRET_KEY = "secondpass-local-development-only"
-$env:DJANGO_TIME_ZONE = "America/Phoenix"
+$env:DJANGO_TIME_ZONE = "UTC"
 $env:DJANGO_ALLOWED_HOSTS = "localhost,127.0.0.1,[::1]"
 $env:DJANGO_CSRF_TRUSTED_ORIGINS = "http://localhost:8000,http://127.0.0.1:8000"
 $env:DJANGO_SECURE_COOKIES = "0"
