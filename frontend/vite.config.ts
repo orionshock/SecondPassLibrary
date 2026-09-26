@@ -15,7 +15,7 @@ export default defineConfig(({ command }) => ({
       reportsDirectory: "../test-results/coverage/frontend",
     },
     include: [
-      "tests/**/*.test.{ts,tsx}",
+      "tests/**/*.test.{ts,tsx,mjs}",
     ],
   },
   server: {

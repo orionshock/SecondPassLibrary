@@ -1,8 +1,11 @@
+/** @vitest-environment happy-dom */
+
 import type { MarginaliaBookSummary, MarginaliaSessionSummary, Page } from "@second-pass/spl-api";
-import { Children, type ReactElement, type ReactNode } from "react";
+import { act } from "react";
+import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { MarginaliaViewSelector } from "../../../../src/features/marginalia/browse/MarginaliaViewSelector";
 import { MarginaliaBooksPageRegion } from "../../../../src/features/marginalia/browse/MarginaliaBooksPageRegion";
@@ -32,19 +35,31 @@ const session: MarginaliaSessionSummary = {
   annotationCount: 12,
 };
 
-describe("Marginalia view selector", () => {
-  it("marks the current view and changes modes without tab semantics", () => {
-    const onViewChange = vi.fn();
-    const selector = MarginaliaViewSelector({ activeView: "sessions", onViewChange }) as ReactElement<{ children: ReactNode }>;
-    const markup = renderToStaticMarkup(selector);
-    expect(markup).toContain('aria-label="Marginalia views"');
-    expect(markup).toMatch(/aria-pressed="true"[^>]*>/);
-    expect(markup).toContain("Sessions");
-    expect(markup).toContain("Books");
-    expect(markup).not.toContain("tablist");
+(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-    const buttons = Children.toArray(selector.props.children) as ReactElement<{ onClick: () => void }>[];
-    buttons[1]?.props.onClick();
+let root: ReturnType<typeof createRoot> | undefined;
+
+afterEach(async () => {
+  if (root) await act(async () => root?.unmount());
+  root = undefined;
+  document.body.replaceChildren();
+});
+
+describe("Marginalia view selector", () => {
+  it("marks the current view and changes modes without tab semantics", async () => {
+    const container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    const onViewChange = vi.fn();
+    await act(async () => root?.render(<MarginaliaViewSelector activeView="sessions" onViewChange={onViewChange} />));
+    const group = container.querySelector<HTMLElement>('[role="group"][aria-label="Marginalia views"]')!;
+    const buttons = group.querySelectorAll<HTMLButtonElement>("button");
+    expect(buttons[0]!.getAttribute("aria-pressed")).toBe("true");
+    expect(buttons[0]!.textContent).toContain("Reading Sessions");
+    expect(buttons[1]!.textContent).toContain("Books");
+    expect(container.querySelector('[role="tablist"]')).toBeNull();
+
+    await act(async () => buttons[1]!.click());
     expect(onViewChange).toHaveBeenCalledWith("books");
   });
 });

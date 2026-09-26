@@ -68,7 +68,7 @@ class SetupMarkupTests(TestCase):
                 self.assertIn(f'id="{help_id}"', content)
                 self.assertIn(help_id, str(field))
 
-    def test_failed_setup_preserves_non_secret_values_and_focuses_first_error(self):
+    def test_failed_setup_preserves_non_secret_values_and_marks_first_error(self):
         response = self.client.post(
             "/setup/",
             {
@@ -77,8 +77,6 @@ class SetupMarkupTests(TestCase):
             },
         )
         form = response.context["form"]
-        content = response.content.decode("utf-8")
-
         self.assertEqual(response.status_code, 200)
         self.assertTrue(form["password2"].errors)
         self.assertContains(response, 'value="Family Library"', html=False)
@@ -89,11 +87,8 @@ class SetupMarkupTests(TestCase):
         self.assertIn('aria-invalid="true"', str(form["password2"]))
         self.assertIn("id_password2_helptext", str(form["password2"]))
         self.assertIn("id_password2_error", str(form["password2"]))
-        self.assertIn('id="id_password2_helptext"', content)
-        self.assertIn('id="id_password2_error"', content)
-        self.assertIn("form.querySelector('[aria-invalid=\"true\"]')", content)
-        self.assertIn('removeAttribute("autofocus")', content)
-        self.assertIn("firstInvalidField.focus()", content)
+        self.assertContains(response, 'id="id_password2_helptext"', html=False)
+        self.assertContains(response, 'id="id_password2_error"', html=False)
 
     def test_initial_setup_keeps_username_autofocus(self):
         response = self.client.get("/setup/")
@@ -134,17 +129,14 @@ class SetupMarkupTests(TestCase):
                 self.assertEqual(attrs.get("autocorrect"), "off")
                 self.assertEqual(attrs.get("spellcheck"), "false")
 
-    def test_dialog_state_reset_and_submit_pending_protection_are_wired(self):
+    def test_dialog_and_submit_controls_expose_semantic_hooks(self):
         response = self.client.get("/setup/")
-        content = response.content.decode("utf-8")
 
         self.assertContains(response, "data-setup-submit")
         self.assertContains(response, 'data-pending-label="Completing setup..."')
-        self.assertIn('dialog.returnValue = ""', content)
-        self.assertIn('form.addEventListener("submit"', content)
-        self.assertIn('form.setAttribute("aria-busy", "true")', content)
-        self.assertIn("submitButton.disabled = true", content)
-        self.assertLess(
-            content.index("event.preventDefault()"),
-            content.index("submitButton.disabled = true"),
+        self.assertContains(response, 'id="setup-advanced-groups-dialog"', html=False)
+        self.assertContains(
+            response,
+            'aria-labelledby="setup-advanced-groups-dialog-title"',
+            html=False,
         )

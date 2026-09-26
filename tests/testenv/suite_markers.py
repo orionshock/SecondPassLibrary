@@ -148,6 +148,7 @@ _NODE_MARKERS: dict[str, tuple[str, ...]] = {
         "tests/accounts/client_api/test_proxy_boundary.py::UvicornProxyBoundaryTests::",
         "tests/accounts/test_browser_auth.py::ConcurrentBrowserLoginThrottleTests::",
         "tests/accounts/test_first_run_setup_concurrency.py::FirstOwnerSetupConcurrencyTests::",
+        "tests/library/groups/test_service_locking.py::LibraryGroupServiceConcurrencyTests::",
         "tests/marginalia/imports/test_apply_api.py::MarginaliaImportApplyConcurrencyTests::",
     ),
     "subprocess": (

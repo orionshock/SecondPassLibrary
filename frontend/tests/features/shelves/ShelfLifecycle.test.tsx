@@ -1,8 +1,13 @@
+/** @vitest-environment happy-dom */
+
+import { act } from "react";
+import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { CurrentUser, LibraryGroup, ShelfEditorItemsPage, ShelfSummary } from "@second-pass/spl-api";
+import { setControlValue } from "../../support/domInteraction";
 import { breadcrumbNavigationState, readIncomingBreadcrumbTrail } from "../../../src/app/navigation/breadcrumbs";
 import {
   authorizedShelfCreateGroupContext,
@@ -38,6 +43,16 @@ import {
   ShelfEditBooksPageRegion,
   ShelfPositionSelectComponent,
 } from "../../../src/features/shelves/edit/ShelfEditBooksPageRegion";
+
+(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+let root: ReturnType<typeof createRoot> | undefined;
+
+afterEach(async () => {
+  if (root) await act(async () => root?.unmount());
+  root = undefined;
+  document.body.replaceChildren();
+});
 import { ShelfEditTabsPageRegion } from "../../../src/features/shelves/edit/ShelfEditTabsPageRegion";
 import { ShelfHeaderPageRegion } from "../../../src/features/shelves/detail/ShelfHeaderPageRegion";
 import { LocalValidationError, idleMutationState } from "../../../src/shared/feedback/mutationState";
@@ -321,24 +336,27 @@ describe("Shelf lifecycle contracts", () => {
     expect(candidates).toContain("Add");
   });
 
-  it("renders one-based Move To options and reports the selected zero-based position", () => {
+  it("renders one-based Move To options and reports the selected zero-based position", async () => {
+    const container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
     const onChange = vi.fn();
-    const control = ShelfPositionSelectComponent({
-      bookTitle: "Book A",
-      position: 1,
-      positionCount: 4,
-      disabled: false,
-      onChange,
-    });
-    const markup = renderToStaticMarkup(control);
-    const select = control.props.children[1];
+    await act(async () => root?.render(<ShelfPositionSelectComponent
+      bookTitle="Book A"
+      position={1}
+      positionCount={4}
+      disabled={false}
+      onChange={onChange}
+    />));
+    const select = container.querySelector<HTMLSelectElement>('select[aria-label="Move Book A to position"]')!;
+    const options = select.querySelectorAll<HTMLOptionElement>("option");
+    expect(container.textContent).toContain("Move To");
+    expect(Array.from(options, (option) => option.textContent)).toEqual(["1", "2", "3", "4"]);
+    expect(options[1]!.disabled).toBe(true);
+    expect(select.value).toBe("1");
 
-    expect(markup).toContain("Move To");
-    expect(markup).toContain('<option value="0">1</option>');
-    expect(markup).toContain('<option value="1" disabled="" selected="">2</option>');
-    expect(markup).toContain('<option value="3">4</option>');
-
-    select.props.onChange({ target: { value: "3" } });
+    await act(async () => setControlValue(select, "3"));
+    expect(onChange).toHaveBeenCalledOnce();
     expect(onChange).toHaveBeenCalledWith(3);
   });
 

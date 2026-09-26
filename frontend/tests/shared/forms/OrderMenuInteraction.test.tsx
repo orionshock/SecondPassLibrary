@@ -46,4 +46,33 @@ describe("OrderMenu keyboard behavior", () => {
     expect(document.activeElement).toBe(trigger);
     expect(container.querySelector('[role="menu"]')).toBeNull();
   });
+
+  it("maps the descending Author option to the public ordering value", async () => {
+    const container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    const onChange = vi.fn();
+    await act(async () => root?.render(<OrderMenu
+      label="Order"
+      value="title"
+      options={[
+        { value: "title", label: "Title A-Z", icon: "sort" },
+        { value: "-title", label: "Title Z-A", icon: "sort" },
+        { value: "author", label: "Author A-Z", icon: "person" },
+        { value: "-author", label: "Author Z-A", icon: "person" },
+      ] as const}
+      onChange={onChange}
+    />));
+
+    await act(async () => container.querySelector<HTMLButtonElement>(
+      '[aria-haspopup="menu"]',
+    )!.click());
+    const option = [...container.querySelectorAll<HTMLButtonElement>(
+      '[role="menuitemradio"]',
+    )].find((item) => item.textContent?.includes("Author Z-A"))!;
+    await act(async () => option.click());
+
+    expect(onChange).toHaveBeenCalledOnce();
+    expect(onChange).toHaveBeenCalledWith("-author");
+  });
 });

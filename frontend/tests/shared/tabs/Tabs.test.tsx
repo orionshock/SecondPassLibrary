@@ -1,9 +1,22 @@
-import type { KeyboardEvent, ReactElement } from "react";
+/** @vitest-environment happy-dom */
+
+import { act } from "react";
+import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { resolveTabQuery, withTabQuery } from "../../../src/app/routing/tabQuery";
-import { TabList, tabFocusIndexForKey } from "../../../src/shared/tabs/TabList";
+import { TabList } from "../../../src/shared/tabs/TabList";
+
+(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+let root: ReturnType<typeof createRoot> | undefined;
+
+afterEach(async () => {
+  if (root) await act(async () => root?.unmount());
+  root = undefined;
+  document.body.replaceChildren();
+});
 
 const tabs = [
   { id: "details", label: "Details" },
@@ -27,47 +40,61 @@ describe("TabList", () => {
     expect(markup).toMatch(/id="example-details-tab"[^>]*aria-selected="false"[^>]*tabindex="-1"/);
   });
 
-  it("activates through click, Enter, and Space but not while disabled", () => {
+  it("activates through mounted click, Enter, and Space but not while disabled", async () => {
+    const container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
     const onChange = vi.fn();
-    const tree = TabList({ tabs, activeTab: "details", onChange, ariaLabel: "Sections" }) as ReactElement<{
-      children: ReactElement<{ onClick: () => void; onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void }>[];
-    }>;
-    const buttons = tree.props.children;
-    buttons[1]!.props.onClick();
-    buttons[2]!.props.onKeyDown({ key: "Enter", preventDefault: vi.fn() } as unknown as KeyboardEvent<HTMLButtonElement>);
-    buttons[2]!.props.onKeyDown({ key: " ", preventDefault: vi.fn() } as unknown as KeyboardEvent<HTMLButtonElement>);
+    await act(async () => root?.render(<TabList
+      tabs={tabs}
+      activeTab="details"
+      onChange={onChange}
+      ariaLabel="Sections"
+    />));
+    const buttons = container.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+    await act(async () => buttons[1]!.click());
+    await act(async () => buttons[2]!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })));
+    await act(async () => buttons[2]!.dispatchEvent(new KeyboardEvent("keydown", { key: " ", bubbles: true })));
     expect(onChange.mock.calls).toEqual([["books"], ["members"], ["members"]]);
 
     const disabledChange = vi.fn();
-    const disabled = TabList({ tabs, activeTab: "details", onChange: disabledChange, ariaLabel: "Sections", disabled: true }) as typeof tree;
-    disabled.props.children[1]!.props.onClick();
-    disabled.props.children[1]!.props.onKeyDown({ key: "Enter", preventDefault: vi.fn() } as unknown as KeyboardEvent<HTMLButtonElement>);
+    await act(async () => root?.render(<TabList
+      tabs={tabs}
+      activeTab="details"
+      onChange={disabledChange}
+      ariaLabel="Sections"
+      disabled
+    />));
+    const disabled = container.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+    await act(async () => disabled[1]!.click());
+    await act(async () => disabled[1]!.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })));
     expect(disabledChange).not.toHaveBeenCalled();
   });
 
-  it("moves focus with arrow, Home, and End keys without activating", () => {
-    expect(tabFocusIndexForKey(0, "ArrowRight", 3)).toBe(1);
-    expect(tabFocusIndexForKey(0, "ArrowLeft", 3)).toBe(2);
-    expect(tabFocusIndexForKey(1, "Home", 3)).toBe(0);
-    expect(tabFocusIndexForKey(1, "End", 3)).toBe(2);
-    expect(tabFocusIndexForKey(1, "Enter", 3)).toBeUndefined();
-
+  it("moves real focus with arrow, Home, and End keys without activating", async () => {
+    const container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
     const onChange = vi.fn();
-    const tree = TabList({ tabs, activeTab: "details", onChange, ariaLabel: "Sections" }) as ReactElement<{
-      children: ReactElement<{ onKeyDown: (event: KeyboardEvent<HTMLButtonElement>) => void }>[];
-    }>;
-    const focused = vi.fn();
-    const currentTarget = { focus: vi.fn(), parentElement: undefined } as unknown as HTMLButtonElement;
-    const nextTarget = { focus: focused } as unknown as HTMLButtonElement;
-    Object.assign(currentTarget, {
-      parentElement: { querySelectorAll: () => [currentTarget, nextTarget] },
-    });
-    tree.props.children[0]!.props.onKeyDown({
-      key: "ArrowRight",
-      currentTarget,
-      preventDefault: vi.fn(),
-    } as unknown as KeyboardEvent<HTMLButtonElement>);
-    expect(focused).toHaveBeenCalledOnce();
+    await act(async () => root?.render(<TabList
+      tabs={tabs}
+      activeTab="details"
+      onChange={onChange}
+      ariaLabel="Sections"
+    />));
+    const buttons = container.querySelectorAll<HTMLButtonElement>('[role="tab"]');
+    buttons[0]!.focus();
+    for (const [key, expected] of [
+      ["ArrowRight", buttons[1]],
+      ["End", buttons[2]],
+      ["Home", buttons[0]],
+      ["ArrowLeft", buttons[2]],
+    ] as const) {
+      await act(async () => (document.activeElement as HTMLButtonElement).dispatchEvent(
+        new KeyboardEvent("keydown", { key, bubbles: true }),
+      ));
+      expect(document.activeElement).toBe(expected);
+    }
     expect(onChange).not.toHaveBeenCalled();
   });
 });

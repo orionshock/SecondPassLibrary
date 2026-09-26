@@ -1,8 +1,11 @@
+/** @vitest-environment happy-dom */
+
 import type { MarginaliaAnnotation, MarginaliaSessionEnvelope } from "@second-pass/spl-api";
-import { Children, type ReactElement, type ReactNode } from "react";
+import { act } from "react";
+import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { appRoutes } from "../../../../src/app/router";
 import { marginaliaSessionBreadcrumbFallback } from "../../../../src/features/marginalia/marginaliaBreadcrumbs";
@@ -82,6 +85,16 @@ const annotations: MarginaliaAnnotation[] = [
   },
 ];
 
+(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+let root: ReturnType<typeof createRoot> | undefined;
+
+afterEach(async () => {
+  if (root) await act(async () => root?.unmount());
+  root = undefined;
+  document.body.replaceChildren();
+});
+
 function renderDetail(overrides: Partial<Parameters<typeof MarginaliaSessionDetailPageRegion>[0]> = {}) {
   return renderToStaticMarkup(<MemoryRouter><MarginaliaSessionDetailPageRegion
     detail={detail}
@@ -155,22 +168,34 @@ describe("My Marginalia Session Detail", () => {
     expect(update).not.toHaveBeenCalled();
   });
 
-  it("keeps compact name editing keyboard behavior and active-only controls", () => {
+  it("keeps compact name editing keyboard behavior and active-only controls", async () => {
+    const container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
     const onSave = vi.fn();
     const onCancel = vi.fn();
-    const editor = MarginaliaSessionTitleEditor({
-      displayName: detail.session.name, editable: true, draft: "Changed", editing: true, pending: false,
-      onDraftChange: vi.fn(), onEdit: vi.fn(), onSave, onCancel,
-    }) as ReactElement<{ children: unknown }>;
-    const markup = renderToStaticMarkup(editor);
-    expect(markup).toContain('aria-label="Reading Session name"');
-    expect(markup).toContain('aria-label="Save Reading Session name"');
-    expect(markup).toContain('aria-label="Cancel editing Reading Session name"');
-    const input = Children.toArray(editor.props.children as ReactNode)[0] as ReactElement<{ onKeyDown: (event: { key: string; preventDefault: () => void }) => void }>;
-    input.props.onKeyDown({ key: "Enter", preventDefault: vi.fn() });
-    input.props.onKeyDown({ key: "Escape", preventDefault: vi.fn() });
+    await act(async () => root?.render(<MarginaliaSessionTitleEditor
+      displayName={detail.session.name}
+      editable
+      draft="Changed"
+      editing
+      pending={false}
+      onDraftChange={vi.fn()}
+      onEdit={vi.fn()}
+      onSave={onSave}
+      onCancel={onCancel}
+    />));
+    const input = container.querySelector<HTMLInputElement>('input[aria-label="Reading Session name"]')!;
+    expect(container.querySelector('[aria-label="Save Reading Session name"]')).not.toBeNull();
+    expect(container.querySelector('[aria-label="Cancel editing Reading Session name"]')).not.toBeNull();
+    const enter = new KeyboardEvent("keydown", { key: "Enter", bubbles: true, cancelable: true });
+    const escape = new KeyboardEvent("keydown", { key: "Escape", bubbles: true, cancelable: true });
+    await act(async () => input.dispatchEvent(enter));
+    await act(async () => input.dispatchEvent(escape));
     expect(onSave).toHaveBeenCalledOnce();
     expect(onCancel).toHaveBeenCalledOnce();
+    expect(enter.defaultPrevented).toBe(true);
+    expect(escape.defaultPrevented).toBe(true);
 
     const closedMarkup = renderToStaticMarkup(MarginaliaSessionTitleEditor({
       displayName: "Closed", editable: false, draft: "", editing: false, pending: false,
@@ -191,30 +216,29 @@ describe("My Marginalia Session Detail", () => {
     expect(updateNote).toHaveBeenCalledWith(detail.session.id, { notes: "New note" });
   });
 
-  it("keeps Session Note save explicit inside the textarea", () => {
+  it("keeps Session Note save explicit inside the mounted textarea", async () => {
+    const container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
     const onSave = vi.fn();
     const onCancel = vi.fn();
-    const editor = MarginaliaSessionNoteEditor({
-      note: detail.session.notes,
-      editable: true,
-      draft: "Edited note",
-      editing: true,
-      pending: false,
-      onDraftChange: vi.fn(),
-      onEdit: vi.fn(),
-      onSave,
-      onCancel,
-    }) as ReactElement<{ children: unknown }>;
-    const markup = renderToStaticMarkup(editor);
-    expect(markup).toContain('aria-label="Reading Session note"');
-    expect(markup).toContain('aria-label="Save Reading Session note"');
-    const textarea = Children.toArray(editor.props.children as ReactNode)[1] as ReactElement<{
-      onKeyDown: (event: { key: string; ctrlKey?: boolean; metaKey?: boolean; preventDefault: () => void }) => void;
-    }>;
-    textarea.props.onKeyDown({ key: "Enter", preventDefault: vi.fn() });
+    await act(async () => root?.render(<MarginaliaSessionNoteEditor
+      note={detail.session.notes}
+      editable
+      draft="Edited note"
+      editing
+      pending={false}
+      onDraftChange={vi.fn()}
+      onEdit={vi.fn()}
+      onSave={onSave}
+      onCancel={onCancel}
+    />));
+    const textarea = container.querySelector<HTMLTextAreaElement>('textarea[aria-label="Reading Session note"]')!;
+    expect(container.querySelector('[aria-label="Save Reading Session note"]')).not.toBeNull();
+    await act(async () => textarea.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })));
     expect(onSave).not.toHaveBeenCalled();
-    textarea.props.onKeyDown({ key: "Enter", ctrlKey: true, preventDefault: vi.fn() });
-    textarea.props.onKeyDown({ key: "Escape", preventDefault: vi.fn() });
+    await act(async () => textarea.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", ctrlKey: true, bubbles: true })));
+    await act(async () => textarea.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
     expect(onSave).toHaveBeenCalledOnce();
     expect(onCancel).toHaveBeenCalledOnce();
   });

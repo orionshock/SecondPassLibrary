@@ -1,4 +1,3 @@
-import type { ReactElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
@@ -44,17 +43,11 @@ describe("OrderMenu", () => {
     expect(markup).toMatch(/role="menuitemradio" aria-checked="true"[^>]*>.*Series A-Z/s);
   });
 
-  it("selects through the consumer handler and uses the close transition", () => {
-    let state = libraryStateFromSearchParams(new URLSearchParams("ordering=series&page=4&q=test"));
-    const onSelect = vi.fn((ordering: LibraryUiOrdering) => {
-      state = withLibraryChange(state, { ordering });
-    });
-    const menu = OrderMenuOptions({ value: "series", options: libraryBookOrderingOptions, ariaLabel: "Sort books", onSelect });
-    const options = (menu as ReactElement<{ children: ReactElement<{ onClick: () => void }>[] }>).props.children;
-    options[3]!.props.onClick();
+  it("resets pagination when the consumer applies a selected ordering", () => {
+    const state = libraryStateFromSearchParams(new URLSearchParams("ordering=series&page=4&q=test"));
+    const changed = withLibraryChange(state, { ordering: "-author" as LibraryUiOrdering });
 
-    expect(onSelect).toHaveBeenCalledWith("-author");
-    expect(state).toMatchObject({ ordering: "-author", page: 1, q: "test" });
+    expect(changed).toMatchObject({ ordering: "-author", page: 1, q: "test" });
     expect(orderMenuReducer(true, "close")).toBe(false);
   });
 

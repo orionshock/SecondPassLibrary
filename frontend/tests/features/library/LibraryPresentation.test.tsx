@@ -1,7 +1,10 @@
-import type { ReactElement } from "react";
+/** @vitest-environment happy-dom */
+
+import { act } from "react";
+import { createRoot } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter } from "react-router";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { CatalogTag, CompactBook, LibraryAuthor, LibrarySeries, Page, ShelfSummary } from "@second-pass/spl-api";
 import { BookCoverEditor } from "../../../src/features/library/bookEdit/BookCoverEditor";
@@ -31,6 +34,16 @@ const book: CompactBook = {
   language: "HIDDEN LANGUAGE", publisher: "Visible Publisher", publishedYear: 1999, publishedMonth: 1, publishedDay: 2,
   publishedDatePrecision: "day", coverUrl: null, fileFormat: "HIDDEN FORMAT",
 };
+
+(globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+
+let root: ReturnType<typeof createRoot> | undefined;
+
+afterEach(async () => {
+  if (root) await act(async () => root?.unmount());
+  root = undefined;
+  document.body.replaceChildren();
+});
 
 function renderList(page?: Page<CompactBook>, options: { loading?: boolean; error?: Error; searching?: boolean; tagged?: boolean } = {}) {
   return renderToStaticMarkup(<MemoryRouter><BookListPageRegion
@@ -196,7 +209,7 @@ describe("Library Books components", () => {
     expect(retainTallestCatalogResultsHeight(640, 780)).toBe(780);
   });
 
-  it("keeps all real axis controls and context-sensitive controls in the stable shell", () => {
+  it("keeps all real axis controls and context-sensitive controls in the stable shell", async () => {
     const onViewChange = vi.fn();
     const axes = renderToStaticMarkup(<LibraryAxesPageRegion activeView="authors" onViewChange={onViewChange} />);
     for (const label of ["Library", "Books", "Authors", "Series"]) expect(axes).toContain(label);
@@ -208,16 +221,20 @@ describe("Library Books components", () => {
     expect(activeTags).toContain("All tags");
     expect(activeTags).toContain('aria-pressed="true"');
 
-    const axisRegion = LibraryAxesPageRegion({ activeView: "books", onViewChange }) as ReactElement<{ children: ReactElement[] }>;
-    const axisBar = axisRegion.props.children[1] as ReactElement<{ children: ReactElement[] }>;
-    const nav = axisBar.props.children[0] as ReactElement<{ children: ReactElement<{ onClick: () => void }>[] }>;
-    nav.props.children[1]!.props.onClick();
+    const container = document.createElement("div");
+    document.body.append(container);
+    root = createRoot(container);
+    await act(async () => root?.render(<LibraryAxesPageRegion activeView="books" onViewChange={onViewChange} />));
+    const authorsButton = Array.from(container.querySelectorAll<HTMLButtonElement>("button"))
+      .find((button) => button.textContent === "Authors")!;
+    await act(async () => authorsButton.click());
     expect(onViewChange).toHaveBeenCalledWith("authors");
 
-    const activeAuthors = LibraryAxesPageRegion({ activeView: "authors", onViewChange }) as ReactElement<{ children: ReactElement[] }>;
-    const activeAxisBar = activeAuthors.props.children[1] as ReactElement<{ children: ReactElement[] }>;
-    const activeNav = activeAxisBar.props.children[0] as ReactElement<{ children: ReactElement<{ onClick: () => void }>[] }>;
-    activeNav.props.children[1]!.props.onClick();
+    await act(async () => root?.render(<LibraryAxesPageRegion activeView="authors" onViewChange={onViewChange} />));
+    const activeAuthorsButton = Array.from(container.querySelectorAll<HTMLButtonElement>("button"))
+      .find((button) => button.textContent === "Authors")!;
+    expect(activeAuthorsButton.getAttribute("aria-pressed")).toBe("true");
+    await act(async () => activeAuthorsButton.click());
     expect(onViewChange).toHaveBeenLastCalledWith("authors");
 
     const managedAuthors = renderToStaticMarkup(<MemoryRouter><LibraryAxesPageRegion activeView="authors" canManageCatalog onViewChange={vi.fn()} /></MemoryRouter>);

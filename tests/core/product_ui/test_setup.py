@@ -65,12 +65,12 @@ class FirstRunProductUiTests(TestCase):
             'name="advanced_library_groups_enabled" checked',
         )
 
-    def test_setup_advanced_groups_modal_warning_and_enable_markup(self):
+    def test_setup_advanced_groups_modal_has_explicit_enable_and_cancel_actions(self):
         response = self.client.get("/setup/")
-        content = response.content.decode("utf-8")
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, 'id="setup-advanced-groups-open"')
+        self.assertContains(response, 'id="setup-advanced-groups-disable"')
         self.assertContains(response, 'id="setup-advanced-groups-dialog"')
         self.assertContains(response, 'class="setup-dialog__actions"')
         self.assertContains(
@@ -83,27 +83,18 @@ class FirstRunProductUiTests(TestCase):
             '<button id="setup-advanced-groups-cancel" class="button button--success-outline" value="cancel">',
             html=False,
         )
-        self.assertContains(
-            response,
-            'dialog.querySelector("#setup-advanced-groups-cancel")?.focus()',
-        )
         self.assertContains(response, 'id="setup-advanced-groups-enabled-status"')
         self.assertContains(
             response,
             "data-advanced-groups-actions",
         )
-        self.assertLess(
-            content.index('value="enable"'),
-            content.index('value="cancel"'),
-        )
 
-    def test_setup_advanced_groups_final_submit_confirmation_markup(self):
+    def test_setup_form_exposes_the_advanced_groups_confirmation_warning(self):
         response = self.client.get("/setup/")
 
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "data-advanced-groups-confirm")
-        self.assertContains(response, "window.confirm")
-        self.assertContains(response, "checkbox.checked")
+        self.assertContains(response, "Turning this off later requires")
 
     def test_setup_submit_with_advanced_groups_off_keeps_feature_disabled(self):
         response = self.client.post("/setup/", self.setup_data, follow=False)
