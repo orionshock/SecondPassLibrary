@@ -83,7 +83,6 @@ class PairingHttpLifecycleTests(ClientApiTestCase):
                     )
                     self.assertEqual(response.status_code, status.HTTP_200_OK)
                     self.assertEqual(response.json(), {"status": expected})
-                    self.assertNotIn("access_token", response.json())
                     self.assertEqual(response["Cache-Control"], "no-store, private")
                     self.assertEqual(response["Pragma"], "no-cache")
 

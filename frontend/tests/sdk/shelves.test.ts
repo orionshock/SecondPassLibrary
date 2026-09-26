@@ -358,8 +358,6 @@ describe("Shelves SDK", () => {
       book: null,
       addedBy: { profileId: "adder", username: "reader" },
     });
-    expect(page.items[1]).not.toHaveProperty("hidden_book_id");
-    expect(page.items[1]).not.toHaveProperty("title");
     expect(calls[1]).toMatchObject({
       path: "/api/v1/shelves/shelf%2Fid/items/item%2Fid/",
       options: { method: "PATCH" },

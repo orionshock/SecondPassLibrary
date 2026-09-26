@@ -254,7 +254,6 @@ class ShelfListEndpointTests(BaseShelvesAPITest):
         shared_rows = response_data_list(shared_response)
         shared_ids = {row["id"] for row in shared_rows}
         self.assertEqual(shared_ids, {str(other_listed.id)})
-        self.assertNotIn(str(other_private.id), shared_ids)
         other_listed_row = next(
             row for row in shared_rows if row["id"] == str(other_listed.id)
         )

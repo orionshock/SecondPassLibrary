@@ -80,7 +80,6 @@ describe("users SDK", () => {
     expect(JSON.parse(String(calls[0]?.init?.body))).toEqual({
       username: "new-reader", email: "new@example.test", first_name: "New", last_name: "Reader", role: "reader",
     });
-    expect(JSON.parse(String(calls[0]?.init?.body))).not.toHaveProperty("is_active");
     expect(result.temporaryPassword).toBe("temporary-secret");
     expect(result.user).toMatchObject({ id: "new-id", isActive: true, mustChangePassword: true });
   });

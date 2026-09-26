@@ -396,9 +396,6 @@ describe("Library SDK", () => {
     const author = (await listAuthors({}, client)).items[0]!;
     const series = (await listSeries({}, client)).items[0]!;
     expect(author).toEqual({ id: "author-1", name: "Ada", sortName: "Ada", biography: "Not for the row", bookCount: 2, previewBooks: [{ id: "book-1", title: "One", coverUrl: null }] });
-    expect(author.previewBooks?.[0]).not.toHaveProperty("extra");
-    expect(author).not.toHaveProperty("normalizedName");
     expect(series).toEqual({ id: "series-1", name: "Saga", sortName: "Saga", summary: "Not for the row", bookCount: 1 });
-    expect(series).not.toHaveProperty("previewBooks");
   });
 });

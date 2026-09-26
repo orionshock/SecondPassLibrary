@@ -131,8 +131,6 @@ describe("Marginalia Session list SDK", () => {
       coverUrl: "/media/covers/book.jpg",
       canOpen: false,
     });
-    expect(page.items[0]?.book).not.toHaveProperty("authors");
-    expect(page.items[0]?.book).not.toHaveProperty("sessionCount");
   });
 
   it("maps both values of the annotation-presence filter and omits it by default", async () => {
