@@ -342,8 +342,11 @@ image build.
 
 The manual `.github/workflows/build-image.yml` workflow builds and smoke-tests
 the selected commit as a development image. Its `publish` input defaults to
-false. When enabled, it publishes only the immutable
-`dev-sha-<full-commit-sha>` tag; it does not create a release or a moving tag.
+false. When enabled, it publishes the immutable `dev-sha-<full-commit-sha>` tag,
+verifies that artifact from the registry, and then moves `dev` to the same
+digest. The `dev` channel therefore identifies the latest successfully built,
+smoke-tested, and published development image. It does not create a release or
+publish `latest`.
 
 Pushing a release tag matching `alpha-rc<integer>` or
 `alpha-rc<integer>.<integer>` starts `.github/workflows/release.yml`. That

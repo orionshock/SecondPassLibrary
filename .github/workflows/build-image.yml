@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       publish:
-        description: Publish the immutable development image to the configured registry.
+        description: Publish the immutable development image and update the dev channel.
         required: true
         default: false
         type: boolean
@@ -45,21 +45,29 @@ jobs:
               echo "Repository variable REGISTRY_IMAGE is required to publish." >&2
               exit 1
             }
-            image="${REGISTRY_IMAGE}:dev-sha-${GITHUB_SHA}"
+            immutable_image="${REGISTRY_IMAGE}:dev-sha-${GITHUB_SHA}"
+            dev_image="${REGISTRY_IMAGE}:dev"
+            build_tags=$(printf '%s\n%s' "$immutable_image" "$dev_image")
           else
-            image="secondpasslibrary:dev-sha-${GITHUB_SHA}"
+            immutable_image="secondpasslibrary:dev-sha-${GITHUB_SHA}"
+            dev_image=""
+            build_tags=$immutable_image
           fi
           {
             echo "version=$version"
             echo "release_date=$release_date"
-            echo "image=$image"
+            echo "immutable_image=$immutable_image"
+            echo "dev_image=$dev_image"
+            echo "build_tags<<EOF"
+            echo "$build_tags"
+            echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
       - name: Build and smoke production image
         uses: ./.github/actions/build-production-image
         with:
-          tags: ${{ steps.metadata.outputs.image }}
-          smoke_image: ${{ steps.metadata.outputs.image }}
+          tags: ${{ steps.metadata.outputs.build_tags }}
+          smoke_image: ${{ steps.metadata.outputs.immutable_image }}
           server_version: ${{ steps.metadata.outputs.version }}
           release_date: ${{ steps.metadata.outputs.release_date }}
 
@@ -88,16 +96,56 @@ jobs:
         if: ${{ inputs.publish }}
         shell: bash
         env:
-          IMAGE: ${{ steps.metadata.outputs.image }}
-        run: docker push "$IMAGE"
+          IMMUTABLE_IMAGE: ${{ steps.metadata.outputs.immutable_image }}
+        run: docker push "$IMMUTABLE_IMAGE"
 
-      - name: Prove published image is independently pullable
+      - name: Verify immutable development artifact from registry
         if: ${{ inputs.publish }}
         shell: bash
         env:
-          IMAGE: ${{ steps.metadata.outputs.image }}
+          IMMUTABLE_IMAGE: ${{ steps.metadata.outputs.immutable_image }}
+          EXPECTED_VERSION: ${{ steps.metadata.outputs.version }}
+          EXPECTED_RELEASE_DATE: ${{ steps.metadata.outputs.release_date }}
         run: |
           set -euo pipefail
-          docker image rm "$IMAGE"
-          docker pull "$IMAGE"
-          docker image inspect --format 'pulled {{index .RepoDigests 0}}' "$IMAGE"
+          docker image rm "$IMMUTABLE_IMAGE"
+          docker pull "$IMMUTABLE_IMAGE"
+          docker run --rm --entrypoint python \
+            --env EXPECTED_VERSION \
+            --env EXPECTED_RELEASE_DATE \
+            "$IMMUTABLE_IMAGE" -c \
+            'import os; from secondpass.version import SERVER_RELEASE_DATE, SERVER_VERSION; assert SERVER_VERSION == os.environ["EXPECTED_VERSION"]; assert SERVER_RELEASE_DATE == os.environ["EXPECTED_RELEASE_DATE"]'
+
+      - name: Publish development channel
+        if: ${{ inputs.publish }}
+        shell: bash
+        env:
+          DEV_IMAGE: ${{ steps.metadata.outputs.dev_image }}
+        run: docker push "$DEV_IMAGE"
+
+      - name: Prove development tags resolve to the same artifact
+        if: ${{ inputs.publish }}
+        shell: bash
+        env:
+          IMMUTABLE_IMAGE: ${{ steps.metadata.outputs.immutable_image }}
+          DEV_IMAGE: ${{ steps.metadata.outputs.dev_image }}
+          EXPECTED_VERSION: ${{ steps.metadata.outputs.version }}
+          EXPECTED_RELEASE_DATE: ${{ steps.metadata.outputs.release_date }}
+        run: |
+          set -euo pipefail
+          immutable_digest=$(docker image inspect --format '{{index .RepoDigests 0}}' "$IMMUTABLE_IMAGE")
+          immutable_digest=${immutable_digest#*@}
+          docker image rm "$IMMUTABLE_IMAGE" "$DEV_IMAGE"
+          docker pull "$DEV_IMAGE"
+          dev_digest=$(docker image inspect --format '{{index .RepoDigests 0}}' "$DEV_IMAGE")
+          dev_digest=${dev_digest#*@}
+          test "$immutable_digest" = "$dev_digest" || {
+            echo "Development tag digest mismatch: immutable=$immutable_digest dev=$dev_digest" >&2
+            exit 1
+          }
+          docker run --rm --entrypoint python \
+            --env EXPECTED_VERSION \
+            --env EXPECTED_RELEASE_DATE \
+            "$DEV_IMAGE" -c \
+            'import os; from secondpass.version import SERVER_RELEASE_DATE, SERVER_VERSION; assert SERVER_VERSION == os.environ["EXPECTED_VERSION"]; assert SERVER_RELEASE_DATE == os.environ["EXPECTED_RELEASE_DATE"]'
+          echo "Verified $IMMUTABLE_IMAGE and $DEV_IMAGE at $dev_digest"
