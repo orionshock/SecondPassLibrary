@@ -312,8 +312,10 @@ environment:
 On Linux, use `.venv/bin/python tools/verify.py`. Select a narrower supported
 lane with `--lane`:
 
-- `fast`: lint, Django checks, non-slow backend tests, Product UI/SDK tests,
-  and static hygiene;
+- `fast`: lint, Django checks, migration consistency, an explicitly owned
+  backend push-confidence sample, complete Product UI/SDK tests with boundary
+  enforcement, and static hygiene. This is the normal push and pull-request
+  lane and is designed to finish in a few minutes;
 - `backend`: the complete Python suite;
 - `backend-coverage`: the complete Python suite with branch coverage under
   `test-results/coverage/python/`;
@@ -402,6 +404,12 @@ are explicit selections; unfiltered pytest still runs every test.
 
 Marker meanings:
 
+- `push`: the deliberately selected backend semantic sample used by `fast`.
+  It covers representative authentication/token, password-policy, authority,
+  API error/shape, immutable identity, canonical visibility, Group fallback,
+  cache publication, maintenance registration, Marginalia lifecycle,
+  and Shelf authorization/model contracts. It is allowlisted so newly added
+  tests cannot silently make normal push feedback unbounded.
 - `security`: owning authentication, authorization, anti-enumeration,
   credential, archive-safety, destructive-operation, and immutable-policy
   boundaries. It is narrower than the complete set of permission assertions.
@@ -411,8 +419,16 @@ Marker meanings:
   temporary directories, static output, or storage cleanup.
 - `integration`: several real application layers whose boundary is not replaced
   by a lower-level test.
-- `slow`: tests measured as expensive or inherently unsuitable for the broad
-  developer lane. Important cheap tests remain in `not slow`.
+- `slow`: tests measured as expensive or inherently unsuitable for normal push
+  feedback. Important coverage remains authoritative in `backend` and `all`.
+
+The `fast` lane intentionally leaves exhaustive matrices and expensive
+families to `backend` and `all`: real concurrency and subprocess scheduling,
+filesystem/archive integration (including hostile-file cases), broad
+multi-layer integration, password-heavy role matrices, and complete
+import/export workflows. Those tests are not optional; they are excluded from
+routine push feedback because their boundary requires the slower execution
+model. Purpose markers continue to make those families directly runnable.
 
 Run the concurrency lane with SQLite resource warnings promoted to errors:
 

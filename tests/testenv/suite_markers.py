@@ -7,6 +7,33 @@ from collections.abc import Iterable
 # scattering organization-only decorators through behavior tests. Prefixes end in
 # '/' and exact files include the .py suffix.
 _PATH_MARKERS: dict[str, tuple[str, ...]] = {
+    # This is an intentionally small semantic sample, not "everything that has
+    # not become slow yet". It keeps normal push feedback bounded while the
+    # complete backend and all lanes remain exhaustive.
+    "push": (
+        "tests/accounts/client_api/test_authentication.py",
+        "tests/accounts/client_api/test_tokens.py",
+        "tests/accounts/passwords/test_must_change_patch.py",
+        "tests/accounts/test_basic_auth_disabled.py",
+        "tests/accounts/test_request_actor.py",
+        "tests/accounts/users/api/test_permissions.py",
+        "tests/accounts/users/api/test_visibility.py",
+        "tests/core/test_api_route_errors.py",
+        "tests/core/test_server_identity_model.py",
+        "tests/core/test_server_info_api.py",
+        "tests/library/test_queries.py",
+        "tests/library/catalog/test_views.py",
+        "tests/library/groups/test_service_public.py",
+        "tests/library/groups/test_service_delete_fallback.py",
+        "tests/library/groups/test_service_cache_invalidation.py",
+        "tests/maintenance/test_registry.py",
+        "tests/marginalia/test_foundation.py",
+        "tests/marginalia/sessions/test_open_api.py",
+        "tests/shelves/test_model_invariants.py",
+        "tests/shelves/test_service_authorization.py",
+        "tests/shelves/bearer/test_auth.py",
+        "tests/testenv/test_suite_markers.py",
+    ),
     "security": (
         "tests/accounts/client_api/",
         "tests/accounts/passwords/",
@@ -106,6 +133,7 @@ _PATH_MARKERS: dict[str, tuple[str, ...]] = {
         "tests/marginalia/archives/test_validation.py",
         "tests/marginalia/exports/test_api.py",
         "tests/marginalia/imports/test_apply_api.py",
+        "tests/marginalia/imports/test_checksum_round_trip.py",
         "tests/marginalia/imports/test_preview_api.py",
         "tests/marginalia/imports/test_staging.py",
         "tests/marginalia/imports/test_unmatched_api.py",
@@ -133,6 +161,7 @@ _PATH_MARKERS: dict[str, tuple[str, ...]] = {
         "tests/marginalia/annotations/test_deleted_cleanup.py",
         "tests/marginalia/exports/test_api.py",
         "tests/marginalia/imports/test_apply_api.py",
+        "tests/marginalia/imports/test_checksum_round_trip.py",
         "tests/marginalia/imports/test_preview_api.py",
         "tests/marginalia/imports/test_staging.py",
         "tests/marginalia/imports/test_unmatched_api.py",

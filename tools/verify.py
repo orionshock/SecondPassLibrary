@@ -11,6 +11,9 @@ from python_runtime import require_supported_python
 
 
 REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
+FAST_BACKEND_SELECTION = (
+    "push and not slow and not concurrency and not subprocess and not filesystem"
+)
 
 
 def run(
@@ -111,7 +114,7 @@ def main() -> int:
     run("Migration consistency", [python, "backend/manage.py", "makemigrations", "--check", "--dry-run"], environment=django_environment)
     backend_command = [python, "-m", "pytest", "-q"]
     if lane == "fast":
-        backend_command.extend(["-m", "not slow and not integration and not concurrency and not subprocess"])
+        backend_command.extend(["-m", FAST_BACKEND_SELECTION])
     run("Backend tests", backend_command, environment=test_environment)
     run("Frontend tests" if lane == "fast" else "Frontend verification", [npm, "--prefix", "frontend", "run", "test" if lane == "fast" else "verify"])
     run("Repository hygiene", [python, "tools/static_hygiene.py"])

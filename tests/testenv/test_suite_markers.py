@@ -58,6 +58,26 @@ from tests.testenv.suite_markers import markers_for_test
             "tests/example/test_ordinary.py::OrdinaryTests::test_behavior",
             (),
         ),
+        (
+            "tests/accounts/client_api/test_authentication.py",
+            "tests/accounts/client_api/test_authentication.py::ClientApiAuthenticationTests::test_authenticates",
+            ("push", "security"),
+        ),
+        (
+            "tests/library/test_queries.py",
+            "tests/library/test_queries.py::LibraryVisibilityQueryTests::test_reader_visibility",
+            ("push", "security"),
+        ),
+        (
+            "tests/library/imports/test_epub_archive_safety.py",
+            "tests/library/imports/test_epub_archive_safety.py::EpubArchiveSafetyTests::test_rejects_bomb",
+            ("security", "filesystem"),
+        ),
+        (
+            "tests/marginalia/imports/test_checksum_round_trip.py",
+            "tests/marginalia/imports/test_checksum_round_trip.py::MarginaliaChecksumRoundTripTests::test_round_trip",
+            ("filesystem", "integration"),
+        ),
     ),
 )
 def test_markers_for_test_classifies_representative_paths_and_nodes(
