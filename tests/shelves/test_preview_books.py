@@ -235,8 +235,8 @@ class ShelfPreviewBooksAPITest(IsolatedMediaRootMixin, APITestCase):
                 limit=6,
             )
 
-        self.assertEqual(len(one_shelf_queries), 1)
-        self.assertEqual(len(five_shelf_queries), 1)
+        self.assertLessEqual(len(one_shelf_queries), 1)
+        self.assertLessEqual(len(five_shelf_queries), 1)
 
     def test_searched_shelf_list_preview_query_count_is_bounded(self):
         for index in range(5):

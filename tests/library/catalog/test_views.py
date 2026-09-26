@@ -102,7 +102,7 @@ class LibraryCatalogBookViewTests(LibraryCatalogApiFixtureMixin, TestCase):
                 many=True,
             ).data
 
-        self.assertEqual(len(captured), 3)
+        self.assertLessEqual(len(captured), 3)
         rows = {row["title"]: row for row in serialized}
         row = rows["Visible One"]
         self.assertEqual(

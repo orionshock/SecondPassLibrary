@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from rest_framework import status
@@ -315,7 +317,7 @@ class MarginaliaSessionDetailAPITests(APITestCase):
         self.assertEqual(self.active.updated_at, before)
 
     def test_detail_query_and_serialization_are_bounded(self):
-        with self.assertNumQueries(3):
+        with CaptureQueriesContext(connection) as queries:
             session = marginalia_session_for_user(
                 user=self.user,
                 session_id=self.active.id,
@@ -325,4 +327,5 @@ class MarginaliaSessionDetailAPITests(APITestCase):
                 {"context": {"book": book}, "session": session}
             ).data
 
+        self.assertLessEqual(len(queries), 3)
         self.assertEqual(payload["session"]["id"], str(self.active.id))

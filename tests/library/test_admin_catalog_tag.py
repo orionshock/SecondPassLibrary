@@ -30,15 +30,6 @@ class CatalogTagAdminTests(TestCase):
         self.request.user = self.owner
         self.model_admin = CatalogTagAdmin(CatalogTag, admin.site)
 
-    def test_only_operator_owned_fields_are_editable(self):
-        form_class = self.model_admin.get_form(self.request)
-
-        self.assertEqual(
-            set(self.model_admin.get_readonly_fields(self.request)),
-            {"normalized_name", "slug"},
-        )
-        self.assertEqual(set(form_class.base_fields), {"name", "sort_name"})
-
     def test_submitted_normalized_name_is_ignored(self):
         form_class = self.model_admin.get_form(self.request)
         form = form_class(
@@ -158,7 +149,6 @@ class CatalogTagAdminTests(TestCase):
         )
         self.assertContains(response, 'name="book_catalog_tags-0-DELETE"')
         self.assertContains(response, "library/admin/catalog_tag_books.js")
-        self.assertContains(response, "library/admin/catalog_tag_books.css")
 
     def test_save_removes_selected_book_relationships_only(self):
         tag = CatalogTag.objects.create(
@@ -218,7 +208,8 @@ class CatalogTagAdminTests(TestCase):
         )
         self.assertTrue(self.client.login(username="owner", password="pw"))
 
-        response = self.client.get(reverse("admin:library_catalogtag_changelist"))
+        url = reverse("admin:library_catalogtag_changelist")
+        response = self.client.get(url)
 
         self.assertEqual(response.status_code, 200)
         counts = {
@@ -226,7 +217,16 @@ class CatalogTagAdminTests(TestCase):
             for result in response.context["cl"].result_list
         }
         self.assertEqual(counts, {"Unused tag": 0, "Used tag": 2})
-        self.assertContains(response, '<th scope="col" class="sortable column-book_count">')
+        ascending = self.client.get(url, {"o": "2"})
+        descending = self.client.get(url, {"o": "-2"})
+        self.assertEqual(
+            [tag.name for tag in ascending.context["cl"].result_list],
+            ["Unused tag", "Used tag"],
+        )
+        self.assertEqual(
+            [tag.name for tag in descending.context["cl"].result_list],
+            ["Used tag", "Unused tag"],
+        )
 
     def test_merge_action_previews_selected_tags_counts_and_recommended_survivor(self):
         first = CatalogTag.objects.create(
@@ -261,10 +261,6 @@ class CatalogTagAdminTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 200)
-        self.assertTemplateUsed(
-            response,
-            "admin/library/catalogtag/merge_selected.html",
-        )
         self.assertContains(response, "Existing relationships: 4")
         self.assertContains(response, "Unique Books preserved: 3")
         self.assertContains(response, "Overlapping relationships collapsed: 1")

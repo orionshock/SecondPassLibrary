@@ -217,7 +217,7 @@ class BookAdminLayoutTests(IsolatedMediaRootMixin, TestCase):
                 self.assertEqual(response.status_code, 200)
 
     def test_stored_epub_and_timestamps_are_read_only(self):
-        readonly = set(self.model_admin.get_readonly_fields(self.request, self.book))
+        form = self.model_admin.get_form(self.request, self.book)
 
         self.assertTrue(
             {
@@ -227,7 +227,7 @@ class BookAdminLayoutTests(IsolatedMediaRootMixin, TestCase):
                 "file_size",
                 "created_at",
                 "updated_at",
-            }.issubset(readonly)
+            }.isdisjoint(form.base_fields)
         )
 
     def test_group_assignment_inline_tracks_advanced_groups_setting(self):

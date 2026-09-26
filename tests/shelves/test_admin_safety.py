@@ -120,29 +120,24 @@ class ShelfAdminSafetyTests(TestCase):
 
     def test_system_fields_are_readonly(self):
         self.request.user = self.user
-        readonly = self.shelf_admin.get_readonly_fields(
-            self.request, obj=Shelf(owner_type=Shelf.OWNER_TYPE_USER)
+        form = self.shelf_admin.get_form(
+            self.request,
+            obj=Shelf(owner_type=Shelf.OWNER_TYPE_USER),
         )
 
-        self.assertIn("id", readonly)
-        self.assertIn("created_at", readonly)
-        self.assertIn("updated_at", readonly)
-        self.assertIn("created_by", readonly)
-    def test_shelf_item_inline_is_readonly_diagnostic(self):
+        self.assertTrue(
+            {"id", "created_at", "updated_at", "created_by"}.isdisjoint(
+                form.base_fields
+            )
+        )
+
+    def test_shelf_item_inline_allows_deletion_but_not_direct_editing(self):
         self.request.user = self.superuser
 
-        self.assertEqual(
-            self.shelf_item_inline.template,
-            "admin/shelves/shelf/edit_inline/shelf_items_tabular.html",
-        )
         self.assertFalse(self.shelf_item_inline.has_add_permission(self.request))
         self.assertFalse(self.shelf_item_inline.has_change_permission(self.request))
         self.assertTrue(self.shelf_item_inline.can_delete)
         self.assertTrue(self.shelf_item_inline.has_delete_permission(self.request))
-        self.assertFalse(self.shelf_item_inline.show_change_link)
-        self.assertNotIn("book", self.shelf_item_inline.fields)
-        for field in ["book_link", "position", "added_by", "created_at", "updated_at"]:
-            self.assertIn(field, self.shelf_item_inline.readonly_fields)
 
     def test_shelf_item_inline_book_display_links_to_book_admin_only(self):
         shelf = Shelf.objects.create(

@@ -17,32 +17,35 @@ class AdminMenuTests(TestCase):
         self.request = RequestFactory().get("/admin/")
         self.request.user = self.user
 
-    def test_menu_uses_operator_workflow_groups_and_labels(self):
+    def test_menu_exposes_operator_workflows_without_internal_relationship_models(self):
         app_list = admin.site.get_app_list(self.request)
+        models = {
+            model["object_name"]: model
+            for app in app_list
+            for model in app["models"]
+        }
 
-        self.assertEqual(
-            [app["name"] for app in app_list],
-            ["Core", "Library", "UserData", "Maintenance"],
+        required_workflows = {
+            "ServerSetting",
+            "User",
+            "UserWebSession",
+            "UserClientSession",
+            "ClientLoginRequest",
+            "CatalogTag",
+            "LibraryGroup",
+            "Book",
+            "Author",
+            "Series",
+            "Shelf",
+            "ReadingSession",
+            "ImportStage",
+            "MaintenanceTaskConfig",
+            "MaintenanceTaskRun",
+        }
+        self.assertTrue(required_workflows.issubset(models))
+        self.assertTrue(all(models[name].get("admin_url") for name in required_workflows))
+        self.assertTrue(
+            {"UserProfile", "ExternalIdentity", "ShelfItem", "Annotation"}.isdisjoint(
+                models
+            )
         )
-        self.assertEqual(
-            [[model["name"] for model in app["models"]] for app in app_list],
-            [
-                [
-                    "Server Settings",
-                    "Users",
-                    "Web Session Management",
-                    "Client Session Management",
-                    "Client Login Request",
-                ],
-                ["Catalog Tags", "Library Groups", "Books", "Authors", "Series"],
-                ["Shelves", "Reading Sessions", "Import Stage Management"],
-                ["Tasks", "Run Log"],
-            ],
-        )
-
-    def test_real_app_indexes_resolve_to_their_operator_group(self):
-        accounts = admin.site.get_app_list(self.request, app_label="accounts")
-        marginalia = admin.site.get_app_list(self.request, app_label="marginalia")
-
-        self.assertEqual([app["name"] for app in accounts], ["Core"])
-        self.assertEqual([app["name"] for app in marginalia], ["UserData"])

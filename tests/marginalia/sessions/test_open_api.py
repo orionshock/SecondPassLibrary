@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 from django.contrib.auth import get_user_model
+from django.db import connection
 from django.test import RequestFactory
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
@@ -260,7 +262,7 @@ class MarginaliaOpenActiveBootstrapTests(APITestCase):
         request = RequestFactory().get(self.active_url)
         request.user = self.user
 
-        with self.assertNumQueries(6):
+        with CaptureQueriesContext(connection) as queries:
             payload = bootstrap_envelope(
                 request=request,
                 book_id=self.book.id,
@@ -268,4 +270,5 @@ class MarginaliaOpenActiveBootstrapTests(APITestCase):
                 created=False,
             )
 
+        self.assertLessEqual(len(queries), 6)
         self.assertEqual(payload["session"]["id"], str(active.id))

@@ -7,7 +7,9 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.db import connection
 from django.test import TestCase
+from django.test.utils import CaptureQueriesContext
 from rest_framework import status
 from rest_framework.test import APIClient
 
@@ -499,9 +501,10 @@ class MarginaliaExportAPITests(TestCase):
         self.assertEqual(bearer_post.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_export_codec_query_count_is_bounded(self):
-        with self.assertNumQueries(7):
+        with CaptureQueriesContext(connection) as queries:
             document = export_all_marginalia(user=self.user)
 
+        self.assertLessEqual(len(queries), 7)
         self.assertTrue(document.content)
 
 

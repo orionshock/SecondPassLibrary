@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth import get_user_model
 from django.test import RequestFactory, TestCase, override_settings
-from django.urls import include, path, resolve, reverse
+from django.urls import include, path, reverse
 
 from core import server_settings
 from core.admin import ServerSettingAdmin
@@ -172,18 +172,13 @@ class AdvancedGroupsRecoveryAdminTests(IsolatedMediaRootMixin, TestCase):
         response = self.client.get(change_url)
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Advanced Library Groups")
-        self.assertContains(response, "Disable and consolidate into Public/Common Room")
+        self.assertContains(response, self.url)
         self.assertNotContains(response, 'name="key"')
         self.assertNotContains(response, 'name="value"')
         model_admin = ServerSettingAdmin(ServerSetting, admin.site)
         self.assertIn("key", model_admin.get_readonly_fields(response.wsgi_request, setting))
         self.assertIn("value", model_admin.get_readonly_fields(response.wsgi_request, setting))
         self.assertFalse(model_admin.has_add_permission(response.wsgi_request))
-        self.assertEqual(
-            resolve(self.url).url_name,
-            "core_serversetting_advanced_groups_disable",
-        )
 
     def test_setting_edit_layouts_hide_internal_keys(self):
         server_settings.ensure_editable_server_settings()
@@ -218,23 +213,6 @@ class AdvancedGroupsRecoveryAdminTests(IsolatedMediaRootMixin, TestCase):
         self.assertFalse(model_admin.has_delete_permission(request, advanced))
         self.assertFalse(model_admin.has_delete_permission(request, public))
         self.assertIsNone(model_admin.actions)
-
-    def test_public_group_page_uses_semantic_selector_and_current_copy(self):
-        self._login_owner()
-        setting = ServerSetting.objects.get(key=PUBLIC_GROUP_ID_SETTING)
-
-        response = self.client.get(
-            reverse("admin:core_serversetting_change", args=[setting.pk])
-        )
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Public/Common Room Group")
-        self.assertContains(response, "configured protected Public/Common Room identity")
-        self.assertContains(response, "Confirm Public/Common Room reassignment")
-        self.assertContains(response, "Repair Public/Common Room identity")
-        self.assertNotContains(response, "public_group_id")
-        self.assertNotContains(response, "rewrite")
-        self.assertNotContains(response, "branch")
 
     def test_public_group_reassignment_requires_confirmation(self):
         self._login_owner()

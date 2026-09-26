@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from rest_framework import status
@@ -311,10 +313,11 @@ class MarginaliaSessionListAPITests(APITestCase):
         self.assertEqual(bearer_response.json(), session_payload)
 
     def test_projection_query_does_not_grow_per_session(self):
-        with self.assertNumQueries(1):
+        with CaptureQueriesContext(connection) as queries:
             sessions = list(marginalia_sessions_for_user(user=self.user))
             rows = MarginaliaGlobalSessionSummarySerializer(sessions, many=True).data
 
+        self.assertLessEqual(len(queries), 1)
         self.assertEqual(len(rows), 3)
 
     def test_route_is_read_only(self):

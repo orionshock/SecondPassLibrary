@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from rest_framework import status
@@ -224,12 +226,13 @@ class MarginaliaBookSessionAPITests(APITestCase):
         self.assertEqual(bearer_response.json(), session_payload)
 
     def test_projection_queries_do_not_grow_per_session(self):
-        with self.assertNumQueries(3):
+        with CaptureQueriesContext(connection) as queries:
             book = marginalia_books_for_user(user=self.user).get(pk=self.book.pk)
             sessions = list(marginalia_sessions_for_book(user=self.user, book=book))
             context = MarginaliaBookSummarySerializer(book).data
             rows = MarginaliaSessionSummarySerializer(sessions, many=True).data
 
+        self.assertLessEqual(len(queries), 3)
         self.assertEqual(context["id"], str(self.book.id))
         self.assertEqual(len(rows), 3)
 

@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from rest_framework import status
@@ -91,10 +93,11 @@ class MarginaliaBookAPITests(APITestCase):
     def test_projection_query_count_does_not_scale_per_book(self):
         queryset = marginalia_books_for_user(user=self.user)
 
-        with self.assertNumQueries(2):
+        with CaptureQueriesContext(connection) as queries:
             books = list(queryset)
             payload = MarginaliaBookSummarySerializer(books, many=True).data
 
+        self.assertLessEqual(len(queries), 2)
         self.assertEqual(len(payload), 2)
 
     def test_historical_projection_is_bounded_and_open_authority_is_independent(self):

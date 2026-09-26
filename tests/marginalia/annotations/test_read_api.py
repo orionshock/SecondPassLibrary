@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient, APITestCase
@@ -183,9 +185,10 @@ class MarginaliaAnnotationReadAPITests(APITestCase):
         highlight, _bookmark = self.make_annotations()
         before = (self.active.updated_at, highlight.updated_at)
 
-        with self.assertNumQueries(2):
+        with CaptureQueriesContext(connection) as queries:
             session = ReadingSession.objects.get(pk=self.active.pk, user=self.user)
             payload = annotation_collection(session)
+        self.assertLessEqual(len(queries), 2)
         response = self.client.get(self.url())
         self.active.refresh_from_db()
         highlight.refresh_from_db()

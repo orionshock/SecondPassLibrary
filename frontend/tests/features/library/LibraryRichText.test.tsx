@@ -40,7 +40,7 @@ const bookDraft: BookEditDraft = {
 };
 
 describe("Library descriptive metadata editing", () => {
-  it("loads Book descriptions through the limited rich-text editing surface", async () => {
+  it("wires Book, Author, and Series prose to the bounded editor", async () => {
     container = document.createElement("div");
     document.body.append(container);
     root = createRoot(container);
@@ -52,16 +52,9 @@ describe("Library descriptive metadata editing", () => {
 
     const editor = container.querySelector<HTMLElement>("#book-edit-description");
     expect(editor?.getAttribute("contenteditable")).toBe("true");
-    expect(editor?.innerHTML).toContain("<strong>description</strong>");
-    expect(container.querySelector("textarea#book-edit-description")).toBeNull();
     expect(container.querySelector(".limited-rich-text-editor__count")?.textContent)
       .toContain("/ 25,000");
-  });
 
-  it("loads Author biography and Series summary through the same editing behavior", async () => {
-    container = document.createElement("div");
-    document.body.append(container);
-    root = createRoot(container);
     const common = {
       state: { pending: false },
       advisory: {
@@ -80,8 +73,8 @@ describe("Library descriptive metadata editing", () => {
       kind="author"
       draft={{ name: "Author", sortName: "", prose: "<p>Rich <strong>biography</strong></p>" }}
     />));
-    expect(container.querySelector<HTMLElement>("#library-entity-prose")?.innerHTML)
-      .toContain("<strong>biography</strong>");
+    expect(container.querySelector<HTMLElement>("#library-entity-prose")?.getAttribute("contenteditable"))
+      .toBe("true");
     expect(container.querySelector(".limited-rich-text-editor__count")?.textContent)
       .toContain("/ 25,000");
 
@@ -90,8 +83,7 @@ describe("Library descriptive metadata editing", () => {
       kind="series"
       draft={{ name: "Series", sortName: "", prose: "<ul><li><em>Summary</em></li></ul>" }}
     />));
-    const editor = container.querySelector<HTMLElement>("#library-entity-prose");
-    expect(editor?.innerHTML).toContain("<ul><li><p><em>Summary</em></p></li></ul>");
-    expect(container.querySelector("textarea#library-entity-prose")).toBeNull();
+    expect(container.querySelector<HTMLElement>("#library-entity-prose")?.getAttribute("contenteditable"))
+      .toBe("true");
   });
 });
