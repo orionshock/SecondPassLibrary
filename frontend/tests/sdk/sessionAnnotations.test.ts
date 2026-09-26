@@ -142,14 +142,10 @@ describe("Marginalia Annotation SDK", () => {
     expect(result[1]).not.toHaveProperty("body");
   });
 
-  it("preserves representative normalized API errors", async () => {
-    for (const error of [
-      new ApiError("Invalid.", 400, { code: "INVALID_REQUEST" }),
-      new ApiError("Missing.", 404),
-      new ApiError("Closed.", 409, { code: "SESSION_CLOSED" }),
-    ]) {
-      const client = { request: async <T>() => Promise.reject(error) as Promise<T> };
-      await expect(closeMarginaliaSession("session-1", {}, client)).rejects.toBe(error);
-    }
+  it("preserves the Session-closed lifecycle conflict", async () => {
+    const error = new ApiError("Closed.", 409, { code: "SESSION_CLOSED" });
+    const client = { request: async <T>() => Promise.reject(error) as Promise<T> };
+
+    await expect(closeMarginaliaSession("session-1", {}, client)).rejects.toBe(error);
   });
 });

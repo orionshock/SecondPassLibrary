@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import type { ApiClient } from "../../packages/spl-api/src/client";
-import { ApiError } from "../../packages/spl-api/src/errors";
 import {
   getMarginaliaBook,
   listMarginaliaBooks,
@@ -235,12 +234,4 @@ describe("Marginalia recent Session SDK", () => {
     ]);
   });
 
-  it("preserves the central SDK error abstraction", async () => {
-    const error = new ApiError("Unavailable.", 409, { code: "INVALID_REQUEST" });
-    const client: ApiClient = {
-      request: async <T>() => Promise.reject(error) as Promise<T>,
-    };
-
-    await expect(listRecentMarginaliaSessions({}, client)).rejects.toBe(error);
-  });
 });

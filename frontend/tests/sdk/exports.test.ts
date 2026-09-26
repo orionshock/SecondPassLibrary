@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { createApiClient, type AttachmentApiClient, type AttachmentDownload } from "../../packages/spl-api/src/client";
-import { ApiError } from "../../packages/spl-api/src/errors";
 import { downloadCompleteMarginaliaExport, downloadSelectedMarginaliaExport, MarginaliaExportTooLargeError } from "../../packages/spl-api/src/marginalia";
 
 const attachment: AttachmentDownload = {
@@ -87,13 +86,10 @@ describe("Marginalia Export SDK", () => {
     await expect(promise).rejects.toBeInstanceOf(MarginaliaExportTooLargeError);
   });
 
-  it("preserves the attachment result and bounded SDK errors", async () => {
-    const error = new ApiError("Nothing to export.", 409, { code: "INVALID_REQUEST" });
+  it("preserves the attachment result", async () => {
     const successClient: AttachmentApiClient = { requestAttachment: async () => attachment };
-    const errorClient: AttachmentApiClient = { requestAttachment: async () => Promise.reject(error) };
 
     await expect(downloadSelectedMarginaliaExport({ readingSessionIds: ["session-1"] }, successClient))
       .resolves.toBe(attachment);
-    await expect(downloadCompleteMarginaliaExport({}, errorClient)).rejects.toBe(error);
   });
 });

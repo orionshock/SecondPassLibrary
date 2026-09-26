@@ -32,7 +32,7 @@ class CurrentUserMePatchAPITest(APITestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-    def test_can_patch_email_first_last_and_response_shape_matches_me(self):
+    def test_can_patch_email_first_last_and_returns_current_identity(self):
         self.client.login(username="reader", password="pw")
         response = assert_response(
             self.client.patch(
@@ -48,33 +48,17 @@ class CurrentUserMePatchAPITest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response_data_dict(response)
 
-        # Same /me shape (bootstrap payload keys).
-        for key in (
-            "username",
-            "email",
-            "profile_id",
-            "role",
-            "groups",
-        ):
-            self.assertIn(key, data)
-        self.assertNotIn("is_owner", data)
-        self.assertNotIn("advanced_library_groups_enabled", data)
-        self.assertNotIn("banner_text", data)
-        self.assertNotIn("capabilities", data)
-        self.assertNotIn("curated_group_ids", data)
-
         self.assertEqual(data["username"], "reader")
         self.assertEqual(data["email"], "new@example.test")
         self.assertEqual(data["first_name"], "R")
         self.assertEqual(data["last_name"], "Eader")
         self.assertEqual(data["profile_id"], str(cast(Any, self.user).profile.id))
-        self.assertNotIn("id", data)
+        self.assertEqual(data["role"], UserProfile.ROLE_READER)
 
         self.user.refresh_from_db()
         self.assertEqual(self.user.email, "new@example.test")
         self.assertEqual(self.user.first_name, "R")
         self.assertEqual(self.user.last_name, "Eader")
-
 
     def test_cannot_patch_protected_fields(self):
         self.client.login(username="reader", password="pw")

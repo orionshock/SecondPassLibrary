@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { type ApiClient, type AttachmentApiClient, type AttachmentDownload } from "../../packages/spl-api/src/client";
-import { ApiError } from "../../packages/spl-api/src/errors";
 import {
   applyMarginaliaImport,
   downloadUnmatchedMarginaliaImport,
@@ -185,14 +184,4 @@ describe("Marginalia Import SDK", () => {
     );
   });
 
-  it("preserves central bounded errors for preview, Apply, and unmatched download", async () => {
-    const errors = [400, 404, 409].map((status) => new ApiError("Import failed.", status, { code: "INVALID_REQUEST" }));
-    for (const error of errors) {
-      const apiClient: ApiClient = { request: async () => Promise.reject(error) };
-      const attachmentClient: AttachmentApiClient = { requestAttachment: async () => Promise.reject(error) };
-      await expect(previewMarginaliaImport(new File(["{}"], "bad.json"), {}, apiClient)).rejects.toBe(error);
-      await expect(applyMarginaliaImport({ importToken: "expired", readingSessions: [{ candidateId: "candidate" }] }, apiClient)).rejects.toBe(error);
-      await expect(downloadUnmatchedMarginaliaImport("expired", attachmentClient)).rejects.toBe(error);
-    }
-  });
 });

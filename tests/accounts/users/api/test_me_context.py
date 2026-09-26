@@ -17,86 +17,57 @@ User = get_user_model()
 
 
 class ManagedUsersMeContextAPITest(ManagedUsersApiTestMixin):
-    def test_me_endpoint_still_works(self):
+    def test_reader_me_payload_is_exact_and_excludes_server_authority_context(self):
+        server_settings.set_server_banner_message("Maintenance tonight.")
+        server_settings.enable_advanced_library_groups()
         self.client.login(username="reader", password="pw")
         response = assert_response(self.client.get("/api/v1/accounts/me/"))
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         data = response_data_dict(response)
+        self.assertEqual(
+            set(data),
+            {
+                "username",
+                "email",
+                "first_name",
+                "last_name",
+                "profile_id",
+                "role",
+                "groups",
+            },
+        )
         self.assertEqual(data["username"], "reader")
+        self.assertEqual(data["email"], "reader@example.com")
         self.assertEqual(
             data["profile_id"], str(UserProfile.objects.get(user=self.reader).id)
         )
         self.assertEqual(data["role"], UserProfile.ROLE_READER)
-        self.assertNotIn("is_owner", data)
-        self.assertNotIn("must_change_password", data)
-        self.assertNotIn("advanced_library_groups_enabled", data)
-        self.assertNotIn("can_access_django_admin", data)
-        self.assertNotIn("banner_text", data)
-        self.assertNotIn("id", data)
-        self.assertNotIn("capabilities", data)
+        self.assertEqual(
+            payload_list(data, "groups"),
+            [
+                {
+                    "id": str(self.public.id),
+                    "name": self.public.name,
+                    "is_public_group": True,
+                }
+            ],
+        )
 
-        groups = payload_list(data, "groups")
-        self.assertGreaterEqual(len(groups), 1)
-        public_groups = [g for g in groups if g["is_public_group"]]
-        self.assertEqual(len(public_groups), 1)
-        self.assertTrue(public_groups[0]["is_public_group"])
-        self.assertNotIn("is_curator", public_groups[0])
-        self.assertNotIn("membership_role", public_groups[0])
-        self.assertNotIn("curated_group_ids", data)
-
-    def test_me_excludes_server_context(self):
-        server_settings.set_server_banner_message("Maintenance tonight.")
-
-        self.client.login(username="reader", password="pw")
-        response = assert_response(self.client.get("/api/v1/accounts/me/"))
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = response_data_dict(response)
-        for key in (
-            "username",
-            "email",
-            "first_name",
-            "last_name",
-            "profile_id",
-            "role",
-            "groups",
-        ):
-            self.assertIn(key, data)
-        self.assertNotIn("must_change_password", data)
-        self.assertNotIn("is_owner", data)
-        self.assertNotIn("advanced_library_groups_enabled", data)
-        self.assertNotIn("banner_text", data)
-        self.assertNotIn("capabilities", data)
-        self.assertNotIn("routes", data)
-        self.assertNotIn("route_manifest", data)
-
-    def test_me_excludes_advanced_group_mode_when_enabled(self):
-        server_settings.enable_advanced_library_groups()
-
-        self.client.login(username="reader", password="pw")
-        response = assert_response(self.client.get("/api/v1/accounts/me/"))
-
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = response_data_dict(response)
-        self.assertNotIn("advanced_library_groups_enabled", data)
-
-    def test_me_manager_payload_uses_role_without_capabilities(self):
-        self.client.login(username="manager", password="pw")
-        response = assert_response(self.client.get("/api/v1/accounts/me/"))
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = response_data_dict(response)
-        self.assertNotIn("is_owner", data)
-        self.assertEqual(data["role"], UserProfile.ROLE_MANAGER)
-        self.assertNotIn("capabilities", data)
-
-    def test_me_owner_payload_uses_owner_flag_without_capabilities(self):
-        self.client.login(username="owner", password="pw")
-        response = assert_response(self.client.get("/api/v1/accounts/me/"))
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = response_data_dict(response)
-        self.assertTrue(data["is_owner"])
-        self.assertNotIn("can_access_django_admin", data)
-        self.assertNotIn("capabilities", data)
+    def test_me_role_and_owner_deltas(self):
+        cases = (
+            ("manager", UserProfile.ROLE_MANAGER, False),
+            ("owner", UserProfile.ROLE_READER, True),
+        )
+        for username, expected_role, expected_owner in cases:
+            with self.subTest(username=username):
+                self.client.logout()
+                self.client.login(username=username, password="pw")
+                response = assert_response(self.client.get("/api/v1/accounts/me/"))
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                data = response_data_dict(response)
+                self.assertEqual(data["role"], expected_role)
+                self.assertEqual(data.get("is_owner", False), expected_owner)
 
     def test_me_allows_multiple_owner_flags(self):
         User.objects.create_superuser(
@@ -144,29 +115,23 @@ class ManagedUsersMeContextAPITest(ManagedUsersApiTestMixin):
 
         self.assertTrue(data["must_change_password"])
 
-    @override_settings(SECOND_PASS_ENABLE_DJANGO_ADMIN=True)
-    def test_me_owner_includes_django_admin_capability_when_enabled(self):
-        self.client.login(username="owner", password="pw")
-        data = response_data_dict(
-            assert_response(self.client.get("/api/v1/accounts/me/"))
+    def test_me_django_admin_capability_matrix(self):
+        cases = (
+            ("owner", True, True),
+            ("owner", False, False),
+            ("manager", True, False),
         )
-
-        self.assertTrue(data["can_access_django_admin"])
-
-    @override_settings(SECOND_PASS_ENABLE_DJANGO_ADMIN=False)
-    def test_me_owner_omits_django_admin_capability_when_disabled(self):
-        self.client.login(username="owner", password="pw")
-        data = response_data_dict(
-            assert_response(self.client.get("/api/v1/accounts/me/"))
-        )
-
-        self.assertNotIn("can_access_django_admin", data)
-
-    @override_settings(SECOND_PASS_ENABLE_DJANGO_ADMIN=True)
-    def test_me_non_owner_omits_django_admin_capability_when_enabled(self):
-        self.client.login(username="manager", password="pw")
-        data = response_data_dict(
-            assert_response(self.client.get("/api/v1/accounts/me/"))
-        )
-
-        self.assertNotIn("can_access_django_admin", data)
+        for username, admin_enabled, expected_capability in cases:
+            with self.subTest(username=username, admin_enabled=admin_enabled):
+                self.client.logout()
+                with override_settings(
+                    SECOND_PASS_ENABLE_DJANGO_ADMIN=admin_enabled
+                ):
+                    self.client.login(username=username, password="pw")
+                    data = response_data_dict(
+                        assert_response(self.client.get("/api/v1/accounts/me/"))
+                    )
+                self.assertEqual(
+                    data.get("can_access_django_admin", False),
+                    expected_capability,
+                )

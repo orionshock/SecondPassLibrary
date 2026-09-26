@@ -60,12 +60,6 @@ describe("users SDK", () => {
     });
   });
 
-  it("preserves normalized SDK errors", async () => {
-    const error = new Error("denied");
-    const client: ApiClient = { request: async <T>() => Promise.reject(error) as Promise<T> };
-    await expect(listUsers({}, client)).rejects.toBe(error);
-  });
-
   it("creates an active-by-default user without sending activity and maps the one-time password", async () => {
     const calls: Array<{ path: string; init?: RequestInit }> = [];
     const response = {

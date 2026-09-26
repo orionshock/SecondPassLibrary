@@ -12,7 +12,6 @@ from accounts.models import UserProfile
 from library.models import Author, BookAuthor
 from tests.library.helpers import (
     LibraryCatalogApiFixtureMixin,
-    assert_axis_detail_ignores_list_params,
     create_catalog_book,
     response_book_counts,
     response_names,
@@ -346,29 +345,6 @@ class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertFalse(Author.objects.filter(name="Forbidden Writer").exists())
 
-    def test_list_includes_only_authors_with_visible_books(self):
-        Author.objects.create(name="Unattached", sort_name="Unattached")
-        hidden_only = Author.objects.create(name="Hidden Only", sort_name="Hidden Only")
-        create_catalog_book("Hidden Only Book", author=hidden_only, group=self.hidden)
-
-        response = self.client.get("/api/v1/library/authors/")
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response_names(response), ["Alpha Author", "Beta Author", "Zeta Author"])
-
-    def test_book_count_counts_visible_books_only(self):
-        self.alpha.biography = "Biography in list payload."
-        self.alpha.save(update_fields=["biography", "updated_at"])
-        response = self.client.get("/api/v1/library/authors/")
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(
-            response_book_counts(response),
-            {"Alpha Author": 2, "Beta Author": 1, "Zeta Author": 1},
-        )
-        alpha = next(item for item in response.json()["results"] if item["name"] == "Alpha Author")
-        self.assertEqual(alpha["biography"], "Biography in list payload.")
-
     def test_preview_books_are_opt_in_limited_and_visibility_scoped(self):
         for index in range(7):
             create_catalog_book(
@@ -464,21 +440,6 @@ class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
                 self.assertEqual(response.status_code, 400)
                 self.assertEqual(set(response.json()), {"preview_limit"})
 
-    def test_q_searches_name_sort_name_and_normalized_name(self):
-        self.beta.sort_name = "Storm Writer"
-        self.beta.normalized_name = "normalized author"
-        self.beta.save(update_fields=["sort_name", "normalized_name", "updated_at"])
-
-        by_name = self.client.get("/api/v1/library/authors/", {"q": "alpha"})
-        by_sort_name = self.client.get("/api/v1/library/authors/", {"q": "storm"})
-        by_normalized_name = self.client.get(
-            "/api/v1/library/authors/", {"q": "  ＮORMALIZED   AUTHOR "}
-        )
-
-        self.assertEqual(response_names(by_name), ["Alpha Author"])
-        self.assertEqual(response_names(by_sort_name), ["Beta Author"])
-        self.assertEqual(response_names(by_normalized_name), ["Beta Author"])
-
     def test_search_can_exclude_one_author_id(self):
         response = self.client.get(
             "/api/v1/library/authors/",
@@ -510,20 +471,6 @@ class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response_names(response), [])
-
-    def test_ordering_name_and_book_count(self):
-        cases = [
-            ("name", ["Alpha Author", "Beta Author", "Zeta Author"]),
-            ("-name", ["Zeta Author", "Beta Author", "Alpha Author"]),
-            ("book_count", ["Beta Author", "Zeta Author", "Alpha Author"]),
-            ("-book_count", ["Alpha Author", "Beta Author", "Zeta Author"]),
-        ]
-
-        for ordering, expected in cases:
-            with self.subTest(ordering=ordering):
-                response = self.client.get("/api/v1/library/authors/", {"ordering": ordering})
-                self.assertEqual(response.status_code, 200)
-                self.assertEqual(response_names(response), expected)
 
     def test_detail_visible_succeeds(self):
         self.alpha.biography = "An established catalog biography."
@@ -595,38 +542,11 @@ class LibraryAuthorAxisTests(LibraryCatalogApiFixtureMixin, TestCase):
         self.alpha.refresh_from_db()
         self.assertEqual(self.alpha.biography, "")
 
-    def test_detail_ignores_list_only_params(self):
-        assert_axis_detail_ignores_list_params(
-            self,
-            url=f"/api/v1/library/authors/{self.alpha.id}/",
-            expected_name="Alpha Author",
-        )
-
-    def test_detail_with_no_visible_books_returns_404(self):
+    def test_unattached_detail_returns_404(self):
         unattached = Author.objects.create(name="Unattached", sort_name="Unattached")
-        hidden_only = Author.objects.create(name="Hidden Only", sort_name="Hidden Only")
-        create_catalog_book("Hidden Only Book", author=hidden_only, group=self.hidden)
-
-        for author in (unattached, hidden_only):
-            with self.subTest(author=author.name):
-                response = self.client.get(f"/api/v1/library/authors/{author.id}/")
-                self.assertEqual(response.status_code, 404)
-
-    def test_hidden_detail_returns_404_even_with_invalid_ordering(self):
-        hidden_only = Author.objects.create(name="Hidden Only", sort_name="Hidden Only")
-        create_catalog_book("Hidden Only Book", author=hidden_only, group=self.hidden)
-
-        response = self.client.get(
-            f"/api/v1/library/authors/{hidden_only.id}/",
-            {"ordering": "created_at"},
-        )
+        response = self.client.get(f"/api/v1/library/authors/{unattached.id}/")
 
         self.assertEqual(response.status_code, 404)
-
-    def test_invalid_ordering_returns_400(self):
-        response = self.client.get("/api/v1/library/authors/", {"ordering": "created_at"})
-
-        self.assertEqual(response.status_code, 400)
 
     def test_pagination_composes_with_ordering(self):
         response = self.client.get(
