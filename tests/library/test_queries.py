@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import AnonymousUser
 from django.core.cache import cache
 from django.test import TestCase
 
@@ -64,6 +65,20 @@ class LibraryVisibilityQueryTests(TestCase):
             "Hidden Book",
             queryset_titles(visible_books_for_user(self.reader, cached=False)),
         )
+
+    def test_anonymous_and_reader_without_memberships_see_no_books(self):
+        LibraryGroupMembership.objects.filter(user=self.other).delete()
+
+        for caller_name, caller in (
+            ("anonymous", AnonymousUser()),
+            ("reader-without-groups", self.other),
+        ):
+            for cached in (False, True):
+                with self.subTest(caller=caller_name, cached=cached):
+                    self.assertEqual(
+                        queryset_titles(visible_books_for_user(caller, cached=cached)),
+                        [],
+                    )
 
     def test_manager_librarian_and_owner_have_broad_access(self):
         expected = ["Club Book", "Hidden Book", "Multi Book", "Public Book"]

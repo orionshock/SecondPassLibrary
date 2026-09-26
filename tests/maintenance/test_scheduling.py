@@ -1,8 +1,11 @@
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
+from threading import Barrier
+from unittest import skipUnless
 from unittest.mock import patch
 
-from django.db import IntegrityError
-from django.test import TestCase
+from django.db import IntegrityError, OperationalError, connection
+from django.test import TestCase, TransactionTestCase
 from django.utils import timezone
 
 from maintenance.models import (
@@ -11,6 +14,7 @@ from maintenance.models import (
     MaintenanceTaskRun,
 )
 from maintenance.services import dispatch_due_tasks
+from tests.testenv.database_connections import orm_worker_connection_scope
 
 
 class MaintenanceSchedulingTests(TestCase):
@@ -166,3 +170,78 @@ class MaintenanceSchedulingTests(TestCase):
         self.assertFalse(MaintenanceTaskRun.objects.filter(pk=expired.pk).exists())
         self.assertTrue(MaintenanceTaskRun.objects.filter(pk=retained.pk).exists())
         self.assertTrue(MaintenanceTaskRun.objects.filter(pk=active.pk).exists())
+
+
+@skipUnless(connection.vendor == "sqlite", "SQLite concurrency regression")
+class MaintenanceDispatchConcurrencyTests(TransactionTestCase):
+    def test_concurrent_dispatchers_converge_on_one_active_run(self):
+        now = timezone.now()
+        configuration = MaintenanceTaskConfig.objects.get(
+            task_key="cleanup_client_pairing_requests"
+        )
+        MaintenanceTaskConfig.objects.exclude(pk=configuration.pk).update(
+            enabled=False,
+            next_due_at=None,
+        )
+        MaintenanceTaskConfig.objects.filter(pk=configuration.pk).update(
+            enabled=True,
+            frequency=MaintenanceFrequency.HOURLY,
+            next_due_at=now - timedelta(minutes=1),
+        )
+        barrier = Barrier(2)
+
+        def dispatch_with_contested_read() -> int | str:
+            with orm_worker_connection_scope():
+                matching_reads = 0
+
+                def synchronize_after_configuration_read(
+                    execute, sql, params, many, context
+                ):
+                    nonlocal matching_reads
+                    result = execute(sql, params, many, context)
+                    if (
+                        sql.lstrip().upper().startswith("SELECT")
+                        and MaintenanceTaskConfig._meta.db_table in sql
+                    ):
+                        matching_reads += 1
+                        if matching_reads == 2:
+                            barrier.wait(timeout=5)
+                    return result
+
+                with connection.execute_wrapper(synchronize_after_configuration_read):
+                    try:
+                        return dispatch_due_tasks(now=now)
+                    except OperationalError as exc:
+                        if "locked" not in str(exc).lower():
+                            raise
+                        return "retryable-lock"
+
+        with (
+            patch("maintenance.services.enqueue_run") as enqueue,
+            ThreadPoolExecutor(max_workers=2) as executor,
+        ):
+            futures = [executor.submit(dispatch_with_contested_read) for _ in range(2)]
+            outcomes = [future.result() for future in futures]
+
+            self.assertIn("retryable-lock", outcomes)
+            self.assertLessEqual(
+                MaintenanceTaskRun.objects.filter(
+                    task_key=configuration.task_key,
+                    status__in=(
+                        MaintenanceTaskRun.Status.QUEUED,
+                        MaintenanceTaskRun.Status.RUNNING,
+                    ),
+                ).count(),
+                1,
+            )
+
+            for outcome in outcomes:
+                if outcome == "retryable-lock":
+                    dispatch_due_tasks(now=now)
+
+        run = MaintenanceTaskRun.objects.get(task_key=configuration.task_key)
+        self.assertEqual(run.status, MaintenanceTaskRun.Status.QUEUED)
+        enqueue.assert_called_once_with(run.pk)
+        configuration.refresh_from_db()
+        self.assertEqual(configuration.last_dispatched_at, now)
+        self.assertEqual(configuration.next_due_at, now + timedelta(hours=1))

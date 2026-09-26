@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import multiprocessing
 import uuid
 from io import StringIO
+from pathlib import Path
+from tempfile import TemporaryDirectory
+from time import sleep
 from unittest.mock import patch
 
 from django.core.cache import cache
 from django.core.management import call_command
-from django.test import TestCase, TransactionTestCase, override_settings
+from django.test import SimpleTestCase, TestCase, TransactionTestCase, override_settings
 
 from core import server_settings
 from core.checks import second_pass_reader_web_client_url_check
@@ -40,6 +44,16 @@ from library.groups.public_group import (
     get_public_group,
     is_public_group,
 )
+from tests.core.server_settings_worker import run_server_settings_worker
+
+
+def _worker_result(pipe):
+    if not pipe.poll(10):
+        raise AssertionError("Server-settings worker did not respond")
+    status, result = pipe.recv()
+    if status == "error":
+        raise AssertionError(result)
+    return result
 
 
 class ServerSettingsServiceTests(TestCase):
@@ -467,3 +481,64 @@ class ServerSettingsFreshnessTests(TransactionTestCase):
             get_marginalia_active_session_tombstone_retention_days(),
             2,
         )
+
+
+class ServerSettingsCrossWorkerFreshnessTests(SimpleTestCase):
+    def test_commits_become_visible_after_cache_expiry_and_rollbacks_do_not_publish(self):
+        process_context = multiprocessing.get_context("spawn")
+        cache_seconds = 0.2
+
+        with TemporaryDirectory() as temp_dir:
+            database_path = str(Path(temp_dir) / "server-settings.sqlite3")
+            writer_pipe, writer_child_pipe = process_context.Pipe()
+            reader_pipe, reader_child_pipe = process_context.Pipe()
+            writer = process_context.Process(
+                target=run_server_settings_worker,
+                args=(database_path, writer_child_pipe, cache_seconds),
+            )
+            reader = process_context.Process(
+                target=run_server_settings_worker,
+                args=(database_path, reader_child_pipe, cache_seconds),
+            )
+            writer.start()
+            try:
+                writer_pipe.send(("bootstrap", None))
+                self.assertIsNone(_worker_result(writer_pipe))
+                reader.start()
+
+                writer_pipe.send(("set", "Original"))
+                self.assertIsNone(_worker_result(writer_pipe))
+                reader_pipe.send(("get", None))
+                self.assertEqual(_worker_result(reader_pipe), "Original")
+
+                writer_pipe.send(("set", "Committed"))
+                self.assertIsNone(_worker_result(writer_pipe))
+                reader_pipe.send(("get", None))
+                self.assertEqual(_worker_result(reader_pipe), "Original")
+
+                sleep(cache_seconds * 2)
+                reader_pipe.send(("get", None))
+                self.assertEqual(_worker_result(reader_pipe), "Committed")
+
+                writer_pipe.send(("get", None))
+                self.assertEqual(_worker_result(writer_pipe), "Committed")
+                writer_pipe.send(("rollback", "Rolled back"))
+                self.assertEqual(_worker_result(writer_pipe), "Committed")
+
+                sleep(cache_seconds * 2)
+                reader_pipe.send(("get", None))
+                self.assertEqual(_worker_result(reader_pipe), "Committed")
+            finally:
+                for pipe, process in (
+                    (reader_pipe, reader),
+                    (writer_pipe, writer),
+                ):
+                    if process.pid is None:
+                        continue
+                    if process.is_alive():
+                        pipe.send(("close", None))
+                        _worker_result(pipe)
+                    process.join(timeout=10)
+                    if process.is_alive():
+                        process.terminate()
+                        process.join(timeout=10)
