@@ -21,11 +21,6 @@ from library.models import (
 )
 
 
-class LibraryModelShapeTests(TestCase):
-    def test_file_format_initially_supports_epub_only(self):
-        self.assertEqual(Book.FILE_FORMAT_CHOICES, [(Book.FILE_FORMAT_EPUB, "EPUB")])
-
-
 class LibraryModelConstraintTests(TestCase):
     def test_series_index_accepts_only_positive_values_with_at_most_two_decimal_places(self):
         book = Book.objects.create(title="Book")

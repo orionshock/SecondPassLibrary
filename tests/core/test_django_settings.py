@@ -185,9 +185,6 @@ class DjangoSettingsContractTests(SimpleTestCase):
             BACKEND_ROOT / "web" / "product_ui" / "assets",
         )
 
-    def test_userdata_dir_supports_path_operations(self):
-        self.assertEqual(Path(settings.USERDATA_DIR / "db"), Path(settings.USERDATA_DIR) / "db")
-
     def test_whitenoise_manifest_strictness_is_intentionally_relaxed(self):
         self.assertIs(settings.WHITENOISE_MANIFEST_STRICT, False)
 

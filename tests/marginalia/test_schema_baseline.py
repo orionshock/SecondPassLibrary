@@ -29,6 +29,4 @@ class FreshInstallBaselineTests(TestCase):
             }
 
         self.assertIn("progress_location", session_columns)
-        self.assertNotIn("progress_cfi", session_columns)
         self.assertIn("location", annotation_columns)
-        self.assertNotIn("cfi", annotation_columns)

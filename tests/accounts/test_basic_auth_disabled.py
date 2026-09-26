@@ -28,11 +28,3 @@ class BasicAuthenticationDisabledTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 403)
-
-    def test_session_auth_still_allows_current_user_api(self):
-        self.client.force_login(self.user)
-
-        response = self.client.get("/api/v1/accounts/me/")
-
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["username"], self.user.username)

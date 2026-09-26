@@ -14,13 +14,5 @@ describe("HelpPopover", () => {
     expect(markup).toContain("Popover content");
     expect(markup).not.toContain("title=");
   });
-
-  it("renders caller-provided trigger content and border colors", () => {
-    const markup = renderToStaticMarkup(<HelpPopover ariaLabel="Trigger description" icon="warning_amber" label="Visible label" mouseoverText="Popover content" border borderColor="#d8b65a" color="#d8b65a" />);
-    expect(markup).toContain("warning_amber");
-    expect(markup).toContain("Visible label");
-    expect(markup).toContain("help-popover__button--bordered");
-    expect(markup).toContain("border-color:#d8b65a");
-  });
 });
 

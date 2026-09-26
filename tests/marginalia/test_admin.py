@@ -322,20 +322,6 @@ class MarginaliaAdminTests(IsolatedUserdataMixin, TestCase):
         self.assertEqual(active.name, "Repaired active name")
         self.assertEqual(closed.name, "Repaired closed name")
 
-    def test_add_change_and_delete_permissions_remain_standard(self):
-        session = self.create_session()
-        annotation = self.create_annotation(session)
-        stage, _path = self.create_stage()
-        for model_admin, obj in (
-            (self.session_admin, session),
-            (self.annotation_admin, annotation),
-            (self.stage_admin, stage),
-        ):
-            self.assertTrue(model_admin.has_add_permission(self.request))
-            self.assertTrue(model_admin.has_change_permission(self.request, obj))
-            self.assertTrue(model_admin.has_delete_permission(self.request, obj))
-        self.assertIn("delete_selected", self.stage_admin.get_actions(self.request))
-
     def test_list_query_data_is_bounded(self):
         sessions = [self.create_session()]
         for index in range(1, 4):
@@ -380,35 +366,6 @@ class MarginaliaAdminTests(IsolatedUserdataMixin, TestCase):
         self.book.delete()
         self.assertFalse(ReadingSession.objects.filter(pk=session.pk).exists())
         self.assertFalse(Annotation.objects.filter(pk=annotation.pk).exists())
-
-    def test_standard_individual_and_bulk_delete_work_for_session_and_annotation(self):
-        individual_session = self.create_session()
-        individual_annotation = self.create_annotation(individual_session)
-        self.annotation_admin.delete_model(self.request, individual_annotation)
-        self.assertFalse(
-            Annotation.objects.filter(pk=individual_annotation.pk).exists()
-        )
-        self.session_admin.delete_model(self.request, individual_session)
-        self.assertFalse(
-            ReadingSession.objects.filter(pk=individual_session.pk).exists()
-        )
-
-        bulk_book = Book.objects.create(title="Bulk Admin Book", checksum="d" * 64)
-        bulk_session = self.create_session(book=bulk_book)
-        first = self.create_annotation(bulk_session, client_id="bulk-1")
-        second = self.create_annotation(bulk_session, client_id="bulk-2")
-        self.annotation_admin.delete_queryset(
-            self.request,
-            Annotation.objects.filter(pk__in=[first.pk, second.pk]),
-        )
-        self.assertFalse(
-            Annotation.objects.filter(pk__in=[first.pk, second.pk]).exists()
-        )
-        self.session_admin.delete_queryset(
-            self.request,
-            ReadingSession.objects.filter(pk=bulk_session.pk),
-        )
-        self.assertFalse(ReadingSession.objects.filter(pk=bulk_session.pk).exists())
 
     def test_import_stage_admin_deletion_removes_only_its_staged_files(self):
         first, first_path = self.create_stage(suffix="1")

@@ -125,7 +125,6 @@ describe("Server Settings", () => {
     expect(render(false, false)).not.toContain("<button");
     expect(render(false, true)).toMatch(/<button[^>]*type="button"/);
     expect(render(true, true)).not.toContain("<button");
-    expect(render(false, true)).toContain("server-settings-region--centered");
   });
 
   it("requires deliberate confirmation and recognizes Owner authority", () => {

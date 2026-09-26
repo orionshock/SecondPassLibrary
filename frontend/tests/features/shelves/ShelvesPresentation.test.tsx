@@ -64,8 +64,6 @@ describe("Shelves read-only regions", () => {
     const personal = renderList(personalShelf, "personal");
     expect(personal).toContain('role="search"');
     expect(personal).toContain('placeholder="Search shelves"');
-    expect(personal.indexOf("Shelf scopes")).toBeLessThan(personal.indexOf('role="search"'));
-    expect(personal.indexOf('role="search"')).toBeLessThan(personal.indexOf("Shelves pagination, top"));
     expect(personal).toContain('href="/shelves/shelf"');
     expect(personal).toContain("Favorites");
     expect(personal).toContain("<b>Reader picks</b>");

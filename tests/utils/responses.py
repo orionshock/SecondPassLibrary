@@ -1,13 +1,7 @@
 from collections.abc import Mapping
 from typing import Any, cast
 
-from django.http.response import HttpResponseBase
 from rest_framework.response import Response
-
-
-def assert_http_response(response: object) -> HttpResponseBase:
-    assert isinstance(response, HttpResponseBase)
-    return response
 
 
 def assert_response(response: object) -> Response:
@@ -31,12 +25,6 @@ def response_data_list(response: Response) -> list[Any]:
         return cast(list[Any], results)
     assert isinstance(data, list)
     return cast(list[Any], data)
-
-
-def paginated_results(response: Response) -> list[Any]:
-    return response_data_list(response)
-
-
 def payload_dict(payload: Mapping[str, Any], key: str) -> dict[str, Any]:
     value = payload[key]
     assert isinstance(value, dict)

@@ -11,10 +11,6 @@ from tests.utils.users import create_role_users, set_user_role
 User = get_user_model()
 
 
-def set_role(user, role: str) -> None:
-    set_user_role(user, role)
-
-
 @dataclass(frozen=True)
 class AccountRoleUsers:
     owner: object
@@ -32,7 +28,7 @@ def create_account_role_users() -> AccountRoleUsers:
         email="manager2@example.com",
     )
 
-    set_role(manager2, UserProfile.ROLE_MANAGER)
+    set_user_role(manager2, UserProfile.ROLE_MANAGER)
 
     return AccountRoleUsers(
         owner=role_users.owner,

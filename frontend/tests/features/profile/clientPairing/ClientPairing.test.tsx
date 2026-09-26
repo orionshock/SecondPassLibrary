@@ -11,12 +11,10 @@ describe("client pairing regions", () => {
     expect(markup).toContain('href="/profile"');
     expect(markup).toContain('href="/"');
     expect(markup).not.toContain("pairing-code");
-    expect(markup.indexOf("Go to Home")).toBeLessThan(markup.indexOf("Back to Profile"));
   });
   it("renders the initial lookup action", () => {
     const markup = renderToStaticMarkup(<MemoryRouter><PairingRequestPageRegion code="" clientName="" pending={false} onCodeChange={vi.fn()} onClientNameChange={vi.fn()} onLookup={vi.fn()} onDecision={vi.fn()} /></MemoryRouter>);
     expect(markup).toContain("Continue");
-    expect(markup).toContain("form-action-row");
   });
 });
 

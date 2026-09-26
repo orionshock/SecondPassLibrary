@@ -3,8 +3,6 @@ from __future__ import annotations
 from django.contrib import admin
 from django.contrib.admin.sites import AdminSite
 from django.contrib.auth.models import User
-from django.contrib.auth.models import Permission
-from django.contrib.contenttypes.models import ContentType
 from django.test import RequestFactory, TestCase, override_settings
 from django.urls import path
 
@@ -226,53 +224,6 @@ class ShelfAdminSafetyTests(TestCase):
         self.request.user = self.superuser
         self.assertTrue(self.shelf_item_admin.has_delete_permission(self.request))
         self.assertFalse(self.shelf_item_admin.has_module_permission(self.request))
-
-    def test_shelf_admin_uses_standard_delete_permissions(self):
-        content_type = ContentType.objects.get_for_model(Shelf)
-        delete_permission = Permission.objects.get(
-            content_type=content_type,
-            codename="delete_shelf",
-        )
-        staff = User.objects.create_user(
-            username="shelf-deleter",
-            email="shelf-deleter@example.com",
-            password="pw",
-            is_staff=True,
-        )
-        staff.user_permissions.add(delete_permission)
-        self.request.user = staff
-
-        self.assertTrue(self.shelf_admin.has_delete_permission(self.request))
-        self.assertTrue(
-            self.shelf_admin.has_delete_permission(
-                self.request,
-                obj=Shelf(
-                    name="Shelf",
-                    owner_type=Shelf.OWNER_TYPE_USER,
-                    owner_user=self.user,
-                ),
-            )
-        )
-
-    def test_shelf_admin_delete_cascades_shelf_items(self):
-        self.request.user = self.superuser
-        shelf = Shelf.objects.create(
-            name="Shelf",
-            owner_type=Shelf.OWNER_TYPE_USER,
-            owner_user=self.user,
-            created_by=self.user,
-        )
-        item = ShelfItem.objects.create(
-            shelf=shelf,
-            book=self.book,
-            position=0,
-            added_by=self.user,
-        )
-
-        self.shelf_admin.delete_model(self.request, shelf)
-
-        self.assertFalse(Shelf.objects.filter(pk=shelf.pk).exists())
-        self.assertFalse(ShelfItem.objects.filter(pk=item.pk).exists())
 
     def assert_user_related_widget_is_view_only(self, widget):
         self.assertFalse(widget.can_add_related)

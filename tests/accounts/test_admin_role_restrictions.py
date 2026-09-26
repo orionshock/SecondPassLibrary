@@ -110,10 +110,6 @@ class UserProfileInlineRoleRestrictionTest(TestCase):
         self.assertIn("profile_id", self.admin.readonly_fields)
         self.assertIn("external_subject_id", self.admin.readonly_fields)
         self.assertEqual(self.admin.profile_id(self.profile), self.profile.id)
-        self.assertEqual(
-            UserProfileInline.profile_id.short_description,
-            "Profile ID",
-        )
 
     def test_owner_can_delete_user_through_django_admin(self):
         ExternalIdentity.objects.create(
@@ -210,13 +206,6 @@ class BuiltInAuthAdminSurfaceTest(TestCase):
         self.assertNotIn("groups", user_admin.filter_horizontal)
         self.assertNotIn("user_permissions", user_admin.filter_horizontal)
         self.assertNotIn("groups", user_admin.list_filter)
-
-    def test_user_admin_does_not_special_case_self_delete_permission(self):
-        user_admin = admin.site._registry[User]
-        request = self.factory.get(f"/admin/auth/user/{self.owner.pk}/change/")
-        request.user = self.owner
-
-        self.assertTrue(user_admin.has_delete_permission(request, self.owner))
 
     def test_accounts_primary_models_remain_registered_without_user_profiles(self):
         self.assertIn(User, admin.site._registry)

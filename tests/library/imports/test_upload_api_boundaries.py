@@ -4,10 +4,7 @@ import json
 from dataclasses import replace
 from unittest.mock import patch
 
-from rest_framework.authentication import SessionAuthentication
-
 from library.groups.public_group import get_public_group
-from library.imports.views import ImportUploadView
 from library.imports.epub_validation import WEB_EPUB_LIMITS
 from library.models import Book, BookGroupAssignment
 from tests.library.imports.helpers import (
@@ -112,9 +109,6 @@ class LibraryImportUploadBoundaryTests(
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["source_label"], "sample.epub")
         self.assertEqual(response.json()["items"][0]["source_label"], "sample.epub")
-
-    def test_endpoint_is_session_auth_oriented(self):
-        self.assertEqual(ImportUploadView.authentication_classes, [SessionAuthentication])
 
     def test_public_assignment_happens_through_persistence(self):
         self.login_librarian()

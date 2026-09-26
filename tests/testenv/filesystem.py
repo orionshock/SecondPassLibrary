@@ -129,17 +129,6 @@ class IsolatedMediaRootMixin(_RuntimePathIsolationMixin):
         cls._media_root = str(isolation.media_root)
 
 
-class IsolatedImportsMixin(_RuntimePathIsolationMixin):
-    """Isolate each test's import staging and media writes."""
-
-    runtime_path_options = {"media": True, "imports": True}
-
-    @classmethod
-    def _expose_runtime_paths(cls, isolation: RuntimePathIsolation) -> None:
-        cls._imports_root = str(isolation.imports_dir)
-        cls._media_root = str(isolation.media_root)
-
-
 class IsolatedUserdataMixin(_RuntimePathIsolationMixin):
     """Keep each test's userdata, media, imports, and static output isolated."""
 

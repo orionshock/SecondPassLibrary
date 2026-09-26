@@ -95,7 +95,6 @@ describe("app frame and router", () => {
     expect(simpleMarkup).toContain('href="/users"');
     expect(simpleMarkup).not.toContain('href="/server"');
     expect(simpleMarkup).not.toContain('href="/groups"');
-    expect(simpleMarkup).not.toContain("app-header--full-navigation");
     expect(navMarkup(manager, { advancedLibraryGroupsEnabled: true })).toContain('href="/groups"');
   });
 

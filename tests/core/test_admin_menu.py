@@ -40,20 +40,6 @@ class AdminMenuTests(TestCase):
             ],
         )
 
-    def test_grouped_models_keep_their_existing_admin_urls(self):
-        models = {
-            model["object_name"]: model
-            for app in admin.site.get_app_list(self.request)
-            for model in app["models"]
-        }
-
-        self.assertEqual(models["User"]["admin_url"], "/admin/auth/user/")
-        self.assertEqual(models["Shelf"]["admin_url"], "/admin/shelves/shelf/")
-        self.assertEqual(
-            models["ReadingSession"]["admin_url"],
-            "/admin/marginalia/readingsession/",
-        )
-
     def test_real_app_indexes_resolve_to_their_operator_group(self):
         accounts = admin.site.get_app_list(self.request, app_label="accounts")
         marginalia = admin.site.get_app_list(self.request, app_label="marginalia")

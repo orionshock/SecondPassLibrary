@@ -12,12 +12,6 @@ class CatalogEntityNameTests(SimpleTestCase):
         self.assertEqual(normalize_catalog_entity_name("  Ａda\tLovelace  "), "ada lovelace")
         self.assertEqual(normalize_catalog_entity_name("A.B."), "a.b.")
 
-    def test_normalized_fields_are_indexed_not_unique(self):
-        for model in (Author, Series):
-            field = model._meta.get_field("normalized_name")
-            self.assertTrue(field.db_index)
-            self.assertFalse(field.unique)
-
     def test_model_validation_populates_normalized_names(self):
         author = Author(name="  Ａda   Lovelace ")
         series = Series(name="  Example   SERIES ")

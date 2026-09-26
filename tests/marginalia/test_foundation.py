@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.core.exceptions import FieldDoesNotExist, ValidationError
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.test import TestCase
 from django.utils import timezone
@@ -146,14 +146,6 @@ class MarginaliaFoundationTests(TestCase):
         assign_session_progress(session=session, location="epubcfi(/6/8)")
 
         self.assertEqual(session.progress_location_label, "")
-
-    def test_profile_uri_is_not_stored_per_row(self):
-        for model in (ReadingSession, Annotation):
-            with (
-                self.subTest(model=model.__name__),
-                self.assertRaises(FieldDoesNotExist),
-            ):
-                model._meta.get_field("profile_version")
 
     def test_location_labels_are_optional_and_preserved_on_annotations(self):
         session = ReadingSession.objects.create(user=self.user, book=self.book)

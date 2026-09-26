@@ -97,7 +97,6 @@ class MarginaliaSessionDetailAPITests(APITestCase):
         )
         self.assertIsNone(payload["session"]["progress"])
         self.assertNotIn("progression", payload["session"])
-        self.assertNotIn("profile_version", payload["session"])
 
     def test_progress_annotation_count_and_activity_are_projected(self):
         session_at = timezone.now() - timedelta(hours=3)

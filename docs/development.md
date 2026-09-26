@@ -493,7 +493,6 @@ in deliberately.
 Test helpers:
 
 - Prefer `tests/utils/books.py::create_file_backed_book()` when a test needs a normal valid Book. The product invariant is that Books are file-backed.
-- Use `create_fileless_book_for_integrity_edge_case()` only for tests that intentionally model inconsistent/out-of-band states.
 
 ## Dev/demo fixture world (local only)
 

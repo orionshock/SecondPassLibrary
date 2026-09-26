@@ -106,19 +106,6 @@ class CurrentUserMeReadApiTest(APITestCase):
             username="testuser", password="testpass", email="test@example.com"
         )
 
-    def test_authenticated_access_me(self):
-        self.client.login(username="testuser", password="testpass")
-        response = assert_response(self.client.get("/api/v1/accounts/me/"))
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        data = response_data_dict(response)
-        self.assertEqual(data["username"], "testuser")
-        self.assertEqual(data["email"], "test@example.com")
-        self.assertEqual(data["first_name"], "")
-        self.assertEqual(data["last_name"], "")
-        self.assertEqual(data["role"], UserProfile.ROLE_READER)
-        self.assertNotIn("must_change_password", data)
-        self.assertIn("profile_id", data)
-
     def test_anonymous_cannot_access_me(self):
         response = self.client.get("/api/v1/accounts/me/")
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)

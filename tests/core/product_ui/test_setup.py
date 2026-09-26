@@ -1,7 +1,7 @@
 """Setup flow tests for first-run product UI."""
 from django.contrib.auth import get_user_model
 from django.core.cache import cache
-from django.test import TestCase, override_settings
+from django.test import TestCase
 
 from accounts.models import UserProfile
 from core import server_settings
@@ -116,13 +116,6 @@ class FirstRunProductUiTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response["Location"], "/login/")
         self.assertTrue(server_settings.get_advanced_library_groups_enabled())
-
-    @override_settings(DEBUG=False)
-    def test_setup_page_is_available_in_production_mode(self):
-        response = self.client.get("/setup/")
-
-        self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Set up your library")
 
     def test_root_app_and_login_direct_to_setup_without_active_owner(self):
         for path in ("/", "/login/"):

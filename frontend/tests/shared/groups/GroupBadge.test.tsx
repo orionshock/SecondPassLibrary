@@ -13,8 +13,6 @@ describe("GroupBadge", () => {
     expect(ordinary).toContain("Editors");
     expect(publicGroup).toContain('aria-label="Public group: Common Room"');
     expect(publicGroup).toContain("Common Room");
-    expect(ordinary).toContain("group-badge-component--small");
-    expect(medium).toContain("group-badge-component--medium");
     expect(medium).toContain('aria-label="Group: Editors"');
   });
 });

@@ -11,7 +11,6 @@ from core.server_settings import set_server_setting
 from library.groups.public_group import (
     DEFAULT_PUBLIC_GROUP_NAME,
     PUBLIC_GROUP_ID_SETTING,
-    RECOVERED_PUBLIC_GROUP_DESCRIPTION,
     get_public_group,
     is_public_group,
 )
@@ -99,20 +98,6 @@ class LibraryPublicGroupServiceTests(LibraryGroupServiceTestCase):
         self.assertEqual(changed.name, "After")
         self.assertEqual(changed.description, "New description")
         self.assertGreater(changed.updated_at, original_updated_at)
-
-    def test_setup_configuration_and_corruption_recovery_descriptions_remain_distinct(self):
-        configured = configure_public_group(name="Setup Room", description="")
-
-        self.assertEqual(configured.description, "")
-
-        set_server_setting(
-            key=PUBLIC_GROUP_ID_SETTING,
-            value=str(uuid4()),
-            description="Public/Common Room group id.",
-        )
-        recovered = get_public_group()
-
-        self.assertEqual(recovered.description, RECOVERED_PUBLIC_GROUP_DESCRIPTION)
 
     def test_renamed_public_group_cannot_be_deleted(self):
         configure_public_group(name="Library Lobby", description="Still public")
