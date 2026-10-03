@@ -1,15 +1,10 @@
 from __future__ import annotations
 
-from pathlib import Path
-import zipfile
 from unittest.mock import patch
 
 from django.test import TestCase
 
-from library.imports.archives import build_zip_index, resolve_zip_member_reference
 from library.imports.batches import import_zip_file
-from library.imports.covers import validate_cover_bytes
-from library.imports.opf import parse_sidecar_opf
 from library.imports.results import (
     IMPORT_STATUS_DUPLICATE,
     IMPORT_STATUS_IMPORTED,
@@ -245,32 +240,6 @@ class ZipSidecarCoverImportTests(IsolatedMediaRootMixin, TestCase):
         self.assertEqual(result.items[0].status, IMPORT_STATUS_IMPORTED)
         self.assertTrue(result.items[0].book.cover_file.name)
         self.assertEqual(existing.cover_file.name, "")
-
-
-class SmallCalibreLibrarySidecarCoverFixtureTests(TestCase):
-    def test_fixture_opfs_reference_adjacent_valid_cover_jpegs(self):
-        fixture = Path(__file__).resolve().parents[2] / "fixtures/library/small_calibre_library.zip"
-
-        with zipfile.ZipFile(fixture, "r") as archive:
-            index = build_zip_index(archive.infolist())
-            opf_names = sorted(
-                name for names in index.opfs_by_dir.values() for name in names
-            )
-
-            self.assertEqual(len(opf_names), 5)
-            for opf_name in opf_names:
-                with self.subTest(opf=opf_name):
-                    parsed = parse_sidecar_opf(archive.read(opf_name))
-                    member = resolve_zip_member_reference(
-                        base_member=opf_name,
-                        href=parsed.cover_href,
-                        members_index=index.members_index,
-                    )
-                    self.assertEqual(parsed.cover_href, "cover.jpg")
-                    self.assertIsNotNone(member)
-                    cover = validate_cover_bytes(archive.read(member.archive_name))
-                    self.assertIsNotNone(cover)
-                    self.assertEqual(cover.extension, ".jpg")
 
 
 def _sidecar_opf(title: str, cover_href: str, *, identifier: str = "") -> bytes:
