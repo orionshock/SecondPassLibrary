@@ -227,6 +227,16 @@ docker compose -f compose.yml logs --tail 200 server
 
 ## Troubleshooting
 
+- **Memory/PID ceiling reached:** check `docker stats`, container
+  `State.OOMKilled` / `RestartCount` with `docker inspect`, and cgroup
+  `memory.events` / `pids.events` where available. A memory ceiling can trigger
+  an OOM kill; reaching the PID ceiling prevents new processes or threads.
+  The example's `restart: unless-stopped` restarts an exited container, but an
+  unhealthy container or failed child process alone does not trigger restart.
+  Interrupted requests can fail, and maintenance runs can remain marked running;
+  inspect import results or maintenance history before retrying. Repeated OOM
+  restarts require workload review and an operator-adjusted ceiling; restarting
+  does not add headroom. See [Resource ceilings](deployment.md#resource-ceilings).
 - **Startup rejects settings:** inspect container logs. Production refuses a
   missing/default `DJANGO_SECRET_KEY`; also verify explicit
   `DJANGO_ALLOWED_HOSTS` and the values in `compose.yml`.

@@ -135,6 +135,34 @@ before enabling remote proxy exposure. The setup wizard configures application
 state after migrations; it does not create database tables during a request.
 Once an active Owner exists, `/setup/` is disabled.
 
+### Resource ceilings
+
+The example sets service-level `mem_limit` / `pids_limit` to `2g` / `256`
+for `server`, `1g` / `256` for `worker`, and `128m` / `64` for `discovery`.
+These are operator-adjustable defaults for Docker Compose, not application
+requirements. CPU scheduling remains unrestricted. PID ceilings count Linux
+threads as well as processes, including healthchecks and `docker compose exec`.
+
+The server handles synchronous EPUB/ZIP and Marginalia imports/exports. EPUB
+validation expands archive contents in memory; trusted CLI imports permit up
+to 1 GiB expanded contents before compressed buffers and parser overhead.
+Marginalia JSON also expands into Python objects. The server therefore has a
+higher ceiling than the single-threaded maintenance consumer. Worker cleanup
+can still grow with catalog, Shelf, and staged-import counts. These ceilings
+do not guarantee that every maximum-size input or concurrent workload fits.
+For large CLI migrations, use an isolated one-off container with a separately
+reviewed ceiling and avoid sharing the running server's budget through `exec`.
+
+Edit the limits in the deployment-owned Compose file for the host's available
+RAM and expected workloads. Validate with `docker compose -f compose.yml
+--profile discovery config --quiet` before recreating services. Memory ceilings
+apply to each container, including charged cache; they do not reserve RAM or
+protect against total pressure from unrelated services. Swap policy is
+unchanged: with `memswap_limit` unset, Docker can permit additional swap up to
+the memory limit when host swap is available. See Docker's
+[Compose service properties](https://docs.docker.com/reference/compose-file/services/)
+and [memory constraints](https://docs.docker.com/engine/containers/resource_constraints/).
+
 ### Optional command-line setup
 
 Headless and disposable deployments may run the same first-owner setup workflow
