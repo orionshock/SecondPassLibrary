@@ -2,43 +2,24 @@
 
 Your books, your notes, your reading history.
 
-Second Pass Library is a self-hosted reading library for EPUB collections. It is built for readers who want to keep their books, highlights, bookmarks, notes, reading progress, and reread history under their own control.
+Second Pass Library is a self-hosted server for personal and shared EPUB libraries. It is built for readers who want to keep their books, highlights, bookmarks, notes, reading progress, and reread history under their own control.
 
-It is EPUB-first, private by default, and designed around durable user-owned reading data.
+It is EPUB-first, private by default, and built around reader-owned Marginalia and reading history.
 
 ## What It Does
 
 - Store and browse an EPUB library
 - Import single EPUB files or simple ZIP archives of EPUBs
 - Keep book metadata, authors, series, identifiers, and cover images
-- Organize books with shelves
-- Manage shared library access with groups and roles
-- Track reading sessions, including rereads and closed historical sessions
+- Organize books with Shelves
+- Manage shared library access with Library Groups and roles
+- Track Reading Sessions, including rereads and closed historical sessions
 - Store reading progress per session
 - Store bookmarks, highlights, and notes
-- View session marginalia in the product UI
-- Export marginalia as JSON for one session, selected sessions, one book, or the whole library
-- Preview SPL native marginalia imports without writing data
-- Provide a REST/JSON API for reader clients
-
-## Product Direction
-
-Second Pass Library is for people who want a personal or small shared EPUB library that is not tied to a vendor cloud.
-
-The project is not trying to be:
-
-- A Kindle clone
-- A PDF annotation system
-- A Calibre replacement
-- A SaaS platform
-- An AI reading product
-
-The focus is a dependable home for EPUB files and reading data.
-
-React provides the active Product UI. A separate Reader client can use the
-bounded external API; it is not part of this repository. Runtime data remains
-under operator-controlled `userdata/`, and portable Marginalia archives keep
-reading history independent of a vendor cloud.
+- View session Marginalia in the Product UI
+- Export Marginalia as JSON for one session, selected sessions, one book, or the whole library
+- Preview SPL native Marginalia imports without writing data
+- Provide a REST/JSON API for separate Web and Android reader clients
 
 ## Documentation
 
