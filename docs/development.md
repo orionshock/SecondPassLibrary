@@ -314,8 +314,8 @@ lane with `--lane`:
 
 - `fast`: lint, Django checks, migration consistency, an explicitly owned
   backend push-confidence sample, complete Product UI/SDK tests with boundary
-  enforcement, and static hygiene. This is the normal push and pull-request
-  lane and is designed to finish in a few minutes;
+  enforcement, and static hygiene. This is the normal maintainer check before
+  pushes and pull-request reviews and is designed to finish in a few minutes;
 - `backend`: the complete Python suite;
 - `backend-coverage`: the complete Python suite with branch coverage under
   `test-results/coverage/python/`;
@@ -334,11 +334,8 @@ checks, not vulnerability scans.
 
 ## CI and releases
 
-Normal branch pushes and pull requests run the repository-owned fast lane
-through `.github/workflows/verify.yml`. They do not build or publish images.
-Use the manual `.github/workflows/verify-full.yml` workflow when HEAD needs the
-complete release-confidence lane plus dependency advisory scans without an
-image build.
+GitHub Actions does not run application verification for branch pushes or pull
+requests. Maintainers run the repository-owned `tools/verify.py` lanes locally.
 
 The manual `.github/workflows/build-image.yml` workflow builds and smoke-tests
 the selected commit as a development image. Its `publish` input defaults to
