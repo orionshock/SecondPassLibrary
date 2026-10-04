@@ -2,7 +2,6 @@
   --page-max-width: 66rem;
   --page-gutter: 1rem;
   --breadcrumb-line-height: 1.2rem;
-  --breadcrumb-content-gap: 0.75rem;
 
   display: flex;
   width: min(var(--page-max-width), calc(100% - (2 * var(--page-gutter))));
@@ -195,27 +194,23 @@
 
 .app-content {
   width: 100%;
-  padding: clamp(1.25rem, 3vw, 2rem) 0;
+  padding: 0 0 clamp(1.25rem, 3vw, 2rem);
   flex: 1;
 }
 
 .app-session-feedback {
-  padding-top: 1rem;
+  padding: 1rem 0;
 }
 
 .app-breadcrumb-slot {
-  min-height: calc(clamp(1.25rem, 3vw, 2rem) + var(--breadcrumb-line-height));
-  padding-top: clamp(1.25rem, 3vw, 2rem);
+  min-height: calc(var(--breadcrumb-line-height) + 0.5rem);
+  padding: 0.25rem 0;
 }
 
 .app-breadcrumbs {
   color: var(--muted);
   font-size: 0.8rem;
   line-height: var(--breadcrumb-line-height);
-}
-
-.app-breadcrumb-slot + .app-content {
-  padding-top: var(--breadcrumb-content-gap);
 }
 
 .app-breadcrumbs ol {
