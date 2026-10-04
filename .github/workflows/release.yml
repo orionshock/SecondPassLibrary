@@ -16,13 +16,10 @@ env:
   REGISTRY_IMAGE: ${{ vars.REGISTRY_IMAGE }}
 
 jobs:
-  verify:
-    name: Verify release
+  publish:
+    name: Build and publish release image
     runs-on: ubuntu-latest
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-
       - name: Validate release tag
         shell: bash
         run: |
@@ -33,25 +30,11 @@ jobs:
             exit 1
           }
 
-      - name: Set up verification environment
-        uses: ./.github/actions/setup-verification
-
-      - name: Run canonical release-confidence verification
-        run: python tools/verify.py --lane all
-
-      - name: Check dependency advisories
-        run: python tools/verify.py --lane security-deps
-
-  publish:
-    name: Build and publish release image
-    needs: verify
-    runs-on: ubuntu-latest
-    steps:
       - name: Check out complete Git history
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
-          fetch-tags: true
+          persist-credentials: false
 
       - name: Require registry configuration
         shell: bash
@@ -94,7 +77,7 @@ jobs:
           release_date: ${{ steps.metadata.outputs.release_date }}
 
       - name: Log in to registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ vars.REGISTRY_HOST }}
           username: ${{ vars.REGISTRY_USERNAME }}
@@ -110,13 +93,25 @@ jobs:
             [ -n "$image" ] && docker push "$image"
           done <<< "$IMAGES"
 
-      - name: Prove immutable release artifact is independently pullable
+      - name: Verify published release artifact and tag identity
         shell: bash
         env:
           IMMUTABLE_IMAGE: ${{ steps.metadata.outputs.immutable_image }}
           RELEASE_IMAGE: ${{ steps.metadata.outputs.release_image }}
+          EXPECTED_VERSION: ${{ steps.metadata.outputs.version }}
+          EXPECTED_RELEASE_DATE: ${{ steps.metadata.outputs.release_date }}
         run: |
           set -euo pipefail
           docker image rm "$IMMUTABLE_IMAGE" "$RELEASE_IMAGE"
           docker pull "$IMMUTABLE_IMAGE"
-          docker image inspect --format 'pulled {{index .RepoDigests 0}}' "$IMMUTABLE_IMAGE"
+          immutable_digest=$(docker image inspect --format '{{index .RepoDigests 0}}' "$IMMUTABLE_IMAGE")
+          immutable_digest=${immutable_digest#*@}
+          tools/smoke-production-image.sh "$IMMUTABLE_IMAGE" "$EXPECTED_VERSION" "$EXPECTED_RELEASE_DATE"
+          docker pull "$RELEASE_IMAGE"
+          release_digest=$(docker image inspect --format '{{index .RepoDigests 0}}' "$RELEASE_IMAGE")
+          release_digest=${release_digest#*@}
+          test "$immutable_digest" = "$release_digest" || {
+            echo "Release tag digest mismatch: immutable=$immutable_digest release=$release_digest" >&2
+            exit 1
+          }
+          echo "Verified $IMMUTABLE_IMAGE and $RELEASE_IMAGE at $release_digest"

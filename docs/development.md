@@ -334,8 +334,9 @@ checks, not vulnerability scans.
 
 ## CI and releases
 
-GitHub Actions does not run application verification for branch pushes or pull
-requests. Maintainers run the repository-owned `tools/verify.py` lanes locally.
+Application verification belongs to local maintainers through the repository-owned
+`tools/verify.py` lanes. GitHub Actions only builds, smoke-tests, verifies, and
+publishes container artifacts; it does not run application tests or advisory scans.
 
 The manual `.github/workflows/build-image.yml` workflow builds and smoke-tests
 the selected commit as a development image. Its `publish` input defaults to
@@ -347,12 +348,20 @@ publish `latest`.
 
 Pushing a release tag matching `alpha-rc<integer>` or
 `alpha-rc<integer>.<integer>` starts `.github/workflows/release.yml`. That
-workflow runs complete verification and advisory scans before it builds,
-smoke-tests, and publishes the production image. It publishes both
+workflow validates the exact tag, then builds, smoke-tests, and publishes the
+production image. Before creating the tag, the maintainer must already have run
+appropriate local verification through `tools/verify.py`. It publishes both
 `sha-<full-commit-sha>` and the exact Git tag as image tags, then deletes its
-local image and pulls the SHA tag back from the registry. The registry image is
-the release artifact; the workflow does not add a forge-specific release-record
-adapter.
+local image and pulls the SHA tag back from the registry to smoke-test runtime
+startup and embedded version/date metadata again. It also pulls the exact release
+tag and checks that both tags resolve to the same digest. The registry image is
+the release artifact; the workflow does not create a GitHub Release.
+
+Both workflows share `.github/actions/build-production-image` for Buildx setup,
+image labels, embedded metadata, local loading, and the production smoke handoff.
+Publishing remains in each workflow because development channel promotion and
+release tags have different policies. Buildx layer caching through `type=gha` is
+deferred until build timings justify it; no application dependency cache is used.
 
 The CI repository must define `REGISTRY_HOST`, `REGISTRY_IMAGE`, and
 `REGISTRY_USERNAME` Actions variables and a write-capable `REGISTRY_TOKEN`
