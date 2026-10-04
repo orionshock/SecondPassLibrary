@@ -51,7 +51,6 @@ ARG SERVER_RELEASE_DATE=
 
 ENV DJANGO_SETTINGS_MODULE=secondpass.settings \
     DJANGO_DEBUG=0 \
-    DJANGO_SECRET_KEY=static-collection-build-only-secret \
     SECOND_PASS_ENABLE_WHITENOISE=1 \
     SECOND_PASS_USERDATA_DIR=/tmp/secondpass-userdata
 
@@ -61,12 +60,15 @@ COPY backend/ ./
 COPY docker/write_image_version.py /tmp/write_image_version.py
 COPY --from=frontend-build /build/product_ui/ web/product_ui/
 
+# Static collection needs Django settings, but no production signing secret.
+# Scope this public placeholder to the command rather than image configuration.
 RUN python /tmp/write_image_version.py \
         secondpass/version.py \
         "$SERVER_VERSION" \
         "$SERVER_RELEASE_DATE" \
     && rm /tmp/write_image_version.py \
-    && python manage.py collectstatic --noinput --clear \
+    && DJANGO_SECRET_KEY=static-collection-build-only-secret \
+        python manage.py collectstatic --noinput --clear \
     && find var/static -type f -name '*.map' -delete \
     && rm -rf web/product_ui/assets web/static
 
