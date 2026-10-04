@@ -13,12 +13,15 @@ permissions:
   contents: read
 
 env:
-  REGISTRY_IMAGE: ${{ vars.REGISTRY_IMAGE }}
+  GHCR_IMAGE: ghcr.io/orionshock/secondpasslibrary
 
 jobs:
   publish:
     name: Build and publish release image
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
     steps:
       - name: Validate release tag
         shell: bash
@@ -36,19 +39,6 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Require registry configuration
-        shell: bash
-        env:
-          REGISTRY_HOST: ${{ vars.REGISTRY_HOST }}
-          REGISTRY_USERNAME: ${{ vars.REGISTRY_USERNAME }}
-          REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
-        run: |
-          set -euo pipefail
-          test -n "$REGISTRY_HOST" || { echo "REGISTRY_HOST is required." >&2; exit 1; }
-          test -n "$REGISTRY_IMAGE" || { echo "REGISTRY_IMAGE is required." >&2; exit 1; }
-          test -n "$REGISTRY_USERNAME" || { echo "REGISTRY_USERNAME is required." >&2; exit 1; }
-          test -n "$REGISTRY_TOKEN" || { echo "REGISTRY_TOKEN is required." >&2; exit 1; }
-
       - name: Derive release image metadata
         id: metadata
         shell: bash
@@ -60,11 +50,11 @@ jobs:
           {
             echo "version=$version"
             echo "release_date=$release_date"
-            echo "immutable_image=${REGISTRY_IMAGE}:sha-${GITHUB_SHA}"
-            echo "release_image=${REGISTRY_IMAGE}:$tag"
+            echo "immutable_image=${GHCR_IMAGE}:sha-${GITHUB_SHA}"
+            echo "release_image=${GHCR_IMAGE}:$tag"
             echo "images<<EOF"
-            echo "${REGISTRY_IMAGE}:sha-${GITHUB_SHA}"
-            echo "${REGISTRY_IMAGE}:$tag"
+            echo "${GHCR_IMAGE}:sha-${GITHUB_SHA}"
+            echo "${GHCR_IMAGE}:$tag"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
@@ -76,12 +66,12 @@ jobs:
           server_version: ${{ steps.metadata.outputs.version }}
           release_date: ${{ steps.metadata.outputs.release_date }}
 
-      - name: Log in to registry
+      - name: Log in to GHCR
         uses: docker/login-action@v4
         with:
-          registry: ${{ vars.REGISTRY_HOST }}
-          username: ${{ vars.REGISTRY_USERNAME }}
-          password: ${{ secrets.REGISTRY_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish release image tags
         shell: bash

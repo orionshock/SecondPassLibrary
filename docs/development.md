@@ -363,10 +363,16 @@ Publishing remains in each workflow because development channel promotion and
 release tags have different policies. Buildx layer caching through `type=gha` is
 deferred until build timings justify it; no application dependency cache is used.
 
-The CI repository must define `REGISTRY_HOST`, `REGISTRY_IMAGE`, and
-`REGISTRY_USERNAME` Actions variables and a write-capable `REGISTRY_TOKEN`
-Actions secret. These are CI configuration, not developer workstation or
-deployment-host credentials.
+Images publish to `ghcr.io/orionshock/secondpasslibrary`. Workflows authenticate
+with `github.actor` and the automatic `GITHUB_TOKEN`; no registry repository
+variables or custom token are required. Only publishing jobs receive
+`packages: write`, alongside `contents: read`. The manual workflow selects
+mutually exclusive build-only and publishing jobs sharing the same anchored
+steps; `publish=false` has no package-write permission, login, or push.
+
+A new GHCR package defaults to private. Anonymous pulls require a later,
+intentional change of package visibility to public; these workflows do not
+change visibility. Until then, deployment hosts need authenticated GHCR access.
 
 Tags should be intentional release identifiers. Existing releases establish
 the `alpha-rc1` and `alpha-rc1.1` forms. The tagged source tree contains the

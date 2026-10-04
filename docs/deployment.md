@@ -40,8 +40,9 @@ only to containers on its Compose network; it does not publish a host port. The
 reverse proxy should connect to `http://server:8000` on that network. Do not
 scale the service or increase its worker count while it uses SQLite.
 
-CI verifies the application, builds the production image, and publishes it to
-the configured registry. The registry image is the release artifact. A
+Maintainers verify the application locally before tagging. GitHub Actions builds
+and smoke-tests the production image, then publishes it to
+`ghcr.io/orionshock/secondpasslibrary`. The registry image is the release artifact. A
 deployment host needs Docker with the Compose plugin, the tracked
 `docker/compose.example.yml`, and registry access if the image is private. It
 does not need a source checkout, Git, Python, Node, or project build scripts.
@@ -61,9 +62,9 @@ release image, preferably an immutable release tag, commit tag, or digest:
 ```yaml
 services:
   server:
-    image: registry.example.com/secondpasslibrary/secondpasslibrary:<release-tag>
+    image: ghcr.io/orionshock/secondpasslibrary:<release-tag>
   worker:
-    image: registry.example.com/secondpasslibrary/secondpasslibrary:<release-tag>
+    image: ghcr.io/orionshock/secondpasslibrary:<release-tag>
 
 DJANGO_SECRET_KEY: <generated-secret>
 DJANGO_ALLOWED_HOSTS: <library-server-hostnames-or-ips>
@@ -77,9 +78,10 @@ proxy may be Caddy, nginx, Traefik, or another suitable implementation; none is
 assumed by the application. It must satisfy the
 [reverse-proxy contract](#reverse-proxy-contract) below.
 
-If the registry requires authentication, log in with a pull-only credential
-using the registry's documented `docker login` flow. Do not place registry
-tokens in Compose or command-line arguments.
+New GHCR packages default to private. Until package visibility is intentionally
+changed to public for anonymous pulls, deployment hosts need authenticated access
+to `ghcr.io` using GitHub's documented pull-only `docker login` flow. Do not place
+registry tokens in Compose or command-line arguments.
 
 Pull and start the deployment from the directory containing `compose.yml`:
 
@@ -355,7 +357,7 @@ identity produced by a successful CI run, review changes to the distributable
 Compose example and migration requirements, then pull and start it:
 
 ```powershell
-$env:SECOND_PASS_IMAGE = "registry.example.com/secondpasslibrary/secondpasslibrary:<immutable-release-tag-or-digest>"
+$env:SECOND_PASS_IMAGE = "ghcr.io/orionshock/secondpasslibrary:<immutable-release-tag-or-digest>"
 docker compose -f compose.yml pull
 docker compose -f compose.yml up -d --no-build
 docker compose -f compose.yml ps

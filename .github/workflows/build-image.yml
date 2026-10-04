@@ -17,13 +17,15 @@ permissions:
   contents: read
 
 env:
-  REGISTRY_IMAGE: ${{ vars.REGISTRY_IMAGE }}
+  GHCR_IMAGE: ghcr.io/orionshock/secondpasslibrary
 
 jobs:
   build:
     name: Build and smoke image
+    if: ${{ !inputs.publish }}
     runs-on: ubuntu-latest
-    steps:
+    # Shared steps keep both permission paths on the same build/publish pipeline.
+    steps: &development_steps
       - name: Check out complete Git history
         uses: actions/checkout@v7
         with:
@@ -41,12 +43,8 @@ jobs:
           version="dev-$describe"
           release_date=$(git log -1 --format=%cs)
           if [ "$PUBLISH" = true ]; then
-            test -n "$REGISTRY_IMAGE" || {
-              echo "Repository variable REGISTRY_IMAGE is required to publish." >&2
-              exit 1
-            }
-            immutable_image="${REGISTRY_IMAGE}:dev-sha-${GITHUB_SHA}"
-            dev_image="${REGISTRY_IMAGE}:dev"
+            immutable_image="${GHCR_IMAGE}:dev-sha-${GITHUB_SHA}"
+            dev_image="${GHCR_IMAGE}:dev"
             build_tags=$(printf '%s\n%s' "$immutable_image" "$dev_image")
           else
             immutable_image="secondpasslibrary:dev-sha-${GITHUB_SHA}"
@@ -71,26 +69,13 @@ jobs:
           server_version: ${{ steps.metadata.outputs.version }}
           release_date: ${{ steps.metadata.outputs.release_date }}
 
-      - name: Require registry credentials
-        if: ${{ inputs.publish }}
-        shell: bash
-        env:
-          REGISTRY_HOST: ${{ vars.REGISTRY_HOST }}
-          REGISTRY_USERNAME: ${{ vars.REGISTRY_USERNAME }}
-          REGISTRY_TOKEN: ${{ secrets.REGISTRY_TOKEN }}
-        run: |
-          set -euo pipefail
-          test -n "$REGISTRY_HOST" || { echo "REGISTRY_HOST is required." >&2; exit 1; }
-          test -n "$REGISTRY_USERNAME" || { echo "REGISTRY_USERNAME is required." >&2; exit 1; }
-          test -n "$REGISTRY_TOKEN" || { echo "REGISTRY_TOKEN is required." >&2; exit 1; }
-
-      - name: Log in to registry
+      - name: Log in to GHCR
         if: ${{ inputs.publish }}
         uses: docker/login-action@v4
         with:
-          registry: ${{ vars.REGISTRY_HOST }}
-          username: ${{ vars.REGISTRY_USERNAME }}
-          password: ${{ secrets.REGISTRY_TOKEN }}
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish immutable development image
         if: ${{ inputs.publish }}
@@ -149,3 +134,12 @@ jobs:
             "$DEV_IMAGE" -c \
             'import os; from secondpass.version import SERVER_RELEASE_DATE, SERVER_VERSION; assert SERVER_VERSION == os.environ["EXPECTED_VERSION"]; assert SERVER_RELEASE_DATE == os.environ["EXPECTED_RELEASE_DATE"]'
           echo "Verified $IMMUTABLE_IMAGE and $DEV_IMAGE at $dev_digest"
+
+  publish:
+    name: Build, smoke, and publish image
+    if: ${{ inputs.publish }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps: *development_steps
