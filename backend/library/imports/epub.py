@@ -26,7 +26,7 @@ from library.imports.results import (
     ImportItemResult,
 )
 from library.imports.services import (
-    ROLLBACK_CLEANUP_DISPOSITION_ATTRIBUTE,
+    ImportPersistenceDiagnosis,
     persist_imported_book,
 )
 
@@ -55,6 +55,7 @@ def import_epub_file(
     but operator_detail exposes only the exception class for those cases.
     """
     source_label = source_label or safe_source_label(source_filename)
+    persistence_diagnosis = ImportPersistenceDiagnosis()
     logger.info("Import candidate received: source_method=%s", source_method)
     try:
         result = _import_epub_file(
@@ -67,6 +68,7 @@ def import_epub_file(
             archive_limits=archive_limits,
             source_method=source_method,
             candidate_ordinal=candidate_ordinal,
+            persistence_diagnosis=persistence_diagnosis,
         )
     except (InvalidEpubImportError, UnsupportedImportSourceError, DjangoValidationError) as exc:
         result = ImportItemResult(
@@ -90,15 +92,6 @@ def import_epub_file(
         )
     except Exception as exc:
         error_category = "io_error" if isinstance(exc, OSError) else "unexpected"
-        persistence_rolled_back = hasattr(
-            exc,
-            ROLLBACK_CLEANUP_DISPOSITION_ATTRIBUTE,
-        )
-        cleanup_disposition = getattr(
-            exc,
-            ROLLBACK_CLEANUP_DISPOSITION_ATTRIBUTE,
-            "handled_if_needed",
-        )
         logger.error(
             "Unexpected EPUB import failure: source_method=%s source=%s "
             "category=%s transaction=%s "
@@ -106,8 +99,8 @@ def import_epub_file(
             source_method,
             _bounded_log_source(source_label),
             error_category,
-            "rolled_back" if persistence_rolled_back else "not_started_or_rolled_back",
-            cleanup_disposition,
+            persistence_diagnosis.transaction,
+            persistence_diagnosis.storage_cleanup,
             str(isinstance(exc, OSError)).lower(),
             type(exc).__name__,
         )
@@ -147,6 +140,7 @@ def _import_epub_file(
     sidecar_cover_bytes: bytes | None = None,
     archive_limits: epub_validation.EpubArchiveLimits | None = None,
     source_method: str,
+    persistence_diagnosis: ImportPersistenceDiagnosis,
     candidate_ordinal: int | None = None,
 ) -> ImportItemResult:
     source_filename = (source_filename or "").strip()
@@ -170,6 +164,7 @@ def _import_epub_file(
         file_size=file_size,
         book_file=ContentFile(data, name=source_filename),
         actor=actor,
+        diagnosis=persistence_diagnosis,
     )
     if persistence_result.status == IMPORT_STATUS_IMPORTED:
         _attach_import_cover_if_available(

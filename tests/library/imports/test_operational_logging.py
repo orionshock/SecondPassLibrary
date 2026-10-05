@@ -1,4 +1,5 @@
 from io import BytesIO
+from pathlib import Path
 from unittest.mock import patch
 
 from django.db import IntegrityError
@@ -288,6 +289,33 @@ class ImportOperationalLoggingTests(
         self.assertIn("storage_cleanup=failed", message)
         self.assertIn("exception=IntegrityError", message)
         self.assertNotIn("C:\\private", message)
+
+    def test_rollback_diagnosis_does_not_require_annotating_the_exception(self):
+        class UnannotatableFailure(RuntimeError):
+            def __setattr__(self, name, value):
+                raise AttributeError("Exception attributes are read-only.")
+
+        with (
+            patch(
+                "library.imports.services._persist_authors",
+                side_effect=UnannotatableFailure("private persistence detail"),
+            ),
+            self.assertLogs("library.imports.epub", level="ERROR") as logs,
+        ):
+            result = import_epub_file(
+                BytesIO(minimal_epub_bytes()),
+                source_filename="safe.epub",
+            )
+
+        self.assertEqual(result.status, "failed")
+        self.assertEqual(result.operator_detail, "UnannotatableFailure")
+        self.assertFalse(Book.objects.exists())
+        self.assertEqual(list(Path(self._media_root).rglob("*.epub")), [])
+        message = " ".join(logs.output)
+        self.assertIn("transaction=rolled_back", message)
+        self.assertIn("storage_cleanup=complete", message)
+        self.assertIn("exception=UnannotatableFailure", message)
+        self.assertNotIn("private persistence detail", message)
 
     def test_unexpected_zip_batch_failure_emits_one_safe_error(self):
         candidate = ZipImportCandidate(

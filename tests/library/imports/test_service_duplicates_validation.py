@@ -222,3 +222,27 @@ class ImportPersistenceDuplicateValidationTests(
         )
         # Clean the deliberately orphaned test fixture without exercising product code.
         original_delete(f"books/ee/ee/{checksum}.epub")
+
+    def test_cleanup_and_logging_failures_preserve_original_exception(self):
+        storage = Book._meta.get_field("book_file").storage
+        cause = ValueError("original cause")
+        original = IntegrityError("original persistence failure")
+        original.__cause__ = cause
+        checksum = "2" * 64
+
+        with (
+            patch("library.imports.services._persist_authors", side_effect=original),
+            patch.object(storage, "delete", side_effect=OSError("cleanup failed")),
+            patch("library.imports.services.log_storage_issue", side_effect=RuntimeError("logging failed")),
+            self.assertRaises(IntegrityError) as raised,
+        ):
+            persist_imported_book(
+                metadata=sample_metadata(),
+                checksum=checksum,
+                book_file=ContentFile(b"epub bytes", name="upload.epub"),
+            )
+
+        self.assertIs(raised.exception, original)
+        self.assertIs(raised.exception.__cause__, cause)
+        self.assertFalse(Book.objects.filter(checksum=checksum).exists())
+        self.assertTrue(storage.exists(f"books/22/22/{checksum}.epub"))

@@ -35,7 +35,18 @@ IMPORT_STATUS_IMPORTED = "imported"
 IMPORT_STATUS_DUPLICATE = "duplicate"
 IMPORT_STATUS_CONFLICT = "conflict"
 logger = logging.getLogger(__name__)
-ROLLBACK_CLEANUP_DISPOSITION_ATTRIBUTE = "_import_rollback_cleanup_disposition"
+
+
+@dataclass
+class ImportPersistenceDiagnosis:
+    """Per-attempt failure diagnosis, independent of the exception being raised.
+
+    Persistence records compensation after its atomic block exits. Callers that
+    need operational context supply a fresh instance; exceptions remain intact.
+    """
+
+    transaction: str = "not_started_or_rolled_back"
+    storage_cleanup: str = "handled_if_needed"
 
 
 @dataclass(frozen=True)
@@ -61,6 +72,7 @@ def persist_imported_book(
     file_size: int | None = None,
     book_file: File | None = None,
     actor=None,
+    diagnosis: ImportPersistenceDiagnosis | None = None,
 ) -> ImportPersistenceResult:
     _validate_import_inputs(metadata=metadata, checksum=checksum, book_file=book_file)
     # Exact bytes are the duplicate-file identity; bibliographic identifiers are
@@ -140,7 +152,7 @@ def persist_imported_book(
             _persist_tags(book=book, metadata=metadata)
             _persist_identifiers(book=book, metadata=metadata)
             add_book_to_group(book=book, group=get_public_group(), actor=actor)
-    except Exception as exc:
+    except Exception:
         cleanup_status = "not_needed"
         if stored_file is not None and not stored_file.created:
             cleanup_status = "preserved_reused"
@@ -150,12 +162,9 @@ def persist_imported_book(
             cleanup_status = _cleanup_rolled_back_book_file(
                 stored_file=stored_file, book=book, actor=actor
             )
-        # Diagnostics must not become a new failure path. Some third-party
-        # exception types may reject arbitrary attributes.
-        try:
-            setattr(exc, ROLLBACK_CLEANUP_DISPOSITION_ATTRIBUTE, cleanup_status)
-        except Exception:
-            pass
+        if diagnosis is not None:
+            diagnosis.transaction = "rolled_back"
+            diagnosis.storage_cleanup = cleanup_status
         raise
 
     return ImportPersistenceResult(status=IMPORT_STATUS_IMPORTED, book=book)
