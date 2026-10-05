@@ -14,6 +14,8 @@ const sdk = vi.hoisted(() => ({
   updateSession: vi.fn(),
   closeSession: vi.fn(),
   deleteSession: vi.fn(),
+  download: vi.fn(),
+  save: vi.fn(),
 }));
 vi.mock("@second-pass/spl-api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@second-pass/spl-api")>()),
@@ -22,7 +24,9 @@ vi.mock("@second-pass/spl-api", async (importOriginal) => ({
   updateMarginaliaSession: sdk.updateSession,
   closeMarginaliaSession: sdk.closeSession,
   deleteMarginaliaSession: sdk.deleteSession,
+  downloadSelectedMarginaliaExport: sdk.download,
 }));
+vi.mock("../../../../src/shared/browser/saveDownloadedFile", () => ({ saveDownloadedFile: sdk.save }));
 vi.mock("../../../../src/app/navigation/usePageBreadcrumbs", () => ({ usePageBreadcrumbs: vi.fn() }));
 
 import { MarginaliaSessionDetailOrchestrator } from "../../../../src/features/marginalia/sessionDetail/MarginaliaSessionDetailOrchestrator";
@@ -87,6 +91,130 @@ function actionButtonContaining(container: HTMLElement, label: string): HTMLButt
 }
 
 describe("MarginaliaSessionDetailOrchestrator", () => {
+  it.each(["resolve", "reject"])("does not publish an export that settles after navigation (%s)", async (outcome) => {
+    sdk.getSession.mockResolvedValue(detail);
+    sdk.listAnnotations.mockResolvedValue([]);
+    const download = deferred<{ blob: Blob; filename: string }>();
+    sdk.download.mockReturnValue(download.promise);
+    const { container, router } = await mountDetail();
+    act(() => actionButtonContaining(container, "Delete").click());
+    act(() => actionButtonContaining(container, "Export Reading Session").click());
+    await act(async () => router.navigate("/marginalia"));
+
+    await act(async () => outcome === "resolve"
+      ? download.resolve({ blob: new Blob(["archive"]), filename: "archive.json" })
+      : download.reject(new Error("Old export failed.")));
+
+    expect(sdk.save).not.toHaveBeenCalled();
+    expect(router.state.location.pathname).toBe("/marginalia");
+    expect(container.textContent).not.toContain("Old export failed.");
+  });
+
+  it("discards an export superseded by close and releases its pending controls", async () => {
+    sdk.getSession.mockResolvedValue(detail);
+    sdk.listAnnotations.mockResolvedValue([]);
+    const download = deferred<{ blob: Blob; filename: string }>();
+    sdk.download.mockReturnValue(download.promise);
+    sdk.closeSession.mockResolvedValue(detailWith({ status: "closed" }));
+    const { container } = await mountDetail();
+    act(() => actionButtonContaining(container, "Delete").click());
+    act(() => actionButtonContaining(container, "Export Reading Session").click());
+    act(() => buttonNamed(container, "Cancel").click());
+    await act(async () => actionButtonContaining(container, "Close Reading Session").click());
+    await act(async () => download.resolve({ blob: new Blob(["archive"]), filename: "archive.json" }));
+
+    expect(sdk.save).not.toHaveBeenCalled();
+    expect(container.textContent).toContain("Closed");
+    act(() => actionButtonContaining(container, "Delete").click());
+    expect(actionButtonContaining(container, "Export Reading Session").disabled).toBe(false);
+    expect(buttonNamed(container, "Continue").disabled).toBe(false);
+  });
+
+  it.each(["download", "save"])("reports a %s failure and permits export retry", async (phase) => {
+    sdk.getSession.mockResolvedValue(detail);
+    sdk.listAnnotations.mockResolvedValue([]);
+    const attachment = { blob: new Blob(["archive"]), filename: "archive.json" };
+    sdk.download.mockResolvedValue(attachment);
+    if (phase === "save") sdk.save.mockImplementationOnce(() => { throw new Error("Export failed."); });
+    else sdk.download.mockRejectedValueOnce(new Error("Export failed."));
+    const { container } = await mountDetail();
+    act(() => actionButtonContaining(container, "Delete").click());
+    await act(async () => actionButtonContaining(container, "Export Reading Session").click());
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe("Export failed.");
+    expect(actionButtonContaining(container, "Export Reading Session").disabled).toBe(false);
+    await act(async () => actionButtonContaining(container, "Export Reading Session").click());
+    expect(sdk.save).toHaveBeenCalledTimes(phase === "save" ? 2 : 1);
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it("trims name and note drafts and displays the authoritative saved fields", async () => {
+    sdk.getSession.mockResolvedValue(detail);
+    sdk.listAnnotations.mockResolvedValue([]);
+    sdk.updateSession.mockResolvedValueOnce(detailWith({ name: "Canonical name" }))
+      .mockResolvedValueOnce(detailWith({ notes: "Canonical note" }));
+    const { container } = await mountDetail();
+    await beginNameSave(container, " Renamed ");
+    await act(async () => undefined);
+    await beginNoteSave(container, " New note ");
+    await act(async () => undefined);
+
+    expect(sdk.updateSession.mock.calls).toEqual([
+      [detail.session.id, { name: "Renamed" }], [detail.session.id, { notes: "New note" }],
+    ]);
+    expect(container.querySelector("h1")?.textContent).toContain("Canonical name");
+    expect(container.textContent).toContain("Canonical note");
+    expect(container.textContent).toContain("Reading Session name saved.");
+    expect(container.textContent).toContain("Reading Session note saved.");
+  });
+
+  it.each(["name", "unnamed", "note"])("finishes an unchanged %s edit without a request or success feedback", async (field) => {
+    sdk.getSession.mockResolvedValue(field === "unnamed" ? detailWith({ name: "" }) : detail);
+    sdk.listAnnotations.mockResolvedValue([]);
+    const { container } = await mountDetail();
+    if (field === "note") await beginNoteSave(container, ` ${detail.session.notes} `);
+    else await beginNameSave(container, field === "unnamed" ? "" : ` ${detail.session.name} `);
+    await act(async () => undefined);
+
+    expect(sdk.updateSession).not.toHaveBeenCalled();
+    expect(container.querySelector('input[aria-label="Reading Session name"]')).toBeNull();
+    expect(container.querySelector('textarea[aria-label="Reading Session note"]')).toBeNull();
+    expect(container.textContent).not.toContain("saved.");
+  });
+
+  it("exports exactly the current Session, saving once after download and excluding deletion", async () => {
+    sdk.getSession.mockResolvedValue(detail);
+    sdk.listAnnotations.mockResolvedValue([]);
+    const download = deferred<{ blob: Blob; filename: string }>();
+    const attachment = { blob: new Blob(["archive"]), filename: "archive.json" };
+    sdk.download.mockReturnValue(download.promise);
+    const { container } = await mountDetail();
+    act(() => actionButtonContaining(container, "Delete").click());
+    act(() => actionButtonContaining(container, "Export Reading Session").click());
+    expect(sdk.download).toHaveBeenCalledExactlyOnceWith({ readingSessionIds: [detail.session.id], includeEmptySessions: true });
+    expect(buttonNamed(container, "Continue").disabled).toBe(true);
+    expect(sdk.save).not.toHaveBeenCalled();
+    expect(sdk.deleteSession).not.toHaveBeenCalled();
+    await act(async () => download.resolve(attachment));
+    expect(sdk.save).toHaveBeenCalledExactlyOnceWith(attachment);
+    expect(buttonNamed(container, "Continue").disabled).toBe(false);
+  });
+
+  it("keeps deletion failure on the current route and replaces navigation only after retry succeeds", async () => {
+    sdk.getSession.mockResolvedValue(detail);
+    sdk.listAnnotations.mockResolvedValue([]);
+    sdk.deleteSession.mockRejectedValueOnce(new Error("Deletion failed.")).mockResolvedValueOnce(undefined);
+    vi.stubGlobal("confirm", vi.fn(() => true));
+    const { container, router } = await mountDetail();
+    act(() => actionButtonContaining(container, "Delete").click());
+    await act(async () => buttonNamed(container, "Continue").click());
+    expect(router.state.location.pathname).toBe("/marginalia/sessions/session-id");
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe("Deletion failed.");
+    act(() => actionButtonContaining(container, "Delete").click());
+    await act(async () => buttonNamed(container, "Continue").click());
+    expect(sdk.deleteSession.mock.calls).toEqual([[detail.session.id], [detail.session.id]]);
+    expect(router.state.location.pathname).toBe("/marginalia");
+    expect(router.state.historyAction).toBe("REPLACE");
+  });
   it("loads the Session and its annotations without displaying selector context", async () => {
     sdk.getSession.mockResolvedValue(detail);
     sdk.listAnnotations.mockResolvedValue([{
@@ -146,6 +274,7 @@ describe("MarginaliaSessionDetailOrchestrator", () => {
       closedAt: "2026-01-04T00:00:00Z",
     })));
 
+    expect(sdk.closeSession).toHaveBeenCalledExactlyOnceWith(detail.session.id);
     expect(container.textContent).toContain("Closed");
     expect(container.querySelector('[aria-label="Edit Reading Session name"]')).toBeNull();
     expect(container.querySelector('[aria-label="Edit Reading Session note"]')).toBeNull();
@@ -157,7 +286,7 @@ describe("MarginaliaSessionDetailOrchestrator", () => {
     expect(container.querySelector('[aria-label="Edit Reading Session note"]')).toBeNull();
   });
 
-  it("merges overlapping name and note results without erasing either field", async () => {
+  it.each(["name", "note"])("merges overlapping name and note results without erasing either field (%s first)", async (first) => {
     const rename = deferred<MarginaliaSessionEnvelope>();
     const note = deferred<MarginaliaSessionEnvelope>();
     sdk.getSession.mockResolvedValue(detail);
@@ -169,11 +298,49 @@ describe("MarginaliaSessionDetailOrchestrator", () => {
 
     await beginNameSave(container, "Renamed Session");
     await beginNoteSave(container, "Updated note");
-    await act(async () => note.resolve(detailWith({ notes: "Updated note" })));
-    await act(async () => rename.resolve(detailWith({ name: "Renamed Session" })));
+    const settleName = () => rename.resolve(detailWith({ name: "Renamed Session" }));
+    const settleNote = () => note.resolve(detailWith({ notes: "Updated note" }));
+    await act(async () => first === "name" ? settleName() : settleNote());
+    await act(async () => first === "name" ? settleNote() : settleName());
 
     expect(container.querySelector("h1")?.textContent).toContain("Renamed Session");
     expect(container.textContent).toContain("Updated note");
+  });
+
+  it("releases discarded metadata after close failure without publishing it and allows retry", async () => {
+    sdk.getSession.mockResolvedValue(detail);
+    sdk.listAnnotations.mockResolvedValue([]);
+    const rename = deferred<MarginaliaSessionEnvelope>();
+    sdk.updateSession.mockReturnValueOnce(rename.promise).mockResolvedValueOnce(detailWith({ name: "Retried name" }));
+    sdk.closeSession.mockRejectedValueOnce(new Error("Close failed."));
+    const { container } = await mountDetail();
+    await beginNameSave(container, "Discarded name");
+    await act(async () => actionButtonContaining(container, "Close Reading Session").click());
+    await act(async () => rename.resolve(detailWith({ name: "Discarded name" })));
+    expect(container.textContent).toContain("Close failed.");
+    expect(container.textContent).not.toContain("Reading Session name saved.");
+    expect(buttonNamed(container, "Save Reading Session name").disabled).toBe(false);
+    act(() => buttonNamed(container, "Cancel editing Reading Session name").click());
+    expect(container.querySelector("h1")?.textContent).toContain("Evening read");
+    await beginNameSave(container, "Retried name");
+    await act(async () => undefined);
+    expect(container.querySelector("h1")?.textContent).toContain("Retried name");
+  });
+
+  it("does not navigate when an old deletion settles on another Session's route", async () => {
+    const other = detailWith({ id: "other", name: "Other Session" });
+    sdk.getSession.mockImplementation((id: string) => Promise.resolve(id === "other" ? other : detail));
+    sdk.listAnnotations.mockResolvedValue([]);
+    const deletion = deferred<void>();
+    sdk.deleteSession.mockReturnValue(deletion.promise);
+    vi.stubGlobal("confirm", vi.fn(() => true));
+    const { container, router } = await mountDetail();
+    act(() => actionButtonContaining(container, "Delete").click());
+    act(() => buttonNamed(container, "Continue").click());
+    await act(async () => router.navigate("/marginalia/sessions/other"));
+    await act(async () => deletion.resolve());
+    expect(router.state.location.pathname).toBe("/marginalia/sessions/other");
+    expect(container.querySelector("h1")?.textContent).toContain("Other Session");
   });
 
   it("invalidates mutation publication when the route selects another Session", async () => {

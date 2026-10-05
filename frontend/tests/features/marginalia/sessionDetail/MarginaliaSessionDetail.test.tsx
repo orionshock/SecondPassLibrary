@@ -9,13 +9,6 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { appRoutes } from "../../../../src/app/router";
 import { marginaliaSessionBreadcrumbFallback } from "../../../../src/features/marginalia/marginaliaBreadcrumbs";
-import {
-  closeMarginaliaSessionFromProductUi,
-  deleteMarginaliaSessionFromProductUi,
-  exportMarginaliaSessionFromProductUi,
-  renameMarginaliaSession,
-  updateMarginaliaSessionNote,
-} from "../../../../src/features/marginalia/sessionDetail/MarginaliaSessionDetailOrchestrator";
 import { MarginaliaSessionNoteEditor } from "../../../../src/features/marginalia/sessionDetail/MarginaliaSessionNoteEditor";
 import { MarginaliaSessionTitleEditor } from "../../../../src/features/marginalia/sessionDetail/MarginaliaSessionTitleEditor";
 import {
@@ -159,13 +152,8 @@ describe("My Marginalia Session Detail", () => {
     expect(marginaliaSessionBreadcrumbFallback(detail.session).at(-1)?.label).toBe("Imported history");
 
     const unnamedSession = { ...detail.session, id: "7f0c9ea5-2c36-4a84-b55b-447e57c24736", name: "" };
-    const unnamedDetail = { ...detail, session: unnamedSession };
     expect(marginaliaSessionBreadcrumbFallback(unnamedSession).at(-1)?.label).toBe("Unnamed Reading Session c24736");
     expect(marginaliaSessionDisplayName(unnamedSession)).toBe("Unnamed Reading Session c24736");
-
-    const update = vi.fn();
-    await expect(renameMarginaliaSession(unnamedDetail, "", update)).resolves.toEqual({ detail: unnamedDetail, changed: false });
-    expect(update).not.toHaveBeenCalled();
   });
 
   it("keeps compact name editing keyboard behavior and active-only controls", async () => {
@@ -202,18 +190,6 @@ describe("My Marginalia Session Detail", () => {
       onDraftChange: vi.fn(), onEdit: vi.fn(), onSave: vi.fn(), onCancel: vi.fn(),
     }));
     expect(closedMarkup).not.toContain("Edit Reading Session name");
-  });
-
-  it("updates active names and notes through the canonical detail envelope", async () => {
-    const renamed = { ...detail, session: { ...detail.session, name: "Renamed" } };
-    const rename = vi.fn().mockResolvedValue(renamed);
-    await expect(renameMarginaliaSession(detail, " Renamed ", rename)).resolves.toEqual({ detail: renamed, changed: true });
-    expect(rename).toHaveBeenCalledWith(detail.session.id, { name: "Renamed" });
-
-    const noted = { ...renamed, session: { ...renamed.session, notes: "New note" } };
-    const updateNote = vi.fn().mockResolvedValue(noted);
-    await expect(updateMarginaliaSessionNote(renamed, " New note ", updateNote)).resolves.toEqual({ detail: noted, changed: true });
-    expect(updateNote).toHaveBeenCalledWith(detail.session.id, { notes: "New note" });
   });
 
   it("keeps Session Note save explicit inside the mounted textarea", async () => {
@@ -295,7 +271,7 @@ describe("My Marginalia Session Detail", () => {
     expect(markup).toContain('/marginalia?view=books&amp;book=book%2Fid');
   });
 
-  it("closes only active Sessions and replaces the page with the authoritative closed detail", async () => {
+  it("shows close only for active Sessions and retains delete for closed history", async () => {
     const onClose = vi.fn();
     const activeMarkup = renderDetail({ onClose });
     expect(activeMarkup).toContain("Close Reading Session");
@@ -308,10 +284,6 @@ describe("My Marginalia Session Detail", () => {
       ...detail,
       session: { ...detail.session, status: "closed" as const, closedAt: "2026-01-04T00:00:00Z" },
     };
-    const close = vi.fn().mockResolvedValue(closed);
-    await expect(closeMarginaliaSessionFromProductUi(detail, close)).resolves.toBe(closed);
-    expect(close).toHaveBeenCalledWith(detail.session.id);
-
     const closedMarkup = renderDetail({
       detail: closed,
       sessionNote: <MarginaliaSessionNoteEditor
@@ -361,22 +333,6 @@ describe("My Marginalia Session Detail", () => {
     expect(markup).toContain(">download</span>Export Reading Session");
   });
 
-  it("uses the selected-Session archive and existing browser download path for exactly the current Session", async () => {
-    const attachment = { blob: new Blob(["archive"]), filename: "20260812-second-pass-marginalia.json" };
-    const download = vi.fn().mockResolvedValue(attachment);
-    const save = vi.fn();
-
-    await expect(exportMarginaliaSessionFromProductUi(detail.session.id, download, save)).resolves.toBeUndefined();
-
-    expect(download).toHaveBeenCalledOnce();
-    expect(download).toHaveBeenCalledWith({
-      readingSessionIds: [detail.session.id],
-      includeEmptySessions: true,
-    });
-    expect(save).toHaveBeenCalledOnce();
-    expect(save).toHaveBeenCalledWith(attachment);
-  });
-
   it("keeps export feedback independent and blocks overlapping export and deletion progression", () => {
     const exporting = renderToStaticMarkup(<MarginaliaSessionDeleteDialog
       sessionName={detail.session.name}
@@ -415,22 +371,6 @@ describe("My Marginalia Session Detail", () => {
       onExport={vi.fn()}
     />);
     expect(deleting).toMatch(/disabled=""[^>]*><span[^>]*>download<\/span>Export Reading Session/);
-  });
-
-  it("deletes exactly one Session and navigates only after SDK success", async () => {
-    const remove = vi.fn().mockResolvedValue(undefined);
-    const navigate = vi.fn();
-    await expect(deleteMarginaliaSessionFromProductUi(detail.session.id, navigate, remove)).resolves.toBeUndefined();
-    expect(remove).toHaveBeenCalledOnce();
-    expect(remove).toHaveBeenCalledWith(detail.session.id);
-    expect(navigate).toHaveBeenCalledOnce();
-    expect(navigate).toHaveBeenCalledWith("/marginalia", { replace: true });
-
-    const failure = new Error("Deletion failed");
-    remove.mockRejectedValueOnce(failure);
-    navigate.mockClear();
-    await expect(deleteMarginaliaSessionFromProductUi(detail.session.id, navigate, remove)).rejects.toBe(failure);
-    expect(navigate).not.toHaveBeenCalled();
   });
 
   it("disables both lifecycle controls and shows bounded feedback while deletion is pending or failed", () => {
