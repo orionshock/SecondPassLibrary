@@ -1,23 +1,14 @@
 import {
-  addShelfItem,
   ApiError,
   deleteShelf,
   getShelf,
-  searchGroupBooks,
-  listShelfEditorItems,
-  moveShelfItem,
-  removeShelfItem,
-  searchLibraryBooks,
-  setShelfItemPosition,
   updateShelf,
-  type ShelfEditorItem,
   type ShelfSummary,
 } from "@second-pass/spl-api";
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router";
 
 import { usePageBreadcrumbs } from "../../../app/navigation/usePageBreadcrumbs";
-import { useUrlCollectionLifecycle } from "../../../app/routing/useUrlCollectionLifecycle";
 import { Button, ErrorPanel } from "../../../components/UiPrimitives";
 import {
   idleMutationState,
@@ -33,6 +24,7 @@ import { ShelfDetailsEditPageRegion } from "../regions/ShelfDetailsEditPageRegio
 import { ShelfEditAddBooksPageRegion } from "./ShelfEditAddBooksPageRegion";
 import { ShelfEditBooksPageRegion } from "./ShelfEditBooksPageRegion";
 import { ShelfEditTabsPageRegion } from "./ShelfEditTabsPageRegion";
+import { useShelfOrderedItemsOrchestrator } from "./useShelfOrderedItemsOrchestrator";
 import {
   emptyShelfDraft,
   shelfDraftFromSummary,
@@ -43,19 +35,13 @@ import {
 } from "../shelfDraft";
 import {
   confirmShelfDelete,
-  confirmUnavailableShelfItemRemoval,
   readShelfLifecycleSuccessMessage,
   shelfDetailNavigationStateFromEdit,
   shelfEditBreadcrumbs,
 } from "../shelfLifecycle";
 import {
-  shelfEditPathWithState,
-  shelfEditSearchParams,
-  shelfEditStateDuringItemMutation,
-  shelfEditStateFromSearchParams,
   withShelfEditPage,
   withShelfEditTab,
-  type ShelfEditUrlState,
 } from "../shelvesQuery";
 import { shelfScopeFromSummary, validBreadcrumbStateForShelf } from "../shelfScopes";
 import "../ShelfLifecycle.css";
@@ -66,13 +52,6 @@ type ShelfLoad =
   | { status: "unavailable" }
   | { status: "not-allowed"; shelf: ShelfSummary }
   | { status: "error"; error: Error };
-
-interface RowMutation {
-  pendingId?: string;
-  pendingAction?: "move" | "remove";
-  error?: Error;
-  message?: string;
-}
 
 export function ShelfEditOrchestrator() {
   const { shelfId = "" } = useParams<{ shelfId: string }>();
@@ -90,62 +69,17 @@ export function ShelfEditOrchestrator() {
   });
   const { draft, mutation } = lifecycle;
   const [deleteMutation, setDeleteMutation] = useState<MutationState>(idleMutationState);
-  const requestedEditState = useMemo(
-    () => shelfEditStateFromSearchParams(new URLSearchParams(location.search)),
-    [location.search],
-  );
-  const [searchDraft, setSearchDraft] = useState(requestedEditState.q);
-  const [itemMutation, setItemMutation] = useState<RowMutation>({});
-  const [candidateMutation, setCandidateMutation] = useState<RowMutation>({});
-  useAutoDismissMutationMessage(itemMutation, setItemMutation);
-  useAutoDismissMutationMessage(candidateMutation, setCandidateMutation);
-  const immediateItemMutationPending = Boolean(itemMutation.pendingId || candidateMutation.pendingId);
-  const stableEditState = useRef(requestedEditState);
-  if (!immediateItemMutationPending) stableEditState.current = requestedEditState;
-  const editState = shelfEditStateDuringItemMutation(
-    requestedEditState,
-    stableEditState.current,
-    immediateItemMutationPending,
-  );
   const shelf = load.status === "ready" || load.status === "not-allowed" ? load.shelf : undefined;
-  const canonicalQuery = shelfEditSearchParams(editState).toString();
-  const queryForPage = (page: number) => shelfEditSearchParams(
-    withShelfEditPage(editState, { page }),
-  ).toString();
-  const itemsLoad = useUrlCollectionLifecycle({
-    scope: `shelf:${shelfId}:edit-items`,
-    canonicalQuery,
-    page: editState.page,
-    pageSize: editState.pageSize,
-    loadPage: (page) => listShelfEditorItems(shelfId, {
-      page,
-      pageSize: editState.pageSize,
-    }),
-    queryForPage,
-    locationState: location.state,
-    enabled: load.status === "ready" && editState.tab === "books",
+  const {
+    editState, pending: immediateItemMutationPending, itemMutation, candidateMutation,
+    itemsLoad, candidatesLoad, navigateEditState, clearCandidateFeedback, addItem, removeItem, moveItem,
+  } = useShelfOrderedItemsOrchestrator({
+    shelfId, shelf, enabled: load.status === "ready", disabled: mutation.pending || deleteMutation.pending,
+    publishItemCount: (itemCount) => setLoad((current) => current.status === "ready" && current.shelf.id === shelfId
+      ? { status: "ready", shelf: { ...current.shelf, itemCount } }
+      : current),
   });
-  const candidatesLoad = useUrlCollectionLifecycle({
-    scope: `shelf:${shelfId}:edit-candidates:${editState.q}`,
-    canonicalQuery,
-    page: editState.page,
-    pageSize: editState.pageSize,
-    loadPage: (page) => {
-      const query = {
-        q: editState.q,
-        excludeShelfId: shelfId,
-        ordering: "title" as const,
-        page,
-        pageSize: editState.pageSize,
-      };
-      if (shelf?.ownerType !== "group") return searchLibraryBooks(query);
-      if (shelf.ownerGroup) return searchGroupBooks(shelf.ownerGroup.id, query);
-      return Promise.reject(new Error("Shelf owner group is unavailable."));
-    },
-    queryForPage,
-    locationState: location.state,
-    enabled: load.status === "ready" && editState.tab === "add-books" && Boolean(editState.q),
-  });
+  const [searchDraft, setSearchDraft] = useState(editState.q);
   const scope = shelf ? shelfScopeFromSummary(shelf) : "personal";
   const breadcrumbs = useMemo(
     () => shelfEditBreadcrumbs(shelfId, shelf?.name, scope),
@@ -154,13 +88,6 @@ export function ShelfEditOrchestrator() {
   usePageBreadcrumbs(breadcrumbs, false, {
     locationState: shelf ? validBreadcrumbStateForShelf(location.state, shelf) : location.state,
   });
-
-  useEffect(() => {
-    const canonical = shelfEditPathWithState(shelfId, editState);
-    if (`${location.pathname}${location.search}` !== canonical) {
-      navigate(canonical, { replace: true, state: location.state });
-    }
-  }, [editState, location.pathname, location.search, location.state, navigate, shelfId]);
 
   useEffect(() => { setSearchDraft(editState.q); }, [editState.q]);
 
@@ -231,75 +158,6 @@ export function ShelfEditOrchestrator() {
       navigate("/shelves", { replace: true, state: null });
     } catch (error: unknown) {
       setDeleteMutation({ pending: false, error: normalizeMutationError(error) });
-    }
-  }
-
-  function navigateEditState(next: ShelfEditUrlState, replace = false) {
-    if (immediateItemMutationPending) return;
-    navigate(shelfEditPathWithState(shelfId, next), { replace, state: location.state });
-  }
-
-  async function refreshShelfItemCount() {
-    const refreshed = await getShelf(shelfId);
-    setLoad((current) => current.status === "ready"
-      ? { status: "ready", shelf: { ...current.shelf, itemCount: refreshed.itemCount } }
-      : current);
-  }
-
-  async function removeItem(item: ShelfEditorItem) {
-    if (item.unavailable && !confirmUnavailableShelfItemRemoval()) return;
-    setItemMutation({ pendingId: item.id, pendingAction: "remove" });
-    try {
-      await removeShelfItem(shelfId, item.id);
-      itemsLoad.reload();
-    } catch (error: unknown) {
-      setItemMutation({ error: normalizeMutationError(error) });
-      return;
-    }
-    try {
-      await refreshShelfItemCount();
-      setItemMutation({ message: item.unavailable ? "Unavailable item removed." : "Book removed from shelf." });
-    } catch {
-      setItemMutation({ error: new Error("Item removed, but the shelf summary could not be refreshed.") });
-    }
-  }
-
-  async function moveItem(itemId: string, move: "up" | "down" | number) {
-    setItemMutation({ pendingId: itemId, pendingAction: "move" });
-    try {
-      if (typeof move === "number") {
-        await setShelfItemPosition(shelfId, itemId, move);
-      } else {
-        await moveShelfItem(shelfId, itemId, move);
-      }
-      itemsLoad.reload();
-    } catch (error: unknown) {
-      setItemMutation({ error: normalizeMutationError(error) });
-      return;
-    }
-    try {
-      await refreshShelfItemCount();
-      setItemMutation({ message: "Shelf order updated." });
-    } catch {
-      setItemMutation({ error: new Error("Shelf order changed, but the shelf summary could not be refreshed.") });
-    }
-  }
-
-  async function addItem(bookId: string) {
-    setCandidateMutation({ pendingId: bookId });
-    try {
-      await addShelfItem(shelfId, { bookId });
-      itemsLoad.reload();
-      candidatesLoad.reload();
-    } catch (error: unknown) {
-      setCandidateMutation({ error: normalizeMutationError(error) });
-      return;
-    }
-    try {
-      await refreshShelfItemCount();
-      setCandidateMutation({ message: "Book added to shelf." });
-    } catch {
-      setCandidateMutation({ error: new Error("Book added, but the shelf summary could not be refreshed.") });
     }
   }
 
@@ -386,7 +244,7 @@ export function ShelfEditOrchestrator() {
         error={candidateMutation.error ?? (candidatesLoad.error === undefined ? undefined : normalizeMutationError(candidatesLoad.error))}
         pendingBookId={candidateMutation.pendingId}
         controlsDisabled={mutation.pending || deleteMutation.pending}
-        onSearchChange={(value) => { setSearchDraft(value); setCandidateMutation({}); }}
+        onSearchChange={(value) => { setSearchDraft(value); clearCandidateFeedback(); }}
         onSearch={() => navigateEditState({ ...editState, q: searchDraft.trim(), page: 1 })}
         onAdd={(bookId) => void addItem(bookId)}
         onPageChange={(page) => navigateEditState(withShelfEditPage(editState, { page }))}

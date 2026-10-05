@@ -18,6 +18,7 @@ interface UrlCollectionRequest<TPage extends { count: number }> {
   loadPage: (page: number) => Promise<TPage>;
   queryForPage: (page: number) => string;
   locationState?: unknown;
+  onPageRecovered?: (page: number) => void;
   enabled?: boolean;
 }
 
@@ -30,6 +31,7 @@ export function useUrlCollectionLifecycle<TPage extends { count: number }>({
   loadPage,
   queryForPage,
   locationState = null,
+  onPageRecovered,
   enabled = true,
 }: UrlCollectionRequest<TPage>): UrlCollectionLoad<TPage> {
   const [searchParameters, setSearchParameters] = useSearchParams();
@@ -42,9 +44,11 @@ export function useUrlCollectionLifecycle<TPage extends { count: number }>({
   const loadPageRef = useRef(loadPage);
   const queryForPageRef = useRef(queryForPage);
   const locationStateRef = useRef(locationState);
+  const onPageRecoveredRef = useRef(onPageRecovered);
   loadPageRef.current = loadPage;
   queryForPageRef.current = queryForPage;
   locationStateRef.current = locationState;
+  onPageRecoveredRef.current = onPageRecovered;
 
   useEffect(() => {
     if (!enabled || currentQuery === canonicalQuery) return;
@@ -60,6 +64,7 @@ export function useUrlCollectionLifecycle<TPage extends { count: number }>({
     const requestPage = loadPageRef.current;
     const recoveredQueryForPage = queryForPageRef.current;
     const replacementState = locationStateRef.current;
+    const publishRecoveredPage = onPageRecoveredRef.current;
     setLoad((current) => ({ page: loadedScope.current === scope ? current.page : undefined, loading: true }));
 
     void requestPage(page)
@@ -83,6 +88,8 @@ export function useUrlCollectionLifecycle<TPage extends { count: number }>({
           const correctedPage = Math.max(1, Math.ceil(firstPage.count / pageSize));
           const result = correctedPage === 1 ? firstPage : await requestPage(correctedPage);
           if (requestGeneration.current !== generation) return;
+          // Let a coordinating workflow retain this authoritative correction while locked.
+          publishRecoveredPage?.(correctedPage);
           const recoveredQuery = recoveredQueryForPage(correctedPage);
           recoveredRequests.current.add(`${scope}:${recoveredQuery}`);
           loadedScope.current = scope;

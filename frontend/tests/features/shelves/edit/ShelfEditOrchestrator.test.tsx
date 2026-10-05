@@ -182,6 +182,75 @@ describe("ShelfEditOrchestrator metadata and deletion", () => {
 });
 
 describe("ShelfEditOrchestrator item mutations", () => {
+  // Regression coverage for the shared two-phase completion rule.
+  it.each([
+    ["remove", "Remove Book One from shelf", "Item removed, but the shelf summary could not be refreshed."],
+    ["move", "Move Book One down", "Shelf order changed, but the shelf summary could not be refreshed."],
+    ["add", "Add", "Book added, but the shelf summary could not be refreshed."],
+  ])("reports %s as committed when only the summary refresh fails", async (command, label, message) => {
+    arrangeDependencies();
+    sdk.getShelf.mockResolvedValueOnce(shelf).mockRejectedValueOnce(new Error("Summary unavailable."));
+    sdk.removeItem.mockResolvedValue(undefined);
+    sdk.moveItem.mockResolvedValue(undefined);
+    sdk.addItem.mockResolvedValue(undefined);
+    sdk.searchLibrary.mockResolvedValue({ items: [book("candidate", "Candidate Book")], count: 1, next: null, previous: null });
+    const { container } = await mount(command === "add"
+      ? "/shelves/shelf%2Fid/edit?tab=add-books&q=Candidate"
+      : "/shelves/shelf%2Fid/edit?tab=books");
+
+    await act(async () => buttonNamed(container, label).click());
+
+    expect(container.querySelector('[role="alert"]')?.textContent).toContain(message);
+    expect(container.querySelector(".shelf-edit-section-feedback")).toBeNull();
+    expect(command === "add" ? sdk.searchLibrary : sdk.listItems).toHaveBeenCalledTimes(2);
+    expect(buttonNamed(container, label).disabled).toBe(false);
+  });
+
+  it("excludes conflicting commands before pending state renders", async () => {
+    arrangeDependencies();
+    const pending = deferred<void>();
+    sdk.moveItem.mockReturnValue(pending.promise);
+    const { container } = await mount("/shelves/shelf%2Fid/edit?tab=books");
+
+    act(() => {
+      buttonNamed(container, "Move Book One down").click();
+      buttonNamed(container, "Remove Book Two from shelf").click();
+    });
+
+    expect(sdk.moveItem).toHaveBeenCalledOnce();
+    expect(sdk.removeItem).not.toHaveBeenCalled();
+    await act(async () => pending.resolve());
+  });
+
+  it.each(["command", "summary"])("discards an old Shelf's %s settlement after a newer Shelf mutation", async (phase) => {
+    arrangeDependencies();
+    const oldCommand = deferred<void>();
+    const oldSummary = deferred<ShelfSummary>();
+    const otherShelf = { ...shelf, id: "other", name: "Other Shelf" };
+    sdk.getShelf.mockResolvedValueOnce(shelf);
+    if (phase === "summary") sdk.getShelf.mockReturnValueOnce(oldSummary.promise);
+    sdk.getShelf.mockResolvedValue(otherShelf);
+    sdk.removeItem.mockReturnValue(oldCommand.promise);
+    sdk.moveItem.mockResolvedValue(undefined);
+    const { container, router } = await mount("/shelves/shelf%2Fid/edit?tab=books");
+
+    act(() => buttonNamed(container, "Remove Book One from shelf").click());
+    if (phase === "summary") await act(async () => oldCommand.resolve());
+    await act(async () => router.navigate("/shelves/other/edit?tab=books"));
+    expect(buttonNamed(container, "Move Book Two up").disabled).toBe(false);
+    await act(async () => buttonNamed(container, "Move Book Two up").click());
+    expect(container.querySelector(".shelf-edit-section-feedback")?.textContent).toBe("Shelf order updated.");
+    const shelfRequests = sdk.getShelf.mock.calls.length;
+    const collectionRequests = sdk.listItems.mock.calls.length;
+
+    await act(async () => phase === "command" ? oldCommand.resolve() : oldSummary.resolve({ ...shelf, itemCount: 1 }));
+
+    expect(container.querySelector("h1")?.textContent).toBe("Other Shelf");
+    expect(container.querySelector(".shelf-edit-section-feedback")?.textContent).toBe("Shelf order updated.");
+    expect(sdk.getShelf).toHaveBeenCalledTimes(shelfRequests);
+    expect(sdk.listItems).toHaveBeenCalledTimes(collectionRequests);
+  });
+
   it("moves an item, locks conflicting commands, and reloads authoritative order", async () => {
     arrangeDependencies();
     sdk.listItems.mockResolvedValueOnce(itemPage([first, second])).mockResolvedValueOnce(itemPage([
@@ -223,6 +292,26 @@ describe("ShelfEditOrchestrator item mutations", () => {
     expect(sdk.getShelf).toHaveBeenCalledTimes(2);
   });
 
+  it("sets a position through the SDK and publishes only the reloaded authoritative order", async () => {
+    arrangeDependencies();
+    const pending = deferred<ShelfEditorItem>();
+    sdk.setPosition.mockReturnValue(pending.promise);
+    sdk.listItems.mockResolvedValueOnce(itemPage([first, second])).mockResolvedValueOnce(itemPage([
+      { ...second, position: 0 }, { ...first, position: 1 },
+    ]));
+    const { container } = await mount("/shelves/shelf%2Fid/edit?tab=books");
+    const position = container.querySelector<HTMLSelectElement>('[aria-label="Move Book One to position"]')!;
+
+    act(() => setControlValue(position, "1"));
+    expect(sdk.setPosition).toHaveBeenCalledWith("shelf/id", "one", 1);
+    expect(position.disabled).toBe(true);
+    expect(position.value).toBe("0");
+    await act(async () => pending.resolve(first));
+
+    expect(container.textContent?.indexOf("Book Two")).toBeLessThan(container.textContent?.indexOf("Book One") ?? 0);
+    expect(container.querySelector<HTMLSelectElement>('[aria-label="Move Book One to position"]')?.value).toBe("1");
+  });
+
   it("adds a Book and refreshes candidates plus the Shelf summary", async () => {
     arrangeDependencies();
     const candidate = book("candidate", "Candidate Book");
@@ -260,6 +349,34 @@ describe("ShelfEditOrchestrator item mutations", () => {
     expect(container.querySelector("[role=\"alert\"]")).toBeNull();
   });
 
+  it.each(["remove", "add"])("preserves %s final-page recovery while the summary is still settling", async (command) => {
+    arrangeDependencies();
+    const summary = deferred<ShelfSummary>();
+    sdk.getShelf.mockResolvedValueOnce(shelf).mockReturnValueOnce(summary.promise);
+    sdk.removeItem.mockResolvedValue(undefined);
+    sdk.addItem.mockResolvedValue(undefined);
+    if (command === "remove") {
+      sdk.listItems.mockResolvedValueOnce({ ...itemPage([first]), count: 31 })
+        .mockRejectedValueOnce(new ApiError("Invalid page.", 404))
+        .mockResolvedValue({ ...itemPage([second]), count: 30 });
+    } else {
+      sdk.searchLibrary.mockResolvedValueOnce({ items: [book("candidate", "Candidate Book")], count: 31, next: null, previous: "page-1" })
+        .mockRejectedValueOnce(new ApiError("Invalid page.", 404))
+        .mockResolvedValue({ items: [], count: 30, next: null, previous: null });
+    }
+    const tab = command === "remove" ? "books" : "add-books";
+    const query = command === "add" ? "&q=Candidate" : "";
+    const { container, router } = await mount(`/shelves/shelf%2Fid/edit?tab=${tab}&page=2&page_size=30${query}`);
+
+    await act(async () => buttonNamed(container, command === "remove" ? "Remove Book One from shelf" : "Add").click());
+    expect(buttonNamed(container, "Details").disabled).toBe(true);
+    await act(async () => summary.resolve({ ...shelf, itemCount: command === "remove" ? 1 : 3 }));
+
+    expect(router.state.location.search).toBe(`?tab=${tab}&page_size=30${query}`);
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+    expect(buttonNamed(container, "Details").disabled).toBe(false);
+  });
+
   it("keeps a candidate visible when adding it fails", async () => {
     arrangeDependencies();
     const candidate = book("candidate", "Candidate Book");
@@ -272,6 +389,27 @@ describe("ShelfEditOrchestrator item mutations", () => {
     expect(container.textContent).toContain("Candidate Book");
     expect(sdk.getShelf).toHaveBeenCalledOnce();
     expect(container.querySelector("[role=\"alert\"]")).not.toBeNull();
+  });
+
+  it("removes an unavailable item only after confirmation and reports the authoritative result", async () => {
+    arrangeDependencies();
+    const unavailable: ShelfEditorItem = { id: "missing", shelfId: shelf.id, position: 0, unavailable: true, addedBy: null, book: null };
+    sdk.listItems.mockResolvedValueOnce({ ...itemPage([unavailable]), visibleItemCount: 0, unavailableItemCount: 1 })
+      .mockResolvedValueOnce(itemPage([]));
+    sdk.removeItem.mockResolvedValue(undefined);
+    const confirm = vi.fn(() => false);
+    vi.stubGlobal("confirm", confirm);
+    const { container } = await mount("/shelves/shelf%2Fid/edit?tab=books");
+    const remove = container.querySelector<HTMLButtonElement>('button[aria-label^="Remove unavailable"]')!;
+
+    await act(async () => remove.click());
+    expect(sdk.removeItem).not.toHaveBeenCalled();
+    confirm.mockReturnValue(true);
+    await act(async () => remove.click());
+
+    expect(sdk.removeItem).toHaveBeenCalledWith("shelf/id", "missing");
+    expect(container.querySelector(".shelf-edit-section-feedback")?.textContent).toBe("Unavailable item removed.");
+    expect(container.textContent).toContain("0 visible \u00b7 0 total");
   });
 
   it("removes a Book and refreshes items plus the Shelf summary after success", async () => {
