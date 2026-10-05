@@ -1,16 +1,19 @@
 from __future__ import annotations
 
 from unittest.mock import patch
+from types import SimpleNamespace
 
 from django.contrib.auth import get_user_model
-from django.db import connection
+from django.db import DatabaseError, connection
 from django.db.models import F
-from django.test import override_settings
+from django.http import HttpResponse
+from django.test import RequestFactory, override_settings
 from django.test.utils import CaptureQueriesContext
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from accounts.models import UserProfile, UserWebSession
+from accounts.middleware import UserWebSessionMiddleware
 from tests.utils.responses import assert_response
 
 
@@ -18,6 +21,45 @@ User = get_user_model()
 
 
 class UserWebSessionMiddlewareTests(APITestCase):
+    def test_bounded_user_agent_tracking_preserves_the_existing_error_response(self):
+        user = User.objects.create_user(username="agent", password="pw")
+        self.client.force_login(user)
+        response = self.client.get("/api/v1/not-a-route/", HTTP_USER_AGENT="a" * 4500)
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        tracked = UserWebSession.objects.get(session_key=self.client.session.session_key)
+        self.assertEqual(tracked.user_agent, "a" * 4000)
+
+    def test_missing_persisted_session_skips_tracking_and_actor_lookup(self):
+        user = User.objects.create_user(username="unpersisted")
+        response = HttpResponse(b"unchanged", status=418, headers={"X-Adapter-Test": "preserved"})
+        middleware = UserWebSessionMiddleware(lambda request: response)
+        for session in (None, {}, SimpleNamespace(session_key="")):
+            with self.subTest(session=session):
+                request = RequestFactory().get("/api/v1/accounts/me/")
+                request.user = user
+                request.session = session
+                with (
+                    patch("accounts.middleware.get_request_actor_context") as acquire,
+                    patch("accounts.middleware.track_web_session") as tracking,
+                ):
+                    self.assertIs(middleware(request), response)
+                acquire.assert_not_called()
+                tracking.assert_not_called()
+
+    def test_tracking_failure_preserves_the_exact_http_response(self):
+        user = User.objects.create_user(username="response-preservation")
+        request = RequestFactory().get("/api/v1/accounts/me/")
+        request.user = user
+        request.session = SimpleNamespace(session_key="persisted")
+        response = HttpResponse(b"original body", status=418, headers={"X-Adapter-Test": "preserved"})
+        middleware = UserWebSessionMiddleware(lambda request: response)
+        with patch("accounts.middleware.track_web_session", side_effect=DatabaseError("private detail")):
+            self.assertIs(middleware(request), response)
+        self.assertEqual(response.content, b"original body")
+        self.assertEqual(response.status_code, 418)
+        self.assertEqual(response["X-Adapter-Test"], "preserved")
+
     def test_authenticated_me_request_tracks_session_with_bounded_queries(self):
         user = User.objects.create_user(username="query-user", password="pw")
         self.client.login(username="query-user", password="pw")
@@ -89,7 +131,7 @@ class UserWebSessionMiddlewareTests(APITestCase):
         UserProfile.objects.filter(user=user).update(must_change_password=True)
 
         with patch(
-            "accounts.middleware.UserWebSession.objects.get_or_create",
+            "accounts.middleware.track_web_session",
             side_effect=RuntimeError("tracking unavailable"),
         ) as tracking:
             response = self.client.get("/api/v1/accounts/me/")

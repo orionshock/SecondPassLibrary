@@ -1,19 +1,15 @@
 from __future__ import annotations
 
-from datetime import timedelta
-
 from django.contrib.auth import logout
 from django.http import JsonResponse
 from django.shortcuts import redirect
-from django.utils import timezone
 
 from accounts.operational_logging import logger, user_uuid
 from accounts.request_identity import get_client_ip
 from accounts.request_actor import get_request_actor_context
 from accounts.session_control import WEB_SESSION_GENERATION_KEY
+from accounts.web_session_tracking import track_web_session
 from library.cover_objects import is_immutable_public_cover_path
-
-from .models import UserWebSession
 
 
 PASSWORD_CHANGE_REQUIRED_CODE = "password_change_required"
@@ -173,10 +169,6 @@ class UserWebSessionMiddleware:
     This is tracking-only. Revocation still deletes rows from Django's session store.
     """
 
-    # Simple write throttle: don't update last-seen more than once per minute unless
-    # user agent / IP changes.
-    THROTTLE_SECONDS = 60
-
     def __init__(self, get_response):
         self.get_response = get_response
 
@@ -207,50 +199,12 @@ class UserWebSessionMiddleware:
             user_agent = (request.META.get("HTTP_USER_AGENT") or "")[:4000]
             ip_address = get_client_ip(request)
 
-            now = timezone.now()
-            defaults = {
-                "user_id": actor.user_id,
-                "user_agent": user_agent,
-                "ip_address": ip_address,
-            }
-
-            obj, created = UserWebSession.objects.get_or_create(
+            track_web_session(
                 session_key=session_key,
-                defaults=defaults,
+                user_id=actor.user_id,
+                user_agent=user_agent,
+                ip_address=ip_address,
             )
-
-            if created:
-                return response
-
-            # Session keys can persist across logout/login; ensure ownership is correct.
-            needs_save = False
-            update_fields: list[str] = []
-
-            if obj.user_id != actor.user_id:
-                obj.user_id = actor.user_id
-                needs_save = True
-                update_fields.append("user")
-
-            if (obj.user_agent or "") != user_agent:
-                obj.user_agent = user_agent
-                needs_save = True
-                update_fields.append("user_agent")
-
-            if obj.ip_address != ip_address:
-                obj.ip_address = ip_address
-                needs_save = True
-                update_fields.append("ip_address")
-
-            # Throttle last-seen updates.
-            if obj.updated_at is None or (now - obj.updated_at) > timedelta(seconds=self.THROTTLE_SECONDS):
-                needs_save = True
-
-            if needs_save:
-                # `updated_at` is auto_now; include it explicitly in update_fields so
-                # Django performs an UPDATE even when only throttling.
-                if "updated_at" not in update_fields:
-                    update_fields.append("updated_at")
-                obj.save(update_fields=update_fields)
         except Exception:
             # Best-effort tracking: do not block responses on tracking failures.
             return response
